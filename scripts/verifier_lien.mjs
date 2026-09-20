@@ -50,8 +50,11 @@ for (const url of urls) {
       await page.waitForTimeout(3000);
       console.log('    avertissement githack franchi, url :', page.url());
     }
-    await page.getByRole('button', { name: /Entraînement/ }).click({ timeout: 20000 });
-    await page.getByRole('button', { name: /Générer la séance/ }).click({ timeout: 15000 });
+    // L'ancienne version vivait dans un onglet ; la version autonome ouvre
+    // directement le formulaire.
+    const onglet = page.getByRole('button', { name: /^Entraînement$/ });
+    if (await onglet.count()) await onglet.click({ timeout: 20000 });
+    await page.getByRole('button', { name: /Générer la séance/ }).click({ timeout: 20000 });
     await page.waitForTimeout(800);
     const images = await page.evaluate(() => [...document.images].map((i) => i.complete && i.naturalWidth > 0));
     const seance = await page.getByText('Séance proposée').count();
