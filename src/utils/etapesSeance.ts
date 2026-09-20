@@ -87,6 +87,7 @@ const EXERCICE_INCONNU: Omit<Exercice, 'id'> = {
   groupe: 'corps-entier',
   muscles: '',
   materiel: 'halteres',
+  pattern: 'isolation',
   niveauMin: 1,
   cotes: 'bilateral',
   unite: 'reps',

@@ -10,6 +10,8 @@ import type {
   Circuit,
   Exercice,
   GroupeMusculaire,
+  Materiel,
+  PatternMoteur,
   Niveau,
   Objectif,
   ParametresSeance,
@@ -245,6 +247,24 @@ function coutCircuit(circuit: Circuit): number {
 
 /** Parcourt le cycle de zones et retient au plus `maximum` exercices, en
  *  préférant à chaque fois un groupe musculaire pas encore sollicité. */
+/** Matériel réellement disponible : ce que l'utilisateur a déclaré, plus les
+ *  exercices qui n'en demandent aucun. Lit l'ancien réglage « banc » des
+ *  séances enregistrées avant l'arrivée de la liste. */
+function materielsPossedes(parametres: ParametresSeance): Set<Materiel> {
+  const declares =
+    parametres.materiels && parametres.materiels.length > 0
+      ? parametres.materiels
+      : parametres.banc
+        ? (['halteres', 'banc', 'step'] as Materiel[])
+        : (['halteres'] as Materiel[]);
+  return new Set<Materiel>(['aucun', ...declares]);
+}
+
+/** Première liste non vide, pour appliquer des préférences en cascade. */
+function premierNonVide<T>(...listes: T[][]): T[] {
+  return listes.find((liste) => liste.length > 0) ?? [];
+}
+
 function selectionnerExercices(
   candidats: Exercice[],
   cycle: Zone[],
@@ -254,6 +274,7 @@ function selectionnerExercices(
   const retenus: Exercice[] = [];
   const idsRetenus = new Set<string>();
   const groupesUtilises = new Set<GroupeMusculaire>();
+  const patternsUtilises = new Set<PatternMoteur>();
   let position = 0;
   let zonesVides = 0;
 
@@ -266,11 +287,22 @@ function selectionnerExercices(
       continue;
     }
     zonesVides = 0;
-    const preferes = disponibles.filter((e) => !groupesUtilises.has(e.groupe));
-    const choisi = tirer(preferes.length > 0 ? preferes : disponibles, alea);
+    // On évite d'abord d'empiler deux fois le même schéma de mouvement
+    // (deux tirages, deux squats), puis le même groupe musculaire. Sans
+    // candidat idéal, on relâche ces préférences plutôt que sauter la zone.
+    const choisi = tirer(
+      premierNonVide(
+        disponibles.filter((e) => !patternsUtilises.has(e.pattern) && !groupesUtilises.has(e.groupe)),
+        disponibles.filter((e) => !patternsUtilises.has(e.pattern)),
+        disponibles.filter((e) => !groupesUtilises.has(e.groupe)),
+        disponibles,
+      ),
+      alea,
+    );
     retenus.push(choisi);
     idsRetenus.add(choisi.id);
     groupesUtilises.add(choisi.groupe);
+    patternsUtilises.add(choisi.pattern);
   }
   return retenus;
 }
@@ -408,13 +440,15 @@ function construireCircuit(
 /** Exercices utilisables avec ces paramètres (matériel, niveau, explosifs). */
 export function exercicesDisponibles(parametres: ParametresSeance): Exercice[] {
   const niveauMax = NIVEAU_MAX[parametres.niveau];
-  return EXERCICES.filter((exercice) => {
-    if (exercice.niveauMin > niveauMax) return false;
-    if (!parametres.banc && exercice.materiel !== 'halteres') return false;
-    if (!parametres.explosifs && exercice.explosif === true) return false;
-    return true;
-  });
+  const possedes = materielsPossedes(parametres);
+  return EXERCICES.filter(
+    (exercice) =>
+      possedes.has(exercice.materiel) &&
+      exercice.niveauMin <= niveauMax &&
+      (parametres.explosifs || !exercice.explosif),
+  );
 }
+
 
 /** Génère une séance complète qui tient dans la durée demandée. */
 export function genererSeance(parametres: ParametresSeance, graine?: number): Seance {
@@ -495,8 +529,16 @@ export function remplacerExercice(seance: Seance, exerciceId: string, graine?: n
   ]);
   if (!utilises.has(exerciceId)) return seance;
 
-  const alternatives = exercicesDisponibles(seance.parametres).filter(
-    (exercice) => exercice.zone === actuel.zone && !utilises.has(exercice.id),
+  // Un remplaçant doit d'abord travailler le même schéma de mouvement : c'est
+  // ce qui garde la séance équilibrée, quel que soit le matériel utilisé. À
+  // défaut, on retombe sur la même zone.
+  const libres = exercicesDisponibles(seance.parametres).filter(
+    (exercice) => !utilises.has(exercice.id),
+  );
+  const alternatives = premierNonVide(
+    libres.filter((e) => e.pattern === actuel.pattern && e.zone === actuel.zone),
+    libres.filter((e) => e.pattern === actuel.pattern),
+    libres.filter((e) => e.zone === actuel.zone),
   );
   if (alternatives.length === 0) return seance;
 

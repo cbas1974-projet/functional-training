@@ -1,6 +1,6 @@
 // Sauvegarde locale : réglages, séance en cours et historique sont conservés
 // dans le navigateur de l'appareil. Rien n'est envoyé sur un serveur.
-import type { EntrainementState, ParametresSeance, Zone } from '../types';
+import type { EntrainementState, Materiel, ParametresSeance, Zone } from '../types';
 import { PARAMETRES_PAR_DEFAUT, TOUTES_LES_ZONES } from '../data/parametres';
 
 const CLE_STOCKAGE = 'functional-training';
@@ -33,7 +33,13 @@ const migrerParametres = (sauvegardes: Partial<ParametresSeance>): ParametresSea
       : sauvegardes.objectif
         ? (ZONES_PAR_OBJECTIF[sauvegardes.objectif] ?? PARAMETRES_PAR_DEFAUT.zones)
         : PARAMETRES_PAR_DEFAUT.zones;
-  return { ...PARAMETRES_PAR_DEFAUT, ...sauvegardes, zones: [...zones] };
+  const materiels =
+    sauvegardes.materiels && sauvegardes.materiels.length > 0
+      ? sauvegardes.materiels
+      : sauvegardes.banc
+        ? (['halteres', 'banc', 'step'] as Materiel[])
+        : PARAMETRES_PAR_DEFAUT.materiels;
+  return { ...PARAMETRES_PAR_DEFAUT, ...sauvegardes, zones: [...zones], materiels: [...materiels] };
 };
 
 const migrer = (sauvegarde: Partial<EntrainementState>): EntrainementState => ({

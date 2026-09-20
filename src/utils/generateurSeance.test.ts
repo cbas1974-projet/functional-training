@@ -95,14 +95,59 @@ describe('exercicesDisponibles', () => {
     expect(avance).toBeGreaterThan(debutant);
   });
 
-  it('ajoute les exercices sur banc quand un banc est disponible', () => {
-    const sansBanc = exercicesDisponibles(avec({ banc: false, niveau: 'avance' }));
-    const avecBanc = exercicesDisponibles(avec({ banc: true, niveau: 'avance' }));
-    expect(avecBanc.length).toBeGreaterThan(sansBanc.length);
-    expect(avecBanc.map((e) => e.id)).toContain('bench-press');
-    expect(avecBanc.map((e) => e.id)).toContain('incline-row');
-    expect(sansBanc.map((e) => e.id)).not.toContain('bench-press');
-    expect(avecBanc.some((e) => e.materiel === 'step')).toBe(true);
+  it('ajoute les exercices sur banc et sur marche selon le matériel déclaré', () => {
+    const halteres = exercicesDisponibles(avec({ materiels: ['halteres'], niveau: 'avance' }));
+    const complet = exercicesDisponibles(
+      avec({ materiels: ['halteres', 'banc', 'step'], niveau: 'avance' }),
+    );
+    expect(complet.length).toBeGreaterThan(halteres.length);
+    expect(complet.map((e) => e.id)).toContain('bench-press');
+    expect(complet.map((e) => e.id)).toContain('incline-row');
+    expect(halteres.map((e) => e.id)).not.toContain('bench-press');
+    expect(complet.some((e) => e.materiel === 'step')).toBe(true);
+
+    // La marche seule ne débloque pas les exercices sur banc.
+    const marche = exercicesDisponibles(avec({ materiels: ['halteres', 'step'], niveau: 'avance' }));
+    expect(marche.map((e) => e.id)).toContain('step-up');
+    expect(marche.map((e) => e.id)).not.toContain('bench-press');
+  });
+
+  it('lit encore l’ancien réglage « banc » des sauvegardes', () => {
+    const ancien = exercicesDisponibles(avec({ materiels: [], banc: true, niveau: 'avance' }));
+    expect(ancien.map((e) => e.id)).toContain('bench-press');
+  });
+
+  it('évite d’empiler deux fois le même schéma de mouvement', () => {
+    // Séance longue, tout le corps : les premiers exercices doivent couvrir
+    // des schémas différents plutôt que deux tirages ou deux squats.
+    const seance = genererSeance(avec({ dureeMinutes: 45, niveau: 'avance' }), GRAINE);
+    const patterns = seance.blocs.map((bloc) => EXERCICES_PAR_ID[bloc.exerciceId].pattern);
+    expect(new Set(patterns).size).toBe(patterns.length);
+  });
+
+  it('remplace par le même schéma de mouvement quand un équivalent existe', () => {
+    const parametres = avec({ dureeMinutes: 45, niveau: 'avance' });
+    const seance = genererSeance(parametres, GRAINE);
+    const utilises = new Set(seance.blocs.map((bloc) => bloc.exerciceId));
+
+    for (const bloc of seance.blocs) {
+      const avant = EXERCICES_PAR_ID[bloc.exerciceId];
+      const apres = remplacerExercice(seance, bloc.exerciceId, GRAINE);
+      const remplacant = apres.blocs.find((b, i) => b.exerciceId !== seance.blocs[i].exerciceId);
+      if (!remplacant) continue;
+      const nouveau = EXERCICES_PAR_ID[remplacant.exerciceId];
+
+      // Un équivalent du même schéma existe-t-il encore dans la bibliothèque ?
+      const equivalentDisponible = exercicesDisponibles(parametres).some(
+        (e) => e.pattern === avant.pattern && !utilises.has(e.id),
+      );
+      if (equivalentDisponible) {
+        expect(nouveau.pattern).toBe(avant.pattern);
+      } else {
+        // Sinon, on garde au moins la zone : la séance reste cohérente.
+        expect(nouveau.zone).toBe(avant.zone);
+      }
+    }
   });
 
   it('ajoute les mouvements explosifs quand ils sont activés', () => {

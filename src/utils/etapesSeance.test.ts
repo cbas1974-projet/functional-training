@@ -28,7 +28,7 @@ const SEANCE: Seance = {
     niveau: 'intermediaire',
     format: 'mixte',
     tempo: TEMPO,
-    banc: false,
+    materiels: ['halteres'],
     explosifs: false,
     seriesParExercice: 3,
     repsParSerie: 8,

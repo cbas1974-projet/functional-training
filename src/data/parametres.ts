@@ -1,4 +1,4 @@
-import type { FormatSeance, Niveau, ParametresSeance, Tempo, Zone } from '../types';
+import type { FormatSeance, Materiel, Niveau, ParametresSeance, Tempo, Zone } from '../types';
 
 /** Toutes les zones, dans l'ordre d'alternance d'une séance corps entier. */
 export const TOUTES_LES_ZONES: Zone[] = ['bas', 'haut', 'dos', 'gainage', 'complet'];
@@ -53,13 +53,25 @@ export const REPS_PAR_SERIE: { valeur: 6 | 8 | 9 | 10 | 12 | null; nom: string; 
   { valeur: null, nom: 'Auto', description: 'L’appli choisit selon le niveau et la durée.' },
 ];
 
+/** Matériel que l'utilisateur peut déclarer. Les exercices sans matériel
+ *  sont toujours disponibles ; les haltères sont la base de la bibliothèque
+ *  actuelle et restent cochés par défaut. */
+export const MATERIELS_DECLARABLES: { id: Materiel; nom: string; precision: string }[] = [
+  { id: 'halteres', nom: 'Haltères', precision: 'La base de la bibliothèque actuelle.' },
+  { id: 'banc', nom: 'Banc', precision: 'Développés, écartés, pull-over, rowing incliné.' },
+  { id: 'step', nom: 'Marche ou step', precision: 'Montées sur marche.' },
+  { id: 'elastique', nom: 'Bande élastique', precision: 'À venir.' },
+  { id: 'swissball', nom: 'Swiss ball', precision: 'À venir.' },
+  { id: 'tapis', nom: 'Tapis', precision: 'Confort au sol pour le gainage et la mobilité.' },
+];
+
 export const PARAMETRES_PAR_DEFAUT: ParametresSeance = {
   dureeMinutes: 20,
   zones: [...TOUTES_LES_ZONES],
   niveau: 'intermediaire',
   format: 'series',
   tempo: { monteeSec: 5, descenteSec: 5 },
-  banc: false,
+  materiels: ['halteres'],
   explosifs: false,
   seriesParExercice: 3,
   repsParSerie: 8,

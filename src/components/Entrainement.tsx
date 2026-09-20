@@ -1,21 +1,18 @@
-import { useState } from 'react';
-import type {
-  EntrainementState,
-  ParametresSeance,
-  ProgressionSeance,
-  Seance,
-} from '../types';
+import { useMemo, useState } from 'react';
+import type { EntrainementState, Materiel, ParametresSeance, ProgressionSeance, Seance } from '../types';
 import {
   DUREES_MINUTES,
   FORMATS,
   NIVEAUX,
   REPS_PAR_SERIE,
+  MATERIELS_DECLARABLES,
   SERIES_PAR_EXERCICE,
   TEMPOS,
   TOUTES_LES_ZONES,
 } from '../data/parametres';
 import { EXERCICES_PAR_ID, NOM_ZONE, ZONES } from '../data/exercices';
 import {
+  exercicesDisponibles,
   formaterDuree,
   genererSeance,
   libelleBloc,
@@ -71,6 +68,20 @@ export default function Entrainement({ etat, onChange }: EntrainementProps) {
   const mettreAJourParametres = (partiel: Partial<ParametresSeance>) => {
     onChange((prec) => ({ ...prec, parametres: { ...prec.parametres, ...partiel } }));
   };
+
+  const materielsChoisis: Materiel[] =
+    parametres.materiels && parametres.materiels.length > 0 ? parametres.materiels : ['halteres'];
+  const basculerMateriel = (materiel: Materiel) => {
+    const suivant = materielsChoisis.includes(materiel)
+      ? materielsChoisis.filter((m) => m !== materiel)
+      : [...materielsChoisis, materiel];
+    // Au moins un matériel : sans rien, la bibliothèque actuelle est vide.
+    mettreAJourParametres({ materiels: suivant.length > 0 ? suivant : ['halteres'] });
+  };
+  const nbExercicesDisponibles = useMemo(
+    () => exercicesDisponibles(parametres).length,
+    [parametres],
+  );
 
   const toutesZones = parametres.zones.length >= TOUTES_LES_ZONES.length;
   const basculerZone = (zone: (typeof TOUTES_LES_ZONES)[number]) => {
@@ -289,17 +300,34 @@ export default function Entrainement({ etat, onChange }: EntrainementProps) {
           </div>
 
           <div>
+            <p className="font-semibold text-gray-800 mb-2">Mon matériel</p>
+            <div className="space-y-2">
+              {MATERIELS_DECLARABLES.map((m) => (
+                <label
+                  key={m.id}
+                  className="flex items-start gap-3 rounded-lg border border-gray-200 p-3 cursor-pointer hover:bg-gray-50"
+                >
+                  <input
+                    type="checkbox"
+                    checked={materielsChoisis.includes(m.id)}
+                    onChange={() => basculerMateriel(m.id)}
+                    className="mt-1 h-5 w-5 shrink-0 accent-blue-600"
+                  />
+                  <span>
+                    <span className="block text-gray-800">{m.nom}</span>
+                    <span className="block text-sm text-gray-500">{m.precision}</span>
+                  </span>
+                </label>
+              ))}
+            </div>
+            <p className="text-sm text-gray-500 mt-2">
+              {nbExercicesDisponibles} exercices disponibles avec ce matériel.
+            </p>
+          </div>
+
+          <div>
             <p className="font-semibold text-gray-800 mb-2">Options</p>
             <div className="space-y-2">
-              <label className="flex items-start gap-3 rounded-lg border border-gray-200 p-3 cursor-pointer hover:bg-gray-50">
-                <input
-                  type="checkbox"
-                  checked={parametres.banc}
-                  onChange={(e) => mettreAJourParametres({ banc: e.target.checked })}
-                  className="mt-1 h-5 w-5 shrink-0 accent-blue-600"
-                />
-                <span className="text-gray-800">J'ai un banc ou une marche solide</span>
-              </label>
               <label className="flex items-start gap-3 rounded-lg border border-gray-200 p-3 cursor-pointer hover:bg-gray-50">
                 <input
                   type="checkbox"

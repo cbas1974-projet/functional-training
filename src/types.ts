@@ -24,8 +24,40 @@ export type GroupeMusculaire =
   | 'mollets'
   | 'corps-entier';
 
-/** Matériel nécessaire en plus des haltères. */
-export type Materiel = 'halteres' | 'banc' | 'step';
+/** Matériel nécessaire pour réaliser l'exercice. L'utilisateur déclare ce
+ *  qu'il possède ; seuls les exercices réalisables lui sont proposés. */
+export type Materiel =
+  | 'aucun'
+  | 'halteres'
+  | 'banc'
+  | 'step'
+  | 'elastique'
+  | 'swissball'
+  | 'tapis';
+
+/** Schéma de mouvement. C'est la clé de l'équilibre d'une séance : on évite
+ *  d'empiler deux exercices du même schéma, et un remplacement propose le
+ *  même schéma avec un autre matériel (soulevé de terre roumain aux haltères
+ *  ↔ good morning à la bande ↔ pont fessier au sol). */
+export type PatternMoteur =
+  | 'squat'
+  | 'charniere'
+  | 'fente'
+  | 'poussee-horizontale'
+  | 'poussee-verticale'
+  | 'tirage-horizontal'
+  | 'tirage-vertical'
+  | 'rotation'
+  | 'anti-rotation'
+  | 'flexion-tronc'
+  | 'flexion-laterale'
+  | 'portage'
+  | 'isolation'
+  | 'mobilite';
+
+/** Famille d'entraînement : détermine la façon de travailler (répétitions
+ *  chargées, maintiens au temps, enchaînements respiratoires). */
+export type Famille = 'musculation' | 'mobilite';
 
 /** bilateral : les deux côtés ensemble ; alterne : un côté puis l'autre à
  *  chaque répétition ; unilateral : toutes les répétitions d'un côté, puis
@@ -48,6 +80,11 @@ export interface Exercice {
   groupe: GroupeMusculaire;
   muscles: string;
   materiel: Materiel;
+  /** Schéma de mouvement, pour équilibrer la séance et proposer des
+   *  équivalents avec un autre matériel. */
+  pattern: PatternMoteur;
+  /** Famille d'entraînement ; 'musculation' par défaut. */
+  famille?: Famille;
   /** 1 = accessible aux débutants, 2 = intermédiaire, 3 = avancé */
   niveauMin: 1 | 2 | 3;
   cotes: Cotes;
@@ -80,8 +117,12 @@ export interface ParametresSeance {
   niveau: Niveau;
   format: FormatSeance;
   tempo: Tempo;
-  /** Banc ou marche solide disponible (débloque 6 exercices du poster). */
-  banc: boolean;
+  /** Matériel dont dispose l'utilisateur. Les haltères et « aucun » sont
+   *  toujours implicites. */
+  materiels: Materiel[];
+  /** Ancien réglage, conservé pour lire les séances enregistrées avant
+   *  l'arrivée de la liste de matériel. */
+  banc?: boolean;
   /** Inclure les mouvements explosifs (squat sauté, swing). */
   explosifs: boolean;
   /** Nombre de séries souhaité par exercice ; null = automatique selon la
