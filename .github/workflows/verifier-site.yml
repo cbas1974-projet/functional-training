@@ -1,5 +1,9 @@
 # Ouvre le site publié dans un vrai navigateur et vérifie qu'une séance se
 # génère, que les images se chargent et qu'aucune erreur ne survient.
+#
+# Netlify met une à deux minutes à publier : on attend d'abord que l'adresse
+# serve bien le commit qu'on vient de pousser, sinon le contrôle validerait
+# le build précédent.
 name: Vérifier le site
 
 on:
@@ -22,11 +26,34 @@ jobs:
         with:
           node-version: 22
       - run: npm i --no-save playwright-core
+
+      - name: Attendre la publication du commit
+        run: |
+          attendu="${{ github.sha }}"
+          for url in $URLS; do
+            echo "=== $url attend $attendu"
+            for essai in $(seq 1 40); do
+              publie=$(curl -sS -L --max-time 30 "$url" \
+                | grep -o '<meta name="version" content="[^"]*"' \
+                | sed 's/.*content="//;s/"//' || true)
+              if [ "$publie" = "$attendu" ]; then
+                echo "publié après $((essai * 15)) s"
+                break
+              fi
+              if [ "$essai" = "40" ]; then
+                echo "::error::$url sert encore « ${publie:-aucune version} » au lieu de $attendu"
+                exit 1
+              fi
+              sleep 15
+            done
+          done
+
       - name: En-têtes HTTP
         run: |
           for u in $URLS; do
             echo "=== $u"
             curl -sS -o /dev/null -D - -L --max-time 60 "$u" | grep -i -E "^HTTP|content-type|content-length" || true
           done
+
       - name: Navigateur
         run: node scripts/verifier_lien.mjs $URLS
