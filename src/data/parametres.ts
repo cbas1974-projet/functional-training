@@ -5,6 +5,7 @@ import type {
   Niveau,
   ParametresSeance,
   Tempo,
+  UnitePoids,
   Zone,
 } from '../types';
 
@@ -79,6 +80,11 @@ export const MATERIELS_DECLARABLES: { id: Materiel; nom: string; precision: stri
   { id: 'tapis', nom: 'Tapis', precision: 'Confort au sol pour le gainage et la mobilité.' },
 ];
 
+export const UNITES_POIDS: { id: UnitePoids; nom: string; description: string }[] = [
+  { id: 'lb', nom: 'Livres (lb)', description: 'Le marquage des haltères vendus ici.' },
+  { id: 'kg', nom: 'Kilogrammes (kg)', description: 'Pour du matériel marqué en kilos.' },
+];
+
 export const GUIDES_VISUELS: { id: GuideVisuel; nom: string; description: string }[] = [
   {
     id: 'les-deux',
@@ -99,5 +105,6 @@ export const PARAMETRES_PAR_DEFAUT: ParametresSeance = {
   explosifs: false,
   seriesParExercice: 3,
   repsParSerie: 8,
+  unitePoids: 'lb',
   guideVisuel: 'les-deux',
 };

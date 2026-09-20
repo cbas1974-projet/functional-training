@@ -411,8 +411,8 @@ function nouvelIdentifiant(): string {
 function poidsParSerie(saisies: number[] | undefined, seriesPrevues: number): number[] {
   const valeurs: number[] = [];
   for (let i = 0; i < seriesPrevues; i += 1) {
-    const kg = saisies?.[i];
-    valeurs.push(typeof kg === 'number' && Number.isFinite(kg) && kg > 0 ? kg : 0);
+    const charge = saisies?.[i];
+    valeurs.push(typeof charge === 'number' && Number.isFinite(charge) && charge > 0 ? charge : 0);
   }
   while (valeurs.length > 0 && valeurs[valeurs.length - 1] === 0) valeurs.pop();
   return valeurs;
@@ -465,13 +465,14 @@ export function agregerRealisation(
 
   const exercices: ExerciceRealise[] = [...parExercice.values()].map((realise) => {
     const parSerie = poidsParSerie(poids[realise.exerciceId], realise.seriesPrevues);
-    // `poidsKg` reste la charge de référence de l'exercice — la plus lourde
-    // des séries — pour les écrans qui n'affichent qu'un chiffre.
-    const maximum = parSerie.reduce((max, kg) => Math.max(max, kg), 0);
+    // `poids` est la charge de référence de l'exercice — la plus lourde des
+    // séries — pour les écrans qui n'affichent qu'un chiffre. Son unité est
+    // celle de la séance (`parametres.unitePoids`).
+    const maximum = parSerie.reduce((max, valeur) => Math.max(max, valeur), 0);
     return {
       ...realise,
       dureeSec: Math.round(realise.dureeSec),
-      ...(maximum > 0 ? { poidsKg: maximum, poidsParSerie: parSerie } : {}),
+      ...(maximum > 0 ? { poids: maximum, poidsParSerie: parSerie } : {}),
     };
   });
 

@@ -4,7 +4,7 @@ import { FORMATS, NIVEAUX } from '../data/parametres';
 import { EXERCICES_PAR_ID } from '../data/exercices';
 import { formaterDuree } from '../utils/generateurSeance';
 import { calculerStatistiques, formaterDateFr, libelleZones } from '../utils/formatage';
-import { libellePoidsParSerie } from '../utils/statistiques';
+import { libellePoidsParSerie, uniteDeSeance } from '../utils/statistiques';
 import FicheExercice from './FicheExercice';
 
 interface HistoriqueEntrainementProps {
@@ -82,6 +82,8 @@ export default function HistoriqueEntrainement({
               // Barre de couleur à gauche : verte si la séance est allée au
               // bout, jaune si elle a été interrompue.
               const couleur = realisee.terminee ? 'var(--montee)' : 'var(--pause)';
+              // Chaque séance est montrée dans l'unité où elle a été saisie.
+              const unite = uniteDeSeance(realisee.parametres);
 
               return (
                 <li
@@ -146,10 +148,12 @@ export default function HistoriqueEntrainement({
                               </p>
                               <p className="text-sm" style={{ color: 'var(--texte-discret)' }}>
                                 <span className="chiffres">{formaterDuree(exo.dureeSec)}</span>
-                                {libellePoidsParSerie(exo) && (
+                                {libellePoidsParSerie(exo, unite) && (
                                   <>
                                     {' · '}
-                                    <span className="chiffres">{libellePoidsParSerie(exo)}</span>
+                                    <span className="chiffres">
+                                      {libellePoidsParSerie(exo, unite)}
+                                    </span>
                                   </>
                                 )}
                               </p>

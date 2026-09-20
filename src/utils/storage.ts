@@ -2,12 +2,15 @@
 // dans le navigateur de l'appareil. Rien n'est envoyé sur un serveur.
 import type {
   EntrainementState,
+  ExerciceRealise,
   Materiel,
   ParametresSeance,
   ProgressionSeance,
+  SeanceRealisee,
   Zone,
 } from '../types';
 import { PARAMETRES_PAR_DEFAUT, TOUTES_LES_ZONES } from '../data/parametres';
+import { uniteDeSeance } from './statistiques';
 
 const CLE_STOCKAGE = 'functional-training';
 
@@ -71,13 +74,45 @@ const migrerPoids = (
 };
 
 const migrerProgression = (enCours: ProgressionSeance | null): ProgressionSeance | null =>
-  enCours === null ? null : { ...enCours, poids: migrerPoids(enCours.poids) };
+  enCours === null
+    ? null
+    : {
+        ...enCours,
+        poids: migrerPoids(enCours.poids),
+        // Une séance commencée avant le réglage d'unité l'a été en kilos.
+        seance: {
+          ...enCours.seance,
+          parametres: {
+            ...enCours.seance.parametres,
+            unitePoids: uniteDeSeance(enCours.seance.parametres),
+          },
+        },
+      };
+
+/** Avant le réglage d'unité, toutes les charges étaient en kilogrammes et
+ *  vivaient dans un champ `poidsKg`. On fige l'unité de ces séances-là : sans
+ *  cela, 16 kg se relirait comme 16 lb. */
+const migrerExercice = (exo: ExerciceRealise): ExerciceRealise => {
+  const migre: ExerciceRealise = { ...exo };
+  delete migre.poidsKg;
+  const poids = exo.poids ?? exo.poidsKg;
+  if (typeof poids === 'number' && poids > 0) migre.poids = poids;
+  return migre;
+};
+
+const migrerHistorique = (historique: SeanceRealisee[]): SeanceRealisee[] =>
+  historique.map((realisee) => ({
+    ...realisee,
+    parametres: { ...realisee.parametres, unitePoids: uniteDeSeance(realisee.parametres) },
+    exercices: realisee.exercices.map(migrerExercice),
+  }));
 
 const migrer = (sauvegarde: Partial<EntrainementState>): EntrainementState => ({
   ...ETAT_PAR_DEFAUT,
   ...sauvegarde,
   parametres: migrerParametres(sauvegarde.parametres ?? {}),
   enCours: migrerProgression(sauvegarde.enCours ?? null),
+  historique: migrerHistorique(sauvegarde.historique ?? []),
 });
 
 /** Lit l'état sauvegardé ; reprend celui de l'ancienne application si besoin. */

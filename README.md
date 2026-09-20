@@ -23,6 +23,8 @@ sur l'appareil.
   (8 par défaut). L'application ajuste le nombre d'exercices pour tenir dans
   la durée demandée, et revient au calcul automatique si le réglage ne tient
   pas.
+- **Unité des charges** : livres par défaut (le marquage des haltères vendus
+  ici), kilogrammes au choix.
 - **Options** : banc ou marche solide, mouvements explosifs.
 
 ### Combien d'exercices tiennent dans une séance ?
@@ -64,8 +66,8 @@ exercice par un autre de la même zone.
 - Bips de montée et de descente, cloche de fin de série.
 - Repos chronométré avec aperçu de l'exercice suivant et bouton « +15 s ».
 - Pause, précédent, suivant, « Passer l'exercice ».
-- **Poids saisi série par série** : le champ est pré-rempli avec la charge de
-  la série précédente, il n'y a qu'à la corriger quand elle change.
+- **Poids saisi série par série**, en livres : le champ est pré-rempli avec la
+  charge de la série précédente, il n'y a qu'à la corriger quand elle change.
 - Retour au calme guidé, puis écran de fin récapitulatif.
 - L'écran reste allumé pendant la séance, si le navigateur le permet.
 - La séance reprend où elle en était si la page est rechargée.
@@ -73,12 +75,14 @@ exercice par un autre de la même zone.
 ### Historique et bibliothèque
 Chaque séance enregistrée conserve la date, la durée réelle et prévue, et pour
 chaque exercice les séries faites, le temps passé et la charge de chaque série
-(« 16 · 16 · 18 kg »).
+(« 30 · 30 · 35 lb »). Chaque séance garde l'unité dans laquelle elle a été
+saisie : changer d'unité ne réécrit pas le passé, et les statistiques
+convertissent ce qu'il faut pour rester comparables.
 
 La bibliothèque présente les 40 exercices classés par zone, avec le poster
 complet. Chaque fiche indique **combien de fois l'exercice a été fait sur
 1 mois, 3 mois, 6 mois et depuis le début**, la date de la dernière fois, la
-charge utilisée et le record. Les exercices travaillés dans le mois portent
+charge utilisée et le record, ramenés à l'unité courante. Les exercices travaillés dans le mois portent
 une pastille sur leur vignette : ce qui n'en a pas est ce qu'on néglige.
 
 ## Installation et lancement

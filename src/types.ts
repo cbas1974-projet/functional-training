@@ -72,6 +72,10 @@ export type Objectif = 'complet' | 'haut' | 'bas' | 'gainage' | 'dos';
 
 export type FormatSeance = 'series' | 'superset' | 'circuit' | 'mixte';
 
+/** Unité dans laquelle les charges sont saisies et affichées. Les haltères
+ *  vendus au Québec sont marqués en livres ; le kilogramme reste disponible. */
+export type UnitePoids = 'lb' | 'kg';
+
 export interface Exercice {
   id: string;
   nomFr: string;
@@ -131,6 +135,9 @@ export interface ParametresSeance {
   /** Répétitions souhaitées par série ; null = automatique selon le niveau.
    *  Si ce nombre ne tient pas dans la durée, l'automatique reprend. */
   repsParSerie: 6 | 8 | 9 | 10 | 12 | null;
+  /** Unité des charges. Absente sur les séances enregistrées avant son
+   *  arrivée : celles-là avaient été saisies en kilogrammes. */
+  unitePoids?: UnitePoids;
   /** Ce qui rythme la répétition à l'écran pendant une série :
    *  une bille qui monte et descend, le décompte en chiffres, ou les deux. */
   guideVisuel: GuideVisuel;
@@ -184,8 +191,11 @@ export interface ExerciceRealise {
   reps: number;
   /** Temps réellement passé sur l'exercice, repos compris. */
   dureeSec: number;
-  /** Charge retenue pour l'exercice : la plus lourde des séries. Conservé
-   *  pour lire les séances enregistrées avant la saisie série par série. */
+  /** Charge retenue pour l'exercice : la plus lourde des séries, dans
+   *  l'unité de la séance (`parametres.unitePoids`). */
+  poids?: number;
+  /** Ancien nom du champ, quand tout était en kilogrammes. Lu une fois au
+   *  chargement, puis remplacé par `poids`. */
   poidsKg?: number;
   /** Charge de chaque série, dans l'ordre ; 0 = non saisie. */
   poidsParSerie?: number[];

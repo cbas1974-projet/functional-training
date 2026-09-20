@@ -15,6 +15,7 @@ import type {
   Seance,
   SeanceRealisee,
   Tempo,
+  UnitePoids,
 } from '../types';
 import { ECHAUFFEMENT, RETOUR_CALME, cheminImage } from '../data/exercices';
 import type { MouvementLibre } from '../data/exercices';
@@ -33,7 +34,7 @@ import {
 } from '../utils/etapesSeance';
 import type { Etape, EtatMetronome, PhaseTempo, Suivant } from '../utils/etapesSeance';
 import { secondesParRep } from '../utils/generateurSeance';
-import { libellePoidsParSerie } from '../utils/statistiques';
+import { SUFFIXE_UNITE, libellePoidsParSerie, uniteDeSeance } from '../utils/statistiques';
 import { ajouterTemps, useMoteurEtapes } from '../hooks/useMoteurEtapes';
 import { useVerrouEcran } from '../hooks/useVerrouEcran';
 import PaceurTempo from './PaceurTempo';
@@ -317,6 +318,7 @@ export default function SeanceGuidee({
   const tempo = seanceActive.parametres.tempo;
   // Les séances enregistrées avant l'arrivée du réglage n'ont pas de guide.
   const guideVisuel: GuideVisuel = seanceActive.parametres.guideVisuel ?? 'les-deux';
+  const unitePoids = uniteDeSeance(seanceActive.parametres);
 
   const moteur = useMoteurEtapes(etapes.length);
 
@@ -517,10 +519,10 @@ export default function SeanceGuidee({
   const prolongerRepos = () => moteur.prolonger(PROLONGATION_REPOS_SEC);
 
   /** Enregistre la charge d'une série précise (numérotée à partir de 1). */
-  const changerPoids = (exerciceId: string, serie: number, kg: number | null) =>
+  const changerPoids = (exerciceId: string, serie: number, charge: number | null) =>
     setPoids((precedents) => {
       const actuelles = precedents[exerciceId] ?? [];
-      const valeur = kg !== null && kg > 0 ? kg : 0;
+      const valeur = charge !== null && charge > 0 ? charge : 0;
       if ((actuelles[serie - 1] ?? 0) === valeur) return precedents;
       const suivantes = [...actuelles];
       while (suivantes.length < serie) suivantes.push(0);
@@ -633,7 +635,8 @@ export default function SeanceGuidee({
           guideVisuel={guideVisuel}
           lireEcouleSec={lireEcouleSec}
           poidsSeries={poids[etape.exerciceId] ?? []}
-          onPoids={(serie, kg) => changerPoids(etape.exerciceId, serie, kg)}
+          unitePoids={unitePoids}
+          onPoids={(serie, charge) => changerPoids(etape.exerciceId, serie, charge)}
           onTerminee={suivant}
           onPasser={passerExercice}
         />
@@ -1010,7 +1013,8 @@ interface CorpsTravailProps {
   lireEcouleSec: () => number;
   /** Charges déjà saisies pour cet exercice, index 0 = première série. */
   poidsSeries: number[];
-  onPoids: (serie: number, kg: number | null) => void;
+  unitePoids: UnitePoids;
+  onPoids: (serie: number, charge: number | null) => void;
   onTerminee: () => void;
   onPasser: () => void;
 }
@@ -1024,6 +1028,7 @@ function CorpsTravail({
   guideVisuel,
   lireEcouleSec,
   poidsSeries,
+  unitePoids,
   onPoids,
   onTerminee,
   onPasser,
@@ -1035,7 +1040,7 @@ function CorpsTravail({
   // tempo lent on garde presque toujours la même d'une série à l'autre.
   const derniereConnue = poidsSeries
     .slice(0, serieCourante - 1)
-    .reduce((dernier, kg) => (kg > 0 ? kg : dernier), 0);
+    .reduce((dernier, charge) => (charge > 0 ? charge : dernier), 0);
   const valeurDepart = dejaSaisi > 0 ? dejaSaisi : derniereConnue;
 
   // Le texte saisi est gardé tel quel (« 12, » ne doit pas être réécrit en
@@ -1044,8 +1049,8 @@ function CorpsTravail({
   const saisirPoids = (evenement: ChangeEvent<HTMLInputElement>) => {
     const valeur = evenement.target.value;
     setTexte(valeur);
-    const kg = Number.parseFloat(valeur.replace(',', '.'));
-    onPoids(serieCourante, Number.isFinite(kg) ? kg : null);
+    const charge = Number.parseFloat(valeur.replace(',', '.'));
+    onPoids(serieCourante, Number.isFinite(charge) ? charge : null);
   };
 
   // La charge reprise de la série précédente est enregistrée d'office : sans
@@ -1117,12 +1122,13 @@ function CorpsTravail({
       >
         <span className="min-w-0">
           <span className="block font-medium">
-            Poids série <span className="chiffres">{serieCourante}</span> (kg)
+            Poids série <span className="chiffres">{serieCourante}</span> (
+            {SUFFIXE_UNITE[unitePoids]})
           </span>
-          {poidsSeries.some((kg) => kg > 0) && (
+          {poidsSeries.some((charge) => charge > 0) && (
             <span className="chiffres block text-xs" style={{ color: 'var(--texte-discret)' }}>
               {poidsSeries
-                .map((kg, i) => `S${i + 1} ${kg > 0 ? kg : '—'}`)
+                .map((charge, i) => `S${i + 1} ${charge > 0 ? charge : '—'}`)
                 .join(' · ')}
             </span>
           )}
@@ -1131,7 +1137,7 @@ function CorpsTravail({
           type="number"
           inputMode="decimal"
           min="0"
-          step="0.5"
+          step={unitePoids === 'lb' ? '1' : '0.5'}
           placeholder="—"
           value={texte}
           onChange={saisirPoids}
@@ -1352,7 +1358,7 @@ function CorpsFin({ realisee, onEnregistrer, onAbandonner }: CorpsFinProps) {
                     {formaterMmSs(realise.dureeSec)}
                   </td>
                   <td className={cellule} style={{ ...bordure, color: 'var(--texte-discret)' }}>
-                    {libellePoidsParSerie(realise) || '—'}
+                    {libellePoidsParSerie(realise, uniteDeSeance(realisee.parametres)) || '—'}
                   </td>
                 </tr>
               );

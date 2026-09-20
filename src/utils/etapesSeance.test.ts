@@ -397,8 +397,8 @@ describe('agregerRealisation', () => {
       seriesFaites: 1,
       reps: 8,
       dureeSec: 225,
-      // `poidsKg` reste la charge de référence : la plus lourde des séries.
-      poidsKg: 14,
+      // `poids` est la charge de référence : la plus lourde des séries.
+      poids: 14,
       poidsParSerie: [12, 14],
     });
     expect(rowing).toEqual({
@@ -408,7 +408,7 @@ describe('agregerRealisation', () => {
       reps: 6,
       dureeSec: 323,
     });
-    expect(rowing.poidsKg).toBeUndefined();
+    expect(rowing.poids).toBeUndefined();
     expect(rowing.poidsParSerie).toBeUndefined();
     expect(marche).toMatchObject({ seriesPrevues: 1, seriesFaites: 0, reps: 40, dureeSec: 0 });
     // Le temps de la préparation du circuit revient à sa première station ;

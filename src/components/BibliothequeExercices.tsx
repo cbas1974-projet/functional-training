@@ -1,16 +1,18 @@
 import { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import type { ReactNode } from 'react';
-import type { Exercice, SeanceRealisee } from '../types';
+import type { Exercice, SeanceRealisee, UnitePoids } from '../types';
 import { CHEMIN_POSTER, EXERCICES, NOM_MATERIEL, NOM_PATTERN, ZONES } from '../data/exercices';
 import { formaterDateFr, libelleNiveauMin } from '../utils/formatage';
-import { frequencesParExercice } from '../utils/statistiques';
+import { SUFFIXE_UNITE, frequencesParExercice } from '../utils/statistiques';
 import type { FrequenceExercice } from '../utils/statistiques';
 import FicheExercice from './FicheExercice';
 
 interface BibliothequeExercicesProps {
   /** Séances enregistrées : elles donnent la fréquence de chaque exercice. */
   historique: SeanceRealisee[];
+  /** Unité dans laquelle ramener les charges de l'historique. */
+  unitePoids: UnitePoids;
 }
 
 function Badge({ children }: { children: ReactNode }) {
@@ -57,17 +59,21 @@ function Frequence({ frequence }: { frequence: FrequenceExercice | undefined }) 
         <span className="chiffres">
           {frequence.derniereDate ? formaterDateFr(frequence.derniereDate) : '—'}
         </span>
-        {typeof frequence.dernierPoidsKg === 'number' && (
+        {typeof frequence.dernierPoids === 'number' && (
           <>
             {' · '}
-            <span className="chiffres">{frequence.dernierPoidsKg} kg</span>
+            <span className="chiffres">
+              {frequence.dernierPoids} {SUFFIXE_UNITE[frequence.unite]}
+            </span>
           </>
         )}
-        {typeof frequence.poidsMaxKg === 'number' &&
-          frequence.poidsMaxKg !== frequence.dernierPoidsKg && (
+        {typeof frequence.poidsMax === 'number' &&
+          frequence.poidsMax !== frequence.dernierPoids && (
             <>
               {' · record '}
-              <span className="chiffres">{frequence.poidsMaxKg} kg</span>
+              <span className="chiffres">
+                {frequence.poidsMax} {SUFFIXE_UNITE[frequence.unite]}
+              </span>
             </>
           )}
       </p>
@@ -75,10 +81,16 @@ function Frequence({ frequence }: { frequence: FrequenceExercice | undefined }) 
   );
 }
 
-export default function BibliothequeExercices({ historique }: BibliothequeExercicesProps) {
+export default function BibliothequeExercices({
+  historique,
+  unitePoids,
+}: BibliothequeExercicesProps) {
   const [exerciceOuvertId, setExerciceOuvertId] = useState<string | null>(null);
   const [posterOuvert, setPosterOuvert] = useState(false);
-  const frequences = useMemo(() => frequencesParExercice(historique), [historique]);
+  const frequences = useMemo(
+    () => frequencesParExercice(historique, unitePoids),
+    [historique, unitePoids],
+  );
 
   useEffect(() => {
     if (!posterOuvert) return;

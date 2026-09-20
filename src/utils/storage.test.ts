@@ -77,6 +77,46 @@ describe('chargerEtat', () => {
     expect(chargerEtat()).toEqual(etat);
   });
 
+  it('fige en kilogrammes les séances enregistrées avant le réglage d’unité', () => {
+    const ancienne = {
+      ...ANCIENNE_SAUVEGARDE,
+      // Séance enregistrée quand tout était en kilos : ni réglage d'unité,
+      // ni champ `poids`, seulement `poidsKg`.
+      parametres: { ...PARAMETRES_PAR_DEFAUT, unitePoids: undefined },
+      enCours: {
+        ...ANCIENNE_SAUVEGARDE.enCours,
+        seance: {
+          ...ANCIENNE_SAUVEGARDE.enCours.seance,
+          parametres: { ...PARAMETRES_PAR_DEFAUT, unitePoids: undefined },
+        },
+      },
+      historique: [
+        {
+          id: 'h1',
+          date: '2026-09-01T10:00:00.000Z',
+          parametres: { ...PARAMETRES_PAR_DEFAUT, unitePoids: undefined },
+          dureePrevueSec: 1200,
+          dureeReelleSec: 1180,
+          terminee: true,
+          exercices: [
+            { exerciceId: 'goblet-squat', seriesPrevues: 3, seriesFaites: 3, reps: 8, dureeSec: 420, poidsKg: 16 },
+          ],
+        },
+      ],
+    };
+    localStorage.setItem(CLE, JSON.stringify(ancienne));
+    const etat = chargerEtat();
+
+    const passee = etat.historique[0];
+    expect(passee.parametres.unitePoids).toBe('kg');
+    expect(passee.exercices[0].poids).toBe(16);
+    expect(passee.exercices[0].poidsKg).toBeUndefined();
+    // La séance en cours aussi : les charges déjà tapées étaient en kilos.
+    expect(etat.enCours?.seance.parametres.unitePoids).toBe('kg');
+    // Les nouvelles séances, elles, partent en livres.
+    expect(etat.parametres.unitePoids).toBe('lb');
+  });
+
   it('rend l’état par défaut quand la sauvegarde est illisible', () => {
     localStorage.setItem(CLE, '{ pas du json');
     expect(chargerEtat().parametres).toEqual(PARAMETRES_PAR_DEFAUT);

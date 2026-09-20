@@ -19,6 +19,7 @@ import {
   SERIES_PAR_EXERCICE,
   TEMPOS,
   TOUTES_LES_ZONES,
+  UNITES_POIDS,
 } from '../data/parametres';
 import { EXERCICES_PAR_ID, NOM_PATTERN, NOM_ZONE, ZONES } from '../data/exercices';
 import {
@@ -32,7 +33,7 @@ import {
 } from '../utils/generateurSeance';
 import type { AnalyseSeance } from '../utils/generateurSeance';
 import { formaterDateFr, graineAleatoire, libelleZones, messageErreur } from '../utils/formatage';
-import { frequencesParExercice, libelleFrequenceCourte } from '../utils/statistiques';
+import { frequencesParExercice, libelleFrequenceCourte, uniteDeSeance } from '../utils/statistiques';
 import type { FrequenceExercice } from '../utils/statistiques';
 import SeanceGuidee from './SeanceGuidee';
 import FicheExercice from './FicheExercice';
@@ -360,6 +361,7 @@ export default function Entrainement({ etat, onChange }: EntrainementProps) {
       : `En alternance : ${libelleZones(parametres)}.`;
   const niveauSelectionne = NIVEAUX.find((n) => n.id === parametres.niveau);
   const formatSelectionne = FORMATS.find((f) => f.id === parametres.format);
+  const uniteSelectionnee = UNITES_POIDS.find((u) => u.id === uniteDeSeance(parametres));
 
   // Résumés de la carte « Ma séance ».
   const resumeVolume =
@@ -463,8 +465,12 @@ export default function Entrainement({ etat, onChange }: EntrainementProps) {
     return `Une série de ${bloc.reps} répétitions à ${monteeSec} s / ${descenteSec} s${cotes} dure ${duree}.`;
   }, [seanceCourante]);
 
-  /** Combien de fois chaque exercice a déjà été fait, par fenêtre glissante. */
-  const frequences = useMemo(() => frequencesParExercice(historique), [historique]);
+  /** Combien de fois chaque exercice a déjà été fait, par fenêtre glissante.
+   *  Les charges d'un historique antérieur au réglage d'unité sont converties. */
+  const frequences = useMemo(
+    () => frequencesParExercice(historique, uniteDeSeance(parametres)),
+    [historique, parametres],
+  );
 
   /** Étiquette « 2× ce mois-ci », ou rien si l'exercice est nouveau. */
   const badgeFrequence = (exerciceId: string): string | null => {
@@ -632,6 +638,20 @@ export default function Entrainement({ etat, onChange }: EntrainementProps) {
                   onClick={() => mettreAJourParametres({ format: f.id })}
                 >
                   {f.nom}
+                </Pastille>
+              ))}
+            </div>
+          </Groupe>
+
+          <Groupe titre="Unité des charges" aide={uniteSelectionnee?.description}>
+            <div className="flex flex-wrap gap-2">
+              {UNITES_POIDS.map((u) => (
+                <Pastille
+                  key={u.id}
+                  selectionne={uniteDeSeance(parametres) === u.id}
+                  onClick={() => mettreAJourParametres({ unitePoids: u.id })}
+                >
+                  {u.nom}
                 </Pastille>
               ))}
             </div>
@@ -1057,7 +1077,7 @@ export default function Entrainement({ etat, onChange }: EntrainementProps) {
           {vue === 'historique' ? (
             <HistoriqueEntrainement historique={historique} onSupprimer={supprimerDeLHistorique} />
           ) : (
-            <BibliothequeExercices historique={historique} />
+            <BibliothequeExercices historique={historique} unitePoids={uniteDeSeance(parametres)} />
           )}
         </div>
       )}
