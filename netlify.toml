@@ -1,0 +1,14 @@
+# Déploiement Netlify : « Add new site » → « Import an existing project » →
+# choisir ce dépôt et la branche. Ces réglages sont repris automatiquement.
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+[build.environment]
+  NODE_VERSION = "22"
+
+# Les vignettes d'exercices ne changent pas : cache long côté navigateur.
+[[headers]]
+  for = "/exercices/*"
+  [headers.values]
+    Cache-Control = "public, max-age=604800"

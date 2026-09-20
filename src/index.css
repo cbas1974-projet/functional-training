@@ -1,0 +1,14 @@
+@import "tailwindcss";
+
+@layer base {
+  body {
+    margin: 0;
+    min-height: 100vh;
+    font-family: system-ui, -apple-system, sans-serif;
+  }
+
+  /* Tailwind v4 ne met plus le curseur "main" sur les boutons par défaut */
+  button:not(:disabled) {
+    cursor: pointer;
+  }
+}
