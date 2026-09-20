@@ -1,0 +1,32 @@
+# Ouvre le site publié dans un vrai navigateur et vérifie qu'une séance se
+# génère, que les images se chargent et qu'aucune erreur ne survient.
+name: Vérifier le site
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  URLS: https://sgtraining.netlify.app/
+
+jobs:
+  verifier:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm i --no-save playwright-core
+      - name: En-têtes HTTP
+        run: |
+          for u in $URLS; do
+            echo "=== $u"
+            curl -sS -o /dev/null -D - -L --max-time 60 "$u" | grep -i -E "^HTTP|content-type|content-length" || true
+          done
+      - name: Navigateur
+        run: node scripts/verifier_lien.mjs $URLS
