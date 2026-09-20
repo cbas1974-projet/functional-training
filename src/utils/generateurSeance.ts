@@ -160,6 +160,114 @@ const REPS_RELACHEES = [6, 8, 9, 10, 12];
  *  les répétitions demandées. Au-delà, le réglage de l'utilisateur prime. */
 const EXERCICES_MINIMUM = 2;
 
+/** Tailles d'enchaînement essayées quand l'utilisateur laisse l'automatique
+ *  choisir. On part de la plus petite : à nombre d'exercices égal, deux
+ *  charges à préparer valent mieux que quatre. */
+const TAILLES_ROTATION_AUTO = [2, 3, 4];
+
+// ------------------------------------------------------- Enchaînements
+
+/** Schémas qui s'opposent. Les enchaîner laisse l'un récupérer pendant que
+ *  l'autre travaille, sans que le second pâtisse du premier. */
+const PATTERNS_OPPOSES: Partial<Record<PatternMoteur, PatternMoteur[]>> = {
+  'poussee-horizontale': ['tirage-horizontal', 'tirage-vertical'],
+  'tirage-horizontal': ['poussee-horizontale', 'poussee-verticale'],
+  'poussee-verticale': ['tirage-vertical', 'tirage-horizontal'],
+  'tirage-vertical': ['poussee-verticale', 'poussee-horizontale'],
+  squat: ['charniere'],
+  charniere: ['squat', 'fente', 'flexion-tronc'],
+  fente: ['charniere'],
+  'flexion-tronc': ['charniere'],
+  rotation: ['anti-rotation'],
+  'anti-rotation': ['rotation'],
+};
+
+/** Muscles antagonistes. C'est là que se joue l'opposition pour les exercices
+ *  d'isolation, qui partagent tous le même schéma de mouvement : un curl et
+ *  une extension triceps sont tous deux « isolation », mais bien opposés. */
+const GROUPES_OPPOSES: Partial<Record<GroupeMusculaire, GroupeMusculaire[]>> = {
+  biceps: ['triceps'],
+  triceps: ['biceps'],
+  pectoraux: ['dorsaux'],
+  dorsaux: ['pectoraux', 'abdominaux'],
+  quadriceps: ['ischios-fessiers'],
+  'ischios-fessiers': ['quadriceps'],
+  abdominaux: ['dorsaux'],
+  obliques: ['abdominaux'],
+  epaules: ['dorsaux'],
+};
+
+/** Schémas qui coupent le souffle : grosse masse musculaire sous charge. */
+const PATTERNS_EXIGEANTS: PatternMoteur[] = ['squat', 'charniere', 'fente', 'portage'];
+
+/** Deux mouvements exigeants dans le même enchaînement et c'est la cage
+ *  thoracique qui lâche avant le muscle. */
+function estExigeant(exercice: Exercice): boolean {
+  return PATTERNS_EXIGEANTS.includes(exercice.pattern) || exercice.groupe === 'corps-entier';
+}
+
+/** Score en dessous duquel un exercice est refusé comme partenaire. */
+const REFUS = -1;
+
+/** À quel point `candidat` ferait un bon partenaire pour un enchaînement
+ *  déjà commencé. Négatif = incompatible. */
+function scoreCompagnon(enchainement: Exercice[], candidat: Exercice): number {
+  let score = 0;
+  for (const membre of enchainement) {
+    if (estExigeant(membre) && estExigeant(candidat)) return REFUS;
+    // Même muscle, ou même schéma : ce n'est plus un enchaînement, c'est une
+    // série longue déguisée. L'isolation fait exception, elle couvre des
+    // muscles opposés sous un seul schéma.
+    if (membre.groupe === candidat.groupe) return REFUS;
+    if (membre.pattern === candidat.pattern && membre.pattern !== 'isolation') return REFUS;
+    if (PATTERNS_OPPOSES[membre.pattern]?.includes(candidat.pattern)) score += 4;
+    if (GROUPES_OPPOSES[membre.groupe]?.includes(candidat.groupe)) score += 4;
+    if (membre.zone !== candidat.zone) score += 1;
+  }
+  return score;
+}
+
+/** Exercices réordonnés en enchaînements de `taille`, chacun composé de
+ *  mouvements qui ne se gênent pas. Un enchaînement se referme plus tôt
+ *  qu'annoncé plutôt que d'accueillir un partenaire incompatible. */
+interface Arrangement {
+  exercices: Exercice[];
+  /** Numéro d'enchaînement de chaque exercice, dans le même ordre. */
+  enchainements: number[];
+}
+
+function arranger(exercices: Exercice[], taille: number): Arrangement {
+  if (taille <= 1) {
+    return { exercices: [...exercices], enchainements: exercices.map((_, index) => index) };
+  }
+  const restants = [...exercices];
+  const ordonnes: Exercice[] = [];
+  const enchainements: number[] = [];
+  let numero = 0;
+  while (restants.length > 0) {
+    const groupe = [restants.shift() as Exercice];
+    while (groupe.length < taille && restants.length > 0) {
+      let choix = -1;
+      let meilleur = REFUS;
+      for (let i = 0; i < restants.length; i += 1) {
+        const score = scoreCompagnon(groupe, restants[i]);
+        if (score > meilleur) {
+          meilleur = score;
+          choix = i;
+        }
+      }
+      if (choix < 0) break;
+      groupe.push(restants.splice(choix, 1)[0]);
+    }
+    for (const exercice of groupe) {
+      ordonnes.push(exercice);
+      enchainements.push(numero);
+    }
+    numero += 1;
+  }
+  return { exercices: ordonnes, enchainements };
+}
+
 /** En dessous de ce budget de travail, le format mixte n'a pas la place
  *  d'accueillir un circuit : il se comporte comme le format séries. */
 const SEUIL_MIXTE_SEC = 600;
@@ -437,8 +545,8 @@ interface Combinaison {
 
 /** Comment les exercices s'enchaînent dans la partie « séries ». */
 interface OptionsBlocs {
-  /** Enchaîner les exercices deux par deux (superset). */
-  apparier: boolean;
+  /** Tailles d'enchaînement à essayer ; 1 = séries droites. */
+  taillesRotation: number[];
   /** Un circuit suit : le dernier repos existe donc bel et bien. */
   suiviDUnCircuit: boolean;
 }
@@ -453,36 +561,47 @@ function construireBlocs(
 ): BlocSeries[] {
   if (retenus.length === 0) return [];
 
-  const fabriquer = (nombre: number, series: number, reps: number, repos: number): BlocSeries[] =>
-    retenus.slice(0, nombre).map((exercice, index) => {
+  const fabriquer = (
+    arrangement: Arrangement,
+    nombre: number,
+    series: number,
+    reps: number,
+    repos: number,
+  ): BlocSeries[] => {
+    const exercices = arrangement.exercices.slice(0, nombre);
+    const numeros = arrangement.enchainements.slice(0, nombre);
+    // Un enchaînement tronqué à un seul exercice redevient une série droite :
+    // sans partenaire, le repos court n'aurait aucun sens.
+    const effectifs = new Map<number, number>();
+    for (const numero of numeros) effectifs.set(numero, (effectifs.get(numero) ?? 0) + 1);
+    return exercices.map((exercice, index) => {
       const bloc: BlocSeries = {
         exerciceId: exercice.id,
         series,
         reps: repsEffectives(exercice, reps, reglages),
         reposSec: repos,
       };
-      // Les exercices sont appariés dans l'ordre de sélection, qui alterne
-      // déjà les zones : le superset oppose donc naturellement deux schémas
-      // de mouvement différents. Un exercice orphelin reste classique.
-      if (options.apparier && nombre > 1) {
-        bloc.superset = Math.floor(index / 2);
+      if ((effectifs.get(numeros[index]) ?? 0) > 1) {
+        bloc.superset = numeros[index];
         bloc.transitionSec = TRANSITION_SUPERSET_SEC;
       }
       return bloc;
     });
+  };
 
   const enumerer = (
+    arrangement: Arrangement,
     seriesPossibles: number[],
     repsPossibles: number[],
   ): Combinaison | null => {
     const possibles: Combinaison[] = [];
     let meilleurCout = 0;
-    for (let nombre = 1; nombre <= retenus.length; nombre += 1) {
+    for (let nombre = 1; nombre <= arrangement.exercices.length; nombre += 1) {
       for (const series of seriesPossibles) {
         for (const reps of repsPossibles) {
           for (const repos of reglages.repos) {
             const cout = dureeBlocsSec(
-              fabriquer(nombre, series, reps, repos),
+              fabriquer(arrangement, nombre, series, reps, repos),
               tempo,
               options.suiviDUnCircuit,
             );
@@ -521,33 +640,56 @@ function construireBlocs(
   }
   if (seriesPreferees) essais.push([seriesFixees, reglages.reps]);
 
-  const resultats: (Combinaison | null)[] = [];
-  for (const [series, reps] of essais) {
-    const resultat = enumerer(series, reps);
-    resultats.push(resultat);
-    // Dès que les préférences donnent une séance digne de ce nom, on s'arrête :
-    // on ne relâche les répétitions que pour sortir d'un exercice unique.
-    if (resultat && resultat.nombre >= EXERCICES_MINIMUM) break;
+  /** Meilleure combinaison pour une taille d'enchaînement donnée. */
+  const pourTaille = (taille: number): { arrangement: Arrangement; choix: Combinaison } | null => {
+    const arrangement = arranger(retenus, taille);
+    const resultats: (Combinaison | null)[] = [];
+    for (const [series, reps] of essais) {
+      const resultat = enumerer(arrangement, series, reps);
+      resultats.push(resultat);
+      // Dès que les préférences donnent une séance digne de ce nom, on s'arrête :
+      // on ne relâche les répétitions que pour sortir d'un exercice unique.
+      if (resultat && resultat.nombre >= EXERCICES_MINIMUM) break;
+    }
+    const meilleurNombre = resultats.reduce((max, c) => Math.max(max, c?.nombre ?? 0), 0);
+    // Le premier essai qui atteint le meilleur nombre d'exercices gagne : on
+    // respecte ainsi les préférences aussi longtemps qu'elles ne coûtent rien.
+    const choix = meilleurNombre > 0 ? resultats.find((c) => c?.nombre === meilleurNombre) : null;
+    return choix ? { arrangement, choix } : null;
+  };
+
+  // À nombre d'exercices égal, le plus petit enchaînement gagne : deux charges
+  // à préparer valent mieux que quatre pour le même travail.
+  let meilleur: { arrangement: Arrangement; choix: Combinaison } | null = null;
+  for (const taille of options.taillesRotation) {
+    const candidat = pourTaille(taille);
+    if (candidat && (meilleur === null || candidat.choix.nombre > meilleur.choix.nombre)) {
+      meilleur = candidat;
+    }
   }
-  const meilleurNombre = resultats.reduce((max, c) => Math.max(max, c?.nombre ?? 0), 0);
-  // Le premier essai qui atteint le meilleur nombre d'exercices gagne : on
-  // respecte ainsi les préférences aussi longtemps qu'elles ne coûtent rien.
-  let choix = meilleurNombre > 0 ? resultats.find((c) => c?.nombre === meilleurNombre) : null;
 
   // Dernier recours : relâcher aussi le nombre de séries, puis, si vraiment
   // rien ne tient, garder un exercice en une série quitte à dépasser un peu.
-  if (!choix) choix = enumerer(reglages.series, reglages.reps);
-  if (!choix) {
-    choix = {
-      nombre: 1,
-      series: 1,
-      reps: repsPreferees ?? Math.min(...reglages.reps),
-      repos: Math.min(...reglages.repos),
-      cout: 0,
+  const arrangementDefaut = arranger(retenus, options.taillesRotation[0] ?? 1);
+  if (!meilleur) {
+    const secours = enumerer(arrangementDefaut, reglages.series, reglages.reps);
+    if (secours) meilleur = { arrangement: arrangementDefaut, choix: secours };
+  }
+  if (!meilleur) {
+    meilleur = {
+      arrangement: arrangementDefaut,
+      choix: {
+        nombre: 1,
+        series: 1,
+        reps: repsPreferees ?? Math.min(...reglages.reps),
+        repos: Math.min(...reglages.repos),
+        cout: 0,
+      },
     };
   }
 
-  return fabriquer(choix.nombre, choix.series, choix.reps, choix.repos);
+  const { arrangement, choix } = meilleur;
+  return fabriquer(arrangement, choix.nombre, choix.series, choix.reps, choix.repos);
 }
 
 /** Choisit le nombre de tours et de stations qui remplit le mieux le budget. */
@@ -603,6 +745,14 @@ export function exercicesDisponibles(parametres: ParametresSeance): Exercice[] {
 }
 
 
+/** Tailles d'enchaînement à essayer pour ces paramètres : une seule si
+ *  l'utilisateur l'a fixée, toutes si l'automatique choisit, et 1 (séries
+ *  droites) hors du format superset. */
+function taillesRotation(parametres: ParametresSeance): number[] {
+  if (parametres.format !== 'superset') return [1];
+  return parametres.tailleRotation ? [parametres.tailleRotation] : TAILLES_ROTATION_AUTO;
+}
+
 /** Génère une séance complète qui tient dans la durée demandée. */
 export function genererSeance(parametres: ParametresSeance, graine?: number): Seance {
   const graineUtilisee = (graine ?? Date.now()) >>> 0;
@@ -629,7 +779,7 @@ export function genererSeance(parametres: ParametresSeance, graine?: number): Se
     const budgetSeries = Math.round(budget * PART_SERIES_MIXTE);
     const retenus = selectionnerExercices(candidats, cycle, reglages.maxExercices, alea);
     blocs = construireBlocs(retenus, budgetSeries, reglages, parametres.tempo, {
-      apparier: false,
+      taillesRotation: [1],
       suiviDUnCircuit: true,
     });
     const utilises = new Set(blocs.map((b) => b.exerciceId));
@@ -646,7 +796,7 @@ export function genererSeance(parametres: ParametresSeance, graine?: number): Se
     // Format séries ou superset, et format mixte trop court pour un circuit.
     const retenus = selectionnerExercices(candidats, cycle, reglages.maxExercices, alea);
     blocs = construireBlocs(retenus, budget, reglages, parametres.tempo, {
-      apparier: parametres.format === 'superset',
+      taillesRotation: taillesRotation(parametres),
       suiviDUnCircuit: false,
     });
   }
@@ -812,9 +962,17 @@ export function analyserSeance(seance: Seance): AnalyseSeance {
       `${unilateraux.map((e) => e.nomFr).join(', ')} : côté droit puis côté gauche, la série compte double.`,
     );
   }
-  if (seance.blocs.some((bloc) => bloc.superset !== undefined)) {
+  const tailleEnchainement = Math.max(
+    0,
+    ...groupesDeBlocs(seance.blocs.filter((bloc) => bloc.series > 0)).map((g) => g.length),
+  );
+  if (tailleEnchainement === 2) {
     ajustements.push(
       'Superset : les exercices vont deux par deux, le repos de l’un est le travail de l’autre.',
+    );
+  } else if (tailleEnchainement > 2) {
+    ajustements.push(
+      `Rotation de ${tailleEnchainement} : chaque muscle récupère pendant que les ${tailleEnchainement - 1} autres travaillent.`,
     );
   }
 

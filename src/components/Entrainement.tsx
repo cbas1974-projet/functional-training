@@ -18,6 +18,7 @@ import {
   MATERIELS_DECLARABLES,
   SERIES_PAR_EXERCICE,
   TEMPOS,
+  TAILLES_ROTATION,
   TOUTES_LES_ZONES,
   UNITES_POIDS,
 } from '../data/parametres';
@@ -362,6 +363,7 @@ export default function Entrainement({ etat, onChange }: EntrainementProps) {
   const niveauSelectionne = NIVEAUX.find((n) => n.id === parametres.niveau);
   const formatSelectionne = FORMATS.find((f) => f.id === parametres.format);
   const uniteSelectionnee = UNITES_POIDS.find((u) => u.id === uniteDeSeance(parametres));
+  const tailleSelectionnee = TAILLES_ROTATION.find((t) => t.valeur === parametres.tailleRotation);
 
   // Résumés de la carte « Ma séance ».
   const resumeVolume =
@@ -642,6 +644,22 @@ export default function Entrainement({ etat, onChange }: EntrainementProps) {
               ))}
             </div>
           </Groupe>
+
+          {parametres.format === 'superset' && (
+            <Groupe titre="Exercices par enchaînement" aide={tailleSelectionnee?.description}>
+              <div className="flex flex-wrap gap-2">
+                {TAILLES_ROTATION.map((t) => (
+                  <Pastille
+                    key={t.nom}
+                    selectionne={parametres.tailleRotation === t.valeur}
+                    onClick={() => mettreAJourParametres({ tailleRotation: t.valeur })}
+                  >
+                    {t.nom}
+                  </Pastille>
+                ))}
+              </div>
+            </Groupe>
+          )}
 
           <Groupe titre="Unité des charges" aide={uniteSelectionnee?.description}>
             <div className="flex flex-wrap gap-2">
@@ -926,7 +944,9 @@ export default function Entrainement({ etat, onChange }: EntrainementProps) {
                       <div className="mt-1 flex flex-wrap gap-1">
                         <Badge>{NOM_ZONE[exercice.zone]}</Badge>
                         <Badge>{NOM_PATTERN[exercice.pattern]}</Badge>
-                        {bloc.superset !== undefined && <Badge>superset {bloc.superset + 1}</Badge>}
+                        {bloc.superset !== undefined && (
+                          <Badge>enchaînement {bloc.superset + 1}</Badge>
+                        )}
                         {badgeFrequence(exercice.id) && <Badge>{badgeFrequence(exercice.id)}</Badge>}
                       </div>
                       <p className="chiffres mt-1 text-sm" style={{ color: 'var(--texte)' }}>

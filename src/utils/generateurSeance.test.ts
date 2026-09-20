@@ -5,6 +5,7 @@ import type { BlocSeries, Circuit, Niveau, ParametresSeance, Seance } from '../t
 import {
   analyserSeance,
   dureeSerieSec,
+  groupesDeBlocs,
   estimerDureeSec,
   exercicesDisponibles,
   formaterDuree,
@@ -279,12 +280,12 @@ describe('genererSeance : toutes les durées, niveaux et formats', () => {
       avec({ dureeMinutes: 10, niveau: 'intermediaire', format: 'series', seriesParExercice: null, repsParSerie: null }),
       GRAINE,
     );
-    expect(seance.blocs).toHaveLength(3);
+    expect(seance.blocs.length).toBeGreaterThanOrEqual(3);
     expect(seance.blocs.every((bloc) => bloc.series === 1)).toBe(true);
     // La durée estimée est celle que déroulera la séance guidée : les
     // préparations comptent, le tout dernier repos n'existe pas.
-    expect(seance.dureeEstimeeSec).toBe(585);
     expect(seance.dureeEstimeeSec).toBeLessThanOrEqual(600);
+    expect(seance.dureeEstimeeSec).toBeGreaterThan(540);
 
     // Une seule série est autorisée à tous les niveaux jusqu'à 10 min.
     for (const niveau of NIVEAUX) {
@@ -404,15 +405,25 @@ describe('remplacerExercice', () => {
   });
 
   it('adapte les répétitions quand l’unité change', () => {
-    const seance = genererSeance(avec({ dureeMinutes: 45, niveau: 'intermediaire' }), GRAINE);
+    const parametres = avec({ dureeMinutes: 45, niveau: 'intermediaire', repsParSerie: 8 });
+    const seance = genererSeance(parametres, GRAINE);
     for (let graine = 1; graine <= 60; graine += 1) {
       for (const bloc of seance.blocs) {
         const modifiee = remplacerExercice(seance, bloc.exerciceId, graine);
         const index = seance.blocs.findIndex((b) => b.exerciceId === bloc.exerciceId);
         const nouveau = modifiee.blocs[index];
-        const exercice = EXERCICES_PAR_ID[nouveau.exerciceId];
-        if (exercice.unite === 'secondes') expect(nouveau.reps).toBe(40);
-        else expect(nouveau.reps).toBeGreaterThanOrEqual(8);
+        const remplacant = EXERCICES_PAR_ID[nouveau.exerciceId];
+        const remplace = EXERCICES_PAR_ID[bloc.exerciceId];
+        if (remplacant.unite === 'secondes') {
+          // Un exercice au temps reçoit la durée de tenue du niveau.
+          expect(nouveau.reps).toBe(40);
+        } else if (remplace.unite === 'secondes') {
+          // On passe du temps aux répétitions : ce sont celles demandées.
+          expect(nouveau.reps).toBe(8);
+        } else {
+          // Même unité des deux côtés : le bloc garde ses répétitions.
+          expect(nouveau.reps).toBe(bloc.reps);
+        }
       }
     }
   });
@@ -468,8 +479,9 @@ describe('libelleBloc', () => {
 
 describe('durée d’une série', () => {
   it('compte le tempo, double l’unilatéral et respecte les exercices au temps', () => {
-    const tempo = PARAMETRES_PAR_DEFAUT.tempo;
+    const tempo = { monteeSec: 5, descenteSec: 5 };
     expect(secondesParRep(tempo)).toBe(10);
+    expect(secondesParRep(PARAMETRES_PAR_DEFAUT.tempo)).toBe(8);
     expect(dureeSerieSec(EXERCICES_PAR_ID['squat'], 8, tempo)).toBe(80);
     expect(dureeSerieSec(EXERCICES_PAR_ID['single-arm-row'], 8, tempo)).toBe(160);
     expect(dureeSerieSec(EXERCICES_PAR_ID['farmers-walk'], 40, tempo)).toBe(40);
@@ -560,14 +572,23 @@ describe('tableau récapitulatif (lecture humaine)', () => {
 });
 
 describe('densité : superset et répétitions relâchées', () => {
-  it('appareille les exercices deux par deux au format superset', () => {
-    const seance = genererSeance(avec({ dureeMinutes: 30, format: 'superset' }), GRAINE);
-    expect(seance.blocs.length).toBeGreaterThanOrEqual(2);
-    // Les blocs vont par paires : 0,0 puis 1,1 puis un éventuel orphelin.
-    expect(seance.blocs.map((bloc) => bloc.superset)).toEqual(
-      seance.blocs.map((_, index) => Math.floor(index / 2)),
+  it('enchaîne les exercices par paires au format superset', () => {
+    const seance = genererSeance(
+      avec({ dureeMinutes: 30, format: 'superset', tailleRotation: 2 }),
+      GRAINE,
     );
-    expect(seance.blocs.every((bloc) => bloc.transitionSec === 20)).toBe(true);
+    expect(seance.blocs.length).toBeGreaterThanOrEqual(2);
+    const groupes = groupesDeBlocs(seance.blocs);
+    expect(groupes.every((g) => g.length <= 2)).toBe(true);
+    expect(groupes.some((g) => g.length === 2)).toBe(true);
+    // Un bloc enchaîné porte son repos court ; un exercice resté seul n'en a
+    // pas besoin, il redevient une série droite.
+    for (const groupe of groupes) {
+      for (const bloc of groupe) {
+        if (groupe.length > 1) expect(bloc.transitionSec).toBe(20);
+        else expect(bloc.superset).toBeUndefined();
+      }
+    }
     expect(seance.dureeEstimeeSec).toBeLessThanOrEqual(30 * 60);
   });
 
@@ -638,5 +659,108 @@ describe('analyserSeance', () => {
   it('annonce le superset', () => {
     const seance = genererSeance(avec({ dureeMinutes: 30, format: 'superset' }), GRAINE);
     expect(analyserSeance(seance).ajustements.some((t) => t.startsWith('Superset'))).toBe(true);
+  });
+});
+
+describe('composition des enchaînements', () => {
+  /** Contraintes dures : elles doivent tenir quelle que soit la séance. */
+  function verifierEnchainements(seance: Seance) {
+    for (const groupe of groupesDeBlocs(seance.blocs)) {
+      const exercices = groupe.map((bloc) => EXERCICES_PAR_ID[bloc.exerciceId]);
+      const exigeants = exercices.filter(
+        (e) => ['squat', 'charniere', 'fente', 'portage'].includes(e.pattern) || e.groupe === 'corps-entier',
+      );
+      // Deux gros mouvements enchaînés : c'est le souffle qui lâche avant le muscle.
+      expect(exigeants.length).toBeLessThanOrEqual(1);
+      // Deux fois le même muscle, ou le même schéma hors isolation : ce n'est
+      // plus un enchaînement, c'est une série longue déguisée.
+      const groupes = exercices.map((e) => e.groupe);
+      expect(new Set(groupes).size).toBe(groupes.length);
+      const schemas = exercices.filter((e) => e.pattern !== 'isolation').map((e) => e.pattern);
+      expect(new Set(schemas).size).toBe(schemas.length);
+    }
+  }
+
+  it('n’enchaîne jamais deux mouvements qui se gênent', () => {
+    for (const taille of [2, 3, 4] as const) {
+      for (const dureeMinutes of DUREES_MINUTES) {
+        for (let graine = 1; graine <= 12; graine += 1) {
+          verifierEnchainements(
+            genererSeance(avec({ dureeMinutes, format: 'superset', tailleRotation: taille }), graine),
+          );
+        }
+      }
+    }
+  });
+
+  it('respecte la taille d’enchaînement demandée', () => {
+    for (const taille of [2, 3, 4] as const) {
+      const seance = genererSeance(
+        avec({ dureeMinutes: 45, format: 'superset', tailleRotation: taille }),
+        GRAINE,
+      );
+      const tailles = groupesDeBlocs(seance.blocs).map((g) => g.length);
+      expect(Math.max(...tailles)).toBeLessThanOrEqual(taille);
+      expect(tailles.some((t) => t === taille)).toBe(true);
+    }
+  });
+
+  it('en automatique, prend l’enchaînement qui fait tenir le plus d’exercices', () => {
+    for (const dureeMinutes of [20, 30, 45]) {
+      const auto = genererSeance(avec({ dureeMinutes, format: 'superset' }), GRAINE);
+      const fixes = ([2, 3, 4] as const).map(
+        (tailleRotation) =>
+          genererSeance(avec({ dureeMinutes, format: 'superset', tailleRotation }), GRAINE).blocs.length,
+      );
+      expect(auto.blocs.length).toBe(Math.max(...fixes));
+      expect(auto.dureeEstimeeSec).toBeLessThanOrEqual(dureeMinutes * 60);
+    }
+  });
+
+  it('préfère une vraie opposition quand elle existe', () => {
+    // Sur une séance longue en paires, au moins une paire doit opposer deux
+    // schémas ou deux muscles antagonistes, pas seulement deux zones.
+    const seance = genererSeance(
+      avec({ dureeMinutes: 45, format: 'superset', tailleRotation: 2 }),
+      GRAINE,
+    );
+    const opposes: [string, string][] = [
+      ['poussee-horizontale', 'tirage-horizontal'],
+      ['poussee-verticale', 'tirage-vertical'],
+      ['squat', 'charniere'],
+      ['charniere', 'fente'],
+      ['charniere', 'flexion-tronc'],
+    ];
+    const opposesGroupe: [string, string][] = [
+      ['biceps', 'triceps'],
+      ['pectoraux', 'dorsaux'],
+      ['quadriceps', 'ischios-fessiers'],
+      ['abdominaux', 'dorsaux'],
+      ['epaules', 'dorsaux'],
+      ['obliques', 'abdominaux'],
+    ];
+    const paire = (a: string, b: string, liste: [string, string][]) =>
+      liste.some(([x, y]) => (a === x && b === y) || (a === y && b === x));
+
+    const vraiesOppositions = groupesDeBlocs(seance.blocs)
+      .filter((g) => g.length === 2)
+      .filter((g) => {
+        const [x, y] = g.map((bloc) => EXERCICES_PAR_ID[bloc.exerciceId]);
+        return paire(x.pattern, y.pattern, opposes) || paire(x.groupe, y.groupe, opposesGroupe);
+      });
+    expect(vraiesOppositions.length).toBeGreaterThan(0);
+  });
+
+  it('densifie franchement une séance de 20 minutes', () => {
+    // Le cas qui a lancé tout ça : 20 min, 3 séries, tempo lent.
+    const ancien = genererSeance(
+      avec({ dureeMinutes: 20, format: 'series', tempo: { monteeSec: 5, descenteSec: 5 }, repsParSerie: 8 }),
+      GRAINE,
+    );
+    const nouveau = genererSeance(avec({ dureeMinutes: 20, format: 'superset' }), GRAINE);
+    expect(ancien.blocs.length).toBe(2);
+    expect(nouveau.blocs.length).toBeGreaterThanOrEqual(4);
+    expect(nouveau.blocs.every((bloc) => bloc.series === 3)).toBe(true);
+    expect(nouveau.dureeEstimeeSec).toBeLessThanOrEqual(20 * 60);
   });
 });

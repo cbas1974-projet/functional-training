@@ -138,6 +138,10 @@ export interface ParametresSeance {
   /** Unité des charges. Absente sur les séances enregistrées avant son
    *  arrivée : celles-là avaient été saisies en kilogrammes. */
   unitePoids?: UnitePoids;
+  /** Nombre d'exercices par enchaînement au format superset : 2 (paire),
+   *  3 (trio) ou 4 (rotation). Absent = automatique, l'appli prend la taille
+   *  qui fait tenir le plus d'exercices dans la durée. */
+  tailleRotation?: 2 | 3 | 4;
   /** Ce qui rythme la répétition à l'écran pendant une série :
    *  une bille qui monte et descend, le décompte en chiffres, ou les deux. */
   guideVisuel: GuideVisuel;

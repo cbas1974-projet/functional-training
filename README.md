@@ -15,12 +15,16 @@ sur l'appareil.
 - **Zones travaillées** : tout le corps, ou une combinaison (haut du corps,
   bas du corps, dos, gainage, corps entier). Plusieurs zones alternent.
 - **Niveau** : débutant, intermédiaire, avancé.
-- **Format** : séries (repos chronométré), **superset** (deux exercices en
-  alternance, le repos de l'un est le travail de l'autre), circuit (stations
+- **Format** : séries (repos chronométré), **superset** (2 à 4 exercices en
+  alternance, le repos de l'un est le travail des autres), circuit (stations
   au temps) ou mixte (séries puis un court circuit).
-- **Tempo** : 5 s / 5 s recommandé, 3 s / 3 s ou 2 s / 4 s.
+- **Exercices par enchaînement** au format superset : paires, trios, rotation
+  de 4, ou automatique — l'application prend alors la taille qui fait tenir
+  le plus d'exercices.
+- **Tempo** : 4 s / 4 s recommandé ; 5 s / 5 s, 3 s / 3 s et 2 s / 4 s restent
+  disponibles.
 - **Séries par exercice** (3 par défaut) et **répétitions par série**
-  (8 par défaut). L'application ajuste le nombre d'exercices pour tenir dans
+  (6 par défaut). L'application ajuste le nombre d'exercices pour tenir dans
   la durée demandée, et revient au calcul automatique si le réglage ne tient
   pas.
 - **Unité des charges** : livres par défaut (le marquage des haltères vendus
@@ -33,24 +37,60 @@ Au tempo lent, l'arithmétique est impitoyable et c'est elle qui décide :
 
 | | calcul | durée |
 |---|---|---|
-| Une répétition | 5 s de montée + 5 s de descente | **10 s** |
-| Une série de 8 | 8 × 10 s | **1 min 20 s** |
-| Une série unilatérale | droite puis gauche | **2 min 40 s** |
-| Un exercice en 3 séries | 3 × (5 s de mise en place + 1 min 20 s + repos) | **environ 7 min** |
+| Une répétition à 4 s / 4 s | montée + descente | **8 s** |
+| Une série de 6 | 6 × 8 s | **48 s** |
+| La même à 5 s / 5 s en 8 reps | 8 × 10 s | **1 min 20 s** |
+| Une série unilatérale | droite puis gauche | **× 2** |
 
-Une séance de 20 minutes garde environ 12 minutes pour les exercices une fois
-l'échauffement et le retour au calme déduits : **deux exercices**, ou un seul
-si le tirage sort un mouvement unilatéral. Trois leviers existent :
+Voilà ce que ça donne sur une séance de 20 minutes, échauffement et
+étirements déduits :
 
-- le **superset**, qui fait tenir un tiers d'exercices en plus à durée égale ;
-- une **durée plus longue** (30 min → 3 à 4 exercices, 45 min → 5 à 6) ;
-- **moins de répétitions** : l'application descend d'elle-même à 6 plutôt que
-  de ne proposer qu'un seul exercice, et le signale.
+| Réglage | Exercices | Repos réel de chaque muscle |
+|---|---|---|
+| 5 s / 5 s, 8 reps, séries droites | 2 | 1 min 30 |
+| 4 s / 4 s, 6 reps, séries droites | 3 | 1 min 30 |
+| **4 s / 4 s, 6 reps, superset** | **4** | **3 à 4 min** |
+
+Le superset n'ajoute pas de la fatigue, il enlève du temps mort : pendant que
+le biceps se repose, le triceps travaille. Le muscle, lui, récupère plus
+longtemps qu'en séries droites.
+
+Les autres leviers : une **durée plus longue** (30 min → 4 à 5 exercices,
+45 min → 6 à 7), et **moins de répétitions** — l'application descend d'elle-même
+à 6 plutôt que de ne proposer qu'un seul exercice, et le signale.
 
 Le panneau « Pourquoi cette durée ? » sous la séance proposée montre où
 passent les minutes : échauffement, mise en place, travail, repos, étirements.
 Le temps qui reste une fois les exercices agencés est reversé au retour au
 calme plutôt que perdu.
+
+### Comment les enchaînements sont composés
+
+Au format superset, les exercices ne sont pas appariés au hasard. Un
+enchaînement réunit des mouvements qui ne se gênent pas :
+
+- **schémas opposés** (poussée ↔ tirage, squat ↔ charnière de hanche) ou
+  **muscles antagonistes** (biceps ↔ triceps, pectoraux ↔ dorsaux) ;
+- **jamais deux fois le même muscle**, ni deux fois le même schéma ;
+- **au plus un mouvement essoufflant** par enchaînement (squat, charnière,
+  fente, portage, corps entier) : sinon c'est la cage thoracique qui lâche
+  avant le muscle, et la qualité du gros mouvement en pâtit.
+
+Faute de partenaire acceptable, un exercice reste seul et redevient une série
+droite plutôt que d'être mal apparié.
+
+### Pourquoi 4 s / 4 s et 6 répétitions par défaut
+
+Ce qui fait progresser un tendon, c'est surtout **l'amplitude de la contrainte**
+maintenue quelques secondes — donc la charge — plus que la lenteur en
+elle-même. Les protocoles cliniques de référence pour la tendinopathie
+travaillent autour de 3 s de montée / 3 s de descente avec une charge lourde.
+
+Un tempo 5 s / 5 s oblige à alléger : le temps sous tension monte, la
+contrainte descend. 4 s / 4 s avec 6 répétitions garde la lenteur et le
+contrôle tout en permettant une charge sérieuse — et libère 40 % du temps
+d'une série, ce qui fait tenir deux fois plus d'exercices. Les autres tempos
+et nombres de répétitions restent disponibles.
 
 ### Séance proposée
 Chaque exercice est présenté avec sa vignette, les séries et répétitions, les
