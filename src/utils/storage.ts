@@ -39,7 +39,15 @@ const migrerParametres = (sauvegardes: Partial<ParametresSeance>): ParametresSea
       : sauvegardes.banc
         ? (['halteres', 'banc', 'step'] as Materiel[])
         : PARAMETRES_PAR_DEFAUT.materiels;
-  return { ...PARAMETRES_PAR_DEFAUT, ...sauvegardes, zones: [...zones], materiels: [...materiels] };
+  // Une séance enregistrée avant l'arrivée d'un réglage arrive sans lui :
+  // on retombe sur la valeur par défaut plutôt que sur `undefined`.
+  return {
+    ...PARAMETRES_PAR_DEFAUT,
+    ...sauvegardes,
+    zones: [...zones],
+    materiels: [...materiels],
+    guideVisuel: sauvegardes.guideVisuel ?? PARAMETRES_PAR_DEFAUT.guideVisuel,
+  };
 };
 
 const migrer = (sauvegarde: Partial<EntrainementState>): EntrainementState => ({

@@ -2,20 +2,22 @@ import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import type { ReactNode } from 'react';
 import type { Exercice } from '../types';
-import { CHEMIN_POSTER, EXERCICES, ZONES } from '../data/exercices';
+import { CHEMIN_POSTER, EXERCICES, NOM_MATERIEL, NOM_PATTERN, ZONES } from '../data/exercices';
 import { libelleNiveauMin } from '../utils/formatage';
 import FicheExercice from './FicheExercice';
 
 function Badge({ children }: { children: ReactNode }) {
   return (
-    <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-700">
+    <span
+      className="rounded-full px-2 py-0.5 text-xs font-medium"
+      style={{ background: 'var(--surface-haute)', color: 'var(--texte-discret)' }}
+    >
       {children}
     </span>
   );
 }
 
 export default function BibliothequeExercices() {
-  const [ouvert, setOuvert] = useState(false);
   const [exerciceOuvertId, setExerciceOuvertId] = useState<string | null>(null);
   const [posterOuvert, setPosterOuvert] = useState(false);
 
@@ -28,9 +30,8 @@ export default function BibliothequeExercices() {
     return () => window.removeEventListener('keydown', surEchap);
   }, [posterOuvert]);
 
-  // Bloque le défilement de la page pendant que la modale est ouverte (évite
-  // aussi un défaut d'affichage du fond assombri sur une bibliothèque très
-  // longue défilée loin du haut) et restaure la position à la fermeture.
+  // Bloque le défilement de la page pendant que la modale est ouverte et
+  // restaure la position à la fermeture.
   useEffect(() => {
     if (!posterOuvert) return;
     const positionPrecedente = window.scrollY;
@@ -48,113 +49,160 @@ export default function BibliothequeExercices() {
   };
 
   return (
-    <div className="bg-white rounded-lg shadow p-4 sm:p-6">
+    <section
+      className="p-4"
+      style={{
+        background: 'var(--surface)',
+        border: '1px solid var(--bordure)',
+        borderRadius: 16,
+      }}
+    >
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 className="text-xl font-bold text-gray-800">Bibliothèque des exercices</h2>
-        <button
-          type="button"
-          onClick={() => setOuvert((v) => !v)}
-          className="rounded-lg bg-gray-100 px-4 py-3 font-medium text-gray-700 hover:bg-gray-200"
-        >
-          {ouvert ? 'Masquer la bibliothèque' : `Voir la bibliothèque des ${EXERCICES.length} exercices`}
-        </button>
+        <h2 className="text-lg font-bold" style={{ color: 'var(--texte)' }}>
+          Bibliothèque
+        </h2>
+        <p className="text-sm" style={{ color: 'var(--texte-discret)' }}>
+          <span className="chiffres">{EXERCICES.length}</span> exercices
+        </p>
       </div>
 
-      {ouvert && (
-        <div className="mt-4 space-y-6">
-          {ZONES.map((zone) => {
-            const exercicesZone = EXERCICES.filter((e) => e.zone === zone.id);
-            const exerciceOuvert: Exercice | undefined = exercicesZone.find(
-              (e) => e.id === exerciceOuvertId
-            );
+      <div className="mt-4 space-y-6">
+        {ZONES.map((zone) => {
+          const exercicesZone = EXERCICES.filter((e) => e.zone === zone.id);
+          const exerciceOuvert: Exercice | undefined = exercicesZone.find(
+            (e) => e.id === exerciceOuvertId
+          );
 
-            return (
-              <div key={zone.id}>
-                <h3 className="mb-3 text-lg font-semibold text-gray-800">{zone.nom}</h3>
-                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-                  {exercicesZone.map((exercice) => (
-                    <FicheExercice
-                      key={exercice.id}
-                      exercice={exercice}
-                      taille="grande"
-                      onClick={() => basculerExercice(exercice.id)}
-                    >
-                      <div className="mt-1 flex flex-wrap gap-1">
-                        {exercice.materiel !== 'halteres' && (
-                          <Badge>{exercice.materiel === 'banc' ? 'banc' : 'marche'}</Badge>
-                        )}
-                        {exercice.explosif && <Badge>explosif</Badge>}
-                        <Badge>{libelleNiveauMin(exercice.niveauMin)}</Badge>
-                      </div>
-                    </FicheExercice>
-                  ))}
-                </div>
-
-                {exerciceOuvert && (
-                  <div className="mt-3 rounded-lg border border-blue-200 bg-blue-50 p-4">
-                    <div className="flex items-start justify-between gap-2">
-                      <h4 className="font-bold text-gray-800">{exerciceOuvert.nomFr}</h4>
-                      <button
-                        type="button"
-                        onClick={() => setExerciceOuvertId(null)}
-                        className="shrink-0 text-sm text-gray-500 hover:text-gray-700"
-                      >
-                        Fermer
-                      </button>
+          return (
+            <div key={zone.id}>
+              <h3 className="mb-3 text-base font-bold" style={{ color: 'var(--texte)' }}>
+                {zone.nom}{' '}
+                <span className="chiffres text-sm font-medium" style={{ color: 'var(--texte-discret)' }}>
+                  {exercicesZone.length}
+                </span>
+              </h3>
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+                {exercicesZone.map((exercice) => (
+                  <FicheExercice
+                    key={exercice.id}
+                    exercice={exercice}
+                    taille="grande"
+                    onClick={() => basculerExercice(exercice.id)}
+                  >
+                    <div className="mt-1 flex flex-wrap gap-1">
+                      <Badge>{NOM_PATTERN[exercice.pattern]}</Badge>
+                      {exercice.materiel !== 'halteres' && (
+                        <Badge>{NOM_MATERIEL[exercice.materiel]}</Badge>
+                      )}
+                      {exercice.explosif && <Badge>explosif</Badge>}
+                      <Badge>{libelleNiveauMin(exercice.niveauMin)}</Badge>
                     </div>
-                    <p className="mt-1 text-sm text-gray-600">
-                      <span className="font-medium">Position : </span>
-                      {exerciceOuvert.position}
-                    </p>
-                    <p className="mt-1 text-sm text-gray-600">
-                      <span className="font-medium">Muscles : </span>
-                      {exerciceOuvert.muscles}
-                    </p>
-                    <div className="mt-2">
-                      <p className="text-sm font-medium text-gray-700">Points d'attention</p>
-                      <ul className="ml-4 mt-1 list-disc space-y-0.5 text-sm text-gray-600">
-                        {exerciceOuvert.pointsAttention.map((point, index) => (
-                          <li key={index}>{point}</li>
-                        ))}
-                      </ul>
-                    </div>
-                    {exerciceOuvert.interetJjb && (
-                      <p className="mt-2 text-sm italic text-blue-700">
-                        {exerciceOuvert.interetJjb}
-                      </p>
-                    )}
-                  </div>
-                )}
+                  </FicheExercice>
+                ))}
               </div>
-            );
-          })}
 
-          <button
-            type="button"
-            onClick={() => setPosterOuvert(true)}
-            className="rounded-lg bg-gray-100 px-4 py-3 font-medium text-gray-700 hover:bg-gray-200"
-          >
-            Voir le poster complet
-          </button>
-        </div>
-      )}
+              {exerciceOuvert && (
+                <div
+                  className="mt-3 p-4"
+                  style={{
+                    background: 'var(--surface-haute)',
+                    border: '1px solid var(--bordure)',
+                    borderRadius: 14,
+                  }}
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <h4 className="font-bold" style={{ color: 'var(--texte)' }}>
+                      {exerciceOuvert.nomFr}
+                    </h4>
+                    <button
+                      type="button"
+                      onClick={() => setExerciceOuvertId(null)}
+                      className="shrink-0 rounded-xl px-3 text-sm font-semibold"
+                      style={{
+                        minHeight: 44,
+                        background: 'var(--surface)',
+                        border: '1px solid var(--bordure)',
+                        color: 'var(--texte)',
+                      }}
+                    >
+                      Fermer
+                    </button>
+                  </div>
+                  <p className="mt-1 text-sm" style={{ color: 'var(--texte-discret)' }}>
+                    <span className="font-semibold" style={{ color: 'var(--texte)' }}>
+                      Position :{' '}
+                    </span>
+                    {exerciceOuvert.position}
+                  </p>
+                  <p className="mt-1 text-sm" style={{ color: 'var(--texte-discret)' }}>
+                    <span className="font-semibold" style={{ color: 'var(--texte)' }}>
+                      Muscles :{' '}
+                    </span>
+                    {exerciceOuvert.muscles}
+                  </p>
+                  <div className="mt-2">
+                    <p className="text-sm font-semibold" style={{ color: 'var(--texte)' }}>
+                      Points d'attention
+                    </p>
+                    <ul
+                      className="ml-4 mt-1 list-disc space-y-0.5 text-sm"
+                      style={{ color: 'var(--texte-discret)' }}
+                    >
+                      {exerciceOuvert.pointsAttention.map((point, index) => (
+                        <li key={index}>{point}</li>
+                      ))}
+                    </ul>
+                  </div>
+                  {exerciceOuvert.interetJjb && (
+                    <p className="mt-2 text-sm italic" style={{ color: 'var(--accent)' }}>
+                      {exerciceOuvert.interetJjb}
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
+          );
+        })}
+
+        <button
+          type="button"
+          onClick={() => setPosterOuvert(true)}
+          className="w-full rounded-xl px-4 text-sm font-semibold"
+          style={{
+            minHeight: 44,
+            background: 'var(--surface-haute)',
+            border: '1px solid var(--bordure)',
+            color: 'var(--texte)',
+          }}
+        >
+          Voir le poster complet
+        </button>
+      </div>
 
       {posterOuvert &&
         createPortal(
           <div
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4"
+            className="fixed inset-0 z-50 flex items-center justify-center p-4"
+            style={{ background: 'rgba(0, 0, 0, 0.8)' }}
             onClick={() => setPosterOuvert(false)}
           >
             <div className="relative w-full max-w-3xl" onClick={(e) => e.stopPropagation()}>
               <img
                 src={CHEMIN_POSTER}
                 alt="Poster complet des 40 exercices"
-                className="max-h-[80vh] w-full rounded-lg bg-white object-contain"
+                className="max-h-[80vh] w-full"
+                style={{ background: '#ffffff', borderRadius: 14, objectFit: 'contain' }}
               />
               <button
                 type="button"
                 onClick={() => setPosterOuvert(false)}
-                className="mt-3 w-full rounded-lg bg-white px-4 py-3 font-medium text-gray-800 hover:bg-gray-100"
+                className="mt-3 w-full rounded-xl px-4 font-semibold"
+                style={{
+                  minHeight: 44,
+                  background: 'var(--surface)',
+                  border: '1px solid var(--bordure)',
+                  color: 'var(--texte)',
+                }}
               >
                 Fermer
               </button>
@@ -162,6 +210,6 @@ export default function BibliothequeExercices() {
           </div>,
           document.body
         )}
-    </div>
+    </section>
   );
 }

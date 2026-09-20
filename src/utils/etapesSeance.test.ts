@@ -32,6 +32,7 @@ const SEANCE: Seance = {
     explosifs: false,
     seriesParExercice: 3,
     repsParSerie: 8,
+    guideVisuel: 'les-deux',
   },
   graine: 42,
   echauffementSec: 120,

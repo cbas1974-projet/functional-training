@@ -1,4 +1,12 @@
-import type { FormatSeance, Materiel, Niveau, ParametresSeance, Tempo, Zone } from '../types';
+import type {
+  FormatSeance,
+  GuideVisuel,
+  Materiel,
+  Niveau,
+  ParametresSeance,
+  Tempo,
+  Zone,
+} from '../types';
 
 /** Toutes les zones, dans l'ordre d'alternance d'une séance corps entier. */
 export const TOUTES_LES_ZONES: Zone[] = ['bas', 'haut', 'dos', 'gainage', 'complet'];
@@ -65,6 +73,16 @@ export const MATERIELS_DECLARABLES: { id: Materiel; nom: string; precision: stri
   { id: 'tapis', nom: 'Tapis', precision: 'Confort au sol pour le gainage et la mobilité.' },
 ];
 
+export const GUIDES_VISUELS: { id: GuideVisuel; nom: string; description: string }[] = [
+  {
+    id: 'les-deux',
+    nom: 'Bille et chiffre',
+    description: 'Recommandé : la bille monte et descend au tempo, les secondes sont inscrites dedans.',
+  },
+  { id: 'bille', nom: 'Bille seule', description: 'Rien à lire : on suit la bille du coin de l’œil.' },
+  { id: 'chiffre', nom: 'Chiffre seul', description: 'Le décompte des secondes en grand.' },
+];
+
 export const PARAMETRES_PAR_DEFAUT: ParametresSeance = {
   dureeMinutes: 20,
   zones: [...TOUTES_LES_ZONES],
@@ -75,4 +93,5 @@ export const PARAMETRES_PAR_DEFAUT: ParametresSeance = {
   explosifs: false,
   seriesParExercice: 3,
   repsParSerie: 8,
+  guideVisuel: 'les-deux',
 };

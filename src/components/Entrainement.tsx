@@ -1,8 +1,18 @@
-import { useMemo, useState } from 'react';
-import type { EntrainementState, Materiel, ParametresSeance, ProgressionSeance, Seance } from '../types';
+import { useEffect, useMemo, useState } from 'react';
+import { createPortal } from 'react-dom';
+import type { ReactNode } from 'react';
+import type {
+  EntrainementState,
+  Materiel,
+  ParametresSeance,
+  ProgressionSeance,
+  Seance,
+  Zone,
+} from '../types';
 import {
   DUREES_MINUTES,
   FORMATS,
+  GUIDES_VISUELS,
   NIVEAUX,
   REPS_PAR_SERIE,
   MATERIELS_DECLARABLES,
@@ -10,7 +20,7 @@ import {
   TEMPOS,
   TOUTES_LES_ZONES,
 } from '../data/parametres';
-import { EXERCICES_PAR_ID, NOM_ZONE, ZONES } from '../data/exercices';
+import { EXERCICES_PAR_ID, NOM_PATTERN, NOM_ZONE, ZONES } from '../data/exercices';
 import {
   exercicesDisponibles,
   formaterDuree,
@@ -36,6 +46,16 @@ interface SeanceActive {
   progression: ProgressionSeance | null;
 }
 
+/** Ce que l'écran d'accueil affiche : la séance, l'historique ou la
+ *  bibliothèque. Un seul à la fois : l'accueil ne doit pas être un rouleau. */
+type Vue = 'seance' | 'historique' | 'bibliotheque';
+
+/** Hauteur minimale d'une cible tactile, en pixels (doigt sur un téléphone). */
+const CIBLE = 44;
+/** Hauteur des deux actions principales : générer et lancer. */
+const ACTION = 60;
+
+/** Pastille de réglage : sélectionnée en accent, sinon en surface haute. */
 function Pastille({
   selectionne,
   onClick,
@@ -43,18 +63,160 @@ function Pastille({
 }: {
   selectionne: boolean;
   onClick: () => void;
-  children: string;
+  children: ReactNode;
 }) {
   return (
     <button
       type="button"
       onClick={onClick}
-      className={`rounded-lg px-4 py-3 font-medium transition-colors ${
-        selectionne ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-      }`}
+      aria-pressed={selectionne}
+      className="rounded-xl px-4 text-sm font-semibold"
+      style={{
+        minHeight: CIBLE,
+        background: selectionne ? 'var(--accent)' : 'var(--surface-haute)',
+        color: selectionne ? 'var(--accent-texte)' : 'var(--texte)',
+        border: `1px solid ${selectionne ? 'var(--accent)' : 'var(--bordure)'}`,
+      }}
     >
       {children}
     </button>
+  );
+}
+
+/** Choix pleine largeur avec une explication : tempo, guide visuel. */
+function Choix({
+  selectionne,
+  onClick,
+  nom,
+  description,
+}: {
+  selectionne: boolean;
+  onClick: () => void;
+  nom: string;
+  description: string;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={selectionne}
+      className="w-full rounded-xl px-4 py-2 text-left"
+      style={{
+        minHeight: CIBLE,
+        background: selectionne ? 'var(--accent)' : 'var(--surface-haute)',
+        color: selectionne ? 'var(--accent-texte)' : 'var(--texte)',
+        border: `1px solid ${selectionne ? 'var(--accent)' : 'var(--bordure)'}`,
+      }}
+    >
+      <span className="block text-sm font-semibold">{nom}</span>
+      <span
+        className="block text-xs"
+        style={selectionne ? { opacity: 0.85 } : { color: 'var(--texte-discret)' }}
+      >
+        {description}
+      </span>
+    </button>
+  );
+}
+
+/** Interrupteur pleine largeur : matériel possédé, mouvements explosifs. */
+function Bascule({
+  actif,
+  onClick,
+  nom,
+  precision,
+}: {
+  actif: boolean;
+  onClick: () => void;
+  nom: string;
+  precision?: string;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={actif}
+      className="flex w-full items-center gap-3 rounded-xl px-3 py-2 text-left"
+      style={{
+        minHeight: CIBLE,
+        background: 'var(--surface-haute)',
+        color: 'var(--texte)',
+        border: `1px solid ${actif ? 'var(--accent)' : 'var(--bordure)'}`,
+      }}
+    >
+      <span
+        aria-hidden="true"
+        className="grid h-6 w-6 shrink-0 place-items-center text-xs font-bold"
+        style={{
+          borderRadius: 7,
+          background: actif ? 'var(--accent)' : 'transparent',
+          color: 'var(--accent-texte)',
+          border: `1px solid ${actif ? 'var(--accent)' : 'var(--bordure)'}`,
+        }}
+      >
+        {actif ? '✓' : ''}
+      </span>
+      <span className="min-w-0">
+        <span className="block text-sm font-semibold">{nom}</span>
+        {precision && (
+          <span className="block text-xs" style={{ color: 'var(--texte-discret)' }}>
+            {precision}
+          </span>
+        )}
+      </span>
+    </button>
+  );
+}
+
+/** Bloc de réglage de la feuille : un titre, des pastilles, une explication. */
+function Groupe({
+  titre,
+  aide,
+  children,
+}: {
+  titre: string;
+  aide?: string;
+  children: ReactNode;
+}) {
+  return (
+    <div>
+      <p className="mb-2 text-sm font-bold" style={{ color: 'var(--texte)' }}>
+        {titre}
+      </p>
+      {children}
+      {aide && (
+        <p className="mt-2 text-xs" style={{ color: 'var(--texte-discret)' }}>
+          {aide}
+        </p>
+      )}
+    </div>
+  );
+}
+
+/** Pastille de résumé (non cliquable) de la carte « Ma séance ». */
+function Resume({ children, accent = false }: { children: ReactNode; accent?: boolean }) {
+  return (
+    <span
+      className="inline-flex items-center rounded-full px-3 py-1 text-sm font-semibold"
+      style={{
+        background: accent ? 'var(--accent)' : 'var(--surface-haute)',
+        color: accent ? 'var(--accent-texte)' : 'var(--texte)',
+      }}
+    >
+      {children}
+    </span>
+  );
+}
+
+/** Petite étiquette : zone travaillée, schéma de mouvement. */
+function Badge({ children }: { children: ReactNode }) {
+  return (
+    <span
+      className="rounded-full px-2 py-0.5 text-xs font-medium"
+      style={{ background: 'var(--surface-haute)', color: 'var(--texte-discret)' }}
+    >
+      {children}
+    </span>
   );
 }
 
@@ -62,6 +224,8 @@ export default function Entrainement({ etat, onChange }: EntrainementProps) {
   const [seanceActive, setSeanceActive] = useState<SeanceActive | null>(null);
   const [erreurGeneration, setErreurGeneration] = useState<string | null>(null);
   const [messageRemplacement, setMessageRemplacement] = useState<Record<string, string>>({});
+  const [vue, setVue] = useState<Vue>('seance');
+  const [reglagesOuverts, setReglagesOuverts] = useState(false);
 
   const { parametres, seanceCourante, enCours, historique } = etat;
 
@@ -84,7 +248,7 @@ export default function Entrainement({ etat, onChange }: EntrainementProps) {
   );
 
   const toutesZones = parametres.zones.length >= TOUTES_LES_ZONES.length;
-  const basculerZone = (zone: (typeof TOUTES_LES_ZONES)[number]) => {
+  const basculerZone = (zone: Zone) => {
     // Depuis « tout le corps », choisir une zone cible cette zone seule ;
     // retirer la dernière zone ramène à tout le corps.
     if (toutesZones) {
@@ -103,6 +267,37 @@ export default function Entrainement({ etat, onChange }: EntrainementProps) {
       : `En alternance : ${libelleZones(parametres)}.`;
   const niveauSelectionne = NIVEAUX.find((n) => n.id === parametres.niveau);
   const formatSelectionne = FORMATS.find((f) => f.id === parametres.format);
+
+  // Résumés de la carte « Ma séance ».
+  const resumeVolume =
+    parametres.seriesParExercice && parametres.repsParSerie
+      ? `${parametres.seriesParExercice} × ${parametres.repsParSerie}`
+      : parametres.seriesParExercice
+        ? `${parametres.seriesParExercice} séries · reps auto`
+        : parametres.repsParSerie
+          ? `séries auto · ${parametres.repsParSerie} reps`
+          : 'séries et reps auto';
+  const resumeTempo = `${parametres.tempo.monteeSec} s / ${parametres.tempo.descenteSec} s`;
+  const resumeMateriel =
+    MATERIELS_DECLARABLES.filter((m) => materielsChoisis.includes(m.id))
+      .map((m) => m.nom)
+      .join(' · ') || 'Sans matériel';
+
+  // La feuille de réglages se ferme avec Échap et bloque le défilement de la
+  // page derrière elle ; la position de lecture est restaurée à la fermeture.
+  useEffect(() => {
+    if (!reglagesOuverts) return;
+    const surEchap = (evenement: KeyboardEvent) => {
+      if (evenement.key === 'Escape') setReglagesOuverts(false);
+    };
+    window.addEventListener('keydown', surEchap);
+    const overflowPrecedent = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      window.removeEventListener('keydown', surEchap);
+      document.body.style.overflow = overflowPrecedent;
+    };
+  }, [reglagesOuverts]);
 
   const genererNouvelleSeance = (nouvelleGraine?: number) => {
     try {
@@ -152,15 +347,59 @@ export default function Entrainement({ etat, onChange }: EntrainementProps) {
     onChange((prec) => ({ ...prec, historique: prec.historique.filter((s) => s.id !== id) }));
   };
 
-  return (
-    <div className="space-y-6">
-      {/* 1. Nouvelle séance */}
-      <div className="bg-white rounded-lg shadow p-4 sm:p-6">
-        <h2 className="text-xl font-bold text-gray-800 mb-4">Nouvelle séance</h2>
+  const nbExercicesSeance = seanceCourante
+    ? seanceCourante.blocs.length + (seanceCourante.circuit?.stations.length ?? 0)
+    : 0;
 
-        <div className="space-y-5">
-          <div>
-            <p className="font-semibold text-gray-800 mb-2">Durée</p>
+  /* ------------------------------------------------ La feuille de réglages */
+  const feuilleReglages = (
+    <div
+      className="fixed inset-0 z-40 flex flex-col items-center justify-end"
+      style={{ background: 'rgba(0, 0, 0, 0.6)' }}
+      onClick={() => setReglagesOuverts(false)}
+    >
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label="Réglages de la séance"
+        className="w-full max-w-3xl overflow-y-auto"
+        style={{
+          maxHeight: '88vh',
+          background: 'var(--surface)',
+          borderTop: '1px solid var(--bordure)',
+          borderTopLeftRadius: 20,
+          borderTopRightRadius: 20,
+          paddingBottom: 'calc(1.5rem + env(safe-area-inset-bottom))',
+        }}
+        onClick={(evenement) => evenement.stopPropagation()}
+      >
+        <div className="sticky top-0 z-10 px-4 pb-3 pt-2" style={{ background: 'var(--surface)' }}>
+          <div
+            aria-hidden="true"
+            className="mx-auto mb-2 h-1.5 w-10 rounded-full"
+            style={{ background: 'var(--texte-discret)', opacity: 0.5 }}
+          />
+          <div className="flex items-center justify-between gap-3">
+            <h2 className="text-lg font-bold" style={{ color: 'var(--texte)' }}>
+              Réglages
+            </h2>
+            <button
+              type="button"
+              onClick={() => setReglagesOuverts(false)}
+              className="rounded-xl px-5 text-sm font-bold"
+              style={{
+                minHeight: CIBLE,
+                background: 'var(--accent)',
+                color: 'var(--accent-texte)',
+              }}
+            >
+              Terminé
+            </button>
+          </div>
+        </div>
+
+        <div className="space-y-5 px-4">
+          <Groupe titre="Durée">
             <div className="flex flex-wrap gap-2">
               {DUREES_MINUTES.map((duree) => (
                 <Pastille
@@ -168,14 +407,13 @@ export default function Entrainement({ etat, onChange }: EntrainementProps) {
                   selectionne={parametres.dureeMinutes === duree}
                   onClick={() => mettreAJourParametres({ dureeMinutes: duree })}
                 >
-                  {`${duree} min`}
+                  <span className="chiffres">{duree} min</span>
                 </Pastille>
               ))}
             </div>
-          </div>
+          </Groupe>
 
-          <div>
-            <p className="font-semibold text-gray-800 mb-2">Zones travaillées</p>
+          <Groupe titre="Zones travaillées" aide={descriptionZones}>
             <div className="flex flex-wrap gap-2">
               <Pastille
                 selectionne={toutesZones}
@@ -193,47 +431,14 @@ export default function Entrainement({ etat, onChange }: EntrainementProps) {
                 </Pastille>
               ))}
             </div>
-            <p className="text-sm text-gray-500 mt-2">{descriptionZones}</p>
-          </div>
+          </Groupe>
 
-          <div>
-            <p className="font-semibold text-gray-800 mb-2">Niveau</p>
-            <div className="flex flex-wrap gap-2">
-              {NIVEAUX.map((n) => (
-                <Pastille
-                  key={n.id}
-                  selectionne={parametres.niveau === n.id}
-                  onClick={() => mettreAJourParametres({ niveau: n.id })}
-                >
-                  {n.nom}
-                </Pastille>
-              ))}
-            </div>
-            {niveauSelectionne && (
-              <p className="text-sm text-gray-500 mt-2">{niveauSelectionne.description}</p>
-            )}
-          </div>
-
-          <div>
-            <p className="font-semibold text-gray-800 mb-2">Format</p>
-            <div className="flex flex-wrap gap-2">
-              {FORMATS.map((f) => (
-                <Pastille
-                  key={f.id}
-                  selectionne={parametres.format === f.id}
-                  onClick={() => mettreAJourParametres({ format: f.id })}
-                >
-                  {f.nom}
-                </Pastille>
-              ))}
-            </div>
-            {formatSelectionne && (
-              <p className="text-sm text-gray-500 mt-2">{formatSelectionne.description}</p>
-            )}
-          </div>
-
-          <div>
-            <p className="font-semibold text-gray-800 mb-2">Séries par exercice</p>
+          <Groupe
+            titre="Séries par exercice"
+            aide={
+              SERIES_PAR_EXERCICE.find((o) => o.valeur === parametres.seriesParExercice)?.description
+            }
+          >
             <div className="flex flex-wrap gap-2">
               {SERIES_PAR_EXERCICE.map((option) => (
                 <Pastille
@@ -241,17 +446,16 @@ export default function Entrainement({ etat, onChange }: EntrainementProps) {
                   selectionne={parametres.seriesParExercice === option.valeur}
                   onClick={() => mettreAJourParametres({ seriesParExercice: option.valeur })}
                 >
-                  {option.nom}
+                  <span className="chiffres">{option.nom}</span>
                 </Pastille>
               ))}
             </div>
-            <p className="text-sm text-gray-500 mt-2">
-              {SERIES_PAR_EXERCICE.find((o) => o.valeur === parametres.seriesParExercice)?.description}
-            </p>
-          </div>
+          </Groupe>
 
-          <div>
-            <p className="font-semibold text-gray-800 mb-2">Répétitions par série</p>
+          <Groupe
+            titre="Répétitions par série"
+            aide={REPS_PAR_SERIE.find((o) => o.valeur === parametres.repsParSerie)?.description}
+          >
             <div className="flex flex-wrap gap-2">
               {REPS_PAR_SERIE.map((option) => (
                 <Pastille
@@ -259,120 +463,153 @@ export default function Entrainement({ etat, onChange }: EntrainementProps) {
                   selectionne={parametres.repsParSerie === option.valeur}
                   onClick={() => mettreAJourParametres({ repsParSerie: option.valeur })}
                 >
-                  {option.nom}
+                  <span className="chiffres">{option.nom}</span>
                 </Pastille>
               ))}
             </div>
-            <p className="text-sm text-gray-500 mt-2">
-              {REPS_PAR_SERIE.find((o) => o.valeur === parametres.repsParSerie)?.description}
-            </p>
-          </div>
+          </Groupe>
 
-          <div>
-            <p className="font-semibold text-gray-800 mb-2">Tempo</p>
+          <Groupe titre="Tempo">
             <div className="space-y-2">
-              {TEMPOS.map((t) => {
-                const selectionne =
-                  parametres.tempo.monteeSec === t.tempo.monteeSec &&
-                  parametres.tempo.descenteSec === t.tempo.descenteSec;
-                return (
-                  <label
-                    key={t.nom}
-                    className={`flex items-start gap-3 rounded-lg border p-3 cursor-pointer ${
-                      selectionne ? 'border-blue-600 bg-blue-50' : 'border-gray-200 hover:bg-gray-50'
-                    }`}
-                  >
-                    <input
-                      type="radio"
-                      name="tempo"
-                      checked={selectionne}
-                      onChange={() => mettreAJourParametres({ tempo: t.tempo })}
-                      className="mt-1 h-5 w-5 shrink-0 accent-blue-600"
-                    />
-                    <span>
-                      <span className="block font-medium text-gray-800">{t.nom}</span>
-                      <span className="block text-sm text-gray-500">{t.description}</span>
-                    </span>
-                  </label>
-                );
-              })}
-            </div>
-          </div>
-
-          <div>
-            <p className="font-semibold text-gray-800 mb-2">Mon matériel</p>
-            <div className="space-y-2">
-              {MATERIELS_DECLARABLES.map((m) => (
-                <label
-                  key={m.id}
-                  className="flex items-start gap-3 rounded-lg border border-gray-200 p-3 cursor-pointer hover:bg-gray-50"
-                >
-                  <input
-                    type="checkbox"
-                    checked={materielsChoisis.includes(m.id)}
-                    onChange={() => basculerMateriel(m.id)}
-                    className="mt-1 h-5 w-5 shrink-0 accent-blue-600"
-                  />
-                  <span>
-                    <span className="block text-gray-800">{m.nom}</span>
-                    <span className="block text-sm text-gray-500">{m.precision}</span>
-                  </span>
-                </label>
+              {TEMPOS.map((t) => (
+                <Choix
+                  key={t.nom}
+                  selectionne={
+                    parametres.tempo.monteeSec === t.tempo.monteeSec &&
+                    parametres.tempo.descenteSec === t.tempo.descenteSec
+                  }
+                  onClick={() => mettreAJourParametres({ tempo: t.tempo })}
+                  nom={t.nom}
+                  description={t.description}
+                />
               ))}
             </div>
-            <p className="text-sm text-gray-500 mt-2">
-              {nbExercicesDisponibles} exercices disponibles avec ce matériel.
-            </p>
-          </div>
+          </Groupe>
 
-          <div>
-            <p className="font-semibold text-gray-800 mb-2">Options</p>
+          <Groupe titre="Guide visuel pendant la série">
             <div className="space-y-2">
-              <label className="flex items-start gap-3 rounded-lg border border-gray-200 p-3 cursor-pointer hover:bg-gray-50">
-                <input
-                  type="checkbox"
-                  checked={parametres.explosifs}
-                  onChange={(e) => mettreAJourParametres({ explosifs: e.target.checked })}
-                  className="mt-1 h-5 w-5 shrink-0 accent-blue-600"
+              {GUIDES_VISUELS.map((guide) => (
+                <Choix
+                  key={guide.id}
+                  selectionne={parametres.guideVisuel === guide.id}
+                  onClick={() => mettreAJourParametres({ guideVisuel: guide.id })}
+                  nom={guide.nom}
+                  description={guide.description}
                 />
-                <span className="text-gray-800">
-                  Inclure les mouvements explosifs (squat sauté, swing)
-                </span>
-              </label>
+              ))}
             </div>
-          </div>
+          </Groupe>
 
-          <button
-            type="button"
-            onClick={() => genererNouvelleSeance()}
-            className="w-full rounded-lg bg-blue-600 px-4 py-3 font-medium text-white hover:bg-blue-700"
-          >
-            Générer la séance
-          </button>
-          {erreurGeneration && (
-            <p role="alert" className="text-sm font-medium text-red-600">
-              {erreurGeneration}
-            </p>
-          )}
+          <details>
+            <summary
+              className="flex cursor-pointer select-none items-center text-sm font-bold"
+              style={{ color: 'var(--texte-discret)', minHeight: CIBLE, listStyle: 'none' }}
+            >
+              Réglages avancés
+            </summary>
+
+            <div className="space-y-5 pb-2">
+              <Groupe titre="Niveau" aide={niveauSelectionne?.description}>
+                <div className="flex flex-wrap gap-2">
+                  {NIVEAUX.map((n) => (
+                    <Pastille
+                      key={n.id}
+                      selectionne={parametres.niveau === n.id}
+                      onClick={() => mettreAJourParametres({ niveau: n.id })}
+                    >
+                      {n.nom}
+                    </Pastille>
+                  ))}
+                </div>
+              </Groupe>
+
+              <Groupe titre="Format" aide={formatSelectionne?.description}>
+                <div className="flex flex-wrap gap-2">
+                  {FORMATS.map((f) => (
+                    <Pastille
+                      key={f.id}
+                      selectionne={parametres.format === f.id}
+                      onClick={() => mettreAJourParametres({ format: f.id })}
+                    >
+                      {f.nom}
+                    </Pastille>
+                  ))}
+                </div>
+              </Groupe>
+
+              <Groupe
+                titre="Mon matériel"
+                aide={`${nbExercicesDisponibles} exercices disponibles avec ce matériel.`}
+              >
+                <div className="space-y-2">
+                  {MATERIELS_DECLARABLES.map((m) => (
+                    <Bascule
+                      key={m.id}
+                      actif={materielsChoisis.includes(m.id)}
+                      onClick={() => basculerMateriel(m.id)}
+                      nom={m.nom}
+                      precision={m.precision}
+                    />
+                  ))}
+                </div>
+              </Groupe>
+
+              <Groupe titre="Options">
+                <Bascule
+                  actif={parametres.explosifs}
+                  onClick={() => mettreAJourParametres({ explosifs: !parametres.explosifs })}
+                  nom="Mouvements explosifs"
+                  precision="Squat sauté, swing : incompatibles avec le tempo lent."
+                />
+              </Groupe>
+            </div>
+          </details>
+
+          <p className="text-xs" style={{ color: 'var(--texte-discret)' }}>
+            Réglages et historique sont sauvegardés sur cet appareil.
+          </p>
         </div>
       </div>
+    </div>
+  );
 
-      {/* 2. Bandeau de reprise */}
+  /* ------------------------------------------------------ L'écran d'accueil */
+  const accueil = (
+    <div className="space-y-3">
       {enCours && (
-        <div className="flex flex-col gap-3 rounded-lg border border-yellow-300 bg-yellow-50 p-4 sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-yellow-800">Séance interrompue le {formaterDateFr(enCours.sauvegardeeLe ?? enCours.demarreeLe)}</p>
-          <div className="flex gap-2">
+        <div
+          className="p-3"
+          style={{
+            background: 'var(--surface)',
+            border: '1px solid var(--pause)',
+            borderRadius: 14,
+          }}
+        >
+          <p className="text-sm" style={{ color: 'var(--texte)' }}>
+            Séance interrompue le{' '}
+            <span className="chiffres">
+              {formaterDateFr(enCours.sauvegardeeLe ?? enCours.demarreeLe)}
+            </span>
+          </p>
+          <div className="mt-2 flex gap-2">
             <button
               type="button"
               onClick={reprendreSeance}
-              className="rounded-lg bg-blue-600 px-4 py-3 font-medium text-white hover:bg-blue-700"
+              className="flex-1 rounded-xl px-4 text-sm font-bold"
+              style={{ minHeight: CIBLE, background: 'var(--montee)', color: 'var(--accent-texte)' }}
             >
               Reprendre
             </button>
             <button
               type="button"
               onClick={abandonnerSeance}
-              className="rounded-lg bg-gray-100 px-4 py-3 font-medium text-gray-700 hover:bg-gray-200"
+              className="rounded-xl px-4 text-sm font-semibold"
+              style={{
+                minHeight: CIBLE,
+                background: 'var(--surface-haute)',
+                border: '1px solid var(--bordure)',
+                color: 'var(--texte)',
+              }}
             >
               Abandonner
             </button>
@@ -380,127 +617,332 @@ export default function Entrainement({ etat, onChange }: EntrainementProps) {
         </div>
       )}
 
-      {/* 3. Séance proposée */}
+      {/* 1. Ma séance : les réglages courants, en un coup d'œil. */}
+      <section
+        className="p-4"
+        style={{
+          background: 'var(--surface)',
+          border: '1px solid var(--bordure)',
+          borderRadius: 16,
+        }}
+      >
+        <div className="flex items-center justify-between gap-3">
+          <h2 className="text-lg font-bold" style={{ color: 'var(--texte)' }}>
+            Ma séance
+          </h2>
+          <button
+            type="button"
+            onClick={() => setReglagesOuverts(true)}
+            className="rounded-xl px-4 text-sm font-semibold"
+            style={{
+              minHeight: CIBLE,
+              background: 'var(--surface-haute)',
+              border: '1px solid var(--bordure)',
+              color: 'var(--texte)',
+            }}
+          >
+            Modifier
+          </button>
+        </div>
+
+        <div className="mt-3 flex flex-wrap gap-2">
+          <Resume accent>
+            <span className="chiffres">{parametres.dureeMinutes} min</span>
+          </Resume>
+          <Resume>{libelleZones(parametres)}</Resume>
+          <Resume>
+            <span className="chiffres">{resumeVolume}</span>
+          </Resume>
+          <Resume>
+            <span className="chiffres">{resumeTempo}</span>
+          </Resume>
+          <Resume>{resumeMateriel}</Resume>
+        </div>
+
+        <p className="mt-3 text-xs" style={{ color: 'var(--texte-discret)' }}>
+          <span className="chiffres">{nbExercicesDisponibles}</span> exercices disponibles ·{' '}
+          {niveauSelectionne?.nom.toLowerCase()}
+        </p>
+      </section>
+
+      {/* 2. L'action principale, toujours visible sans défiler. */}
+      <button
+        type="button"
+        onClick={() => genererNouvelleSeance()}
+        className="w-full font-bold"
+        style={{
+          height: ACTION,
+          borderRadius: 16,
+          background: 'var(--accent)',
+          color: 'var(--accent-texte)',
+          fontSize: 17,
+        }}
+      >
+        Générer la séance
+      </button>
+
+      {erreurGeneration && (
+        <p role="alert" className="text-sm font-semibold" style={{ color: 'var(--alerte)' }}>
+          {erreurGeneration}
+        </p>
+      )}
+
+      {/* 3. Les deux écrans secondaires, derrière un bouton chacun. */}
+      <div className="grid grid-cols-2 gap-3">
+        <button
+          type="button"
+          onClick={() => setVue('historique')}
+          className="rounded-xl px-3 text-sm font-semibold"
+          style={{
+            minHeight: CIBLE,
+            background: 'var(--surface)',
+            border: '1px solid var(--bordure)',
+            color: 'var(--texte)',
+          }}
+        >
+          Historique{' '}
+          <span className="chiffres" style={{ color: 'var(--texte-discret)' }}>
+            {historique.length}
+          </span>
+        </button>
+        <button
+          type="button"
+          onClick={() => setVue('bibliotheque')}
+          className="rounded-xl px-3 text-sm font-semibold"
+          style={{
+            minHeight: CIBLE,
+            background: 'var(--surface)',
+            border: '1px solid var(--bordure)',
+            color: 'var(--texte)',
+          }}
+        >
+          Bibliothèque
+        </button>
+      </div>
+
+      {/* 4. La séance proposée. */}
       {seanceCourante && (
-        <div className="bg-white rounded-lg shadow p-4 sm:p-6">
-          <h2 className="text-xl font-bold text-gray-800 mb-4">Séance proposée</h2>
-
-          <div className="mb-4 space-y-1 rounded-lg bg-gray-50 p-3 text-sm text-gray-700">
-            <p>
-              Durée estimée :{' '}
-              <span className="font-semibold">{formaterDuree(seanceCourante.dureeEstimeeSec)}</span>{' '}
-              (demandée : {seanceCourante.parametres.dureeMinutes} min)
-            </p>
-            <p>Échauffement : {formaterDuree(seanceCourante.echauffementSec)}</p>
-            <p>
-              Exercices :{' '}
-              {seanceCourante.blocs.length + (seanceCourante.circuit?.stations.length ?? 0)}
-            </p>
-            <p>Retour au calme : {formaterDuree(seanceCourante.retourCalmeSec)}</p>
-            {seanceCourante.circuit && (
-              <p>
-                Circuit : {seanceCourante.circuit.stations.length} stations ×{' '}
-                {seanceCourante.circuit.tours} tours, {seanceCourante.circuit.travailSec} s /{' '}
-                {seanceCourante.circuit.reposSec} s
-              </p>
-            )}
+        <section
+          className="p-4"
+          style={{
+            background: 'var(--surface)',
+            border: '1px solid var(--bordure)',
+            borderRadius: 16,
+          }}
+        >
+          <div className="flex items-center justify-between gap-3">
+            <h2 className="text-lg font-bold" style={{ color: 'var(--texte)' }}>
+              Séance proposée
+            </h2>
+            <button
+              type="button"
+              onClick={() => genererNouvelleSeance(graineAleatoire())}
+              className="rounded-xl px-4 text-sm font-semibold"
+              style={{
+                minHeight: CIBLE,
+                background: 'var(--surface-haute)',
+                border: '1px solid var(--bordure)',
+                color: 'var(--texte)',
+              }}
+            >
+              Regénérer
+            </button>
           </div>
 
-          <div className="mb-4 rounded-lg border border-blue-200 bg-blue-50 p-3 text-sm text-blue-800">
-            Tempo {seanceCourante.parametres.tempo.monteeSec} s montée /{' '}
-            {seanceCourante.parametres.tempo.descenteSec} s descente · sans rebond, contrôle total
+          <div className="mt-3 flex flex-wrap gap-2">
+            <Resume accent>
+              <span className="chiffres">{formaterDuree(seanceCourante.dureeEstimeeSec)}</span>
+            </Resume>
+            <Resume>
+              <span className="chiffres">{nbExercicesSeance}</span>
+              &nbsp;exercices
+            </Resume>
+            <Resume>
+              Tempo&nbsp;
+              <span className="chiffres">
+                {seanceCourante.parametres.tempo.monteeSec} s /{' '}
+                {seanceCourante.parametres.tempo.descenteSec} s
+              </span>
+            </Resume>
           </div>
+          <p className="mt-2 text-xs" style={{ color: 'var(--texte-discret)' }}>
+            Échauffement <span className="chiffres">{formaterDuree(seanceCourante.echauffementSec)}</span>{' '}
+            · retour au calme{' '}
+            <span className="chiffres">{formaterDuree(seanceCourante.retourCalmeSec)}</span> ·
+            demandé <span className="chiffres">{seanceCourante.parametres.dureeMinutes} min</span>
+          </p>
 
           {seanceCourante.blocs.length > 0 && (
-            <div className="mb-4 space-y-3">
+            <ul className="mt-3 space-y-2">
               {seanceCourante.blocs.map((bloc) => {
                 const exercice = EXERCICES_PAR_ID[bloc.exerciceId];
                 if (!exercice) return null;
                 return (
-                  <div key={bloc.exerciceId} className="rounded-lg border border-gray-200 p-3">
+                  <li
+                    key={bloc.exerciceId}
+                    className="p-3"
+                    style={{ background: 'var(--surface-haute)', borderRadius: 14 }}
+                  >
                     <FicheExercice exercice={exercice} taille="petite">
-                      <span className="mb-1 inline-block rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-700">
-                        {NOM_ZONE[exercice.zone]}
-                      </span>
-                      <p className="text-sm text-gray-600">{libelleBloc(bloc, exercice)}</p>
+                      <div className="mt-1 flex flex-wrap gap-1">
+                        <Badge>{NOM_ZONE[exercice.zone]}</Badge>
+                        <Badge>{NOM_PATTERN[exercice.pattern]}</Badge>
+                      </div>
+                      <p className="chiffres mt-1 text-sm" style={{ color: 'var(--texte)' }}>
+                        {libelleBloc(bloc, exercice)}
+                      </p>
+                    </FicheExercice>
+
+                    <div className="mt-2 flex flex-wrap items-center gap-2">
                       <button
                         type="button"
                         onClick={() => remplacerDansSeance(bloc.exerciceId)}
-                        className="mt-2 text-sm font-medium text-blue-600 hover:text-blue-700"
+                        className="rounded-xl px-4 text-sm font-semibold"
+                        style={{
+                          minHeight: CIBLE,
+                          background: 'var(--surface)',
+                          border: '1px solid var(--bordure)',
+                          color: 'var(--texte)',
+                        }}
                       >
                         Remplacer
                       </button>
                       {messageRemplacement[bloc.exerciceId] && (
-                        <p className="mt-1 text-xs text-gray-500">
+                        <span className="text-xs" style={{ color: 'var(--texte-discret)' }}>
                           {messageRemplacement[bloc.exerciceId]}
-                        </p>
+                        </span>
                       )}
-                    </FicheExercice>
-                    <details className="mt-2">
-                      <summary className="cursor-pointer select-none text-sm text-gray-600">
+                    </div>
+
+                    <details>
+                      <summary
+                        className="flex cursor-pointer select-none items-center text-sm"
+                        style={{
+                          color: 'var(--texte-discret)',
+                          minHeight: CIBLE,
+                          listStyle: 'none',
+                        }}
+                      >
                         Points d'attention
                       </summary>
-                      <ul className="ml-4 mt-1 list-disc space-y-0.5 text-sm text-gray-600">
+                      <ul
+                        className="ml-4 list-disc space-y-0.5 pb-1 text-sm"
+                        style={{ color: 'var(--texte-discret)' }}
+                      >
                         {exercice.pointsAttention.map((point, index) => (
                           <li key={index}>{point}</li>
                         ))}
+                        {exercice.interetJjb && (
+                          <li style={{ color: 'var(--accent)' }}>{exercice.interetJjb}</li>
+                        )}
                       </ul>
                     </details>
-                    {exercice.interetJjb && (
-                      <p className="mt-2 text-sm italic text-blue-700">{exercice.interetJjb}</p>
-                    )}
-                  </div>
+                  </li>
                 );
               })}
-            </div>
+            </ul>
           )}
 
           {seanceCourante.circuit && (
-            <div className="mb-4 space-y-3">
-              <h3 className="font-semibold text-gray-800">Circuit</h3>
-              <p className="text-sm text-gray-600">
-                {seanceCourante.circuit.tours} tours · {seanceCourante.circuit.travailSec} s de
-                travail / {seanceCourante.circuit.reposSec} s de repos
+            <div className="mt-4">
+              <h3 className="text-base font-bold" style={{ color: 'var(--texte)' }}>
+                Circuit
+              </h3>
+              <p className="mt-1 text-sm" style={{ color: 'var(--texte-discret)' }}>
+                <span className="chiffres">{seanceCourante.circuit.tours}</span> tours ·{' '}
+                <span className="chiffres">{seanceCourante.circuit.travailSec} s</span> de travail /{' '}
+                <span className="chiffres">{seanceCourante.circuit.reposSec} s</span> de repos
               </p>
-              {seanceCourante.circuit.stations.map((exerciceId, index) => {
-                const exercice = EXERCICES_PAR_ID[exerciceId];
-                if (!exercice) return null;
-                return (
-                  <div key={`${exerciceId}-${index}`} className="rounded-lg border border-gray-200 p-3">
-                    <FicheExercice exercice={exercice} taille="petite">
-                      <p className="mb-1 text-xs font-semibold text-gray-500">
-                        Station {index + 1}
-                      </p>
-                      <span className="inline-block rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-700">
-                        {NOM_ZONE[exercice.zone]}
-                      </span>
-                    </FicheExercice>
-                  </div>
-                );
-              })}
+              <ul className="mt-2 space-y-2">
+                {seanceCourante.circuit.stations.map((exerciceId, index) => {
+                  const exercice = EXERCICES_PAR_ID[exerciceId];
+                  if (!exercice) return null;
+                  return (
+                    <li
+                      key={`${exerciceId}-${index}`}
+                      className="p-3"
+                      style={{ background: 'var(--surface-haute)', borderRadius: 14 }}
+                    >
+                      <FicheExercice exercice={exercice} taille="petite">
+                        <p
+                          className="chiffres text-xs font-semibold"
+                          style={{ color: 'var(--texte-discret)' }}
+                        >
+                          Station {index + 1}
+                        </p>
+                        <div className="mt-1 flex flex-wrap gap-1">
+                          <Badge>{NOM_ZONE[exercice.zone]}</Badge>
+                          <Badge>{NOM_PATTERN[exercice.pattern]}</Badge>
+                        </div>
+                      </FicheExercice>
+                    </li>
+                  );
+                })}
+              </ul>
             </div>
           )}
+        </section>
+      )}
 
-          <div className="flex flex-col gap-3 sm:flex-row">
-            <button
-              type="button"
-              onClick={() => genererNouvelleSeance(graineAleatoire())}
-              className="flex-1 rounded-lg bg-gray-100 px-4 py-3 font-medium text-gray-700 hover:bg-gray-200"
-            >
-              Regénérer
-            </button>
-            <button
-              type="button"
-              onClick={lancerSeance}
-              className="flex-1 rounded-lg bg-green-600 px-4 py-3 font-medium text-white hover:bg-green-700"
-            >
-              Lancer la séance
-            </button>
-          </div>
+      {/* 5. L'action de départ, collée en bas : jamais besoin de défiler. */}
+      {seanceCourante && (
+        <div
+          className="sticky bottom-0 z-30 -mx-4 px-4 pt-3"
+          style={{
+            background: 'var(--fond)',
+            borderTop: '1px solid var(--bordure)',
+            paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom))',
+          }}
+        >
+          <button
+            type="button"
+            onClick={lancerSeance}
+            className="w-full font-bold"
+            style={{
+              height: ACTION,
+              borderRadius: 16,
+              background: 'var(--montee)',
+              color: 'var(--accent-texte)',
+              fontSize: 17,
+            }}
+          >
+            Lancer la séance
+          </button>
+        </div>
+      )}
+    </div>
+  );
+
+  /* ------------------------------------------------------------- Le rendu */
+  return (
+    <div>
+      {vue === 'seance' ? (
+        accueil
+      ) : (
+        <div className="space-y-3">
+          <button
+            type="button"
+            onClick={() => setVue('seance')}
+            className="rounded-xl px-4 text-sm font-semibold"
+            style={{
+              minHeight: CIBLE,
+              background: 'var(--surface)',
+              border: '1px solid var(--bordure)',
+              color: 'var(--texte)',
+            }}
+          >
+            ← Ma séance
+          </button>
+          {vue === 'historique' ? (
+            <HistoriqueEntrainement historique={historique} onSupprimer={supprimerDeLHistorique} />
+          ) : (
+            <BibliothequeExercices />
+          )}
         </div>
       )}
 
-      {/* 4. Mode guidé */}
+      {reglagesOuverts && createPortal(feuilleReglages, document.body)}
+
       {seanceActive && (
         <SeanceGuidee
           seance={seanceActive.seance}
@@ -520,12 +962,6 @@ export default function Entrainement({ etat, onChange }: EntrainementProps) {
           }}
         />
       )}
-
-      {/* 5. Historique */}
-      <HistoriqueEntrainement historique={historique} onSupprimer={supprimerDeLHistorique} />
-
-      {/* 6. Bibliothèque */}
-      <BibliothequeExercices />
     </div>
   );
 }

@@ -131,7 +131,15 @@ export interface ParametresSeance {
   /** Répétitions souhaitées par série ; null = automatique selon le niveau.
    *  Si ce nombre ne tient pas dans la durée, l'automatique reprend. */
   repsParSerie: 6 | 8 | 9 | 10 | 12 | null;
+  /** Ce qui rythme la répétition à l'écran pendant une série :
+   *  une bille qui monte et descend, le décompte en chiffres, ou les deux. */
+  guideVisuel: GuideVisuel;
 }
+
+/** bille : une bille parcourt un rail au rythme du tempo, on la suit du coin
+ *  de l'œil ; chiffre : le décompte des secondes en grand ; les-deux : la
+ *  bille avec les secondes inscrites dedans. */
+export type GuideVisuel = 'bille' | 'chiffre' | 'les-deux';
 
 export interface BlocSeries {
   exerciceId: string;

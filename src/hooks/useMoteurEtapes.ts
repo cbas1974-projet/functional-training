@@ -3,7 +3,10 @@
 // chaque étape quittée. Tout repose sur des instants `Date.now()` passés dans
 // les actions (et non sur un décrément par tick) : un onglet mobile en
 // arrière-plan ralentit les minuteurs, pas l'horloge.
-import { useCallback, useEffect, useReducer, useState } from 'react';
+import { useCallback, useEffect, useReducer, useRef, useState } from 'react';
+
+/** Pas de rafraîchissement de l'affichage, en millisecondes. */
+const PAS_HORLOGE_MS = 80;
 
 export interface EtatMoteur {
   /** Index de l'étape courante. */
@@ -101,8 +104,13 @@ export interface MoteurEtapes {
   etat: EtatMoteur | null;
   /** Dernier instant connu (rafraîchi toutes les 200 ms quand le chrono tourne). */
   maintenant: number;
-  /** Secondes écoulées dans l'étape courante, pauses exclues. */
+  /** Secondes écoulées dans l'étape courante, pauses exclues. Rafraîchi
+   *  cinq fois par seconde : suffisant pour un affichage, trop grossier pour
+   *  une animation. */
   ecouleSec: number;
+  /** Lecture instantanée de l'horloge, sans passer par un rendu React : à
+   *  utiliser dans une boucle d'animation (la bille du tempo). */
+  lireEcouleSec: () => number;
   /** Démarre (ou reprend) la séance à l'étape `index`, avec les temps déjà
    *  crédités aux étapes lors d'une reprise. */
   demarrer: (index: number, tempsParEtapeSec: number[]) => void;
@@ -123,10 +131,12 @@ export function useMoteurEtapes(nbEtapes: number): MoteurEtapes {
   const enMarche = etat !== null && !etat.enPause && etat.index < nbEtapes - 1;
 
   // Un simple rafraîchissement périodique : le temps écoulé se déduit de
-  // l'horloge, jamais du nombre de ticks.
+  // l'horloge, jamais du nombre de ticks. Le pas fixe le retard maximal entre
+  // le demi-tour de la bille, qui suit l'horloge à chaque image, et le bip,
+  // déclenché par un rendu : 80 ms passent inaperçus, 200 ms s'entendaient.
   useEffect(() => {
     if (!enMarche) return;
-    const intervalle = window.setInterval(() => setMaintenant(Date.now()), 200);
+    const intervalle = window.setInterval(() => setMaintenant(Date.now()), PAS_HORLOGE_MS);
     return () => window.clearInterval(intervalle);
   }, [enMarche]);
 
@@ -167,5 +177,24 @@ export function useMoteurEtapes(nbEtapes: number): MoteurEtapes {
 
   const ecouleSec = etat ? ecouleEtapeMs(etat, maintenant) / 1000 : 0;
 
-  return { etat, maintenant, ecouleSec, demarrer, allerA, pause, reprendre, prolonger };
+  // L'état courant dans une ref : la boucle d'animation le lit sans dépendre
+  // du rythme des rendus.
+  const etatRef = useRef(etat);
+  etatRef.current = etat;
+  const lireEcouleSec = useCallback(
+    () => (etatRef.current ? ecouleEtapeMs(etatRef.current, Date.now()) / 1000 : 0),
+    [],
+  );
+
+  return {
+    etat,
+    maintenant,
+    ecouleSec,
+    lireEcouleSec,
+    demarrer,
+    allerA,
+    pause,
+    reprendre,
+    prolonger,
+  };
 }

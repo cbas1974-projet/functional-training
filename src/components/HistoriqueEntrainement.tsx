@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import type { SeanceRealisee } from '../types';
 import { FORMATS, NIVEAUX } from '../data/parametres';
 import { EXERCICES_PAR_ID } from '../data/exercices';
@@ -8,6 +9,23 @@ import FicheExercice from './FicheExercice';
 interface HistoriqueEntrainementProps {
   historique: SeanceRealisee[];
   onSupprimer: (id: string) => void;
+}
+
+/** Tuile de statistique : un grand nombre, un libellé discret dessous. */
+function Tuile({ valeur, libelle }: { valeur: ReactNode; libelle: string }) {
+  return (
+    <div
+      className="px-2 py-3 text-center"
+      style={{ background: 'var(--surface-haute)', borderRadius: 14 }}
+    >
+      <p className="chiffres text-xl font-bold leading-tight" style={{ color: 'var(--texte)' }}>
+        {valeur}
+      </p>
+      <p className="mt-0.5 text-xs" style={{ color: 'var(--texte-discret)' }}>
+        {libelle}
+      </p>
+    </div>
+  );
 }
 
 export default function HistoriqueEntrainement({
@@ -26,28 +44,33 @@ export default function HistoriqueEntrainement({
   };
 
   return (
-    <div className="bg-white rounded-lg shadow p-4 sm:p-6">
-      <h2 className="text-xl font-bold text-gray-800 mb-4">Historique</h2>
+    <section
+      className="p-4"
+      style={{
+        background: 'var(--surface)',
+        border: '1px solid var(--bordure)',
+        borderRadius: 16,
+      }}
+    >
+      <h2 className="mb-3 text-lg font-bold" style={{ color: 'var(--texte)' }}>
+        Historique
+      </h2>
 
       {historique.length === 0 ? (
-        <p className="text-gray-600">Aucune séance enregistrée pour l'instant.</p>
+        <p style={{ color: 'var(--texte-discret)' }}>Aucune séance enregistrée pour l'instant.</p>
       ) : (
         <>
-          <div className="grid grid-cols-3 gap-2 mb-6 text-center">
-            <div className="bg-gray-50 rounded-lg p-3">
-              <p className="text-2xl font-bold text-gray-800">{stats.nombreSeances}</p>
-              <p className="text-xs text-gray-500">séance{stats.nombreSeances > 1 ? 's' : ''}</p>
-            </div>
-            <div className="bg-gray-50 rounded-lg p-3">
-              <p className="text-2xl font-bold text-gray-800">
-                {formaterDuree(stats.tempsTotalSec)}
-              </p>
-              <p className="text-xs text-gray-500">temps total</p>
-            </div>
-            <div className="bg-gray-50 rounded-lg p-3">
-              <p className="text-2xl font-bold text-gray-800">{stats.seances7DerniersJours}</p>
-              <p className="text-xs text-gray-500">7 derniers jours</p>
-            </div>
+          <div className="mb-4 grid grid-cols-3 gap-2">
+            <Tuile
+              valeur={stats.nombreSeances}
+              libelle={`séance${stats.nombreSeances > 1 ? 's' : ''}`}
+            />
+            {/* Arrondi à la minute : une tuile n'a pas la place des secondes. */}
+            <Tuile
+              valeur={formaterDuree(Math.round(stats.tempsTotalSec / 60) * 60)}
+              libelle="temps total"
+            />
+            <Tuile valeur={stats.seances7DerniersJours} libelle="7 derniers jours" />
           </div>
 
           <ul className="space-y-3">
@@ -55,69 +78,108 @@ export default function HistoriqueEntrainement({
               const zones = libelleZones(realisee.parametres);
               const niveau = NIVEAUX.find((n) => n.id === realisee.parametres.niveau);
               const format = FORMATS.find((f) => f.id === realisee.parametres.format);
+              // Barre de couleur à gauche : verte si la séance est allée au
+              // bout, jaune si elle a été interrompue.
+              const couleur = realisee.terminee ? 'var(--montee)' : 'var(--pause)';
 
               return (
-                <li key={realisee.id} className="border border-gray-200 rounded-lg p-3">
-                  <div className="flex flex-wrap items-start justify-between gap-2">
-                    <div>
-                      <p className="font-semibold text-gray-800">
-                        {formaterDateFr(realisee.date)}
-                      </p>
-                      <p className="text-sm text-gray-600">
-                        {zones} · {format?.nom} · {niveau?.nom}
-                      </p>
-                      <p className="text-sm text-gray-600">
-                        {formaterDuree(realisee.dureeReelleSec)} / {formaterDuree(realisee.dureePrevueSec)}{' '}
-                        prévues
-                      </p>
+                <li
+                  key={realisee.id}
+                  className="overflow-hidden"
+                  style={{
+                    background: 'var(--surface-haute)',
+                    borderRadius: 14,
+                    borderLeft: `4px solid ${couleur}`,
+                  }}
+                >
+                  <div className="p-3">
+                    <div className="flex flex-wrap items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <p
+                          className="chiffres font-semibold"
+                          style={{ color: 'var(--texte)' }}
+                        >
+                          {formaterDateFr(realisee.date)}
+                        </p>
+                        <p className="text-sm" style={{ color: 'var(--texte-discret)' }}>
+                          {zones} · {format?.nom} · {niveau?.nom}
+                        </p>
+                        <p className="text-sm" style={{ color: 'var(--texte-discret)' }}>
+                          <span className="chiffres">{formaterDuree(realisee.dureeReelleSec)}</span>{' '}
+                          / <span className="chiffres">{formaterDuree(realisee.dureePrevueSec)}</span>{' '}
+                          prévues
+                        </p>
+                      </div>
+                      {!realisee.terminee && (
+                        <span
+                          className="whitespace-nowrap rounded-full px-2 py-1 text-xs font-semibold"
+                          style={{ background: 'var(--pause)', color: 'var(--accent-texte)' }}
+                        >
+                          interrompue
+                        </span>
+                      )}
                     </div>
-                    {!realisee.terminee && (
-                      <span className="whitespace-nowrap rounded-full bg-orange-100 px-2 py-1 text-xs font-medium text-orange-700">
-                        interrompue
-                      </span>
-                    )}
+
+                    <details>
+                      <summary
+                        className="flex cursor-pointer select-none items-center text-sm font-medium"
+                        style={{ color: 'var(--texte-discret)', minHeight: 44, listStyle: 'none' }}
+                      >
+                        Détail par exercice
+                      </summary>
+                      <div className="space-y-3 pb-1">
+                        {realisee.exercices.map((exo, index) => {
+                          const exercice = EXERCICES_PAR_ID[exo.exerciceId];
+                          if (!exercice) return null;
+                          return (
+                            <FicheExercice
+                              key={`${exo.exerciceId}-${index}`}
+                              exercice={exercice}
+                              taille="petite"
+                            >
+                              <p className="text-sm" style={{ color: 'var(--texte-discret)' }}>
+                                <span className="chiffres">
+                                  {exo.seriesFaites} / {exo.seriesPrevues}
+                                </span>{' '}
+                                séries
+                              </p>
+                              <p className="text-sm" style={{ color: 'var(--texte-discret)' }}>
+                                <span className="chiffres">{formaterDuree(exo.dureeSec)}</span>
+                                {typeof exo.poidsKg === 'number' ? (
+                                  <>
+                                    {' · '}
+                                    <span className="chiffres">{exo.poidsKg} kg</span>
+                                  </>
+                                ) : (
+                                  ''
+                                )}
+                              </p>
+                            </FicheExercice>
+                          );
+                        })}
+                      </div>
+                    </details>
+
+                    <button
+                      type="button"
+                      onClick={() => handleSupprimer(realisee.id)}
+                      className="rounded-xl px-3 text-sm font-semibold"
+                      style={{
+                        minHeight: 44,
+                        background: 'transparent',
+                        border: '1px solid var(--bordure)',
+                        color: 'var(--alerte)',
+                      }}
+                    >
+                      Supprimer
+                    </button>
                   </div>
-
-                  <details className="mt-2">
-                    <summary className="cursor-pointer select-none text-sm text-blue-600">
-                      Détail par exercice
-                    </summary>
-                    <div className="mt-2 space-y-3">
-                      {realisee.exercices.map((exo, index) => {
-                        const exercice = EXERCICES_PAR_ID[exo.exerciceId];
-                        if (!exercice) return null;
-                        return (
-                          <FicheExercice
-                            key={`${exo.exerciceId}-${index}`}
-                            exercice={exercice}
-                            taille="petite"
-                          >
-                            <p className="text-sm text-gray-600">
-                              {exo.seriesFaites} / {exo.seriesPrevues} séries
-                            </p>
-                            <p className="text-sm text-gray-600">
-                              {formaterDuree(exo.dureeSec)}
-                              {typeof exo.poidsKg === 'number' ? ` · ${exo.poidsKg} kg` : ''}
-                            </p>
-                          </FicheExercice>
-                        );
-                      })}
-                    </div>
-                  </details>
-
-                  <button
-                    type="button"
-                    onClick={() => handleSupprimer(realisee.id)}
-                    className="mt-3 text-sm font-medium text-red-600 hover:text-red-700"
-                  >
-                    Supprimer
-                  </button>
                 </li>
               );
             })}
           </ul>
         </>
       )}
-    </div>
+    </section>
   );
 }

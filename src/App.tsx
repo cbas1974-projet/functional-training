@@ -11,25 +11,25 @@ export default function App() {
   }, [etat]);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
-      <header className="bg-white shadow-sm border-b border-gray-200">
-        <div className="max-w-5xl mx-auto px-4 py-4">
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Functional Training</h1>
-          <p className="text-sm text-gray-600 mt-1">
-            Séances guidées au tempo lent, pour les tendons et le jiu-jitsu
-          </p>
-        </div>
+    // Le fond vient des jetons de thème : sombre par défaut, clair si le
+    // système le demande. Aucun dégradé forcé ici.
+    <div className="min-h-screen" style={{ color: 'var(--texte)' }}>
+      {/* En-tête compact : une ligne, pour laisser la place à la séance. */}
+      <header
+        className="mx-auto flex max-w-3xl items-baseline justify-between gap-3 px-4 pb-2"
+        style={{ paddingTop: 'calc(0.75rem + env(safe-area-inset-top))' }}
+      >
+        <h1 className="shrink-0 whitespace-nowrap text-base font-bold" style={{ color: 'var(--texte)' }}>
+          Functional Training
+        </h1>
+        <p className="truncate text-xs" style={{ color: 'var(--texte-discret)' }}>
+          Tempo lent
+        </p>
       </header>
 
-      <main className="max-w-5xl mx-auto px-4 py-6">
+      <main className="mx-auto max-w-3xl px-4 pb-4">
         <Entrainement etat={etat} onChange={(miseAJour) => setEtat((prec) => miseAJour(prec))} />
       </main>
-
-      <footer className="mt-12 bg-white border-t border-gray-200">
-        <div className="max-w-5xl mx-auto px-4 py-4 text-center text-sm text-gray-600">
-          Sauvegarde automatique sur cet appareil
-        </div>
-      </footer>
     </div>
   );
 }

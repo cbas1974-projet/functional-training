@@ -1,9 +1,21 @@
 // Mode séance guidée : l'application déroule les étapes de la séance, dicte
-// le tempo des séries (l'utilisateur suit l'écran et les bips), gère la
+// le tempo des séries (l'utilisateur suit la bille et les bips), gère la
 // pause, la reprise après rechargement et le temps passé sur chaque exercice.
+//
+// Habillage : uniquement les jetons de couleur de `index.css` (mode sombre
+// par défaut, mode clair suivant le système) et la classe `.chiffres` sur
+// tout ce qui se compte. Chaque phase a sa couleur d'ambiance, reconnaissable
+// d'un coup d'œil à bout de bras.
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import type { ChangeEvent, ReactNode } from 'react';
-import type { Exercice, ProgressionSeance, Seance, SeanceRealisee, Tempo } from '../types';
+import type { ChangeEvent, CSSProperties, ReactNode } from 'react';
+import type {
+  Exercice,
+  GuideVisuel,
+  ProgressionSeance,
+  Seance,
+  SeanceRealisee,
+  Tempo,
+} from '../types';
 import { ECHAUFFEMENT, RETOUR_CALME, cheminImage } from '../data/exercices';
 import type { MouvementLibre } from '../data/exercices';
 import { bellSound } from '../utils/sounds';
@@ -19,9 +31,12 @@ import {
   indexReprise,
   premierePhase,
 } from '../utils/etapesSeance';
-import type { Etape, EtatMetronome, Suivant } from '../utils/etapesSeance';
+import type { Etape, EtatMetronome, PhaseTempo, Suivant } from '../utils/etapesSeance';
+import { secondesParRep } from '../utils/generateurSeance';
 import { ajouterTemps, useMoteurEtapes } from '../hooks/useMoteurEtapes';
 import { useVerrouEcran } from '../hooks/useVerrouEcran';
+import PaceurTempo from './PaceurTempo';
+import type { LectureTempo } from './PaceurTempo';
 
 export interface SeanceGuideeProps {
   /** Séance à dérouler. */
@@ -48,15 +63,114 @@ const PROLONGATION_REPOS_SEC = 15;
 const TOLERANCE_FIN_MS = 1000;
 /** Les dernières secondes d'un compte à rebours passent en rouge. */
 const SECONDES_ALERTE = 3;
+/** Hauteur du rail de la bille : la série entière tient encore sur un écran
+ *  de 390 × 780 avec la vignette, le poids et la barre du bas. */
+const HAUTEUR_BILLE_PX = 210;
 
-const BOUTON_BASE = 'min-h-14 rounded-lg font-semibold transition-colors touch-manipulation disabled:opacity-40';
-const BOUTON = `${BOUTON_BASE} px-4 text-lg`;
-const BOUTON_VERT = `${BOUTON} bg-green-600 hover:bg-green-700 text-white`;
-const BOUTON_JAUNE = `${BOUTON} bg-yellow-600 hover:bg-yellow-700 text-white`;
-const BOUTON_BLEU = `${BOUTON} bg-blue-600 hover:bg-blue-700 text-white`;
-const BOUTON_CLAIR = `${BOUTON} bg-gray-200 hover:bg-gray-300 text-gray-800`;
-/** Précédent / Suivant : plus étroits, texte plus petit pour tenir sur 390 px. */
-const BOUTON_NAV = `${BOUTON_BASE} px-2 text-base bg-gray-600 hover:bg-gray-700 text-white`;
+// ------------------------------------------------------------- Habillage
+
+/** Titres et chiffres : la police Archivo, plus large de loin. */
+const ARCHIVO: CSSProperties = { fontFamily: "'Archivo', sans-serif" };
+
+/** Le texte posé sur une couleur de signal reprend le fond de l'écran, le
+ *  vis-à-vis le plus contrasté dans les deux thèmes. Le jaune de la pause est
+ *  la seule exception : en thème clair il est trop pâle pour le fond crème,
+ *  il prend donc l'encre de l'accent (blanche en clair, sombre en sombre). */
+type VarianteBouton = 'accent' | 'montee' | 'pause' | 'neutre' | 'fantome';
+
+const STYLES_BOUTON: Record<VarianteBouton, CSSProperties> = {
+  accent: { background: 'var(--accent)', color: 'var(--accent-texte)' },
+  montee: { background: 'var(--montee)', color: 'var(--fond)' },
+  pause: { background: 'var(--pause)', color: 'var(--accent-texte)' },
+  neutre: { background: 'var(--surface-haute)', color: 'var(--texte)' },
+  fantome: { background: 'transparent', color: 'var(--texte-discret)' },
+};
+
+const BOUTON_COMMUN =
+  'font-semibold touch-manipulation transition-opacity hover:opacity-90 active:opacity-80 disabled:opacity-40';
+
+/** Chaque taille porte son unique classe de hauteur, de padding et de corps :
+ *  rien à écraser depuis l'appelant, qui ne donne que la mise en page.
+ *  `petit` est la cible tactile minimale (44 px), les autres sont les
+ *  commandes de séance (56 px), que le pouce trouve sans regarder. */
+type TailleBouton = 'petit' | 'etroit' | 'grand' | 'vedette';
+
+const CLASSES_TAILLE: Record<TailleBouton, string> = {
+  petit: 'min-h-11 rounded-xl px-4 text-sm',
+  etroit: 'min-h-14 rounded-2xl px-2 text-base',
+  grand: 'min-h-14 rounded-2xl px-4 text-lg',
+  vedette: 'min-h-14 rounded-2xl px-4 text-xl',
+};
+
+interface BoutonProps {
+  variante: VarianteBouton;
+  onClick: () => void;
+  children: ReactNode;
+  taille?: TailleBouton;
+  /** Uniquement de la mise en page (largeur, flex, soulignement). */
+  className?: string;
+  disabled?: boolean;
+}
+
+function Bouton({ variante, onClick, children, taille = 'grand', className = '', disabled }: BoutonProps) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      className={`${BOUTON_COMMUN} ${CLASSES_TAILLE[taille]} ${className}`}
+      style={STYLES_BOUTON[variante]}
+    >
+      {children}
+    </button>
+  );
+}
+
+interface VignetteProps {
+  exerciceId: string;
+  alt: string;
+  /** Largeur, arrondi et marge : la plaque blanche, elle, est imposée. */
+  className?: string;
+}
+
+/** Vignette d'exercice. Les dessins sont noirs sur fond blanc : sur le thème
+ *  sombre il leur faut toujours une plaque blanche, jamais le fond de l'écran. */
+function Vignette({ exerciceId, alt, className = '' }: VignetteProps) {
+  return (
+    <img
+      src={cheminImage(exerciceId)}
+      alt={alt}
+      className={`object-contain ${className}`}
+      style={{ background: '#ffffff', aspectRatio: '3 / 2' }}
+    />
+  );
+}
+
+/** Couleur de signal et couleur d'ambiance d'une étape. Le fond de l'écran
+ *  change avec la phase : on voit d'un coup d'œil si on travaille ou si on
+ *  récupère. */
+interface Ambiance {
+  couleur: string;
+  fond: string;
+}
+
+function ambianceEtape(etape: Etape): Ambiance {
+  switch (etape.type) {
+    case 'serie':
+    case 'station':
+      return { couleur: 'var(--montee)', fond: 'var(--montee-fond)' };
+    case 'repos':
+    case 'reposTour':
+      return { couleur: 'var(--descente)', fond: 'var(--descente-fond)' };
+    case 'retourCalme':
+      return { couleur: 'var(--descente)', fond: 'var(--fond)' };
+    case 'fin':
+      return { couleur: 'var(--montee)', fond: 'var(--fond)' };
+    case 'echauffement':
+    case 'pret':
+      return { couleur: 'var(--accent)', fond: 'var(--fond)' };
+  }
+}
 
 // ------------------------------------------------------------- Formatage
 
@@ -166,8 +280,9 @@ function decrireEtape(etape: Etape): string {
   }
 }
 
+/** Les dernières secondes d'un décompte passent en rouge. */
 function couleurCompte(resteSec: number, normale: string): string {
-  return resteSec <= SECONDES_ALERTE ? 'text-red-600' : normale;
+  return resteSec <= SECONDES_ALERTE ? 'var(--alerte)' : normale;
 }
 
 // ------------------------------------------------------------- Composant
@@ -188,6 +303,7 @@ export default function SeanceGuidee({
   const [demarreeLe, setDemarreeLe] = useState<string | null>(null);
 
   const etapes = useMemo(() => construireEtapes(seanceActive), [seanceActive]);
+  const dureeTotale = useMemo(() => dureeTotaleSec(etapes), [etapes]);
   const ordreExercices = useMemo(() => {
     const ids = [
       ...seanceActive.blocs.map((bloc) => bloc.exerciceId),
@@ -196,8 +312,18 @@ export default function SeanceGuidee({
     return ids.filter((id, i) => ids.indexOf(id) === i);
   }, [seanceActive]);
   const tempo = seanceActive.parametres.tempo;
+  // Les séances enregistrées avant l'arrivée du réglage n'ont pas de guide.
+  const guideVisuel: GuideVisuel = seanceActive.parametres.guideVisuel ?? 'les-deux';
 
   const moteur = useMoteurEtapes(etapes.length);
+
+  // À chaque changement d'étape, on remonte en haut : sans cela la page reste
+  // là où l'étape précédente l'avait laissée et le haut de l'écran est rogné.
+  const visite = moteur.etat?.visite;
+  useEffect(() => {
+    if (visite === undefined) return;
+    window.scrollTo({ top: 0, behavior: 'auto' });
+  }, [visite]);
 
   // Bloque le défilement de la page derrière l'écran plein écran.
   useEffect(() => {
@@ -207,7 +333,7 @@ export default function SeanceGuidee({
       document.body.style.overflow = precedent;
     };
   }, []);
-  const { etat, maintenant, allerA } = moteur;
+  const { etat, maintenant, allerA, lireEcouleSec } = moteur;
   const enCours = etat !== null;
   const enPause = etat?.enPause ?? false;
   const index = etat ? Math.min(etat.index, etapes.length - 1) : 0;
@@ -455,6 +581,7 @@ export default function SeanceGuidee({
   }
 
   const exercice = etape.exerciceId ? exerciceDeSeance(etape.exerciceId) : null;
+  const ambiance = ambianceEtape(etape);
   let corps: ReactNode;
   switch (etape.type) {
     case 'echauffement':
@@ -490,6 +617,8 @@ export default function SeanceGuidee({
           metro={metro}
           resteSec={reste}
           tempo={tempo}
+          guideVisuel={guideVisuel}
+          lireEcouleSec={lireEcouleSec}
           poidsInitial={poids[etape.exerciceId]}
           onPoids={(kg) => changerPoids(etape.exerciceId, kg)}
           onTerminee={suivant}
@@ -509,37 +638,50 @@ export default function SeanceGuidee({
   }
 
   return (
-    <div className="fixed inset-0 z-50 bg-white overflow-y-auto flex flex-col">
+    <div
+      className="fixed inset-0 z-50 flex flex-col overflow-y-auto transition-colors duration-500"
+      style={{ background: ambiance.fond, color: 'var(--texte)' }}
+    >
       <EnTete
         phase={libellePhase(etape)}
         position={libellePosition(etapes, index, ordreExercices)}
+        exercice={etape.exerciceId ? exerciceDeSeance(etape.exerciceId).nomFr : undefined}
+        couleur={ambiance.couleur}
+        avancement={dureeTotale > 0 ? tempsTotalEcoule / dureeTotale : 0}
         ecouleSec={tempsTotalEcoule}
         resteSec={tempsRestant}
         onQuitter={quitter}
       />
       {enPause && (
-        <div className="bg-yellow-100 text-yellow-900 text-center font-semibold py-2">
+        <div
+          className="py-2 text-center font-semibold"
+          style={{ background: 'var(--pause)', color: 'var(--accent-texte)' }}
+        >
           En pause · le chrono est arrêté
         </div>
       )}
-      <main className="flex-1 w-full max-w-md mx-auto px-4 py-4">{corps}</main>
+      <main className="mx-auto w-full max-w-md flex-1 px-4 py-4">{corps}</main>
       <footer
-        className="sticky bottom-0 bg-white border-t border-gray-200 px-4 pt-3"
-        style={{ paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom))' }}
+        className="sticky bottom-0 px-4 pt-3"
+        style={{
+          background: 'var(--surface)',
+          borderTop: '1px solid var(--bordure)',
+          paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom))',
+        }}
       >
-        <div className="flex gap-2 max-w-md mx-auto">
-          <button onClick={precedent} disabled={index === 0} className={`${BOUTON_NAV} flex-1`}>
+        <div className="mx-auto flex max-w-md gap-2">
+          <Bouton variante="neutre" taille="etroit" onClick={precedent} disabled={index === 0} className="flex-1">
             Précédent
-          </button>
+          </Bouton>
           {!estFin && (
-            <button onClick={basculerPause} className={`${BOUTON_JAUNE} flex-[1.5]`}>
+            <Bouton variante="pause" onClick={basculerPause} className="flex-[1.5]">
               {enPause ? 'Reprendre' : 'Pause'}
-            </button>
+            </Bouton>
           )}
           {!estFin && (
-            <button onClick={suivant} className={`${BOUTON_NAV} flex-1`}>
+            <Bouton variante="neutre" taille="etroit" onClick={suivant} className="flex-1">
               Suivant
-            </button>
+            </Bouton>
           )}
         </div>
       </footer>
@@ -574,44 +716,62 @@ function EcranAccueil({
     ? etapesSauvees[Math.max(0, Math.min(progression?.indexEtape ?? 0, etapesSauvees.length - 1))]
     : null;
 
+  const chiffreCle = 'chiffres text-2xl font-bold';
+  const legende = 'text-xs';
+
   return (
-    <div className="fixed inset-0 z-50 bg-white overflow-y-auto flex flex-col">
-      <header className="flex items-center justify-between px-4 py-3 border-b border-gray-200">
-        <h2 className="text-lg font-bold text-gray-900">Séance guidée</h2>
-        <button
-          onClick={onQuitter}
-          className="min-h-14 px-4 rounded-lg bg-gray-200 hover:bg-gray-300 text-gray-800 text-sm font-medium touch-manipulation"
-        >
+    <div
+      className="fixed inset-0 z-50 flex flex-col overflow-y-auto"
+      style={{ background: 'var(--fond)', color: 'var(--texte)' }}
+    >
+      <header
+        className="flex items-center justify-between px-4 pb-3"
+        style={{
+          borderBottom: '1px solid var(--bordure)',
+          background: 'var(--surface)',
+          paddingTop: 'max(0.75rem, env(safe-area-inset-top))',
+        }}
+      >
+        <h2 className="text-lg font-bold">Séance guidée</h2>
+        <Bouton variante="neutre" taille="petit" onClick={onQuitter} className="shrink-0">
           Quitter
-        </button>
+        </Bouton>
       </header>
 
-      <main className="flex-1 w-full max-w-md mx-auto px-4 py-6 space-y-6">
-        <div className="bg-white rounded-lg shadow p-4 grid grid-cols-3 gap-2 text-center">
+      <main className="mx-auto w-full max-w-md flex-1 space-y-6 px-4 py-6">
+        <div className="grid grid-cols-3 gap-2 rounded-2xl p-4 text-center" style={{ background: 'var(--surface)' }}>
           <div>
-            <div className="text-2xl font-bold text-gray-900">{formaterDureeCourte(dureeTotaleSec(etapes))}</div>
-            <div className="text-xs text-gray-500">durée estimée</div>
+            <div className={chiffreCle}>{formaterDureeCourte(dureeTotaleSec(etapes))}</div>
+            <div className={legende} style={{ color: 'var(--texte-discret)' }}>durée estimée</div>
           </div>
           <div>
-            <div className="text-2xl font-bold text-gray-900">{ordreExercices.length}</div>
-            <div className="text-xs text-gray-500">{ordreExercices.length > 1 ? 'exercices' : 'exercice'}</div>
+            <div className={chiffreCle}>{ordreExercices.length}</div>
+            <div className={legende} style={{ color: 'var(--texte-discret)' }}>
+              {ordreExercices.length > 1 ? 'exercices' : 'exercice'}
+            </div>
           </div>
           <div>
-            <div className="text-2xl font-bold text-gray-900">
+            <div className={chiffreCle}>
               {tempo.monteeSec} / {tempo.descenteSec}
             </div>
-            <div className="text-xs text-gray-500">tempo (s)</div>
+            <div className={legende} style={{ color: 'var(--texte-discret)' }}>tempo (s)</div>
           </div>
         </div>
 
-        <ul className="bg-white rounded-lg shadow divide-y divide-gray-100">
+        <ul className="overflow-hidden rounded-2xl" style={{ background: 'var(--surface)' }}>
           {ordreExercices.map((id, i) => {
             const exercice = exerciceDeSeance(id);
             return (
-              <li key={id} className="flex items-center gap-3 px-3 py-2">
-                <img src={cheminImage(id)} alt="" className="w-14 rounded bg-gray-50 shrink-0" />
-                <span className="text-gray-800">
-                  <span className="text-gray-400 mr-2">{i + 1}.</span>
+              <li
+                key={id}
+                className={`flex items-center gap-3 px-3 py-2 ${i > 0 ? 'border-t' : ''}`}
+                style={{ borderColor: 'var(--bordure)' }}
+              >
+                <Vignette exerciceId={id} alt="" className="w-14 shrink-0 rounded-lg" />
+                <span>
+                  <span className="chiffres mr-2" style={{ color: 'var(--texte-discret)' }}>
+                    {i + 1}.
+                  </span>
                   {exercice.nomFr}
                 </span>
               </li>
@@ -619,31 +779,34 @@ function EcranAccueil({
           })}
         </ul>
 
-        <p className="text-sm text-gray-700">
-          L’application dicte le tempo : suivez l’écran et les bips, elle compte les répétitions à votre
+        <p className="text-sm" style={{ color: 'var(--texte-discret)' }}>
+          L’application dicte le tempo : suivez la bille et les bips, elle compte les répétitions à votre
           place. Séries lentes, sans rebond, pour protéger tendons et ligaments.
         </p>
 
         {progression && etapeSauvee ? (
           <div className="space-y-3">
-            <div className="bg-yellow-50 border-2 border-yellow-400 rounded-lg p-3 text-sm text-yellow-900">
+            <div
+              className="rounded-2xl p-3 text-sm"
+              style={{ background: 'var(--surface)', border: '2px solid var(--pause)' }}
+            >
               Une séance a été interrompue {decrireEtape(etapeSauvee)}, après{' '}
               {formaterDureeCourte(progression.tempsCumuleSec)} d’effort.
             </div>
-            <button onClick={onReprendre} className={`${BOUTON_VERT} w-full text-xl`}>
+            <Bouton variante="accent" taille="vedette" onClick={onReprendre} className="w-full">
               Reprendre la séance
-            </button>
-            <button onClick={onCommencer} className={`${BOUTON_CLAIR} w-full`}>
+            </Bouton>
+            <Bouton variante="neutre" onClick={onCommencer} className="w-full">
               Recommencer du début
-            </button>
+            </Bouton>
           </div>
         ) : (
-          <button onClick={onCommencer} className={`${BOUTON_VERT} w-full text-xl`}>
+          <Bouton variante="accent" taille="vedette" onClick={onCommencer} className="w-full">
             Commencer
-          </button>
+          </Bouton>
         )}
 
-        <p className="text-xs text-gray-500 text-center">
+        <p className="text-center text-xs" style={{ color: 'var(--texte-discret)' }}>
           Le son et le maintien de l’écran allumé s’activent au premier appui.
         </p>
       </main>
@@ -654,29 +817,66 @@ function EcranAccueil({
 interface EnTeteProps {
   phase: string;
   position: string;
+  /** Nom de l'exercice en cours, pour qu'il reste lisible quand le corps
+   *  de la page défile sous l'en-tête collant. */
+  exercice?: string;
+  /** Couleur de la phase : barre de progression et nom de la phase. */
+  couleur: string;
+  /** Avancement de la séance, de 0 à 1. */
+  avancement: number;
   ecouleSec: number;
   resteSec: number;
   onQuitter: () => void;
 }
 
-function EnTete({ phase, position, ecouleSec, resteSec, onQuitter }: EnTeteProps) {
+function EnTete({
+  phase,
+  position,
+  exercice,
+  couleur,
+  avancement,
+  ecouleSec,
+  resteSec,
+  onQuitter,
+}: EnTeteProps) {
+  const rempli = Math.min(100, Math.max(0, avancement * 100));
   return (
-    <header className="sticky top-0 z-10 bg-white border-b border-gray-200 px-4 py-2">
-      <div className="flex items-center justify-between gap-2 max-w-md mx-auto">
-        <div className="min-w-0">
-          <div className="text-xs uppercase tracking-wide text-gray-500">{phase}</div>
-          <div className="font-semibold text-gray-800 truncate">{position || ' '}</div>
-        </div>
-        <button
-          onClick={onQuitter}
-          className="shrink-0 min-h-14 px-4 rounded-lg bg-gray-200 hover:bg-gray-300 text-gray-800 text-sm font-medium touch-manipulation"
-        >
-          Quitter
-        </button>
+    <header
+      className="sticky top-0 z-10"
+      style={{ background: 'var(--surface)', borderBottom: '1px solid var(--bordure)' }}
+    >
+      <div className="h-1 w-full" style={{ background: 'var(--bordure)' }}>
+        <div
+          className="h-full transition-[width] duration-300"
+          style={{ width: `${rempli.toFixed(1)}%`, background: couleur }}
+        />
       </div>
-      <div className="flex justify-between text-sm text-gray-600 mt-1 tabular-nums max-w-md mx-auto">
-        <span>Écoulé {formaterMmSs(ecouleSec)}</span>
-        <span>Reste ~ {formaterMmSs(resteSec)}</span>
+      <div
+        className="mx-auto max-w-md px-4 pb-2"
+        style={{ paddingTop: 'max(0.5rem, env(safe-area-inset-top))' }}
+      >
+        <div className="flex items-center justify-between gap-3">
+          <div className="min-w-0">
+            <div className="text-xs font-bold uppercase tracking-[0.18em]" style={{ color: couleur }}>
+              {phase}
+            </div>
+            <div className="truncate font-semibold" style={ARCHIVO}>
+              {exercice || position || ' '}
+            </div>
+            {exercice && position && (
+              <div className="truncate text-xs" style={{ color: 'var(--texte-discret)' }}>
+                {position}
+              </div>
+            )}
+          </div>
+          <Bouton variante="neutre" taille="petit" onClick={onQuitter} className="shrink-0">
+            Quitter
+          </Bouton>
+        </div>
+        <div className="chiffres mt-1 flex justify-between text-sm" style={{ color: 'var(--texte-discret)' }}>
+          <span>Écoulé {formaterMmSs(ecouleSec)}</span>
+          <span>Reste ~ {formaterMmSs(resteSec)}</span>
+        </div>
       </div>
     </header>
   );
@@ -695,21 +895,32 @@ function CorpsMouvements({ titre, mouvements, indexMouvement, resteMouvementSec,
   const courant = mouvements[indexMouvement];
   const prochain = mouvements[indexMouvement + 1];
   return (
-    <div className="text-center space-y-4">
-      <div className={`text-8xl font-bold leading-none tabular-nums ${couleurCompte(resteSec, 'text-gray-800')}`}>
+    <div className="space-y-4 text-center">
+      <div
+        className="chiffres text-8xl font-bold leading-none"
+        style={{ color: couleurCompte(resteSec, 'var(--texte)') }}
+      >
         {formaterMmSs(Math.ceil(resteSec))}
       </div>
-      <p className="text-gray-500">{titre}</p>
+      <p style={{ color: 'var(--texte-discret)' }}>{titre}</p>
       {courant && (
-        <div className="bg-white rounded-lg shadow p-4">
-          <div className="text-xs uppercase tracking-wide text-gray-500">
-            Mouvement {indexMouvement + 1} / {mouvements.length} · {Math.ceil(resteMouvementSec)} s
+        <div className="rounded-2xl p-4 text-left" style={{ background: 'var(--surface)' }}>
+          <div
+            className="text-xs font-bold uppercase tracking-[0.18em]"
+            style={{ color: 'var(--texte-discret)' }}
+          >
+            Mouvement {indexMouvement + 1} / {mouvements.length} ·{' '}
+            <span className="chiffres">{Math.ceil(resteMouvementSec)} s</span>
           </div>
-          <div className="text-2xl font-bold text-gray-900 mt-1">{courant.nom}</div>
-          <p className="text-gray-700 mt-2">{courant.consigne}</p>
+          <div className="mt-1 text-2xl font-bold">{courant.nom}</div>
+          <p className="mt-2" style={{ color: 'var(--texte-discret)' }}>{courant.consigne}</p>
         </div>
       )}
-      {prochain && <p className="text-sm text-gray-500">Ensuite : {prochain.nom}</p>}
+      {prochain && (
+        <p className="text-sm" style={{ color: 'var(--texte-discret)' }}>
+          Ensuite : {prochain.nom}
+        </p>
+      )}
     </div>
   );
 }
@@ -732,36 +943,44 @@ function CorpsPret({ etape, exercice, resteSec, onDemarrer, onPasser }: CorpsPre
 
   return (
     <div className="space-y-4">
-      <img
-        src={cheminImage(exercice.id)}
+      <Vignette
+        exerciceId={exercice.id}
         alt={exercice.nomFr}
-        className="w-full max-w-md mx-auto rounded-lg bg-gray-50"
+        className="mx-auto w-full max-w-md rounded-2xl"
       />
       <div className="text-center">
-        <h2 className="text-2xl font-bold text-gray-900">{exercice.nomFr}</h2>
-        <p className="text-gray-600">{sousTitre}</p>
-        <p className="text-sm text-gray-500">
+        <h2 className="text-2xl font-bold">{exercice.nomFr}</h2>
+        <p style={{ color: 'var(--texte-discret)' }}>{sousTitre}</p>
+        <p className="text-sm" style={{ color: 'var(--texte-discret)' }}>
           {exercice.position}
           {exercice.unite === 'reps' && ` · départ par la ${departDescente ? 'descente' : 'montée'}`}
         </p>
       </div>
       <div className="text-center">
-        <div className="text-lg font-semibold text-gray-600">Préparez-vous</div>
-        <div className={`text-8xl font-bold leading-none tabular-nums ${couleurCompte(resteSec, 'text-gray-800')}`}>
+        <div
+          className="text-xs font-bold uppercase tracking-[0.18em]"
+          style={{ color: 'var(--accent)' }}
+        >
+          Préparez-vous
+        </div>
+        <div
+          className="chiffres text-8xl font-bold leading-none"
+          style={{ color: couleurCompte(resteSec, 'var(--texte)') }}
+        >
           {Math.ceil(resteSec)}
         </div>
       </div>
-      <ul className="list-disc pl-5 space-y-1 text-gray-700">
+      <ul className="list-disc space-y-1 pl-5" style={{ color: 'var(--texte-discret)' }}>
         {exercice.pointsAttention.map((point) => (
           <li key={point}>{point}</li>
         ))}
       </ul>
-      <button onClick={onDemarrer} className={`${BOUTON_VERT} w-full`}>
+      <Bouton variante="accent" onClick={onDemarrer} className="w-full">
         Démarrer maintenant
-      </button>
-      <button onClick={onPasser} className="w-full min-h-14 text-gray-500 underline touch-manipulation">
+      </Bouton>
+      <Bouton variante="fantome" onClick={onPasser} className="w-full underline">
         Passer cet exercice
-      </button>
+      </Bouton>
     </div>
   );
 }
@@ -772,6 +991,9 @@ interface CorpsTravailProps {
   metro: EtatMetronome | null;
   resteSec: number;
   tempo: Tempo;
+  guideVisuel: GuideVisuel;
+  /** Horloge de l'étape, lue à chaque image par la bille. */
+  lireEcouleSec: () => number;
   poidsInitial: number | undefined;
   onPoids: (kg: number | null) => void;
   onTerminee: () => void;
@@ -784,6 +1006,8 @@ function CorpsTravail({
   metro,
   resteSec,
   tempo,
+  guideVisuel,
+  lireEcouleSec,
   poidsInitial,
   onPoids,
   onTerminee,
@@ -807,36 +1031,57 @@ function CorpsTravail({
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-3">
-        <img src={cheminImage(exercice.id)} alt="" className="w-28 rounded-lg bg-gray-50 shrink-0" />
+        <Vignette exerciceId={exercice.id} alt="" className="w-28 shrink-0 rounded-xl" />
         <div className="min-w-0">
-          <h2 className="text-xl font-bold text-gray-900 leading-tight">{exercice.nomFr}</h2>
-          <p className="text-sm text-gray-600">{sousTitre}</p>
+          <h2 className="text-xl font-bold leading-tight">{exercice.nomFr}</h2>
+          <p className="text-sm" style={{ color: 'var(--texte-discret)' }}>{sousTitre}</p>
         </div>
       </div>
 
       {metro ? (
-        <Metronome metro={metro} exercice={exercice} tempo={tempo} />
+        <Metronome
+          metro={metro}
+          exercice={exercice}
+          tempo={tempo}
+          guideVisuel={guideVisuel}
+          lireEcouleSec={lireEcouleSec}
+        />
       ) : (
-        <div className="text-center select-none py-2">
-          <div className="text-lg font-semibold text-gray-600">Maintenez l’effort</div>
-          <div className={`text-9xl font-bold leading-none tabular-nums ${couleurCompte(resteSec, 'text-blue-600')}`}>
+        // Exercice au temps : pas de répétition à rythmer, donc pas de bille,
+        // seulement le décompte du maintien.
+        <div className="select-none py-2 text-center">
+          <div
+            className="text-xs font-bold uppercase tracking-[0.18em]"
+            style={{ color: 'var(--texte-discret)' }}
+          >
+            Maintenez l’effort
+          </div>
+          <div
+            className="chiffres text-9xl font-bold leading-none"
+            style={{ color: couleurCompte(resteSec, 'var(--montee)') }}
+          >
             {Math.ceil(resteSec)}
           </div>
-          <div className="text-sm text-gray-500 mt-3">secondes restantes</div>
+          <div className="mt-3 text-sm" style={{ color: 'var(--texte-discret)' }}>
+            secondes restantes
+          </div>
         </div>
       )}
 
-      <details className="bg-gray-50 rounded-lg px-4">
-        <summary className="py-3 font-medium text-gray-800 cursor-pointer">Points d’attention</summary>
-        <ul className="list-disc pl-5 pb-3 space-y-1 text-gray-700">
+      <details className="rounded-2xl px-4" style={{ background: 'var(--surface)' }}>
+        <summary className="cursor-pointer py-3 font-medium">Points d’attention</summary>
+        <ul className="list-disc space-y-1 pb-3 pl-5" style={{ color: 'var(--texte-discret)' }}>
           {exercice.pointsAttention.map((point) => (
             <li key={point}>{point}</li>
           ))}
         </ul>
       </details>
 
-      <label className="flex items-center justify-between gap-3 bg-white rounded-lg shadow px-4 py-3">
-        <span className="font-medium text-gray-800">Poids (kg)</span>
+      <label
+        className="flex items-center justify-between gap-3 rounded-2xl px-4 py-3"
+        style={{ background: 'var(--surface)' }}
+      >
+        <span className="font-medium">Poids (kg)</span>
         <input
           type="number"
           inputMode="decimal"
@@ -845,17 +1090,22 @@ function CorpsTravail({
           placeholder="—"
           value={texte}
           onChange={saisirPoids}
-          className="w-28 h-14 text-2xl text-center border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none"
+          className="chiffres h-14 w-28 rounded-xl border-2 text-center text-2xl"
+          style={{
+            background: 'var(--surface-haute)',
+            color: 'var(--texte)',
+            borderColor: 'var(--bordure)',
+          }}
         />
       </label>
 
       <div className="grid grid-cols-2 gap-3">
-        <button onClick={onTerminee} className={BOUTON_BLEU}>
+        <Bouton variante="accent" taille="etroit" onClick={onTerminee}>
           {etape.type === 'serie' ? 'Série terminée' : 'Station terminée'}
-        </button>
-        <button onClick={onPasser} className={BOUTON_CLAIR}>
+        </Bouton>
+        <Bouton variante="neutre" taille="etroit" onClick={onPasser}>
           Passer l’exercice
-        </button>
+        </Bouton>
       </div>
     </div>
   );
@@ -865,23 +1115,80 @@ interface MetronomeProps {
   metro: EtatMetronome;
   exercice: Exercice;
   tempo: Tempo;
+  guideVisuel: GuideVisuel;
+  lireEcouleSec: () => number;
 }
 
-function Metronome({ metro, exercice, tempo }: MetronomeProps) {
+/** Le cœur de l'écran pendant une série : le mot de la phase en grand, puis
+ *  la bille, le décompte, ou les deux, selon le guide visuel choisi. */
+function Metronome({ metro, exercice, tempo, guideVisuel, lireEcouleSec }: MetronomeProps) {
   const monte = metro.phase === 'monte';
-  const couleur = monte ? 'text-green-600' : 'text-orange-500';
+  const couleur = monte ? 'var(--montee)' : 'var(--descente)';
+  const avecBille = guideVisuel !== 'chiffre';
+
+  // Les trois valeurs dont dépend le placement de la bille, réduites à des
+  // nombres : `lire` garde ainsi la même identité d'un rendu à l'autre et la
+  // boucle d'animation du paceur n'est pas relancée cinq fois par seconde.
+  const parRep = secondesParRep(tempo);
+  const premiere = premierePhase(exercice);
+  const dureePremiere = premiere === 'monte' ? tempo.monteeSec : tempo.descenteSec;
+
+  /** Position de la bille à l'instant présent. Le calcul est exactement celui
+   *  de `etatMetronome`, appliqué à l'horloge de l'étape lue à chaque image :
+   *  même découpage en cycles, même première phase, même durée de phase. Les
+   *  deux basculent donc au même instant que les bips, qui sortent du même
+   *  calcul ; les bips partent seulement au rendu qui suit (au plus 200 ms),
+   *  puisqu'ils sont déclenchés par l'état React et non par l'animation. */
+  const lire = useCallback((): LectureTempo | null => {
+    if (parRep <= 0) return null;
+    const ecoule = Math.max(0, lireEcouleSec());
+    const dansCycle = ecoule - Math.floor(ecoule / parRep) * parRep;
+    const enPremiere = dansCycle < dureePremiere;
+    const dureePhase = enPremiere ? dureePremiere : parRep - dureePremiere;
+    const ecouleDansPhase = enPremiere ? dansCycle : dansCycle - dureePremiere;
+    const seconde: PhaseTempo = premiere === 'monte' ? 'descend' : 'monte';
+    return {
+      phase: enPremiere ? premiere : seconde,
+      progression: dureePhase > 0 ? ecouleDansPhase / dureePhase : 0,
+    };
+  }, [lireEcouleSec, parRep, premiere, dureePremiere]);
+
   return (
-    <div className="text-center select-none py-2">
-      <div className={`text-4xl font-extrabold tracking-widest ${couleur}`}>{monte ? 'MONTE' : 'DESCENDS'}</div>
-      <div className={`text-9xl font-bold leading-none tabular-nums ${couleur}`}>
-        {Math.max(1, Math.ceil(metro.resteDansPhaseSec))}
+    <div className="select-none py-2 text-center">
+      <div className="text-5xl font-extrabold tracking-[0.12em]" style={{ ...ARCHIVO, color: couleur }}>
+        {monte ? 'MONTE' : 'DESCENDS'}
       </div>
-      <div className="text-2xl font-semibold text-gray-800 mt-2">
+
+      {avecBille ? (
+        <div className="mt-3">
+          <PaceurTempo
+            lire={lire}
+            resteSec={metro.resteDansPhaseSec}
+            phase={metro.phase}
+            avecChiffre={guideVisuel === 'les-deux'}
+            hauteurPx={HAUTEUR_BILLE_PX}
+          />
+        </div>
+      ) : (
+        <div className="chiffres text-9xl font-bold leading-none" style={{ color: couleur }}>
+          {Math.max(1, Math.ceil(metro.resteDansPhaseSec))}
+        </div>
+      )}
+
+      <div className="chiffres mt-2 text-2xl font-semibold">
         Rép {metro.rep} / {metro.totalReps}
       </div>
-      {metro.cote && <div className="text-xl font-medium text-blue-700">Côté {metro.cote}</div>}
-      {exercice.cotes === 'alterne' && <div className="text-lg text-gray-600">en alternant</div>}
-      <div className="text-sm text-gray-500 mt-3">
+      {metro.cote && (
+        <div className="text-xl font-medium" style={{ color: 'var(--accent)' }}>
+          Côté {metro.cote}
+        </div>
+      )}
+      {exercice.cotes === 'alterne' && (
+        <div className="text-lg" style={{ color: 'var(--texte-discret)' }}>
+          en alternant
+        </div>
+      )}
+      <div className="chiffres mt-3 text-sm" style={{ color: 'var(--texte-discret)' }}>
         Tempo {tempo.monteeSec} s / {tempo.descenteSec} s · sans rebond
       </div>
     </div>
@@ -899,36 +1206,41 @@ function CorpsRepos({ etape, resteSec, onProlonger, onPasser }: CorpsReposProps)
   const { suivant } = etape;
   const exerciceSuivant = suivant.type === 'retourCalme' ? null : exerciceDeSeance(suivant.exerciceId);
   return (
-    <div className="text-center space-y-4">
-      <div className="text-lg font-semibold text-gray-600">
+    <div className="space-y-4 text-center">
+      <div className="text-xs font-bold uppercase tracking-[0.18em]" style={{ color: 'var(--descente)' }}>
         {etape.type === 'reposTour' ? `Fin du tour ${etape.tour} / ${etape.tours} · repos` : 'Repos'}
       </div>
-      <div className={`text-8xl font-bold leading-none tabular-nums ${couleurCompte(resteSec, 'text-blue-600')}`}>
+      <div
+        className="chiffres text-8xl font-bold leading-none"
+        style={{ color: couleurCompte(resteSec, 'var(--descente)') }}
+      >
         {formaterMmSs(Math.ceil(resteSec))}
       </div>
-      <div className="bg-white rounded-lg shadow p-4">
-        <div className="text-xs uppercase tracking-wide text-gray-500 mb-2">Prochain</div>
+      <div className="rounded-2xl p-4" style={{ background: 'var(--surface)' }}>
+        <div className="mb-2 text-xs font-bold uppercase tracking-[0.18em]" style={{ color: 'var(--texte-discret)' }}>
+          Prochain
+        </div>
         {exerciceSuivant ? (
           <>
-            <img
-              src={cheminImage(exerciceSuivant.id)}
+            <Vignette
+              exerciceId={exerciceSuivant.id}
               alt={exerciceSuivant.nomFr}
-              className="w-full max-w-xs mx-auto rounded-lg bg-gray-50"
+              className="mx-auto w-full max-w-xs rounded-xl"
             />
-            <div className="text-xl font-bold text-gray-900 mt-2">{exerciceSuivant.nomFr}</div>
-            <div className="text-gray-600">{libelleSuivant(suivant)}</div>
+            <div className="mt-2 text-xl font-bold">{exerciceSuivant.nomFr}</div>
+            <div style={{ color: 'var(--texte-discret)' }}>{libelleSuivant(suivant)}</div>
           </>
         ) : (
-          <div className="text-xl font-bold text-gray-900">Retour au calme</div>
+          <div className="text-xl font-bold">Retour au calme</div>
         )}
       </div>
       <div className="grid grid-cols-2 gap-3">
-        <button onClick={onProlonger} className={BOUTON_CLAIR}>
+        <Bouton variante="neutre" onClick={onProlonger}>
           +{PROLONGATION_REPOS_SEC} s
-        </button>
-        <button onClick={onPasser} className={BOUTON_BLEU}>
+        </Bouton>
+        <Bouton variante="accent" onClick={onPasser}>
           Passer
-        </button>
+        </Bouton>
       </div>
     </div>
   );
@@ -943,59 +1255,73 @@ interface CorpsFinProps {
 function CorpsFin({ realisee, onEnregistrer, onAbandonner }: CorpsFinProps) {
   const seriesFaites = realisee.exercices.reduce((total, e) => total + e.seriesFaites, 0);
   const seriesPrevues = realisee.exercices.reduce((total, e) => total + e.seriesPrevues, 0);
+  const cellule = 'px-2 py-2 text-center chiffres';
   return (
     <div className="space-y-4">
       <div className="text-center">
-        <h2 className="text-2xl font-bold text-gray-900">Bravo, séance terminée</h2>
-        <p className="text-gray-600 mt-1">
-          Durée réelle <span className="font-semibold tabular-nums">{formaterMmSs(realisee.dureeReelleSec)}</span>{' '}
-          · prévue <span className="tabular-nums">{formaterMmSs(realisee.dureePrevueSec)}</span>
+        <h2 className="text-2xl font-bold">Bravo, séance terminée</h2>
+        <p className="mt-1" style={{ color: 'var(--texte-discret)' }}>
+          Durée réelle <span className="chiffres font-semibold">{formaterMmSs(realisee.dureeReelleSec)}</span> ·
+          prévue <span className="chiffres">{formaterMmSs(realisee.dureePrevueSec)}</span>
         </p>
-        <p className="text-gray-600">
+        <p className="chiffres" style={{ color: 'var(--texte-discret)' }}>
           {seriesFaites} / {seriesPrevues} séries faites
         </p>
       </div>
 
-      <table className="w-full text-sm bg-white rounded-lg shadow overflow-hidden">
-        <thead>
-          <tr className="bg-gray-50 text-left text-xs uppercase tracking-wide text-gray-500">
-            <th className="px-3 py-2 font-medium" colSpan={2}>
-              Exercice
-            </th>
-            <th className="px-2 py-2 font-medium text-center">Séries</th>
-            <th className="px-2 py-2 font-medium text-center">Temps</th>
-            <th className="px-2 py-2 font-medium text-center">Poids</th>
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-gray-100">
-          {realisee.exercices.map((realise) => {
-            const exercice = exerciceDeSeance(realise.exerciceId);
-            const complet = realise.seriesFaites >= realise.seriesPrevues;
-            return (
-              <tr key={realise.exerciceId}>
-                <td className="pl-3 py-2 w-14">
-                  <img src={cheminImage(exercice.id)} alt="" className="w-12 rounded bg-gray-50" />
-                </td>
-                <td className="px-2 py-2 font-medium text-gray-900">{exercice.nomFr}</td>
-                <td className={`px-2 py-2 text-center tabular-nums ${complet ? 'text-green-600 font-semibold' : 'text-gray-600'}`}>
-                  {realise.seriesFaites} / {realise.seriesPrevues}
-                </td>
-                <td className="px-2 py-2 text-center tabular-nums text-gray-600">{formaterMmSs(realise.dureeSec)}</td>
-                <td className="px-2 py-2 text-center tabular-nums text-gray-600">
-                  {realise.poidsKg !== undefined ? `${realise.poidsKg} kg` : '—'}
-                </td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
+      <div className="overflow-hidden rounded-2xl" style={{ background: 'var(--surface)' }}>
+        <table className="w-full text-sm" style={{ borderCollapse: 'separate', borderSpacing: 0 }}>
+          <thead>
+            <tr
+              className="text-left text-xs font-bold uppercase tracking-[0.12em]"
+              style={{ background: 'var(--surface-haute)', color: 'var(--texte-discret)' }}
+            >
+              <th className="px-3 py-2 font-bold" colSpan={2}>
+                Exercice
+              </th>
+              <th className="px-2 py-2 text-center font-bold">Séries</th>
+              <th className="px-2 py-2 text-center font-bold">Temps</th>
+              <th className="px-2 py-2 text-center font-bold">Poids</th>
+            </tr>
+          </thead>
+          <tbody>
+            {realisee.exercices.map((realise, i) => {
+              const exercice = exerciceDeSeance(realise.exerciceId);
+              const complet = realise.seriesFaites >= realise.seriesPrevues;
+              const bordure: CSSProperties = i > 0 ? { borderTop: '1px solid var(--bordure)' } : {};
+              return (
+                <tr key={realise.exerciceId}>
+                  <td className="w-14 py-2 pl-3" style={bordure}>
+                    <Vignette exerciceId={exercice.id} alt="" className="w-12 rounded-lg" />
+                  </td>
+                  <td className="px-2 py-2 font-medium" style={bordure}>
+                    {exercice.nomFr}
+                  </td>
+                  <td
+                    className={`${cellule} ${complet ? 'font-semibold' : ''}`}
+                    style={{ ...bordure, color: complet ? 'var(--montee)' : 'var(--texte-discret)' }}
+                  >
+                    {realise.seriesFaites} / {realise.seriesPrevues}
+                  </td>
+                  <td className={cellule} style={{ ...bordure, color: 'var(--texte-discret)' }}>
+                    {formaterMmSs(realise.dureeSec)}
+                  </td>
+                  <td className={cellule} style={{ ...bordure, color: 'var(--texte-discret)' }}>
+                    {realise.poidsKg !== undefined ? `${realise.poidsKg} kg` : '—'}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
 
-      <button onClick={onEnregistrer} className={`${BOUTON_VERT} w-full`}>
+      <Bouton variante="montee" onClick={onEnregistrer} className="w-full">
         Enregistrer la séance
-      </button>
-      <button onClick={onAbandonner} className={`${BOUTON_CLAIR} w-full`}>
+      </Bouton>
+      <Bouton variante="neutre" onClick={onAbandonner} className="w-full">
         Ne pas enregistrer
-      </button>
+      </Bouton>
     </div>
   );
 }

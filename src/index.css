@@ -1,14 +1,93 @@
 @import "tailwindcss";
 
+/* ------------------------------------------------------------------ Thèmes
+   Le mode sombre est le mode par défaut : une séance se fait souvent le soir
+   ou dans un gym peu éclairé. Le mode clair suit le réglage du système. */
 @layer base {
-  body {
-    margin: 0;
-    min-height: 100vh;
-    font-family: system-ui, -apple-system, sans-serif;
+  :root {
+    color-scheme: dark light;
+
+    --fond: #14171a;
+    --surface: #1e2227;
+    --surface-haute: #2a3038;
+    --bordure: #2e353d;
+    --texte: #f3f0eb;
+    --texte-discret: #98a2ac;
+
+    /* Accent : argile. Les actions principales. */
+    --accent: #dc6b3c;
+    --accent-texte: #14171a;
+
+    /* Couleurs de signal du tempo et des états. */
+    --montee: #56c878;
+    --montee-fond: #0c1410;
+    --descente: #3f8fcc;
+    --descente-fond: #0b1016;
+    --pause: #e8b93c;
+    --alerte: #e35b5b;
   }
 
-  /* Tailwind v4 ne met plus le curseur "main" sur les boutons par défaut */
+  @media (prefers-color-scheme: light) {
+    :root:not([data-theme='dark']) {
+      --fond: #f5f2ed;
+      --surface: #ffffff;
+      --surface-haute: #ede8e0;
+      --bordure: #ddd7ce;
+      --texte: #171a1d;
+      --texte-discret: #5c6670;
+
+      --accent: #b4501f;
+      --accent-texte: #ffffff;
+
+      --montee: #1f7a44;
+      --montee-fond: #f2f7f3;
+      --descente: #1d5f92;
+      --descente-fond: #f1f5f9;
+      --pause: #9a6f0f;
+      --alerte: #b42318;
+    }
+  }
+
+  html,
+  body {
+    height: 100%;
+  }
+
+  body {
+    margin: 0;
+    background: var(--fond);
+    color: var(--texte);
+    font-family: 'Public Sans', system-ui, -apple-system, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    font-family: 'Archivo', system-ui, sans-serif;
+    letter-spacing: -0.01em;
+  }
+
+  /* Tailwind v4 ne met plus le curseur « main » sur les boutons. */
   button:not(:disabled) {
     cursor: pointer;
+  }
+
+  /* Les compteurs et les chiffres ne doivent pas tressauter. */
+  .chiffres {
+    font-variant-numeric: tabular-nums;
+    font-family: 'Archivo', system-ui, sans-serif;
+  }
+
+  /* Respecte le réglage système. La bille du tempo est déplacée par script,
+     pas par une transition : PaceurTempo la fait alors avancer par crans. */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      transition-duration: 0.01ms !important;
+    }
   }
 }
