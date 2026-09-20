@@ -33,6 +33,7 @@ import {
 } from '../utils/etapesSeance';
 import type { Etape, EtatMetronome, PhaseTempo, Suivant } from '../utils/etapesSeance';
 import { secondesParRep } from '../utils/generateurSeance';
+import { libellePoidsParSerie } from '../utils/statistiques';
 import { ajouterTemps, useMoteurEtapes } from '../hooks/useMoteurEtapes';
 import { useVerrouEcran } from '../hooks/useVerrouEcran';
 import PaceurTempo from './PaceurTempo';
@@ -63,9 +64,10 @@ const PROLONGATION_REPOS_SEC = 15;
 const TOLERANCE_FIN_MS = 1000;
 /** Les dernières secondes d'un compte à rebours passent en rouge. */
 const SECONDES_ALERTE = 3;
-/** Hauteur du rail de la bille : la série entière tient encore sur un écran
- *  de 390 × 780 avec la vignette, le poids et la barre du bas. */
-const HAUTEUR_BILLE_PX = 210;
+/** Hauteur du rail de la bille. Mesurée pour que « Série terminée » reste
+ *  au-dessus de la barre du bas sur un écran de 390 × 844 : la vignette, le
+ *  compteur, les points d'attention et la saisie du poids passent avant. */
+const HAUTEUR_BILLE_PX = 176;
 
 // ------------------------------------------------------------- Habillage
 
@@ -299,7 +301,8 @@ export default function SeanceGuidee({
   const [progressionInitiale] = useState(progression);
   // Séance réellement déroulée : la prop, ou la séance sauvegardée si reprise.
   const [seanceActive, setSeanceActive] = useState<Seance>(seance);
-  const [poids, setPoids] = useState<Record<string, number>>({});
+  // Charges saisies : une valeur par série, index 0 = première série.
+  const [poids, setPoids] = useState<Record<string, number[]>>({});
   const [demarreeLe, setDemarreeLe] = useState<string | null>(null);
 
   const etapes = useMemo(() => construireEtapes(seanceActive), [seanceActive]);
@@ -317,12 +320,14 @@ export default function SeanceGuidee({
 
   const moteur = useMoteurEtapes(etapes.length);
 
-  // À chaque changement d'étape, on remonte en haut : sans cela la page reste
-  // là où l'étape précédente l'avait laissée et le haut de l'écran est rogné.
+  // À chaque changement d'étape, on remonte en haut. C'est le conteneur plein
+  // écran qui défile, pas la fenêtre (le défilement du corps est bloqué) :
+  // sans cette remise à zéro, le nom de l'exercice reste sous l'en-tête.
+  const conteneurRef = useRef<HTMLDivElement>(null);
   const visite = moteur.etat?.visite;
   useEffect(() => {
     if (visite === undefined) return;
-    window.scrollTo({ top: 0, behavior: 'auto' });
+    conteneurRef.current?.scrollTo({ top: 0, behavior: 'auto' });
   }, [visite]);
 
   // Bloque le défilement de la page derrière l'écran plein écran.
@@ -441,7 +446,7 @@ export default function SeanceGuidee({
   }, [onProgression]);
   /** Vrai dès que la séance est enregistrée ou abandonnée : plus de sauvegarde. */
   const clotureeRef = useRef(false);
-  const sauvegardeRef = useRef<{ visite: number; ms: number; poids: Record<string, number> | null }>({
+  const sauvegardeRef = useRef<{ visite: number; ms: number; poids: Record<string, number[]> | null }>({
     visite: 0,
     ms: 0,
     poids: null,
@@ -472,7 +477,7 @@ export default function SeanceGuidee({
     source: Seance,
     indexDepart: number,
     temps: number[],
-    poidsInitial: Record<string, number>,
+    poidsInitial: Record<string, number[]>,
     debut: string,
   ) => {
     // Geste utilisateur : on en profite pour débloquer l'audio et l'écran.
@@ -511,10 +516,18 @@ export default function SeanceGuidee({
   const passerExercice = () => naviguer(indexApresExercice(etapes, index));
   const prolongerRepos = () => moteur.prolonger(PROLONGATION_REPOS_SEC);
 
-  const changerPoids = (exerciceId: string, kg: number | null) =>
+  /** Enregistre la charge d'une série précise (numérotée à partir de 1). */
+  const changerPoids = (exerciceId: string, serie: number, kg: number | null) =>
     setPoids((precedents) => {
+      const actuelles = precedents[exerciceId] ?? [];
+      const valeur = kg !== null && kg > 0 ? kg : 0;
+      if ((actuelles[serie - 1] ?? 0) === valeur) return precedents;
+      const suivantes = [...actuelles];
+      while (suivantes.length < serie) suivantes.push(0);
+      suivantes[serie - 1] = valeur;
+      while (suivantes.length > 0 && suivantes[suivantes.length - 1] === 0) suivantes.pop();
       const suivants = { ...precedents };
-      if (kg !== null && kg > 0) suivants[exerciceId] = kg;
+      if (suivantes.length > 0) suivants[exerciceId] = suivantes;
       else delete suivants[exerciceId];
       return suivants;
     });
@@ -619,8 +632,8 @@ export default function SeanceGuidee({
           tempo={tempo}
           guideVisuel={guideVisuel}
           lireEcouleSec={lireEcouleSec}
-          poidsInitial={poids[etape.exerciceId]}
-          onPoids={(kg) => changerPoids(etape.exerciceId, kg)}
+          poidsSeries={poids[etape.exerciceId] ?? []}
+          onPoids={(serie, kg) => changerPoids(etape.exerciceId, serie, kg)}
           onTerminee={suivant}
           onPasser={passerExercice}
         />
@@ -639,6 +652,7 @@ export default function SeanceGuidee({
 
   return (
     <div
+      ref={conteneurRef}
       className="fixed inset-0 z-50 flex flex-col overflow-y-auto transition-colors duration-500"
       style={{ background: ambiance.fond, color: 'var(--texte)' }}
     >
@@ -994,8 +1008,9 @@ interface CorpsTravailProps {
   guideVisuel: GuideVisuel;
   /** Horloge de l'étape, lue à chaque image par la bille. */
   lireEcouleSec: () => number;
-  poidsInitial: number | undefined;
-  onPoids: (kg: number | null) => void;
+  /** Charges déjà saisies pour cet exercice, index 0 = première série. */
+  poidsSeries: number[];
+  onPoids: (serie: number, kg: number | null) => void;
   onTerminee: () => void;
   onPasser: () => void;
 }
@@ -1008,20 +1023,39 @@ function CorpsTravail({
   tempo,
   guideVisuel,
   lireEcouleSec,
-  poidsInitial,
+  poidsSeries,
   onPoids,
   onTerminee,
   onPasser,
 }: CorpsTravailProps) {
+  // Numéro de la série en cours : le tour, pour une station de circuit.
+  const serieCourante = etape.type === 'serie' ? etape.serie : etape.tour;
+  const dejaSaisi = poidsSeries[serieCourante - 1] ?? 0;
+  // Sans saisie pour cette série, on reprend la dernière charge connue : au
+  // tempo lent on garde presque toujours la même d'une série à l'autre.
+  const derniereConnue = poidsSeries
+    .slice(0, serieCourante - 1)
+    .reduce((dernier, kg) => (kg > 0 ? kg : dernier), 0);
+  const valeurDepart = dejaSaisi > 0 ? dejaSaisi : derniereConnue;
+
   // Le texte saisi est gardé tel quel (« 12, » ne doit pas être réécrit en
   // « 12 » à chaque frappe) ; seule la valeur numérique remonte au parent.
-  const [texte, setTexte] = useState(poidsInitial !== undefined ? String(poidsInitial) : '');
+  const [texte, setTexte] = useState(valeurDepart > 0 ? String(valeurDepart) : '');
   const saisirPoids = (evenement: ChangeEvent<HTMLInputElement>) => {
     const valeur = evenement.target.value;
     setTexte(valeur);
     const kg = Number.parseFloat(valeur.replace(',', '.'));
-    onPoids(Number.isFinite(kg) ? kg : null);
+    onPoids(serieCourante, Number.isFinite(kg) ? kg : null);
   };
+
+  // La charge reprise de la série précédente est enregistrée d'office : sans
+  // cela, une série faite avec la même charge ressortirait vide du bilan.
+  const reprise = dejaSaisi === 0 && derniereConnue > 0 ? derniereConnue : 0;
+  useEffect(() => {
+    if (reprise > 0) onPoids(serieCourante, reprise);
+    // Au montage uniquement : le composant est remonté à chaque étape.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const sousTitre =
     etape.type === 'serie'
@@ -1081,7 +1115,18 @@ function CorpsTravail({
         className="flex items-center justify-between gap-3 rounded-2xl px-4 py-3"
         style={{ background: 'var(--surface)' }}
       >
-        <span className="font-medium">Poids (kg)</span>
+        <span className="min-w-0">
+          <span className="block font-medium">
+            Poids série <span className="chiffres">{serieCourante}</span> (kg)
+          </span>
+          {poidsSeries.some((kg) => kg > 0) && (
+            <span className="chiffres block text-xs" style={{ color: 'var(--texte-discret)' }}>
+              {poidsSeries
+                .map((kg, i) => `S${i + 1} ${kg > 0 ? kg : '—'}`)
+                .join(' · ')}
+            </span>
+          )}
+        </span>
         <input
           type="number"
           inputMode="decimal"
@@ -1307,7 +1352,7 @@ function CorpsFin({ realisee, onEnregistrer, onAbandonner }: CorpsFinProps) {
                     {formaterMmSs(realise.dureeSec)}
                   </td>
                   <td className={cellule} style={{ ...bordure, color: 'var(--texte-discret)' }}>
-                    {realise.poidsKg !== undefined ? `${realise.poidsKg} kg` : '—'}
+                    {libellePoidsParSerie(realise) || '—'}
                   </td>
                 </tr>
               );

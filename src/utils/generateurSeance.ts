@@ -141,6 +141,25 @@ function cycleZones(parametres: ParametresSeance): Zone[] {
 /** Repos entre deux tours de circuit. */
 const REPOS_ENTRE_TOURS_SEC = 60;
 
+/** Durée de la préparation (« Préparez-vous ») avant chaque série et avant
+ *  le circuit. Elle est comptée dans le budget : sur trois séries de trois
+ *  exercices, elle pèse déjà 45 s. */
+export const DUREE_PRET_SEC = 5;
+
+/** Repos entre les deux exercices d'un superset : le temps de changer
+ *  d'haltères, pas le temps de récupérer. */
+export const TRANSITION_SUPERSET_SEC = 20;
+
+/** Répétitions envisageables quand celles demandées ne tiennent pas dans la
+ *  durée. On ne descend jamais sous 6 et jamais au-dessus de ce qui a été
+ *  demandé : alourdir la série ne ferait qu'aggraver le manque de place. */
+const REPS_RELACHEES = [6, 8, 9, 10, 12];
+
+/** En dessous de ce nombre d'exercices, la séance ne travaille plus qu'un
+ *  seul schéma de mouvement : c'est le seul cas où l'on se permet de réduire
+ *  les répétitions demandées. Au-delà, le réglage de l'utilisateur prime. */
+const EXERCICES_MINIMUM = 2;
+
 /** En dessous de ce budget de travail, le format mixte n'a pas la place
  *  d'accueillir un circuit : il se comporte comme le format séries. */
 const SEUIL_MIXTE_SEC = 600;
@@ -211,6 +230,29 @@ function retourCalmeSec(dureeMinutes: number): number {
   return limiter(arrondiDemiMinute(dureeMinutes * 0.08), 0.5, 4) * 60;
 }
 
+/** Le temps qui reste une fois les exercices agencés ne se perd pas : il part
+ *  dans les étirements. Un exercice de plus ne tient jamais dans ce reliquat
+ *  (au tempo lent, il en faudrait bien davantage), et finir trois minutes
+ *  plus tôt qu'annoncé n'a aucun intérêt. */
+const RETOUR_CALME_PART_MAXI = 0.25;
+const RETOUR_CALME_MAXI_SEC = 6 * 60;
+/** En dessous, le reliquat ne vaut pas la peine d'être réparti. */
+const RELIQUAT_MINIMUM_SEC = 30;
+
+function retourCalmeAllonge(
+  retourCalmeInitialSec: number,
+  totalSec: number,
+  dureeMinutes: number,
+): number {
+  const demande = dureeMinutes * 60;
+  const reliquat = demande - totalSec;
+  if (reliquat < RELIQUAT_MINIMUM_SEC) return retourCalmeInitialSec;
+  const plafond = Math.min(RETOUR_CALME_MAXI_SEC, Math.round(demande * RETOUR_CALME_PART_MAXI));
+  // Arrondi à 15 s près : un chiffre rond se lit mieux à l'écran.
+  const vise = Math.floor((retourCalmeInitialSec + reliquat) / 15) * 15;
+  return Math.max(retourCalmeInitialSec, Math.min(plafond, vise));
+}
+
 /** Secondes par répétition au tempo donné (montée + descente). */
 export function secondesParRep(tempo: Tempo): number {
   return tempo.monteeSec + tempo.descenteSec;
@@ -229,18 +271,92 @@ function repsEffectives(exercice: Exercice, reps: number, reglages: ReglagesNive
   return exercice.unite === 'secondes' ? reglages.tenueSec : reps;
 }
 
-/** Coût d'un bloc : chaque série est suivie de son repos, le dernier repos
- *  servant de transition vers l'exercice suivant. */
-function coutBloc(exercice: Exercice, bloc: BlocSeries, tempo: Tempo): number {
-  return bloc.series * (dureeSerieSec(exercice, bloc.reps, tempo) + bloc.reposSec);
+/** Regroupe les blocs consécutifs qui partagent le même numéro de superset ;
+ *  un bloc sans superset forme un groupe à lui seul. Un groupe se déroule en
+ *  alternance : A1, B1, A2, B2… */
+export function groupesDeBlocs(blocs: BlocSeries[]): BlocSeries[][] {
+  const groupes: BlocSeries[][] = [];
+  for (const bloc of blocs) {
+    const dernier = groupes[groupes.length - 1];
+    if (dernier && bloc.superset !== undefined && dernier[0].superset === bloc.superset) {
+      dernier.push(bloc);
+    } else {
+      groupes.push([bloc]);
+    }
+  }
+  return groupes;
 }
 
-function coutCircuit(circuit: Circuit): number {
-  const parStation = circuit.travailSec + circuit.reposSec;
-  return (
-    circuit.tours * circuit.stations.length * parStation +
-    Math.max(0, circuit.tours - 1) * circuit.reposEntreToursSec
-  );
+/** Nombre de séries d'un groupe. Le générateur donne le même nombre à tous
+ *  les blocs d'un superset ; on lit celui du premier, qui fait foi. */
+function seriesDuGroupe(groupe: BlocSeries[]): number {
+  return groupe[0].series;
+}
+
+/** Répartition du temps d'une suite de blocs, dans l'ordre exact où la séance
+ *  guidée la déroule : préparation avant chaque série, série, puis repos —
+ *  court entre les deux exercices d'un superset, complet sinon. Le tout
+ *  dernier repos n'existe pas quand plus rien ne suit. */
+export interface DetailBlocs {
+  preparationSec: number;
+  travailSec: number;
+  reposSec: number;
+  series: number;
+}
+
+export function detaillerBlocs(
+  blocs: BlocSeries[],
+  tempo: Tempo,
+  suiviDUnCircuit: boolean,
+): DetailBlocs {
+  const detail: DetailBlocs = { preparationSec: 0, travailSec: 0, reposSec: 0, series: 0 };
+  const groupes = groupesDeBlocs(blocs.filter((bloc) => bloc.series > 0));
+  groupes.forEach((groupe, indexGroupe) => {
+    const series = seriesDuGroupe(groupe);
+    for (let serie = 1; serie <= series; serie += 1) {
+      groupe.forEach((bloc, indexBloc) => {
+        const exercice = EXERCICES_PAR_ID[bloc.exerciceId];
+        detail.preparationSec += DUREE_PRET_SEC;
+        detail.series += 1;
+        if (exercice) detail.travailSec += dureeSerieSec(exercice, bloc.reps, tempo);
+        const dernierDuGroupe = indexBloc === groupe.length - 1;
+        const toutDernier =
+          dernierDuGroupe && serie === series && indexGroupe === groupes.length - 1;
+        if (toutDernier && !suiviDUnCircuit) return;
+        detail.reposSec += dernierDuGroupe
+          ? bloc.reposSec
+          : (bloc.transitionSec ?? TRANSITION_SUPERSET_SEC);
+      });
+    }
+  });
+  return detail;
+}
+
+/** Durée exacte de la partie « séries ». */
+function dureeBlocsSec(blocs: BlocSeries[], tempo: Tempo, suiviDUnCircuit: boolean): number {
+  const detail = detaillerBlocs(blocs, tempo, suiviDUnCircuit);
+  return detail.preparationSec + detail.travailSec + detail.reposSec;
+}
+
+/** Répartition du temps d'un circuit : une seule préparation au départ, puis
+ *  les stations, avec un repos entre deux stations et un repos plus long
+ *  entre deux tours. */
+export function detaillerCircuit(circuit: Circuit): DetailBlocs {
+  const stations = circuit.stations.length;
+  const tours = circuit.tours;
+  return {
+    preparationSec: DUREE_PRET_SEC,
+    travailSec: tours * stations * circuit.travailSec,
+    reposSec:
+      tours * Math.max(0, stations - 1) * circuit.reposSec +
+      Math.max(0, tours - 1) * circuit.reposEntreToursSec,
+    series: tours * stations,
+  };
+}
+
+function dureeCircuitSec(circuit: Circuit): number {
+  const detail = detaillerCircuit(circuit);
+  return detail.preparationSec + detail.travailSec + detail.reposSec;
 }
 
 // ------------------------------------------------------------- Sélection
@@ -319,33 +435,57 @@ interface Combinaison {
   cout: number;
 }
 
+/** Comment les exercices s'enchaînent dans la partie « séries ». */
+interface OptionsBlocs {
+  /** Enchaîner les exercices deux par deux (superset). */
+  apparier: boolean;
+  /** Un circuit suit : le dernier repos existe donc bel et bien. */
+  suiviDUnCircuit: boolean;
+}
+
 /** Construit les blocs de séries qui remplissent le mieux le budget. */
 function construireBlocs(
   retenus: Exercice[],
   budgetSec: number,
   reglages: ReglagesNiveau,
   tempo: Tempo,
+  options: OptionsBlocs,
 ): BlocSeries[] {
   if (retenus.length === 0) return [];
 
-  // Durée d'une série, exercice par exercice et pour chaque option de reps.
-  const dureeUneSerie = (exercice: Exercice, reps: number): number =>
-    dureeSerieSec(exercice, repsEffectives(exercice, reps, reglages), tempo);
+  const fabriquer = (nombre: number, series: number, reps: number, repos: number): BlocSeries[] =>
+    retenus.slice(0, nombre).map((exercice, index) => {
+      const bloc: BlocSeries = {
+        exerciceId: exercice.id,
+        series,
+        reps: repsEffectives(exercice, reps, reglages),
+        reposSec: repos,
+      };
+      // Les exercices sont appariés dans l'ordre de sélection, qui alterne
+      // déjà les zones : le superset oppose donc naturellement deux schémas
+      // de mouvement différents. Un exercice orphelin reste classique.
+      if (options.apparier && nombre > 1) {
+        bloc.superset = Math.floor(index / 2);
+        bloc.transitionSec = TRANSITION_SUPERSET_SEC;
+      }
+      return bloc;
+    });
 
   const enumerer = (
     seriesPossibles: number[],
     repsPossibles: number[],
-  ): { possibles: Combinaison[]; meilleurCout: number } => {
+  ): Combinaison | null => {
     const possibles: Combinaison[] = [];
     let meilleurCout = 0;
     for (let nombre = 1; nombre <= retenus.length; nombre += 1) {
       for (const series of seriesPossibles) {
         for (const reps of repsPossibles) {
           for (const repos of reglages.repos) {
-            let cout = 0;
-            for (let i = 0; i < nombre; i += 1) {
-              cout += series * (dureeUneSerie(retenus[i], reps) + repos);
-            }
+            const cout = dureeBlocsSec(
+              fabriquer(nombre, series, reps, repos),
+              tempo,
+              options.suiviDUnCircuit,
+            );
             if (cout > budgetSec) continue;
             possibles.push({ nombre, series, reps, repos, cout });
             if (cout > meilleurCout) meilleurCout = cout;
@@ -353,49 +493,61 @@ function construireBlocs(
         }
       }
     }
-    return { possibles, meilleurCout };
+    if (possibles.length === 0) return null;
+    // On écarte les combinaisons qui laissent trop de temps mort, puis on
+    // prend le plus d'exercices, les répétitions les plus proches de ce qui
+    // a été demandé, le plus de séries, et enfin le remplissage le plus fin.
+    const seuil = meilleurCout * SEUIL_REMPLISSAGE;
+    const retenues = possibles.filter((c) => c.cout >= seuil);
+    retenues.sort(
+      (a, b) => b.nombre - a.nombre || b.reps - a.reps || b.series - a.series || b.cout - a.cout,
+    );
+    return retenues[0];
   };
 
-  // Les séries et répétitions demandées passent en premier ; si elles ne
-  // tiennent pas dans la durée (séance très courte, exercice unilatéral
-  // long…), on relâche d'abord les répétitions, puis les séries, puis tout.
+  // Le nombre de séries demandé est un choix ferme : on ne le sacrifie que
+  // si rien ne tient. Les répétitions, elles, se relâchent vers le bas dès
+  // que cela permet de garder un exercice de plus dans la séance — mieux
+  // vaut deux exercices à 3 × 6 qu'un seul à 3 × 8.
   const { seriesPreferees, repsPreferees } = reglages;
+  const seriesFixees = seriesPreferees ? [seriesPreferees] : reglages.series;
   const essais: [number[], number[]][] = [];
-  if (seriesPreferees && repsPreferees) essais.push([[seriesPreferees], [repsPreferees]]);
-  if (seriesPreferees) essais.push([[seriesPreferees], reglages.reps]);
-  if (repsPreferees) essais.push([reglages.series, [repsPreferees]]);
-  essais.push([reglages.series, reglages.reps]);
-  let possibles: Combinaison[] = [];
-  let meilleurCout = 0;
-  for (const [seriesPossibles, repsPossibles] of essais) {
-    ({ possibles, meilleurCout } = enumerer(seriesPossibles, repsPossibles));
-    if (possibles.length > 0) break;
+  if (repsPreferees) {
+    essais.push([seriesFixees, [repsPreferees]]);
+    const plusBasses = REPS_RELACHEES.filter((r) => r < repsPreferees).sort((a, b) => b - a);
+    if (plusBasses.length > 0) essais.push([seriesFixees, [repsPreferees, ...plusBasses]]);
+  } else {
+    essais.push([seriesFixees, reglages.reps]);
   }
+  if (seriesPreferees) essais.push([seriesFixees, reglages.reps]);
 
-  let choix: Combinaison;
-  if (possibles.length === 0) {
-    // Séances très courtes : on garde au moins un exercice, une série, le
-    // volume minimal du niveau, quitte à dépasser un peu la durée demandée.
+  const resultats: (Combinaison | null)[] = [];
+  for (const [series, reps] of essais) {
+    const resultat = enumerer(series, reps);
+    resultats.push(resultat);
+    // Dès que les préférences donnent une séance digne de ce nom, on s'arrête :
+    // on ne relâche les répétitions que pour sortir d'un exercice unique.
+    if (resultat && resultat.nombre >= EXERCICES_MINIMUM) break;
+  }
+  const meilleurNombre = resultats.reduce((max, c) => Math.max(max, c?.nombre ?? 0), 0);
+  // Le premier essai qui atteint le meilleur nombre d'exercices gagne : on
+  // respecte ainsi les préférences aussi longtemps qu'elles ne coûtent rien.
+  let choix = meilleurNombre > 0 ? resultats.find((c) => c?.nombre === meilleurNombre) : null;
+
+  // Dernier recours : relâcher aussi le nombre de séries, puis, si vraiment
+  // rien ne tient, garder un exercice en une série quitte à dépasser un peu.
+  if (!choix) choix = enumerer(reglages.series, reglages.reps);
+  if (!choix) {
     choix = {
       nombre: 1,
       series: 1,
-      reps: reglages.repsPreferees ?? Math.min(...reglages.reps),
+      reps: repsPreferees ?? Math.min(...reglages.reps),
       repos: Math.min(...reglages.repos),
       cout: 0,
     };
-  } else {
-    const seuil = meilleurCout * SEUIL_REMPLISSAGE;
-    const retenues = possibles.filter((c) => c.cout >= seuil);
-    retenues.sort((a, b) => b.nombre - a.nombre || b.series - a.series || b.cout - a.cout);
-    choix = retenues[0];
   }
 
-  return retenus.slice(0, choix.nombre).map((exercice) => ({
-    exerciceId: exercice.id,
-    series: choix.series,
-    reps: repsEffectives(exercice, choix.reps, reglages),
-    reposSec: choix.repos,
-  }));
+  return fabriquer(choix.nombre, choix.series, choix.reps, choix.repos);
 }
 
 /** Choisit le nombre de tours et de stations qui remplit le mieux le budget. */
@@ -406,14 +558,21 @@ function construireCircuit(
   bornes: BornesCircuit,
 ): Circuit | null {
   if (stations.length === 0) return null;
-  const parStation = reglages.travailSec + reglages.reposStationSec;
   const maximumStations = Math.min(bornes.stationsMax, stations.length);
   const minimumStations = Math.min(bornes.stationsMin, maximumStations);
+
+  const essai = (tours: number, nombre: number): Circuit => ({
+    stations: stations.slice(0, nombre).map((e) => e.id),
+    tours,
+    travailSec: reglages.travailSec,
+    reposSec: reglages.reposStationSec,
+    reposEntreToursSec: REPOS_ENTRE_TOURS_SEC,
+  });
 
   let meilleur: { tours: number; nombre: number; cout: number } | null = null;
   for (let tours = bornes.toursMin; tours <= bornes.toursMax; tours += 1) {
     for (let nombre = minimumStations; nombre <= maximumStations; nombre += 1) {
-      const cout = tours * nombre * parStation + (tours - 1) * REPOS_ENTRE_TOURS_SEC;
+      const cout = dureeCircuitSec(essai(tours, nombre));
       if (cout > budgetSec) continue;
       const mieux =
         meilleur === null ||
@@ -426,13 +585,7 @@ function construireCircuit(
 
   // Rien ne tient : un seul tour au nombre minimal de stations.
   const choix = meilleur ?? { tours: 1, nombre: minimumStations, cout: 0 };
-  return {
-    stations: stations.slice(0, choix.nombre).map((e) => e.id),
-    tours: choix.tours,
-    travailSec: reglages.travailSec,
-    reposSec: reglages.reposStationSec,
-    reposEntreToursSec: REPOS_ENTRE_TOURS_SEC,
-  };
+  return essai(choix.tours, choix.nombre);
 }
 
 // ------------------------------------------------------------- API publique
@@ -475,7 +628,10 @@ export function genererSeance(parametres: ParametresSeance, graine?: number): Se
   } else if (parametres.format === 'mixte' && budget >= SEUIL_MIXTE_SEC) {
     const budgetSeries = Math.round(budget * PART_SERIES_MIXTE);
     const retenus = selectionnerExercices(candidats, cycle, reglages.maxExercices, alea);
-    blocs = construireBlocs(retenus, budgetSeries, reglages, parametres.tempo);
+    blocs = construireBlocs(retenus, budgetSeries, reglages, parametres.tempo, {
+      apparier: false,
+      suiviDUnCircuit: true,
+    });
     const utilises = new Set(blocs.map((b) => b.exerciceId));
     const restants = candidats.filter((e) => !utilises.has(e.id));
     const cycleCircuit = CYCLE_CIRCUIT_MIXTE.filter((zone) => cycle.includes(zone));
@@ -487,9 +643,12 @@ export function genererSeance(parametres: ParametresSeance, graine?: number): Se
     );
     circuit = construireCircuit(stations, budget - budgetSeries, reglages, BORNES_CIRCUIT_MIXTE);
   } else {
-    // Format séries, et format mixte trop court pour accueillir un circuit.
+    // Format séries ou superset, et format mixte trop court pour un circuit.
     const retenus = selectionnerExercices(candidats, cycle, reglages.maxExercices, alea);
-    blocs = construireBlocs(retenus, budget, reglages, parametres.tempo);
+    blocs = construireBlocs(retenus, budget, reglages, parametres.tempo, {
+      apparier: parametres.format === 'superset',
+      suiviDUnCircuit: false,
+    });
   }
 
   const seance: Seance = {
@@ -503,6 +662,12 @@ export function genererSeance(parametres: ParametresSeance, graine?: number): Se
     circuit,
     dureeEstimeeSec: 0,
   };
+  seance.dureeEstimeeSec = estimerDureeSec(seance);
+  seance.retourCalmeSec = retourCalmeAllonge(
+    seance.retourCalmeSec,
+    seance.dureeEstimeeSec,
+    parametres.dureeMinutes,
+  );
   seance.dureeEstimeeSec = estimerDureeSec(seance);
   return seance;
 }
@@ -573,16 +738,98 @@ export function remplacerExercice(seance: Seance, exerciceId: string, graine?: n
   return nouvelle;
 }
 
-/** Durée totale estimée de la séance en secondes. */
+/** Vrai quand la séance comporte un circuit réellement praticable. */
+function circuitActif(seance: Seance): boolean {
+  const circuit = seance.circuit;
+  return circuit !== null && circuit.stations.length > 0 && circuit.tours > 0;
+}
+
+/** Durée totale estimée de la séance, à la seconde près : c'est exactement la
+ *  somme des étapes que déroulera la séance guidée. */
 export function estimerDureeSec(seance: Seance): number {
+  const avecCircuit = circuitActif(seance);
   let total = seance.echauffementSec + seance.retourCalmeSec;
-  for (const bloc of seance.blocs) {
-    const exercice = EXERCICES_PAR_ID[bloc.exerciceId];
-    if (!exercice) continue;
-    total += coutBloc(exercice, bloc, seance.parametres.tempo);
-  }
-  if (seance.circuit) total += coutCircuit(seance.circuit);
+  total += dureeBlocsSec(seance.blocs, seance.parametres.tempo, avecCircuit);
+  if (avecCircuit && seance.circuit) total += dureeCircuitSec(seance.circuit);
   return total;
+}
+
+/** Décomposition du temps d'une séance, pour expliquer à l'écran pourquoi
+ *  une durée donnée ne contient que tel nombre d'exercices. */
+export interface AnalyseSeance {
+  echauffementSec: number;
+  preparationSec: number;
+  /** Temps sous tension : les séries et les stations elles-mêmes. */
+  travailSec: number;
+  reposSec: number;
+  retourCalmeSec: number;
+  totalSec: number;
+  demandeSec: number;
+  nombreExercices: number;
+  nombreSeries: number;
+  /** Écarts entre ce qui a été demandé et ce que la durée permettait. */
+  ajustements: string[];
+}
+
+export function analyserSeance(seance: Seance): AnalyseSeance {
+  const { parametres } = seance;
+  const avecCircuit = circuitActif(seance);
+  const blocs = detaillerBlocs(seance.blocs, parametres.tempo, avecCircuit);
+  const circuit = avecCircuit && seance.circuit ? detaillerCircuit(seance.circuit) : null;
+
+  const preparationSec = blocs.preparationSec + (circuit?.preparationSec ?? 0);
+  const travailSec = blocs.travailSec + (circuit?.travailSec ?? 0);
+  const reposSec = blocs.reposSec + (circuit?.reposSec ?? 0);
+  const exercices = new Set<string>([
+    ...seance.blocs.filter((bloc) => bloc.series > 0).map((bloc) => bloc.exerciceId),
+    ...(avecCircuit ? (seance.circuit?.stations ?? []) : []),
+  ]);
+
+  const ajustements: string[] = [];
+  const premier = seance.blocs[0];
+  if (premier) {
+    const seriesDemandees = parametres.seriesParExercice;
+    if (seriesDemandees && premier.series !== seriesDemandees) {
+      ajustements.push(
+        `${premier.series} séries au lieu de ${seriesDemandees} : la durée demandée ne permettait pas plus.`,
+      );
+    }
+    const repsDemandees = parametres.repsParSerie;
+    const blocEnReps = seance.blocs.find(
+      (bloc) => EXERCICES_PAR_ID[bloc.exerciceId]?.unite === 'reps',
+    );
+    if (repsDemandees && blocEnReps && blocEnReps.reps !== repsDemandees) {
+      ajustements.push(
+        `${blocEnReps.reps} répétitions au lieu de ${repsDemandees} : cela libère la place d'un exercice de plus.`,
+      );
+    }
+  }
+  const unilateraux = [...exercices]
+    .map((id) => EXERCICES_PAR_ID[id])
+    .filter((exercice) => exercice?.cotes === 'unilateral');
+  if (unilateraux.length > 0) {
+    ajustements.push(
+      `${unilateraux.map((e) => e.nomFr).join(', ')} : côté droit puis côté gauche, la série compte double.`,
+    );
+  }
+  if (seance.blocs.some((bloc) => bloc.superset !== undefined)) {
+    ajustements.push(
+      'Superset : les exercices vont deux par deux, le repos de l’un est le travail de l’autre.',
+    );
+  }
+
+  return {
+    echauffementSec: seance.echauffementSec,
+    preparationSec,
+    travailSec,
+    reposSec,
+    retourCalmeSec: seance.retourCalmeSec,
+    totalSec: seance.echauffementSec + preparationSec + travailSec + reposSec + seance.retourCalmeSec,
+    demandeSec: parametres.dureeMinutes * 60,
+    nombreExercices: exercices.size,
+    nombreSeries: blocs.series + (circuit?.series ?? 0),
+    ajustements,
+  };
 }
 
 /** "45 s", "12 min", "12 min 30 s", "1 h 05". */
@@ -606,4 +853,10 @@ export function libelleBloc(bloc: BlocSeries, exercice: Exercice): string {
   if (exercice.cotes === 'unilateral') return `${bloc.series} × ${bloc.reps} reps par côté${repos}`;
   if (exercice.cotes === 'alterne') return `${bloc.series} × ${bloc.reps} reps en alternant${repos}`;
   return `${bloc.series} × ${bloc.reps} reps${repos}`;
+}
+
+/** Temps effectif d'une série de ce bloc, tel qu'il sera chronométré. */
+export function dureeSerieDuBloc(bloc: BlocSeries, tempo: Tempo): number {
+  const exercice = EXERCICES_PAR_ID[bloc.exerciceId];
+  return exercice ? dureeSerieSec(exercice, bloc.reps, tempo) : 0;
 }

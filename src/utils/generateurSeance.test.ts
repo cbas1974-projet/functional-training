@@ -3,6 +3,7 @@ import { EXERCICES_PAR_ID } from '../data/exercices';
 import { DUREES_MINUTES, FORMATS, NIVEAUX, PARAMETRES_PAR_DEFAUT } from '../data/parametres';
 import type { BlocSeries, Circuit, Niveau, ParametresSeance, Seance } from '../types';
 import {
+  analyserSeance,
   dureeSerieSec,
   estimerDureeSec,
   exercicesDisponibles,
@@ -280,7 +281,10 @@ describe('genererSeance : toutes les durées, niveaux et formats', () => {
     );
     expect(seance.blocs).toHaveLength(3);
     expect(seance.blocs.every((bloc) => bloc.series === 1)).toBe(true);
-    expect(seance.dureeEstimeeSec).toBe(600);
+    // La durée estimée est celle que déroulera la séance guidée : les
+    // préparations comptent, le tout dernier repos n'existe pas.
+    expect(seance.dureeEstimeeSec).toBe(585);
+    expect(seance.dureeEstimeeSec).toBeLessThanOrEqual(600);
 
     // Une seule série est autorisée à tous les niveaux jusqu'à 10 min.
     for (const niveau of NIVEAUX) {
@@ -552,5 +556,87 @@ describe('tableau récapitulatif (lecture humaine)', () => {
     ];
     console.log(lignes.join('\n'));
     expect(seance.blocs.length).toBeGreaterThan(0);
+  });
+});
+
+describe('densité : superset et répétitions relâchées', () => {
+  it('appareille les exercices deux par deux au format superset', () => {
+    const seance = genererSeance(avec({ dureeMinutes: 30, format: 'superset' }), GRAINE);
+    expect(seance.blocs.length).toBeGreaterThanOrEqual(2);
+    // Les blocs vont par paires : 0,0 puis 1,1 puis un éventuel orphelin.
+    expect(seance.blocs.map((bloc) => bloc.superset)).toEqual(
+      seance.blocs.map((_, index) => Math.floor(index / 2)),
+    );
+    expect(seance.blocs.every((bloc) => bloc.transitionSec === 20)).toBe(true);
+    expect(seance.dureeEstimeeSec).toBeLessThanOrEqual(30 * 60);
+  });
+
+  it('tient plus d’exercices en superset qu’en séries pour la même durée', () => {
+    for (const dureeMinutes of [20, 30, 45]) {
+      const series = genererSeance(avec({ dureeMinutes, format: 'series' }), GRAINE);
+      const superset = genererSeance(avec({ dureeMinutes, format: 'superset' }), GRAINE);
+      expect(superset.blocs.length).toBeGreaterThanOrEqual(series.blocs.length);
+      expect(superset.dureeEstimeeSec).toBeLessThanOrEqual(dureeMinutes * 60);
+    }
+  });
+
+  it('ne laisse jamais un seul exercice quand baisser les répétitions en donne deux', () => {
+    // C'est le cas qui surprend : au tempo 5 s / 5 s, un exercice unilatéral
+    // à 3 × 8 mange presque toute une séance de 20 minutes.
+    for (let graine = 1; graine <= 40; graine += 1) {
+      const seance = genererSeance(
+        avec({ dureeMinutes: 20, format: 'series', seriesParExercice: 3, repsParSerie: 8 }),
+        graine,
+      );
+      expect(seance.blocs.length).toBeGreaterThanOrEqual(2);
+      expect(seance.blocs.every((bloc) => bloc.series === 3)).toBe(true);
+      expect(seance.dureeEstimeeSec).toBeLessThanOrEqual(20 * 60);
+    }
+  });
+
+  it('garde les répétitions demandées quand la durée le permet', () => {
+    // À 45 minutes, rien ne justifie de rogner sur les répétitions choisies.
+    const seance = genererSeance(avec({ dureeMinutes: 45, repsParSerie: 8 }), GRAINE);
+    for (const bloc of seance.blocs) {
+      if (EXERCICES_PAR_ID[bloc.exerciceId].unite === 'reps') expect(bloc.reps).toBe(8);
+    }
+  });
+});
+
+describe('analyserSeance', () => {
+  it('décompose la durée sans rien perdre', () => {
+    for (const format of FORMATS) {
+      for (const dureeMinutes of DUREES_MINUTES) {
+        const seance = genererSeance(avec({ dureeMinutes, format: format.id }), GRAINE);
+        const analyse = analyserSeance(seance);
+        expect(analyse.totalSec).toBe(seance.dureeEstimeeSec);
+        expect(analyse.demandeSec).toBe(dureeMinutes * 60);
+        expect(analyse.nombreExercices).toBe(new Set(identifiantsSeance(seance)).size);
+        expect(analyse.travailSec).toBeGreaterThan(0);
+        expect(analyse.nombreSeries).toBeGreaterThan(0);
+      }
+    }
+  });
+
+  it('signale les exercices unilatéraux et les réglages rabotés', () => {
+    const seance = genererSeance(avec({ dureeMinutes: 20, repsParSerie: 8 }), GRAINE);
+    const analyse = analyserSeance(seance);
+    const unilateral = seance.blocs.some(
+      (bloc) => EXERCICES_PAR_ID[bloc.exerciceId].cotes === 'unilateral',
+    );
+    if (unilateral) {
+      expect(analyse.ajustements.some((texte) => texte.includes('côté droit'))).toBe(true);
+    }
+    const rabote = seance.blocs.some(
+      (bloc) => EXERCICES_PAR_ID[bloc.exerciceId].unite === 'reps' && bloc.reps !== 8,
+    );
+    if (rabote) {
+      expect(analyse.ajustements.some((texte) => texte.includes('au lieu de 8'))).toBe(true);
+    }
+  });
+
+  it('annonce le superset', () => {
+    const seance = genererSeance(avec({ dureeMinutes: 30, format: 'superset' }), GRAINE);
+    expect(analyserSeance(seance).ajustements.some((t) => t.startsWith('Superset'))).toBe(true);
   });
 });

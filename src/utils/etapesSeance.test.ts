@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import type { Seance } from '../types';
 import { EXERCICES_PAR_ID } from '../data/exercices';
+import { DUREES_MINUTES, FORMATS, NIVEAUX, PARAMETRES_PAR_DEFAUT } from '../data/parametres';
+import { genererSeance } from './generateurSeance';
 import {
   DUREE_PRET_SEC,
   agregerRealisation,
@@ -368,7 +370,7 @@ describe('agregerRealisation', () => {
       SEANCE,
       ETAPES,
       temps,
-      { 'goblet-squat': 12, 'single-arm-row': 0 },
+      { 'goblet-squat': [12, 14], 'single-arm-row': [0] },
       843.6,
       false,
     );
@@ -395,7 +397,9 @@ describe('agregerRealisation', () => {
       seriesFaites: 1,
       reps: 8,
       dureeSec: 225,
-      poidsKg: 12,
+      // `poidsKg` reste la charge de référence : la plus lourde des séries.
+      poidsKg: 14,
+      poidsParSerie: [12, 14],
     });
     expect(rowing).toEqual({
       exerciceId: 'single-arm-row',
@@ -405,6 +409,7 @@ describe('agregerRealisation', () => {
       dureeSec: 323,
     });
     expect(rowing.poidsKg).toBeUndefined();
+    expect(rowing.poidsParSerie).toBeUndefined();
     expect(marche).toMatchObject({ seriesPrevues: 1, seriesFaites: 0, reps: 40, dureeSec: 0 });
     // Le temps de la préparation du circuit revient à sa première station ;
     // le repos entre tours n'est attribué à personne.
@@ -417,5 +422,68 @@ describe('agregerRealisation', () => {
     expect(realisee.terminee).toBe(true);
     expect(realisee.exercices[0]).toMatchObject({ seriesFaites: 1, dureeSec: 85 });
     expect(realisee.exercices.slice(1).every((e) => e.seriesFaites === 0 && e.dureeSec === 0)).toBe(true);
+  });
+});
+
+describe('accord entre la durée estimée et les étapes', () => {
+  it('la séance guidée dure exactement ce que le générateur annonce', () => {
+    for (const format of FORMATS) {
+      for (const dureeMinutes of DUREES_MINUTES) {
+        for (const niveau of NIVEAUX) {
+          const seance = genererSeance(
+            { ...PARAMETRES_PAR_DEFAUT, dureeMinutes, format: format.id, niveau: niveau.id },
+            123,
+          );
+          expect(dureeTotaleSec(construireEtapes(seance))).toBe(seance.dureeEstimeeSec);
+        }
+      }
+    }
+  });
+});
+
+describe('superset', () => {
+  const SEANCE_SUPERSET: Seance = {
+    ...SEANCE,
+    parametres: { ...SEANCE.parametres, format: 'superset' },
+    blocs: [
+      { exerciceId: 'goblet-squat', series: 2, reps: 8, reposSec: 60, superset: 0, transitionSec: 20 },
+      { exerciceId: 'shoulder-press', series: 2, reps: 8, reposSec: 60, superset: 0, transitionSec: 20 },
+      { exerciceId: 'russian-twist', series: 2, reps: 40, reposSec: 60, superset: 1, transitionSec: 20 },
+    ],
+    circuit: null,
+  };
+  const ETAPES_SUPERSET = construireEtapes(SEANCE_SUPERSET);
+
+  it('alterne les deux exercices série par série', () => {
+    const travail = ETAPES_SUPERSET.filter((e) => e.type === 'serie');
+    expect(travail.map((e) => `${e.exerciceId}#${e.serie}`)).toEqual([
+      'goblet-squat#1',
+      'shoulder-press#1',
+      'goblet-squat#2',
+      'shoulder-press#2',
+      'russian-twist#1',
+      'russian-twist#2',
+    ]);
+  });
+
+  it('place un repos court entre les deux exercices et le repos complet après', () => {
+    const repos = ETAPES_SUPERSET.filter((e) => e.type === 'repos').map((e) => e.dureeSec);
+    // squat → 20 s → press → 60 s → squat → 20 s → press → 60 s → twist → 60 s
+    expect(repos).toEqual([20, 60, 20, 60, 60]);
+  });
+
+  it('annonce le partenaire du superset pendant le repos court', () => {
+    const premierRepos = ETAPES_SUPERSET.find((e) => e.type === 'repos');
+    expect(premierRepos?.type === 'repos' && premierRepos.suivant).toMatchObject({
+      type: 'serie',
+      exerciceId: 'shoulder-press',
+      serie: 1,
+    });
+  });
+
+  it('« Passer l’exercice » saute le superset entier', () => {
+    const premiereSerie = ETAPES_SUPERSET.findIndex((e) => e.type === 'serie');
+    const apres = indexApresExercice(ETAPES_SUPERSET, premiereSerie);
+    expect(ETAPES_SUPERSET[apres].exerciceId).toBe('russian-twist');
   });
 });

@@ -22,13 +22,18 @@ import {
 } from '../data/parametres';
 import { EXERCICES_PAR_ID, NOM_PATTERN, NOM_ZONE, ZONES } from '../data/exercices';
 import {
+  analyserSeance,
+  dureeSerieDuBloc,
   exercicesDisponibles,
   formaterDuree,
   genererSeance,
   libelleBloc,
   remplacerExercice,
 } from '../utils/generateurSeance';
+import type { AnalyseSeance } from '../utils/generateurSeance';
 import { formaterDateFr, graineAleatoire, libelleZones, messageErreur } from '../utils/formatage';
+import { frequencesParExercice, libelleFrequenceCourte } from '../utils/statistiques';
+import type { FrequenceExercice } from '../utils/statistiques';
 import SeanceGuidee from './SeanceGuidee';
 import FicheExercice from './FicheExercice';
 import HistoriqueEntrainement from './HistoriqueEntrainement';
@@ -208,6 +213,94 @@ function Resume({ children, accent = false }: { children: ReactNode; accent?: bo
   );
 }
 
+/** Une ligne du décompte du temps, avec sa barre proportionnelle. */
+function LigneBudget({
+  libelle,
+  secondes,
+  totalSec,
+  couleur,
+}: {
+  libelle: string;
+  secondes: number;
+  totalSec: number;
+  couleur: string;
+}) {
+  if (secondes <= 0) return null;
+  const part = totalSec > 0 ? (secondes / totalSec) * 100 : 0;
+  return (
+    <div className="flex items-center gap-2">
+      <span className="w-32 shrink-0 text-xs" style={{ color: 'var(--texte-discret)' }}>
+        {libelle}
+      </span>
+      <span className="h-2 min-w-0 flex-1 overflow-hidden rounded-full" style={{ background: 'var(--surface)' }}>
+        <span className="block h-full rounded-full" style={{ width: `${part}%`, background: couleur }} />
+      </span>
+      <span className="chiffres w-16 shrink-0 text-right text-xs" style={{ color: 'var(--texte)' }}>
+        {formaterDuree(secondes)}
+      </span>
+    </div>
+  );
+}
+
+/** « Pourquoi cette durée ? » : où passent les minutes demandées. Au tempo
+ *  5 s / 5 s, une série de 8 répétitions dure 80 secondes — deux fois plus
+ *  si l'exercice se fait un côté après l'autre. C'est l'arithmétique qui
+ *  explique qu'une séance de 20 minutes ne contienne que deux exercices. */
+function BudgetSeance({ analyse, exemple }: { analyse: AnalyseSeance; exemple: string | null }) {
+  return (
+    <details className="mt-3">
+      <summary
+        className="flex cursor-pointer select-none items-center text-sm font-medium"
+        style={{ color: 'var(--texte-discret)', minHeight: CIBLE, listStyle: 'none' }}
+      >
+        Pourquoi cette durée ?
+      </summary>
+      <div className="space-y-2 pb-1">
+        <LigneBudget
+          libelle="Échauffement"
+          secondes={analyse.echauffementSec}
+          totalSec={analyse.totalSec}
+          couleur="var(--pause)"
+        />
+        <LigneBudget
+          libelle="Mise en place"
+          secondes={analyse.preparationSec}
+          totalSec={analyse.totalSec}
+          couleur="var(--texte-discret)"
+        />
+        <LigneBudget
+          libelle={`Travail · ${analyse.nombreSeries} séries`}
+          secondes={analyse.travailSec}
+          totalSec={analyse.totalSec}
+          couleur="var(--montee)"
+        />
+        <LigneBudget
+          libelle="Repos"
+          secondes={analyse.reposSec}
+          totalSec={analyse.totalSec}
+          couleur="var(--descente)"
+        />
+        <LigneBudget
+          libelle="Retour au calme"
+          secondes={analyse.retourCalmeSec}
+          totalSec={analyse.totalSec}
+          couleur="var(--accent)"
+        />
+        {exemple && (
+          <p className="pt-1 text-xs" style={{ color: 'var(--texte-discret)' }}>
+            {exemple}
+          </p>
+        )}
+        {analyse.ajustements.map((texte) => (
+          <p key={texte} className="text-xs" style={{ color: 'var(--texte-discret)' }}>
+            · {texte}
+          </p>
+        ))}
+      </div>
+    </details>
+  );
+}
+
 /** Petite étiquette : zone travaillée, schéma de mouvement. */
 function Badge({ children }: { children: ReactNode }) {
   return (
@@ -350,6 +443,34 @@ export default function Entrainement({ etat, onChange }: EntrainementProps) {
   const nbExercicesSeance = seanceCourante
     ? seanceCourante.blocs.length + (seanceCourante.circuit?.stations.length ?? 0)
     : 0;
+
+  const analyse = useMemo(
+    () => (seanceCourante ? analyserSeance(seanceCourante) : null),
+    [seanceCourante],
+  );
+
+  /** Une ligne concrète pour rendre le tempo palpable : c'est elle qui
+   *  explique tout le reste du budget. */
+  const exempleTempo = useMemo(() => {
+    const bloc = seanceCourante?.blocs.find(
+      (b) => EXERCICES_PAR_ID[b.exerciceId]?.unite === 'reps',
+    );
+    if (!bloc || !seanceCourante) return null;
+    const exercice = EXERCICES_PAR_ID[bloc.exerciceId];
+    const { monteeSec, descenteSec } = seanceCourante.parametres.tempo;
+    const duree = formaterDuree(dureeSerieDuBloc(bloc, seanceCourante.parametres.tempo));
+    const cotes = exercice.cotes === 'unilateral' ? ', droite puis gauche' : '';
+    return `Une série de ${bloc.reps} répétitions à ${monteeSec} s / ${descenteSec} s${cotes} dure ${duree}.`;
+  }, [seanceCourante]);
+
+  /** Combien de fois chaque exercice a déjà été fait, par fenêtre glissante. */
+  const frequences = useMemo(() => frequencesParExercice(historique), [historique]);
+
+  /** Étiquette « 2× ce mois-ci », ou rien si l'exercice est nouveau. */
+  const badgeFrequence = (exerciceId: string): string | null => {
+    const frequence: FrequenceExercice | undefined = frequences.get(exerciceId);
+    return frequence && frequence.total > 0 ? libelleFrequenceCourte(frequence) : null;
+  };
 
   /* ------------------------------------------------ La feuille de réglages */
   const feuilleReglages = (
@@ -500,6 +621,22 @@ export default function Entrainement({ etat, onChange }: EntrainementProps) {
             </div>
           </Groupe>
 
+          {/* Le format reste au premier plan : au tempo lent, c'est lui qui
+              décide combien d'exercices tiennent dans la durée demandée. */}
+          <Groupe titre="Format" aide={formatSelectionne?.description}>
+            <div className="flex flex-wrap gap-2">
+              {FORMATS.map((f) => (
+                <Pastille
+                  key={f.id}
+                  selectionne={parametres.format === f.id}
+                  onClick={() => mettreAJourParametres({ format: f.id })}
+                >
+                  {f.nom}
+                </Pastille>
+              ))}
+            </div>
+          </Groupe>
+
           <details>
             <summary
               className="flex cursor-pointer select-none items-center text-sm font-bold"
@@ -518,20 +655,6 @@ export default function Entrainement({ etat, onChange }: EntrainementProps) {
                       onClick={() => mettreAJourParametres({ niveau: n.id })}
                     >
                       {n.nom}
-                    </Pastille>
-                  ))}
-                </div>
-              </Groupe>
-
-              <Groupe titre="Format" aide={formatSelectionne?.description}>
-                <div className="flex flex-wrap gap-2">
-                  {FORMATS.map((f) => (
-                    <Pastille
-                      key={f.id}
-                      selectionne={parametres.format === f.id}
-                      onClick={() => mettreAJourParametres({ format: f.id })}
-                    >
-                      {f.nom}
                     </Pastille>
                   ))}
                 </div>
@@ -656,6 +779,7 @@ export default function Entrainement({ etat, onChange }: EntrainementProps) {
           <Resume>
             <span className="chiffres">{resumeTempo}</span>
           </Resume>
+          <Resume>{formatSelectionne?.nom}</Resume>
           <Resume>{resumeMateriel}</Resume>
         </div>
 
@@ -765,12 +889,7 @@ export default function Entrainement({ etat, onChange }: EntrainementProps) {
               </span>
             </Resume>
           </div>
-          <p className="mt-2 text-xs" style={{ color: 'var(--texte-discret)' }}>
-            Échauffement <span className="chiffres">{formaterDuree(seanceCourante.echauffementSec)}</span>{' '}
-            · retour au calme{' '}
-            <span className="chiffres">{formaterDuree(seanceCourante.retourCalmeSec)}</span> ·
-            demandé <span className="chiffres">{seanceCourante.parametres.dureeMinutes} min</span>
-          </p>
+          {analyse && <BudgetSeance analyse={analyse} exemple={exempleTempo} />}
 
           {seanceCourante.blocs.length > 0 && (
             <ul className="mt-3 space-y-2">
@@ -787,6 +906,8 @@ export default function Entrainement({ etat, onChange }: EntrainementProps) {
                       <div className="mt-1 flex flex-wrap gap-1">
                         <Badge>{NOM_ZONE[exercice.zone]}</Badge>
                         <Badge>{NOM_PATTERN[exercice.pattern]}</Badge>
+                        {bloc.superset !== undefined && <Badge>superset {bloc.superset + 1}</Badge>}
+                        {badgeFrequence(exercice.id) && <Badge>{badgeFrequence(exercice.id)}</Badge>}
                       </div>
                       <p className="chiffres mt-1 text-sm" style={{ color: 'var(--texte)' }}>
                         {libelleBloc(bloc, exercice)}
@@ -936,7 +1057,7 @@ export default function Entrainement({ etat, onChange }: EntrainementProps) {
           {vue === 'historique' ? (
             <HistoriqueEntrainement historique={historique} onSupprimer={supprimerDeLHistorique} />
           ) : (
-            <BibliothequeExercices />
+            <BibliothequeExercices historique={historique} />
           )}
         </div>
       )}

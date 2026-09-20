@@ -41,6 +41,12 @@ export const NIVEAUX: { id: Niveau; nom: string; description: string }[] = [
 
 export const FORMATS: { id: FormatSeance; nom: string; description: string }[] = [
   { id: 'series', nom: 'Séries', description: 'Chaque exercice en plusieurs séries, repos chronométré entre les séries.' },
+  {
+    id: 'superset',
+    nom: 'Superset',
+    description:
+      'Les exercices vont deux par deux, en alternance : le repos de l’un est le travail de l’autre. Le meilleur moyen de tenir plus d’exercices dans la même durée au tempo lent.',
+  },
   { id: 'circuit', nom: 'Circuit', description: 'Enchaînement de stations au temps, plusieurs tours.' },
   { id: 'mixte', nom: 'Mixte', description: 'Séries pour la force, puis un court circuit pour finir.' },
 ];

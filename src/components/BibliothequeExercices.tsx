@@ -1,10 +1,17 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import type { ReactNode } from 'react';
-import type { Exercice } from '../types';
+import type { Exercice, SeanceRealisee } from '../types';
 import { CHEMIN_POSTER, EXERCICES, NOM_MATERIEL, NOM_PATTERN, ZONES } from '../data/exercices';
-import { libelleNiveauMin } from '../utils/formatage';
+import { formaterDateFr, libelleNiveauMin } from '../utils/formatage';
+import { frequencesParExercice } from '../utils/statistiques';
+import type { FrequenceExercice } from '../utils/statistiques';
 import FicheExercice from './FicheExercice';
+
+interface BibliothequeExercicesProps {
+  /** Séances enregistrées : elles donnent la fréquence de chaque exercice. */
+  historique: SeanceRealisee[];
+}
 
 function Badge({ children }: { children: ReactNode }) {
   return (
@@ -17,9 +24,61 @@ function Badge({ children }: { children: ReactNode }) {
   );
 }
 
-export default function BibliothequeExercices() {
+/** Ce que l'exercice a donné jusqu'ici : combien de fois, quand, avec quoi.
+ *  C'est ce qui permet de voir d'un coup d'œil ce qu'on néglige. */
+function Frequence({ frequence }: { frequence: FrequenceExercice | undefined }) {
+  if (!frequence || frequence.total === 0) {
+    return (
+      <p className="mt-2 text-sm" style={{ color: 'var(--texte-discret)' }}>
+        Jamais fait depuis que l’historique existe.
+      </p>
+    );
+  }
+  const cellule = (valeur: number, libelle: string) => (
+    <div key={libelle} className="text-center">
+      <p className="chiffres text-lg font-bold leading-tight" style={{ color: 'var(--texte)' }}>
+        {valeur}
+      </p>
+      <p className="text-xs" style={{ color: 'var(--texte-discret)' }}>
+        {libelle}
+      </p>
+    </div>
+  );
+  return (
+    <div className="mt-2">
+      <div className="grid grid-cols-4 gap-2">
+        {cellule(frequence.parFenetre[30], '1 mois')}
+        {cellule(frequence.parFenetre[90], '3 mois')}
+        {cellule(frequence.parFenetre[180], '6 mois')}
+        {cellule(frequence.total, 'en tout')}
+      </div>
+      <p className="mt-2 text-sm" style={{ color: 'var(--texte-discret)' }}>
+        Dernière fois{' '}
+        <span className="chiffres">
+          {frequence.derniereDate ? formaterDateFr(frequence.derniereDate) : '—'}
+        </span>
+        {typeof frequence.dernierPoidsKg === 'number' && (
+          <>
+            {' · '}
+            <span className="chiffres">{frequence.dernierPoidsKg} kg</span>
+          </>
+        )}
+        {typeof frequence.poidsMaxKg === 'number' &&
+          frequence.poidsMaxKg !== frequence.dernierPoidsKg && (
+            <>
+              {' · record '}
+              <span className="chiffres">{frequence.poidsMaxKg} kg</span>
+            </>
+          )}
+      </p>
+    </div>
+  );
+}
+
+export default function BibliothequeExercices({ historique }: BibliothequeExercicesProps) {
   const [exerciceOuvertId, setExerciceOuvertId] = useState<string | null>(null);
   const [posterOuvert, setPosterOuvert] = useState(false);
+  const frequences = useMemo(() => frequencesParExercice(historique), [historique]);
 
   useEffect(() => {
     if (!posterOuvert) return;
@@ -90,6 +149,9 @@ export default function BibliothequeExercices() {
                     onClick={() => basculerExercice(exercice.id)}
                   >
                     <div className="mt-1 flex flex-wrap gap-1">
+                      {(frequences.get(exercice.id)?.parFenetre[30] ?? 0) > 0 && (
+                        <Badge>{frequences.get(exercice.id)?.parFenetre[30]}× ce mois-ci</Badge>
+                      )}
                       <Badge>{NOM_PATTERN[exercice.pattern]}</Badge>
                       {exercice.materiel !== 'halteres' && (
                         <Badge>{NOM_MATERIEL[exercice.materiel]}</Badge>
@@ -128,7 +190,8 @@ export default function BibliothequeExercices() {
                       Fermer
                     </button>
                   </div>
-                  <p className="mt-1 text-sm" style={{ color: 'var(--texte-discret)' }}>
+                  <Frequence frequence={frequences.get(exerciceOuvert.id)} />
+                  <p className="mt-2 text-sm" style={{ color: 'var(--texte-discret)' }}>
                     <span className="font-semibold" style={{ color: 'var(--texte)' }}>
                       Position :{' '}
                     </span>

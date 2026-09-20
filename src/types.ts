@@ -70,7 +70,7 @@ export type Niveau = 'debutant' | 'intermediaire' | 'avance';
 
 export type Objectif = 'complet' | 'haut' | 'bas' | 'gainage' | 'dos';
 
-export type FormatSeance = 'series' | 'circuit' | 'mixte';
+export type FormatSeance = 'series' | 'superset' | 'circuit' | 'mixte';
 
 export interface Exercice {
   id: string;
@@ -148,6 +148,13 @@ export interface BlocSeries {
    *  se mesure au temps). */
   reps: number;
   reposSec: number;
+  /** Numéro du superset auquel appartient le bloc. Deux blocs qui partagent
+   *  ce numéro sont enchaînés en alternance (A1, B1, A2, B2…) : le repos de
+   *  l'un est le travail de l'autre, ce qui double presque le nombre
+   *  d'exercices tenables dans la même durée. Absent = bloc classique. */
+  superset?: number;
+  /** Repos court entre les deux exercices d'un superset, en secondes. */
+  transitionSec?: number;
 }
 
 export interface Circuit {
@@ -177,7 +184,11 @@ export interface ExerciceRealise {
   reps: number;
   /** Temps réellement passé sur l'exercice, repos compris. */
   dureeSec: number;
+  /** Charge retenue pour l'exercice : la plus lourde des séries. Conservé
+   *  pour lire les séances enregistrées avant la saisie série par série. */
   poidsKg?: number;
+  /** Charge de chaque série, dans l'ordre ; 0 = non saisie. */
+  poidsParSerie?: number[];
 }
 
 export interface SeanceRealisee {
@@ -197,7 +208,9 @@ export interface ProgressionSeance {
   indexEtape: number;
   tempsCumuleSec: number;
   tempsParEtapeSec: number[];
-  poids: Record<string, number>;
+  /** Charges saisies, par exercice puis par série (index 0 = série 1).
+   *  0 = série non renseignée. */
+  poids: Record<string, number[]>;
   demarreeLe: string;
   /** Dernière sauvegarde (ISO), pour le bandeau de reprise. */
   sauvegardeeLe?: string;

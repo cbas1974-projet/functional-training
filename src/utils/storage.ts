@@ -1,6 +1,12 @@
 // Sauvegarde locale : réglages, séance en cours et historique sont conservés
 // dans le navigateur de l'appareil. Rien n'est envoyé sur un serveur.
-import type { EntrainementState, Materiel, ParametresSeance, Zone } from '../types';
+import type {
+  EntrainementState,
+  Materiel,
+  ParametresSeance,
+  ProgressionSeance,
+  Zone,
+} from '../types';
 import { PARAMETRES_PAR_DEFAUT, TOUTES_LES_ZONES } from '../data/parametres';
 
 const CLE_STOCKAGE = 'functional-training';
@@ -50,10 +56,28 @@ const migrerParametres = (sauvegardes: Partial<ParametresSeance>): ParametresSea
   };
 };
 
+/** Les charges étaient autrefois un seul nombre par exercice ; elles sont
+ *  désormais une valeur par série. Une ancienne saisie devient la charge de
+ *  la première série. */
+const migrerPoids = (
+  sauvegardes: ProgressionSeance['poids'] | Record<string, number> | undefined,
+): ProgressionSeance['poids'] => {
+  const poids: ProgressionSeance['poids'] = {};
+  for (const [exerciceId, valeur] of Object.entries(sauvegardes ?? {})) {
+    if (Array.isArray(valeur)) poids[exerciceId] = valeur.map((kg) => (Number.isFinite(kg) ? kg : 0));
+    else if (typeof valeur === 'number' && valeur > 0) poids[exerciceId] = [valeur];
+  }
+  return poids;
+};
+
+const migrerProgression = (enCours: ProgressionSeance | null): ProgressionSeance | null =>
+  enCours === null ? null : { ...enCours, poids: migrerPoids(enCours.poids) };
+
 const migrer = (sauvegarde: Partial<EntrainementState>): EntrainementState => ({
   ...ETAT_PAR_DEFAUT,
   ...sauvegarde,
   parametres: migrerParametres(sauvegarde.parametres ?? {}),
+  enCours: migrerProgression(sauvegarde.enCours ?? null),
 });
 
 /** Lit l'état sauvegardé ; reprend celui de l'ancienne application si besoin. */

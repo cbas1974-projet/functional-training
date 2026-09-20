@@ -4,6 +4,7 @@ import { FORMATS, NIVEAUX } from '../data/parametres';
 import { EXERCICES_PAR_ID } from '../data/exercices';
 import { formaterDuree } from '../utils/generateurSeance';
 import { calculerStatistiques, formaterDateFr, libelleZones } from '../utils/formatage';
+import { libellePoidsParSerie } from '../utils/statistiques';
 import FicheExercice from './FicheExercice';
 
 interface HistoriqueEntrainementProps {
@@ -145,13 +146,11 @@ export default function HistoriqueEntrainement({
                               </p>
                               <p className="text-sm" style={{ color: 'var(--texte-discret)' }}>
                                 <span className="chiffres">{formaterDuree(exo.dureeSec)}</span>
-                                {typeof exo.poidsKg === 'number' ? (
+                                {libellePoidsParSerie(exo) && (
                                   <>
                                     {' · '}
-                                    <span className="chiffres">{exo.poidsKg} kg</span>
+                                    <span className="chiffres">{libellePoidsParSerie(exo)}</span>
                                   </>
-                                ) : (
-                                  ''
                                 )}
                               </p>
                             </FicheExercice>

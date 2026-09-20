@@ -1,12 +1,26 @@
 // Logique pure du mode séance guidée : construction de la liste plate des
 // étapes, calculs de temps, état du métronome et agrégation du résultat.
 // Aucune dépendance à React : tout est testable unitairement.
-import type { Exercice, ExerciceRealise, Seance, SeanceRealisee, Tempo } from '../types';
+import type {
+  BlocSeries,
+  Exercice,
+  ExerciceRealise,
+  Seance,
+  SeanceRealisee,
+  Tempo,
+} from '../types';
 import { EXERCICES_PAR_ID } from '../data/exercices';
-import { dureeSerieSec, secondesParRep } from './generateurSeance';
+import {
+  DUREE_PRET_SEC,
+  TRANSITION_SUPERSET_SEC,
+  dureeSerieSec,
+  groupesDeBlocs,
+  secondesParRep,
+} from './generateurSeance';
 
-/** Durée de la préparation (« Préparez-vous ») avant une série ou le circuit. */
-export const DUREE_PRET_SEC = 5;
+// La durée de la préparation appartient au modèle de coût du générateur ;
+// elle est réexportée ici parce que c'est l'étape qui la matérialise.
+export { DUREE_PRET_SEC };
 
 export type PhaseTempo = 'monte' | 'descend';
 
@@ -31,7 +45,14 @@ export type SuivantTravail = Exclude<Suivant, { type: 'retourCalme' }>;
  *  discriminer le type. */
 export type Etape =
   | { type: 'echauffement'; dureeSec: number; exerciceId?: undefined }
-  | { type: 'pret'; exerciceId: string; dureeSec: number; suivant: SuivantTravail }
+  | {
+      type: 'pret';
+      exerciceId: string;
+      dureeSec: number;
+      suivant: SuivantTravail;
+      /** Index du groupe de blocs (un bloc seul, ou les deux d'un superset). */
+      groupe?: number;
+    }
   | {
       type: 'serie';
       exerciceId: string;
@@ -39,8 +60,9 @@ export type Etape =
       series: number;
       reps: number;
       dureeSec: number;
+      groupe?: number;
     }
-  | { type: 'repos'; exerciceId: string; dureeSec: number; suivant: Suivant }
+  | { type: 'repos'; exerciceId: string; dureeSec: number; suivant: Suivant; groupe?: number }
   | {
       type: 'station';
       exerciceId: string;
@@ -132,53 +154,67 @@ export function construireEtapes(seance: Seance): Etape[] {
     stations: circuit ? circuit.stations.length : 0,
   });
 
-  blocs.forEach((bloc, indexBloc) => {
-    const exercice = exerciceDeSeance(bloc.exerciceId);
-    const cibleSerie = (serie: number): SuivantTravail => ({
-      type: 'serie',
-      exerciceId: bloc.exerciceId,
-      serie,
-      series: bloc.series,
-      reps: bloc.reps,
-    });
+  const cibleSerie = (bloc: BlocSeries, serie: number): SuivantTravail => ({
+    type: 'serie',
+    exerciceId: bloc.exerciceId,
+    serie,
+    series: bloc.series,
+    reps: bloc.reps,
+  });
 
-    for (let serie = 1; serie <= bloc.series; serie += 1) {
-      etapes.push({
-        type: 'pret',
-        exerciceId: bloc.exerciceId,
-        dureeSec: DUREE_PRET_SEC,
-        suivant: cibleSerie(serie),
-      });
-      etapes.push({
-        type: 'serie',
-        exerciceId: bloc.exerciceId,
-        serie,
-        series: bloc.series,
-        reps: bloc.reps,
-        dureeSec: dureeSerieSec(exercice, bloc.reps, tempo),
-      });
-
-      // Ce qui suit la série : la série suivante, le premier exercice du bloc
-      // suivant, la première station du circuit… ou rien d'autre que le
-      // retour au calme, auquel cas on ne crée pas de repos.
-      let suivant: Suivant | null = null;
-      if (serie < bloc.series) {
-        suivant = cibleSerie(serie + 1);
-      } else if (indexBloc < blocs.length - 1) {
-        const prochain = blocs[indexBloc + 1];
-        suivant = {
+  // Un groupe rassemble les blocs d'un superset ; un bloc classique est un
+  // groupe à lui seul. À l'intérieur d'un groupe, les exercices alternent
+  // série par série : A1, B1, A2, B2…
+  const groupes = groupesDeBlocs(blocs);
+  groupes.forEach((groupe, indexGroupe) => {
+    const series = groupe[0].series;
+    for (let serie = 1; serie <= series; serie += 1) {
+      groupe.forEach((bloc, indexBloc) => {
+        const exercice = exerciceDeSeance(bloc.exerciceId);
+        etapes.push({
+          type: 'pret',
+          exerciceId: bloc.exerciceId,
+          dureeSec: DUREE_PRET_SEC,
+          suivant: cibleSerie(bloc, serie),
+          groupe: indexGroupe,
+        });
+        etapes.push({
           type: 'serie',
-          exerciceId: prochain.exerciceId,
-          serie: 1,
-          series: prochain.series,
-          reps: prochain.reps,
-        };
-      } else if (circuit) {
-        suivant = cibleStation(1, 1);
-      }
-      if (suivant && bloc.reposSec > 0) {
-        etapes.push({ type: 'repos', exerciceId: bloc.exerciceId, dureeSec: bloc.reposSec, suivant });
-      }
+          exerciceId: bloc.exerciceId,
+          serie,
+          series: bloc.series,
+          reps: bloc.reps,
+          dureeSec: dureeSerieSec(exercice, bloc.reps, tempo),
+          groupe: indexGroupe,
+        });
+
+        // Ce qui suit la série : l'autre exercice du superset après un repos
+        // court, la série suivante, le groupe suivant, la première station du
+        // circuit… ou rien d'autre que le retour au calme, auquel cas on ne
+        // crée pas de repos.
+        const dernierDuGroupe = indexBloc === groupe.length - 1;
+        let suivant: Suivant | null = null;
+        let reposSec = bloc.reposSec;
+        if (!dernierDuGroupe) {
+          suivant = cibleSerie(groupe[indexBloc + 1], serie);
+          reposSec = bloc.transitionSec ?? TRANSITION_SUPERSET_SEC;
+        } else if (serie < series) {
+          suivant = cibleSerie(groupe[0], serie + 1);
+        } else if (indexGroupe < groupes.length - 1) {
+          suivant = cibleSerie(groupes[indexGroupe + 1][0], 1);
+        } else if (circuit) {
+          suivant = cibleStation(1, 1);
+        }
+        if (suivant && reposSec > 0) {
+          etapes.push({
+            type: 'repos',
+            exerciceId: bloc.exerciceId,
+            dureeSec: reposSec,
+            suivant,
+            groupe: indexGroupe,
+          });
+        }
+      });
     }
   });
 
@@ -284,14 +320,33 @@ export function indexReprise(etapes: Etape[], index: number): number {
   return borne;
 }
 
+/** Groupe de blocs auquel appartient l'étape, s'il y en a un. */
+function groupeDeEtape(etape: Etape): number | undefined {
+  switch (etape.type) {
+    case 'pret':
+    case 'serie':
+    case 'repos':
+      return etape.groupe;
+    default:
+      return undefined;
+  }
+}
+
 /** Index de la première étape qui ne concerne plus l'exercice de l'étape
- *  `index` : sert à « Passer l'exercice ». */
+ *  `index` : sert à « Passer l'exercice ». Dans un superset, les deux
+ *  exercices sont indissociables : on passe le groupe entier. */
 export function indexApresExercice(etapes: Etape[], index: number): number {
   const dernier = etapes.length - 1;
-  const exerciceId = etapes[index]?.exerciceId;
+  const depart = etapes[index];
   let i = Math.min(index + 1, dernier);
-  if (!exerciceId) return i;
-  while (i < dernier && etapes[i].exerciceId === exerciceId) i += 1;
+  if (!depart?.exerciceId) return i;
+  const groupe = groupeDeEtape(depart);
+  while (i < dernier) {
+    const etape = etapes[i];
+    const memeGroupe = groupe !== undefined && groupeDeEtape(etape) === groupe;
+    if (!memeGroupe && etape.exerciceId !== depart.exerciceId) break;
+    i += 1;
+  }
   return i;
 }
 
@@ -351,6 +406,18 @@ function nouvelIdentifiant(): string {
   return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
+/** Charges d'un exercice, une par série prévue, zéros de fin retirés.
+ *  0 signifie « série non renseignée ». */
+function poidsParSerie(saisies: number[] | undefined, seriesPrevues: number): number[] {
+  const valeurs: number[] = [];
+  for (let i = 0; i < seriesPrevues; i += 1) {
+    const kg = saisies?.[i];
+    valeurs.push(typeof kg === 'number' && Number.isFinite(kg) && kg > 0 ? kg : 0);
+  }
+  while (valeurs.length > 0 && valeurs[valeurs.length - 1] === 0) valeurs.pop();
+  return valeurs;
+}
+
 /** Agrège le temps passé sur chaque étape en un compte rendu par exercice.
  *  Une série ou une station compte comme faite si le temps passé atteint la
  *  moitié de la durée prévue ; le temps d'un exercice additionne ses
@@ -359,7 +426,7 @@ export function agregerRealisation(
   seance: Seance,
   etapes: Etape[],
   tempsParEtapeSec: number[],
-  poids: Record<string, number>,
+  poids: Record<string, number[]>,
   dureeReelleSec: number,
   terminee: boolean,
 ): SeanceRealisee {
@@ -397,11 +464,14 @@ export function agregerRealisation(
   });
 
   const exercices: ExerciceRealise[] = [...parExercice.values()].map((realise) => {
-    const poidsKg = poids[realise.exerciceId];
+    const parSerie = poidsParSerie(poids[realise.exerciceId], realise.seriesPrevues);
+    // `poidsKg` reste la charge de référence de l'exercice — la plus lourde
+    // des séries — pour les écrans qui n'affichent qu'un chiffre.
+    const maximum = parSerie.reduce((max, kg) => Math.max(max, kg), 0);
     return {
       ...realise,
       dureeSec: Math.round(realise.dureeSec),
-      ...(typeof poidsKg === 'number' && poidsKg > 0 ? { poidsKg } : {}),
+      ...(maximum > 0 ? { poidsKg: maximum, poidsParSerie: parSerie } : {}),
     };
   });
 
