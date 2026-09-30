@@ -89,6 +89,16 @@ describe('exercicesDisponibles', () => {
     }
   });
 
+  it('écarte les postures de mobilité, à tous les niveaux et tous matériels', () => {
+    for (const niveau of NIVEAUX) {
+      const disponibles = exercicesDisponibles(
+        avec({ niveau: niveau.id, materiels: ['halteres', 'banc', 'step', 'tapis', 'elastique'] }),
+      );
+      expect(disponibles.some((e) => e.famille === 'mobilite')).toBe(false);
+      expect(disponibles.map((e) => e.id)).not.toContain('yoga-cadavre');
+    }
+  });
+
   it('respecte le niveau minimal des exercices', () => {
     expect(exercicesDisponibles(avec({ niveau: 'debutant' })).every((e) => e.niveauMin <= 1)).toBe(true);
     expect(exercicesDisponibles(avec({ niveau: 'intermediaire' })).every((e) => e.niveauMin <= 2)).toBe(true);

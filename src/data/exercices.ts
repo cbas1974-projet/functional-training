@@ -1,4 +1,5 @@
 import type { Exercice, Materiel, Objectif, PatternMoteur, Zone } from '../types';
+import { EXERCICES_YOGA } from './yoga';
 
 // Les 40 exercices du poster « Dumbbell Workouts », dans l'ordre de lecture.
 // Les identifiants correspondent aux fichiers public/exercices/<id>.png
@@ -1632,6 +1633,9 @@ export const EXERCICES: Exercice[] = [
       'Mouvement explosif et technique : incompatible avec le tempo lent.',
     ],
   },
+  // Les 57 postures du poster « Yoga Poses ». Famille « mobilité » : tenues au
+  // temps, sans charge, et écartées des séances de musculation.
+  ...EXERCICES_YOGA,
 ];
 
 export const EXERCICES_PAR_ID: Record<string, Exercice> = Object.fromEntries(
@@ -1708,6 +1712,12 @@ export const POSTERS: { id: string; nom: string; chemin: string }[] = [
     nom: 'Haltères — volume 2',
     chemin:
       IMAGES_INTEGREES?.['_poster-v2'] ?? `${import.meta.env.BASE_URL}exercices/_poster-v2.jpg`,
+  },
+  {
+    id: '_poster-yoga',
+    nom: 'Yoga — 57 postures',
+    chemin:
+      IMAGES_INTEGREES?.['_poster-yoga'] ?? `${import.meta.env.BASE_URL}exercices/_poster-yoga.jpg`,
   },
 ];
 

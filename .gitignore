@@ -23,3 +23,7 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Cache de l'interpréteur Python (scripts de découpe des posters)
+__pycache__/
+*.pyc

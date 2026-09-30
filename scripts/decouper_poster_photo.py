@@ -56,6 +56,18 @@ DISPOSITIONS: dict[str, list[tuple[str, list[Rangee]]]] = {
         # à la règle sur la photo.
         ("Corps entier", [[0.405, 0.611, 0.813]]),
     ],
+    "yoga": [
+        ("Échauffement", [5]),
+        ("Étirements", [5, 4]),
+        ("Équilibre", [5, 5]),
+        ("Force", [5, 5]),
+        ("Gainage", [5]),
+        ("Extensions", [4, 4]),
+        # Première rangée : un faux trait coupe « Legs Up the Wall » en deux et
+        # celui entre « Easy » et « Happy Baby » ne ressort pas. Les cinq cases
+        # sont régulières, on impose les coupes.
+        ("Récupération", [[0.2, 0.4, 0.6, 0.8], 5]),
+    ],
 }
 
 #: Identifiants dans l'ordre de lecture, alignés sur src/data/exercices.ts.
@@ -80,6 +92,37 @@ IDENTIFIANTS: dict[str, list[str]] = {
         "single-leg-deadlift-db",
         # Corps entier
         "dumbbell-burpee", "high-pull", "side-lunge-thruster", "dumbbell-snatch",
+    ],
+    "yoga": [
+        # Échauffement
+        "yoga-chat", "yoga-vache", "yoga-coeur-fondant", "yoga-enfant",
+        "yoga-flexion-avant-debout",
+        # Étirements
+        "yoga-pyramide", "yoga-chien-tete-en-bas", "yoga-guirlande", "yoga-pince-assise",
+        "yoga-angle-lie",
+        "yoga-tete-au-genou", "yoga-demi-seigneur-poissons", "yoga-heros",
+        "yoga-grand-angle-assis",
+        # Équilibre
+        "yoga-arbre", "yoga-seigneur-danse", "yoga-aigle", "yoga-grand-ecart-debout",
+        "yoga-demi-lune",
+        "yoga-guerrier-3", "yoga-equilibre-mains", "yoga-corbeau",
+        "yoga-main-gros-orteil", "yoga-shiva-dansant",
+        # Force
+        "yoga-guerrier-1", "yoga-guerrier-2", "yoga-deesse", "yoga-guerrier-humble",
+        "yoga-baton-quatre-appuis",
+        "yoga-planche-inversee", "yoga-chaise", "yoga-dauphin", "yoga-triangle",
+        "yoga-fente-haute",
+        # Gainage
+        "yoga-planche", "yoga-planche-laterale", "yoga-bateau", "yoga-chien-une-jambe",
+        "yoga-balance",
+        # Extensions
+        "yoga-cobra", "yoga-chien-tete-en-haut", "yoga-sauterelle", "yoga-arc",
+        "yoga-chameau", "yoga-heros-couche", "yoga-pigeon-royal", "yoga-arc-ascendant",
+        # Récupération
+        "yoga-jambes-au-mur", "yoga-chandelle", "yoga-charrue", "yoga-aisee",
+        "yoga-bebe-heureux",
+        "yoga-angle-lie-couche", "yoga-main-gros-orteil-couche", "yoga-torsion-couchee",
+        "yoga-demi-pigeon", "yoga-cadavre",
     ],
 }
 
@@ -253,6 +296,8 @@ def main() -> None:
     p.add_argument("disposition", choices=sorted(DISPOSITIONS))
     p.add_argument("--sortie", type=Path, default=Path("public/exercices"))
     p.add_argument("--planche", type=Path, help="planche de contrôle")
+    p.add_argument("--garder-libelle", action="store_true",
+                   help="conserve le libellé imprimé : sert à vérifier les identifiants")
     p.add_argument("--debug", action="store_true")
     args = p.parse_args()
 
@@ -299,7 +344,9 @@ def main() -> None:
                 if cb - ca < 40 or rb - ra < 40:
                     sys.exit(f"Cellule dégénérée en {nom_section} : x={ca}..{cb}, y={ra}..{rb}")
                 cellule = img.crop((ca + 6, ra + 4, cb - 6, rb - 2))
-                cellule = rogner_blanc(retirer_libelle(cellule))
+                if not args.garder_libelle:
+                    cellule = retirer_libelle(cellule)
+                cellule = rogner_blanc(cellule)
                 echelle = LARGEUR_VIGNETTE / cellule.width
                 cellule = cellule.resize(
                     (LARGEUR_VIGNETTE, max(1, int(round(cellule.height * echelle)))), Image.LANCZOS

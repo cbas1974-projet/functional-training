@@ -515,8 +515,14 @@ function dureeCircuitSec(circuit: Circuit): number {
 
 // ------------------------------------------------------------- Sélection
 
-/** Parcourt le cycle de zones et retient au plus `maximum` exercices, en
- *  préférant à chaque fois un groupe musculaire pas encore sollicité. */
+/** Exercice de renforcement, par opposition aux postures de mobilité (yoga,
+ *  étirements). Celles-ci se tiennent au temps, ne prennent pas de charge et
+ *  n'ont rien à faire dans une séance de musculation : on ne veut pas d'un
+ *  squat enchaîné avec la posture du cadavre. */
+function estMusculation(exercice: Exercice): boolean {
+  return (exercice.famille ?? 'musculation') === 'musculation';
+}
+
 /** Matériel réellement disponible : ce que l'utilisateur a déclaré, plus les
  *  exercices qui n'en demandent aucun. Lit l'ancien réglage « banc » des
  *  séances enregistrées avant l'arrivée de la liste. */
@@ -535,6 +541,8 @@ function premierNonVide<T>(...listes: T[][]): T[] {
   return listes.find((liste) => liste.length > 0) ?? [];
 }
 
+/** Parcourt le cycle de zones et retient au plus `maximum` exercices, en
+ *  préférant à chaque fois un groupe musculaire pas encore sollicité. */
 function selectionnerExercices(
   candidats: Exercice[],
   cycle: Zone[],
@@ -791,6 +799,7 @@ export function exercicesDisponibles(parametres: ParametresSeance): Exercice[] {
   const possedes = materielsPossedes(parametres);
   return EXERCICES.filter(
     (exercice) =>
+      estMusculation(exercice) &&
       possedes.has(exercice.materiel) &&
       exercice.niveauMin <= niveauMax &&
       (parametres.explosifs || !exercice.explosif),

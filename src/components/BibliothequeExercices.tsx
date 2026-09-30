@@ -81,12 +81,31 @@ function Frequence({ frequence }: { frequence: FrequenceExercice | undefined }) 
   );
 }
 
+/** Les postures de yoga et d'étirement forment une famille à part : on les
+ *  tient au temps, sans charge. Sans ce filtre, elles noieraient les exercices
+ *  de renforcement dans une liste de plus de cent trente fiches. */
+type FiltreFamille = 'toutes' | 'musculation' | 'mobilite';
+
+const FILTRES_FAMILLE: { id: FiltreFamille; nom: string }[] = [
+  { id: 'toutes', nom: 'Tout' },
+  { id: 'musculation', nom: 'Musculation' },
+  { id: 'mobilite', nom: 'Yoga et mobilité' },
+];
+
 export default function BibliothequeExercices({
   historique,
   unitePoids,
 }: BibliothequeExercicesProps) {
   const [exerciceOuvertId, setExerciceOuvertId] = useState<string | null>(null);
   const [posterOuvert, setPosterOuvert] = useState<string | null>(null);
+  const [famille, setFamille] = useState<FiltreFamille>('toutes');
+  const exercices = useMemo(
+    () =>
+      famille === 'toutes'
+        ? EXERCICES
+        : EXERCICES.filter((e) => (e.famille ?? 'musculation') === famille),
+    [famille],
+  );
   const frequences = useMemo(
     () => frequencesParExercice(historique, unitePoids),
     [historique, unitePoids],
@@ -133,13 +152,40 @@ export default function BibliothequeExercices({
           Bibliothèque
         </h2>
         <p className="text-sm" style={{ color: 'var(--texte-discret)' }}>
-          <span className="chiffres">{EXERCICES.length}</span> exercices
+          <span className="chiffres">{exercices.length}</span> exercices
         </p>
+      </div>
+
+      <div className="mt-3 flex flex-wrap gap-2">
+        {FILTRES_FAMILLE.map((filtre) => {
+          const actif = filtre.id === famille;
+          return (
+            <button
+              key={filtre.id}
+              type="button"
+              onClick={() => {
+                setFamille(filtre.id);
+                setExerciceOuvertId(null);
+              }}
+              aria-pressed={actif}
+              className="rounded-xl px-3 text-sm font-semibold"
+              style={{
+                minHeight: 44,
+                background: actif ? 'var(--accent)' : 'var(--surface-haute)',
+                border: `1px solid ${actif ? 'var(--accent)' : 'var(--bordure)'}`,
+                color: actif ? 'var(--accent-texte)' : 'var(--texte)',
+              }}
+            >
+              {filtre.nom}
+            </button>
+          );
+        })}
       </div>
 
       <div className="mt-4 space-y-6">
         {ZONES.map((zone) => {
-          const exercicesZone = EXERCICES.filter((e) => e.zone === zone.id);
+          const exercicesZone = exercices.filter((e) => e.zone === zone.id);
+          if (exercicesZone.length === 0) return null;
           const exerciceOuvert: Exercice | undefined = exercicesZone.find(
             (e) => e.id === exerciceOuvertId
           );
