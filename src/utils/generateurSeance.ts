@@ -197,6 +197,19 @@ const GROUPES_OPPOSES: Partial<Record<GroupeMusculaire, GroupeMusculaire[]>> = {
   epaules: ['dorsaux'],
 };
 
+/** Vrai quand les deux exercices s'opposent réellement — par le schéma de
+ *  mouvement ou par le muscle. C'est ce que cherche l'appariement des
+ *  enchaînements ; exporté pour que les tests interrogent la définition au
+ *  lieu d'en tenir une copie qui dérive. */
+export function sontOpposes(a: Exercice, b: Exercice): boolean {
+  return (
+    (PATTERNS_OPPOSES[a.pattern]?.includes(b.pattern) ?? false) ||
+    (PATTERNS_OPPOSES[b.pattern]?.includes(a.pattern) ?? false) ||
+    (GROUPES_OPPOSES[a.groupe]?.includes(b.groupe) ?? false) ||
+    (GROUPES_OPPOSES[b.groupe]?.includes(a.groupe) ?? false)
+  );
+}
+
 /** Schémas qui coupent le souffle : grosse masse musculaire sous charge. */
 const PATTERNS_EXIGEANTS: PatternMoteur[] = ['squat', 'charniere', 'fente', 'portage'];
 

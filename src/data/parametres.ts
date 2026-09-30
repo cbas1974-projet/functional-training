@@ -105,6 +105,7 @@ export const MATERIELS_DECLARABLES: { id: Materiel; nom: string; precision: stri
   { id: 'halteres', nom: 'Haltères', precision: 'La base de la bibliothèque actuelle.' },
   { id: 'banc', nom: 'Banc', precision: 'Développés, écartés, pull-over, rowing incliné.' },
   { id: 'step', nom: 'Marche ou step', precision: 'Montées sur marche.' },
+  { id: 'barre-fixe', nom: 'Barre de traction', precision: 'Relevés de jambes suspendu.' },
   { id: 'elastique', nom: 'Bande élastique', precision: 'À venir.' },
   { id: 'swissball', nom: 'Swiss ball', precision: 'À venir.' },
   { id: 'tapis', nom: 'Tapis', precision: 'Confort au sol pour le gainage et la mobilité.' },

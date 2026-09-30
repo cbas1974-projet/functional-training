@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import type { ReactNode } from 'react';
 import type { Exercice, SeanceRealisee, UnitePoids } from '../types';
-import { CHEMIN_POSTER, EXERCICES, NOM_MATERIEL, NOM_PATTERN, ZONES } from '../data/exercices';
+import { EXERCICES, NOM_MATERIEL, NOM_PATTERN, POSTERS, ZONES } from '../data/exercices';
 import { formaterDateFr, libelleNiveauMin } from '../utils/formatage';
 import { SUFFIXE_UNITE, frequencesParExercice } from '../utils/statistiques';
 import type { FrequenceExercice } from '../utils/statistiques';
@@ -86,16 +86,16 @@ export default function BibliothequeExercices({
   unitePoids,
 }: BibliothequeExercicesProps) {
   const [exerciceOuvertId, setExerciceOuvertId] = useState<string | null>(null);
-  const [posterOuvert, setPosterOuvert] = useState(false);
+  const [posterOuvert, setPosterOuvert] = useState<string | null>(null);
   const frequences = useMemo(
     () => frequencesParExercice(historique, unitePoids),
     [historique, unitePoids],
   );
 
   useEffect(() => {
-    if (!posterOuvert) return;
+    if (posterOuvert === null) return;
     const surEchap = (evenement: KeyboardEvent) => {
-      if (evenement.key === 'Escape') setPosterOuvert(false);
+      if (evenement.key === 'Escape') setPosterOuvert(null);
     };
     window.addEventListener('keydown', surEchap);
     return () => window.removeEventListener('keydown', surEchap);
@@ -104,7 +104,7 @@ export default function BibliothequeExercices({
   // Bloque le défilement de la page pendant que la modale est ouverte et
   // restaure la position à la fermeture.
   useEffect(() => {
-    if (!posterOuvert) return;
+    if (posterOuvert === null) return;
     const positionPrecedente = window.scrollY;
     const overflowPrecedent = document.body.style.overflow;
     window.scrollTo({ top: 0 });
@@ -239,38 +239,44 @@ export default function BibliothequeExercices({
           );
         })}
 
-        <button
-          type="button"
-          onClick={() => setPosterOuvert(true)}
-          className="w-full rounded-xl px-4 text-sm font-semibold"
-          style={{
-            minHeight: 44,
-            background: 'var(--surface-haute)',
-            border: '1px solid var(--bordure)',
-            color: 'var(--texte)',
-          }}
-        >
-          Voir le poster complet
-        </button>
+        <div className="flex flex-wrap gap-2">
+          {POSTERS.map((poster) => (
+            <button
+              key={poster.id}
+              type="button"
+              onClick={() => setPosterOuvert(poster.id)}
+              className="flex-1 rounded-xl px-4 text-sm font-semibold"
+              style={{
+                minHeight: 44,
+                minWidth: 160,
+                background: 'var(--surface-haute)',
+                border: '1px solid var(--bordure)',
+                color: 'var(--texte)',
+              }}
+            >
+              Poster {poster.nom}
+            </button>
+          ))}
+        </div>
       </div>
 
-      {posterOuvert &&
+      {posterOuvert !== null &&
         createPortal(
           <div
             className="fixed inset-0 z-50 flex items-center justify-center p-4"
             style={{ background: 'rgba(0, 0, 0, 0.8)' }}
-            onClick={() => setPosterOuvert(false)}
+            onClick={() => setPosterOuvert(null)}
           >
             <div className="relative w-full max-w-3xl" onClick={(e) => e.stopPropagation()}>
               <img
-                src={CHEMIN_POSTER}
-                alt="Poster complet des 40 exercices"
+                src={POSTERS.find((p) => p.id === posterOuvert)?.chemin}
+                alt={`Poster ${POSTERS.find((p) => p.id === posterOuvert)?.nom}`}
                 className="max-h-[80vh] w-full"
                 style={{ background: '#ffffff', borderRadius: 14, objectFit: 'contain' }}
               />
               <button
                 type="button"
-                onClick={() => setPosterOuvert(false)}
+                onClick={() => setPosterOuvert(null)}
                 className="mt-3 w-full rounded-xl px-4 font-semibold"
                 style={{
                   minHeight: 44,

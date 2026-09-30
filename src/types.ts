@@ -31,6 +31,7 @@ export type Materiel =
   | 'halteres'
   | 'banc'
   | 'step'
+  | 'barre-fixe'
   | 'elastique'
   | 'swissball'
   | 'tapis';

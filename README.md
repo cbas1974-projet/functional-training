@@ -119,8 +119,8 @@ chaque exercice les séries faites, le temps passé et la charge de chaque séri
 saisie : changer d'unité ne réécrit pas le passé, et les statistiques
 convertissent ce qu'il faut pour rester comparables.
 
-La bibliothèque présente les 40 exercices classés par zone, avec le poster
-complet. Chaque fiche indique **combien de fois l'exercice a été fait sur
+La bibliothèque présente les **77 exercices** classés par zone, avec les deux
+posters d'origine consultables en entier. Chaque fiche indique **combien de fois l'exercice a été fait sur
 1 mois, 3 mois, 6 mois et depuis le début**, la date de la dernière fois, la
 charge utilisée et le record, ramenés à l'unité courante. Les exercices travaillés dans le mois portent
 une pastille sur leur vignette : ce qui n'en a pas est ce qu'on néglige.
@@ -183,7 +183,7 @@ src/
 │   ├── HistoriqueEntrainement.tsx
 │   └── BibliothequeExercices.tsx
 ├── data/
-│   ├── exercices.ts              # Les 40 exercices et leurs points d'attention
+│   ├── exercices.ts              # Les 77 exercices et leurs points d'attention
 │   └── parametres.ts             # Durées, tempos, niveaux, formats, zones
 ├── utils/
 │   ├── generateurSeance.ts       # Choix des exercices et calcul des volumes
@@ -198,6 +198,31 @@ src/
 ├── types.ts
 └── App.tsx
 ```
+
+## La bibliothèque d'exercices
+
+77 mouvements, tirés de deux posters QuickFit « Dumbbell Workouts » (volumes 1
+et 2). Chacun porte son nom français, sa zone, son muscle, son **schéma de
+mouvement**, son matériel, son niveau, ses côtés, ses points d'attention et,
+quand il y a lieu, son intérêt pour le jiu-jitsu.
+
+Les vignettes sont découpées automatiquement depuis une photo du poster :
+
+```bash
+python3 scripts/decouper_poster_photo.py photo.jpg dumbbell-v2 \
+    --sortie public/exercices --planche controle.png
+```
+
+`decouper_poster_photo.py` part d'une photo de téléphone d'un poster plastifié :
+il corrige l'éclairage par division par un flou large — ce qui efface la
+dominante chaude et rend le fond blanc —, repère les bandeaux de section par
+leur couleur, absorbe la perspective résiduelle en interpolant les bords, puis
+détecte les traits de grille. Un trait est gris sur toute sa traversée, là où un
+dessin est noir par endroits et le fond blanc partout : c'est ce qui les
+distingue. Les rangées dont les traits ne survivent pas à la photo portent leurs
+coupes en dur dans la disposition.
+
+`decouper_poster.py`, plus ancien, reste pour un scan à plat à grille régulière.
 
 ## Comment le temps est calculé
 
