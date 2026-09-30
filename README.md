@@ -132,13 +132,19 @@ chaque exercice les séries faites, le temps passé et la charge de chaque séri
 saisie : changer d'unité ne réécrit pas le passé, et les statistiques
 convertissent ce qu'il faut pour rester comparables.
 
-La bibliothèque présente les **134 exercices** classés par zone, avec les
-posters d'origine consultables en entier. Un filtre sépare les deux familles :
-**musculation** (77 exercices aux haltères, au banc, à la marche et à la barre
-de traction) et **yoga et mobilité** (les 57 postures du poster « Yoga Poses »,
-tenues au temps et sans charge). Les postures de mobilité n'entrent jamais dans
-une séance de musculation générée — on ne veut pas d'un squat enchaîné avec la
-posture du cadavre. Chaque fiche indique **combien de fois l'exercice a été fait sur
+La bibliothèque présente les **186 exercices** classés par zone, avec les
+quatre posters d'origine consultables en entier. Un filtre sépare les trois
+familles :
+
+| Famille | Nombre | Comment ça se travaille |
+| --- | --- | --- |
+| Musculation | 77 | Répétitions au tempo, avec une charge |
+| Yoga | 57 | Postures tenues au temps, sans charge |
+| Étirements | 52 | Positions tenues au temps, sans charge |
+
+Le yoga et les étirements n'entrent jamais dans une séance de musculation
+générée : on ne veut pas d'un squat enchaîné avec la posture du cadavre. Chaque
+fiche indique **combien de fois l'exercice a été fait sur
 1 mois, 3 mois, 6 mois et depuis le début**, la date de la dernière fois, la
 charge utilisée et le record, ramenés à l'unité courante. Les exercices travaillés dans le mois portent
 une pastille sur leur vignette : ce qui n'en a pas est ce qu'on néglige.

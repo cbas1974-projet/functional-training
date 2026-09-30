@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import type { ReactNode } from 'react';
-import type { Exercice, SeanceRealisee, UnitePoids } from '../types';
+import type { Exercice, Famille, SeanceRealisee, UnitePoids } from '../types';
 import { EXERCICES, NOM_MATERIEL, NOM_PATTERN, POSTERS, ZONES } from '../data/exercices';
 import { formaterDateFr, libelleNiveauMin } from '../utils/formatage';
 import { SUFFIXE_UNITE, frequencesParExercice } from '../utils/statistiques';
@@ -81,15 +81,16 @@ function Frequence({ frequence }: { frequence: FrequenceExercice | undefined }) 
   );
 }
 
-/** Les postures de yoga et d'étirement forment une famille à part : on les
- *  tient au temps, sans charge. Sans ce filtre, elles noieraient les exercices
- *  de renforcement dans une liste de plus de cent trente fiches. */
-type FiltreFamille = 'toutes' | 'musculation' | 'mobilite';
+/** Le yoga et les étirements se tiennent au temps, sans charge : ce sont deux
+ *  familles à part. Sans ce filtre, elles noieraient les exercices de
+ *  renforcement dans une liste de près de deux cents fiches. */
+type FiltreFamille = 'toutes' | Famille;
 
 const FILTRES_FAMILLE: { id: FiltreFamille; nom: string }[] = [
   { id: 'toutes', nom: 'Tout' },
   { id: 'musculation', nom: 'Musculation' },
-  { id: 'mobilite', nom: 'Yoga et mobilité' },
+  { id: 'yoga', nom: 'Yoga' },
+  { id: 'etirement', nom: 'Étirements' },
 ];
 
 export default function BibliothequeExercices({

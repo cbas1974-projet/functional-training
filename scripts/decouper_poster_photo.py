@@ -93,6 +93,43 @@ IDENTIFIANTS: dict[str, list[str]] = {
         # Corps entier
         "dumbbell-burpee", "high-pull", "side-lunge-thruster", "dumbbell-snatch",
     ],
+    "stretching": [
+        # Nuque
+        "etir-nuque-inclinaison", "etir-nuque-flexion", "etir-nuque-oblique",
+        "etir-nuque-trapeze",
+        # Épaules et bras (premier panneau)
+        "etir-trapeze-assis", "etir-epaule-rotation-interne", "etir-epaules-croisees",
+        "etir-epaule-posterieure",
+        # Épaules et bras (second panneau)
+        "etir-triceps-nuque", "etir-epaule-serviette", "etir-avant-bras-flechisseurs",
+        "etir-poignets-quatre-pattes", "etir-poignet-extenseurs",
+        # Poitrine
+        "etir-pectoraux-mains-nuque", "etir-pectoral-montant", "etir-pectoraux-mains-dos",
+        # Dos
+        "etir-haut-dos-bras-devant", "etir-dos-assis-plantes-jointes",
+        "etir-dos-rond-quatre-pattes", "etir-bascule-dos", "etir-rachis-debout",
+        # Hanches
+        "etir-fente-laterale", "etir-hanche-accroupie", "etir-ecart-coudes-genoux",
+        "etir-hanche-sol-jambe-tendue", "etir-genou-en-travers", "etir-fessier-chiffre-4",
+        "etir-ecart-allonge", "etir-ecart-assis-lateral",
+        # Tronc (colonne de gauche)
+        "etir-grandissement-bras-leves", "etir-inclinaison-tronc",
+        "etir-torsion-allongee", "etir-torsion-jambe-croisee",
+        # Tronc (colonne de droite)
+        "etir-torsion-assise", "etir-fente-bras-leve",
+        # Abdominaux
+        "etir-dos-creux-quatre-pattes", "etir-abdos-debout", "etir-cobra-sol",
+        # Quadriceps
+        "etir-quadriceps-cote", "etir-quadriceps-debout", "etir-quadriceps-ventre",
+        # Ischio-jambiers
+        "etir-ischios-debout", "etir-ischios-allonge", "etir-ischios-jambes-croisees",
+        "etir-ischios-assis",
+        # Mollets et chevilles
+        "etir-mollet-marche", "etir-mollet-mur", "etir-soleaire-genou-flechi",
+        "etir-tibia-cou-de-pied",
+        # Corps entier
+        "etir-corps-debout", "etir-allongement-sol", "etir-suspension-barre",
+    ],
     "yoga": [
         # Échauffement
         "yoga-chat", "yoga-vache", "yoga-coeur-fondant", "yoga-enfant",
@@ -125,6 +162,46 @@ IDENTIFIANTS: dict[str, list[str]] = {
         "yoga-demi-pigeon", "yoga-cadavre",
     ],
 }
+
+#: Certains posters ne sont pas une pile de bandeaux pleine largeur : les
+#: sections y sont disposées en colonnes, côte à côte, de hauteurs inégales.
+#: Impossible de les déduire d'un balayage par rangées — on décrit alors chaque
+#: panneau par sa boîte, en fraction de l'image, mesurée une fois sur les
+#: bandeaux de couleur détectés. Un panneau se découpe ensuite comme une
+#: section ordinaire.
+Panneau = tuple[str, tuple[float, float, float, float], list[Rangee]]
+PANNEAUX: dict[str, list[Panneau]] = {
+    "stretching": [
+        ("Nuque", (0.0483, 0.4977, 0.1250, 0.2185), [4]),
+        ("Épaules et bras", (0.5040, 0.9617, 0.1250, 0.2185), [4]),
+        # Dernière case : les deux dessins d'avant-bras comptent pour une.
+        ("Épaules et bras", (0.0493, 0.6133, 0.2418, 0.3343),
+         [[0.167, 0.337, 0.570, 0.767]]),
+        ("Poitrine", (0.6193, 0.9643, 0.2418, 0.3343), [3]),
+        # Quatrième case : la séquence de bascule sur le dos, en trois dessins.
+        ("Dos", (0.0523, 0.9640, 0.3558, 0.4490),
+         [[0.152, 0.369, 0.537, 0.859]]),
+        ("Hanches", (0.0543, 0.5030, 0.4690, 0.7573), [3, 3, 2]),
+        # Le tronc est sur deux colonnes de deux cases plus une colonne à part,
+        # dont la coupe horizontale est plus haute : deux panneaux distincts.
+        ("Tronc", (0.5087, 0.8077, 0.4690, 0.6388), [2, 2]),
+        ("Tronc", (0.8077, 0.9647, 0.4690, 0.6388), [1, 1]),
+        ("Abdominaux", (0.5110, 0.9710, 0.6558, 0.7573), [3]),
+        ("Quadriceps", (0.0530, 0.4963, 0.7748, 0.8725), [3]),
+        ("Ischio-jambiers", (0.5027, 0.9793, 0.7748, 0.8725), [4]),
+        ("Mollets et chevilles", (0.0557, 0.6037, 0.8910, 0.9865), [4]),
+        ("Corps entier", (0.6093, 0.9797, 0.8910, 0.9865), [3]),
+    ],
+}
+
+#: Posters dont les cases ne portent aucun libellé imprimé : rien à retirer
+#: sous le dessin.
+SANS_LIBELLE = {"stretching"}
+
+#: Posters sans trait de grille imprimé : les cases ne sont séparées que par du
+#: blanc. On y repère les gouttières — les colonnes sans une goutte d'encre —
+#: plutôt que des traits gris qui n'existent pas.
+SANS_GRILLE = {"stretching"}
 
 #: Largeur des vignettes produites. Les 40 premières font 199 px ; on monte à
 #: 320 px, ce que la photo permet sans interpoler.
@@ -229,6 +306,49 @@ def traits(bloc: np.ndarray, axe: int, part: float = 0.60, epaisseur: int = 6) -
     return [x for x in out if marge <= x <= longueur - 1 - marge]
 
 
+def gouttieres(bloc: np.ndarray, nombre: int, marge: float = 0.05) -> list[int]:
+    """Les `nombre - 1` gouttières les plus larges d'un bloc : les colonnes où
+    ne passe aucun trait d'encre. C'est ce qui sépare les cases d'un poster qui
+    n'imprime pas de grille ; les dessins n'y étant pas régulièrement espacés,
+    un découpage en parts égales tomberait au milieu des silhouettes."""
+    if nombre < 2:
+        return []
+    vides = (bloc < 200).sum(0) <= max(1, bloc.shape[0] // 60)
+    plages, debut = [], None
+    for x, vide in enumerate(vides):
+        if vide and debut is None:
+            debut = x
+        elif not vide and debut is not None:
+            plages.append((debut, x - 1))
+            debut = None
+    if debut is not None:
+        plages.append((debut, len(vides) - 1))
+    # Une gouttière collée au bord est la marge du panneau, pas une séparation.
+    bord = marge * bloc.shape[1]
+    plages = [p for p in plages if p[0] > bord and p[1] < bloc.shape[1] - 1 - bord]
+    plages.sort(key=lambda p: p[1] - p[0], reverse=True)
+    return sorted((p[0] + p[1]) // 2 for p in plages[: nombre - 1])
+
+
+def resserrer(
+    gris: np.ndarray, x0: int, x1: int, y0: int, y1: int, part: float = 0.90
+) -> tuple[int, int, int, int]:
+    """Rétrécit une boîte de panneau tant qu'un de ses bords n'est pas
+    majoritairement blanc. Retire le bandeau de couleur qui déborde, le liseré
+    du poster et la table sur laquelle la photo a été prise — sans quoi il ne
+    reste plus une seule colonne sans encre où couper."""
+    blanc = gris > 205
+    while y1 - y0 > 40 and blanc[y0, x0:x1].mean() < part:
+        y0 += 1
+    while y1 - y0 > 40 and blanc[y1 - 1, x0:x1].mean() < part:
+        y1 -= 1
+    while x1 - x0 > 40 and blanc[y0:y1, x0].mean() < part:
+        x0 += 1
+    while x1 - x0 > 40 and blanc[y0:y1, x1 - 1].mean() < part:
+        x1 -= 1
+    return x0, x1, y0, y1
+
+
 def decouper(debut: int, fin: int, rangee: Rangee, detectes: list[int]) -> list[tuple[int, int]]:
     """Bornes des cellules entre `debut` et `fin`.
 
@@ -293,7 +413,7 @@ def rogner_blanc(cellule: Image.Image, marge: int = 6) -> Image.Image:
 def main() -> None:
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     p.add_argument("photo", type=Path)
-    p.add_argument("disposition", choices=sorted(DISPOSITIONS))
+    p.add_argument("disposition", choices=sorted(set(DISPOSITIONS) | set(PANNEAUX)))
     p.add_argument("--sortie", type=Path, default=Path("public/exercices"))
     p.add_argument("--planche", type=Path, help="planche de contrôle")
     p.add_argument("--garder-libelle", action="store_true",
@@ -305,46 +425,70 @@ def main() -> None:
     img = aplanir(brute)
     gris = np.asarray(img.convert("L"), dtype=float)
 
-    sections = DISPOSITIONS[args.disposition]
     identifiants = IDENTIFIANTS[args.disposition]
+    en_panneaux = args.disposition in PANNEAUX
+    sections: list[tuple[str, list[Rangee]]] = (
+        [(nom, rangees) for nom, _, rangees in PANNEAUX[args.disposition]]
+        if en_panneaux
+        else DISPOSITIONS[args.disposition]
+    )
     attendu = sum(nb_cellules(r) for _, rangees in sections for r in rangees)
     if len(identifiants) != attendu:
         sys.exit(f"{len(identifiants)} identifiants pour {attendu} cellules annoncées.")
 
-    tous = bandeaux(img)
-    barres = bandeaux_de_section(tous, len(sections), img.size[0])
-    # Bas de la dernière section : le pied de page, s'il a été repéré. Sans
-    # cette borne, la dernière rangée mord sur le bandeau du bas et les traits
-    # de grille deviennent indétectables.
-    apres_derniere = [b for b in tous if b[0] > barres[-1][1] + 20]
-    bas_dernier = apres_derniere[0][0] - 10 if apres_derniere else img.size[1]
-    if args.debug:
-        for y0, y1, x0, x1 in tous:
-            print(f"  bandeau y={y0}..{y1} (h={y1-y0+1}) x={x0}..{x1}")
+    # Boîte de chaque section : (nom, rangées, x_gauche, x_droite, haut, bas).
+    boites: list[tuple[str, list[Rangee], int, int, int, int]] = []
+    if en_panneaux:
+        largeur, hauteur = img.size
+        for nom, (fx0, fx1, fy0, fy1), rangees in PANNEAUX[args.disposition]:
+            x0, x1, y0, y1 = resserrer(
+                gris,
+                round(fx0 * largeur) + 8, round(fx1 * largeur) - 8,
+                round(fy0 * hauteur), round(fy1 * hauteur),
+            )
+            boites.append((nom, rangees, x0, x1, y0, y1))
+    else:
+        tous = bandeaux(img)
+        barres = bandeaux_de_section(tous, len(sections), img.size[0])
+        # Bas de la dernière section : le pied de page, s'il a été repéré. Sans
+        # cette borne, la dernière rangée mord sur le bandeau du bas et les
+        # traits de grille deviennent indétectables.
+        apres_derniere = [b for b in tous if b[0] > barres[-1][1] + 20]
+        bas_dernier = apres_derniere[0][0] - 10 if apres_derniere else img.size[1]
+        if args.debug:
+            for y0, y1, x0, x1 in tous:
+                print(f"  bandeau y={y0}..{y1} (h={y1-y0+1}) x={x0}..{x1}")
+        for i, (nom, rangees) in enumerate(sections):
+            y0, y1, gx0, gx1 = barres[i]
+            bas = (barres[i + 1][0] - 10) if i + 1 < len(barres) else bas_dernier
+            # Bord du poster interpolé : le bandeau de la section, et le suivant.
+            sx0, sx1 = (barres[i + 1][2], barres[i + 1][3]) if i + 1 < len(barres) else (gx0, gx1)
+            boites.append((nom, rangees, max(gx0, sx0) + 8, min(gx1, sx1) - 8, y1 + 10, bas))
 
     args.sortie.mkdir(parents=True, exist_ok=True)
     vignettes: list[tuple[str, Image.Image]] = []
     index = 0
 
-    for i, (nom_section, rangees) in enumerate(sections):
-        y0, y1, gx0, gx1 = barres[i]
-        haut = y1 + 10
-        bas = (barres[i + 1][0] - 10) if i + 1 < len(barres) else bas_dernier
-        # Bord du poster interpolé : le bandeau de la section, et le suivant.
-        sx0, sx1 = (barres[i + 1][2], barres[i + 1][3]) if i + 1 < len(barres) else (gx0, gx1)
-        x_gauche, x_droite = max(gx0, sx0) + 8, min(gx1, sx1) - 8
-
+    for nom_section, rangees, x_gauche, x_droite, haut, bas in boites:
         lignes = [haut + t for t in traits(gris[haut:bas, x_gauche:x_droite], 1)]
         bornes_y = decouper(haut, bas, len(rangees), lignes)
 
         for (ra, rb), rangee in zip(bornes_y, rangees):
             ra, rb = ra + 6, rb - 6
-            cols = [x_gauche + t for t in traits(gris[ra:rb, x_gauche:x_droite], 0)]
+            bloc = gris[ra:rb, x_gauche:x_droite]
+            cols = [
+                x_gauche + t
+                for t in (
+                    gouttieres(bloc, nb_cellules(rangee))
+                    if args.disposition in SANS_GRILLE
+                    else traits(bloc, 0)
+                )
+            ]
             for (ca, cb) in decouper(x_gauche, x_droite, rangee, cols):
                 if cb - ca < 40 or rb - ra < 40:
                     sys.exit(f"Cellule dégénérée en {nom_section} : x={ca}..{cb}, y={ra}..{rb}")
                 cellule = img.crop((ca + 6, ra + 4, cb - 6, rb - 2))
-                if not args.garder_libelle:
+                if not args.garder_libelle and args.disposition not in SANS_LIBELLE:
                     cellule = retirer_libelle(cellule)
                 cellule = rogner_blanc(cellule)
                 echelle = LARGEUR_VIGNETTE / cellule.width

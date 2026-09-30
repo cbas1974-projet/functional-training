@@ -57,8 +57,10 @@ export type PatternMoteur =
   | 'mobilite';
 
 /** Famille d'entraînement : détermine la façon de travailler (répétitions
- *  chargées, maintiens au temps, enchaînements respiratoires). */
-export type Famille = 'musculation' | 'mobilite';
+ *  chargées, maintiens au temps, enchaînements respiratoires). Seule la
+ *  musculation entre dans les séances générées ; les deux autres alimentent la
+ *  bibliothèque et les routines de mobilité. */
+export type Famille = 'musculation' | 'yoga' | 'etirement';
 
 /** bilateral : les deux côtés ensemble ; alterne : un côté puis l'autre à
  *  chaque répétition ; unilateral : toutes les répétitions d'un côté, puis

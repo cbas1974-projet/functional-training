@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { EXERCICES, EXERCICES_PAR_ID, POSTERS } from './exercices';
+import { EXERCICES_ETIREMENTS } from './etirements';
 import { EXERCICES_YOGA } from './yoga';
 
 /** Noms des fichiers réellement présents dans public/exercices. Passer par
@@ -31,6 +32,14 @@ describe('bibliothèque d’exercices', () => {
     expect(manquants).toEqual([]);
   });
 
+  it('n’a pas de vignette orpheline dans public/exercices', () => {
+    const connus = new Set([
+      ...EXERCICES.map((e) => `${e.id}.png`),
+      ...POSTERS.map((p) => `${p.id}.jpg`),
+    ]);
+    expect([...FICHIERS].filter((f) => !connus.has(f)).sort()).toEqual([]);
+  });
+
   it('renseigne au moins deux points d’attention par exercice', () => {
     const pauvres = EXERCICES.filter((e) => e.pointsAttention.length < 2).map((e) => e.id);
     expect(pauvres).toEqual([]);
@@ -44,7 +53,7 @@ describe('postures de yoga', () => {
 
   it('les tient au temps, sur un tapis, dans la famille mobilité', () => {
     for (const posture of EXERCICES_YOGA) {
-      expect(posture.famille).toBe('mobilite');
+      expect(posture.famille).toBe('yoga');
       expect(posture.unite).toBe('secondes');
       expect(posture.materiel).toBe('tapis');
       expect(posture.pattern).toBe('mobilite');
@@ -58,5 +67,33 @@ describe('postures de yoga', () => {
   it('fait partie de la bibliothèque commune', () => {
     expect(EXERCICES_PAR_ID['yoga-guerrier-2'].nomFr).toBe('Guerrier II');
     expect(EXERCICES_PAR_ID['yoga-cadavre'].zone).toBe('complet');
+  });
+});
+
+describe('étirements', () => {
+  it('compte les 52 cases du poster', () => {
+    expect(EXERCICES_ETIREMENTS).toHaveLength(52);
+  });
+
+  it('les tient au temps, dans la famille mobilité', () => {
+    for (const etirement of EXERCICES_ETIREMENTS) {
+      expect(etirement.famille).toBe('etirement');
+      expect(etirement.unite).toBe('secondes');
+      expect(etirement.pattern).toBe('mobilite');
+      expect(etirement.explosif).toBeUndefined();
+      expect(etirement.id.startsWith('etir-')).toBe(true);
+    }
+  });
+
+  it('ne demande que du matériel qu’on peut déclarer', () => {
+    const attendus = new Set(['aucun', 'tapis', 'step', 'barre-fixe']);
+    const inattendus = EXERCICES_ETIREMENTS.filter((e) => !attendus.has(e.materiel));
+    expect(inattendus.map((e) => `${e.id}: ${e.materiel}`)).toEqual([]);
+  });
+
+  it('couvre le corps de la nuque aux chevilles', () => {
+    expect(EXERCICES_PAR_ID['etir-nuque-flexion'].groupe).toBe('trapezes');
+    expect(EXERCICES_PAR_ID['etir-mollet-marche'].materiel).toBe('step');
+    expect(EXERCICES_PAR_ID['etir-suspension-barre'].materiel).toBe('barre-fixe');
   });
 });

@@ -1,4 +1,5 @@
 import type { Exercice, Materiel, Objectif, PatternMoteur, Zone } from '../types';
+import { EXERCICES_ETIREMENTS } from './etirements';
 import { EXERCICES_YOGA } from './yoga';
 
 // Les 40 exercices du poster « Dumbbell Workouts », dans l'ordre de lecture.
@@ -1633,9 +1634,11 @@ export const EXERCICES: Exercice[] = [
       'Mouvement explosif et technique : incompatible avec le tempo lent.',
     ],
   },
-  // Les 57 postures du poster « Yoga Poses ». Famille « mobilité » : tenues au
-  // temps, sans charge, et écartées des séances de musculation.
+  // Les 57 postures du poster « Yoga Poses » et les 52 étirements du poster
+  // « Stretching Exercises ». Famille « mobilité » : tenues au temps, sans
+  // charge, et écartées des séances de musculation.
   ...EXERCICES_YOGA,
+  ...EXERCICES_ETIREMENTS,
 ];
 
 export const EXERCICES_PAR_ID: Record<string, Exercice> = Object.fromEntries(
@@ -1718,6 +1721,13 @@ export const POSTERS: { id: string; nom: string; chemin: string }[] = [
     nom: 'Yoga — 57 postures',
     chemin:
       IMAGES_INTEGREES?.['_poster-yoga'] ?? `${import.meta.env.BASE_URL}exercices/_poster-yoga.jpg`,
+  },
+  {
+    id: '_poster-stretching',
+    nom: 'Étirements — 52 exercices',
+    chemin:
+      IMAGES_INTEGREES?.['_poster-stretching'] ??
+      `${import.meta.env.BASE_URL}exercices/_poster-stretching.jpg`,
   },
 ];
 

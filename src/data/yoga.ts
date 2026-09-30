@@ -18,7 +18,7 @@ const posture = (
   ...e,
   materiel: 'tapis',
   pattern: 'mobilite',
-  famille: 'mobilite',
+  famille: 'yoga',
   unite: 'secondes',
 });
 
