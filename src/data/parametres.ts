@@ -1,4 +1,5 @@
 import type {
+  Discipline,
   FormatSeance,
   StyleCircuit,
   GuideVisuel,
@@ -39,6 +40,42 @@ export const TEMPOS: { tempo: Tempo; nom: string; description: string }[] = [
     tempo: { monteeSec: 2, descenteSec: 4 },
     nom: '2 s / 4 s',
     description: 'Montée normale, descente lente (excentrique).',
+  },
+];
+
+export const DISCIPLINES: { id: Discipline; nom: string; description: string }[] = [
+  {
+    id: 'musculation',
+    nom: 'Musculation',
+    description: 'Répétitions au tempo, avec une charge. Haltères, banc, marche, barre.',
+  },
+  {
+    id: 'mobilite',
+    nom: 'Yoga et étirements',
+    description:
+      'Des positions tenues, sans charge, dans l’ordre des posters : on démarre en douceur et on finit par la récupération.',
+  },
+  { id: 'yoga', nom: 'Yoga seul', description: 'Les 57 postures du poster de yoga.' },
+  {
+    id: 'etirement',
+    nom: 'Étirements seuls',
+    description: 'Les 52 étirements du poster, de la nuque aux chevilles.',
+  },
+];
+
+/** Durées de maintien proposées pour une position, en secondes. */
+export const TENUES_SEC: { valeur: number; nom: string; description: string }[] = [
+  { valeur: 20, nom: '20 s', description: 'Court : on passe beaucoup de positions.' },
+  {
+    valeur: 30,
+    nom: '30 s',
+    description: 'Recommandé : le seuil à partir duquel le muscle lâche vraiment.',
+  },
+  { valeur: 45, nom: '45 s', description: 'Long : moins de positions, plus profondes.' },
+  {
+    valeur: 60,
+    nom: '60 s',
+    description: 'Très long, façon yin. Réservé aux positions au sol et confortables.',
   },
 ];
 
@@ -153,7 +190,9 @@ export const PARAMETRES_PAR_DEFAUT: ParametresSeance = {
   dureeMinutes: 20,
   zones: [...TOUTES_LES_ZONES],
   niveau: 'intermediaire',
+  discipline: 'musculation',
   format: 'series',
+  tenueSec: 30,
   styleCircuit: 'classique',
   tempo: { monteeSec: 4, descenteSec: 4 },
   materiels: ['halteres'],

@@ -149,6 +149,31 @@ fiche indique **combien de fois l'exercice a été fait sur
 charge utilisée et le record, ramenés à l'unité courante. Les exercices travaillés dans le mois portent
 une pastille sur leur vignette : ce qui n'en a pas est ce qu'on néglige.
 
+## Yoga et étirements
+
+Le réglage **Discipline** change la nature de la séance : *Musculation* tire
+dans les 77 exercices chargés, *Yoga et étirements* dans les 109 positions,
+*Yoga seul* et *Étirements seuls* dans un seul poster.
+
+En mobilité, l'application ne propose plus ni tempo, ni séries, ni format, ni
+unité de charge — rien de tout cela ne s'applique. À la place, une **durée de
+maintien** (20, 30, 45 ou 60 s). Le tapis est implicite : c'est le sol du dojo
+ou une serviette, pas du matériel à déclarer.
+
+Deux choses méritent d'être connues :
+
+- **Une position unilatérale se tient des deux côtés.** Une posture annoncée à
+  30 s en prend soixante, et l'écran de séance affiche « Côté droit », puis
+  « Côté gauche » à la moitié. Le décompte du temps de la séance en tient
+  compte : c'est pour ça qu'une séance de 20 minutes propose seize positions et
+  pas vingt-cinq.
+- **L'ordre suit celui des posters.** Les positions sont choisies en alternant
+  les zones du corps, puis remises dans l'ordre d'impression : les posters vont
+  de l'échauffement à la récupération, du debout au sol. Une séance commence
+  donc par le chat et finit par la posture du cadavre, même quand elle pioche
+  dans les deux posters à la fois — le rang est ramené à une fraction, ce qui
+  rend les deux comparables.
+
 ## Installation et lancement
 
 Node.js 20 ou plus récent est nécessaire.

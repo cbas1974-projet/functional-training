@@ -1,7 +1,15 @@
 import { describe, expect, it } from 'vitest';
-import { EXERCICES_PAR_ID } from '../data/exercices';
+import { EXERCICES, EXERCICES_PAR_ID } from '../data/exercices';
 import { DUREES_MINUTES, FORMATS, NIVEAUX, PARAMETRES_PAR_DEFAUT } from '../data/parametres';
-import type { BlocSeries, Circuit, Niveau, ParametresSeance, Seance } from '../types';
+import type {
+  BlocSeries,
+  Circuit,
+  Discipline,
+  Materiel,
+  Niveau,
+  ParametresSeance,
+  Seance,
+} from '../types';
 import {
   analyserSeance,
   dureeSerieSec,
@@ -173,6 +181,77 @@ describe('exercicesDisponibles', () => {
   it('rend les exercices dans l’ordre du poster', () => {
     const disponibles = exercicesDisponibles(avec({ niveau: 'avance' }));
     expect(disponibles[0].id).toBe('hammer-curl');
+  });
+});
+
+describe('séances de mobilité', () => {
+  const MATERIEL_COMPLET: Materiel[] = ['halteres', 'banc', 'step', 'tapis', 'barre-fixe'];
+  const disciplines: Discipline[] = ['yoga', 'etirement', 'mobilite'];
+
+  for (const discipline of disciplines) {
+    for (const dureeMinutes of [10, 20, 45] as const) {
+      it(`${discipline} · ${dureeMinutes} min : que des positions tenues, à la suite`, () => {
+        const seance = genererSeance(
+          avec({ discipline, dureeMinutes, materiels: MATERIEL_COMPLET }),
+          GRAINE,
+        );
+        expect(seance.circuit).toBeNull();
+        expect(seance.blocs.length).toBeGreaterThan(2);
+        const attendues =
+          discipline === 'mobilite' ? ['yoga', 'etirement'] : [discipline];
+        for (const bloc of seance.blocs) {
+          const exercice = EXERCICES_PAR_ID[bloc.exerciceId];
+          expect(attendues).toContain(exercice.famille);
+          expect(exercice.unite).toBe('secondes');
+          // Une position ne se répète pas et ne s'enchaîne avec rien.
+          expect(bloc.series).toBe(1);
+          expect(bloc.superset).toBeUndefined();
+          expect(bloc.reps).toBe(PARAMETRES_PAR_DEFAUT.tenueSec);
+        }
+        // Chaque position n'apparaît qu'une fois.
+        const identifiants = seance.blocs.map((b) => b.exerciceId);
+        expect(new Set(identifiants).size).toBe(identifiants.length);
+      });
+    }
+  }
+
+  it('respecte la durée de maintien demandée', () => {
+    for (const tenueSec of [20, 45, 60]) {
+      const seance = genererSeance(avec({ discipline: 'yoga', tenueSec, dureeMinutes: 20 }), GRAINE);
+      for (const bloc of seance.blocs) expect(bloc.reps).toBe(tenueSec);
+    }
+  });
+
+  it('compte deux fois une position tenue d’un côté puis de l’autre', () => {
+    const unilaterale = EXERCICES_PAR_ID['yoga-guerrier-2'];
+    const bilaterale = EXERCICES_PAR_ID['yoga-planche'];
+    expect(unilaterale.cotes).toBe('unilateral');
+    expect(bilaterale.cotes).toBe('bilateral');
+    const tempo = PARAMETRES_PAR_DEFAUT.tempo;
+    expect(dureeSerieSec(unilaterale, 30, tempo)).toBe(60);
+    expect(dureeSerieSec(bilaterale, 30, tempo)).toBe(30);
+  });
+
+  it('suit la progression du poster, de l’échauffement à la récupération', () => {
+    const seance = genererSeance(
+      avec({ discipline: 'yoga', dureeMinutes: 45, materiels: MATERIEL_COMPLET }),
+      GRAINE,
+    );
+    const rangs = seance.blocs.map((bloc) =>
+      EXERCICES.findIndex((exercice) => exercice.id === bloc.exerciceId),
+    );
+    expect(rangs).toEqual([...rangs].sort((a, b) => a - b));
+    // Une séance longue va jusqu'au bout du poster : elle finit couchée.
+    expect(EXERCICES_PAR_ID[seance.blocs[seance.blocs.length - 1].exerciceId].zone).toBe('complet');
+  });
+
+  it('couvre plusieurs zones, pas seulement le haut du poster', () => {
+    const seance = genererSeance(
+      avec({ discipline: 'etirement', dureeMinutes: 20, materiels: MATERIEL_COMPLET }),
+      GRAINE,
+    );
+    const zones = new Set(seance.blocs.map((b) => EXERCICES_PAR_ID[b.exerciceId].zone));
+    expect(zones.size).toBeGreaterThanOrEqual(4);
   });
 });
 

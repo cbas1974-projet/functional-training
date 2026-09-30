@@ -371,25 +371,37 @@ def nb_cellules(rangee: Rangee) -> int:
 # ------------------------------------------------------------- Nettoyage
 
 def retirer_libelle(cellule: Image.Image) -> Image.Image:
-    """Coupe le libellé anglais imprimé sous le dessin."""
+    """Coupe le libellé imprimé sous le dessin.
+
+    Le libellé tient sur une ligne (« Hammer Curl ») ou sur deux, le nom
+    anglais puis le nom sanskrit sur le poster de yoga — et un seuil fixe de
+    blanc ne sait pas distinguer l'interligne de la séparation. On cherche
+    donc, dans le bas de la case, la plus large bande blanche qui ne touche
+    pas le bord : c'est la respiration entre le dessin et son libellé, plus
+    large que n'importe quel interligne. On coupe en son milieu."""
     g = np.asarray(cellule.convert("L"), dtype=float)
     hauteur, largeur = g.shape
     encre = (g < 110).mean(axis=1)
+    depart = int(0.40 * hauteur)
 
-    y = hauteur - 1
-    while y > 0 and encre[y] < 0.004:      # marge sous le texte
-        y -= 1
-    while y > 0 and encre[y] >= 0.004:     # le texte lui-même
-        y -= 1
-    blancs, coupe = 0, y
-    while y > 0 and blancs < 4:            # blanc entre le dessin et le texte
+    plages, debut = [], None
+    for y in range(depart, hauteur):
         if encre[y] < 0.004:
-            blancs += 1
-        else:
-            blancs, coupe = 0, y
-        y -= 1
-    if not (0.55 * hauteur <= coupe <= 0.97 * hauteur):
-        coupe = int(0.84 * hauteur)
+            if debut is None:
+                debut = y
+        elif debut is not None:
+            plages.append((debut, y - 1))
+            debut = None
+    # Une bande blanche qui touche le bas est la marge de la case, pas une
+    # séparation : il n'y a rien à couper en dessous.
+    plages = [p for p in plages if p[1] < hauteur - 1]
+    if not plages:
+        return cellule
+
+    a, b = max(plages, key=lambda p: p[1] - p[0])
+    coupe = (a + b) // 2
+    if not (0.45 * hauteur <= coupe <= 0.97 * hauteur):
+        return cellule
     return cellule.crop((0, 0, largeur, coupe))
 
 

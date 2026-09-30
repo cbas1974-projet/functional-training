@@ -89,6 +89,14 @@ export type Etape =
 export type EtapeTravail = Extract<Etape, { type: 'serie' | 'station' }>;
 
 /** État affiché par le métronome pendant une série ou une station. */
+/** Position tenue d'un côté puis de l'autre. */
+export interface EtatMaintien {
+  cote: 'droit' | 'gauche';
+  /** Secondes restantes sur le côté en cours. */
+  resteSec: number;
+  parCoteSec: number;
+}
+
 export interface EtatMetronome {
   /** Répétition en cours, de 1 à `totalReps` (par côté si unilatéral). */
   rep: number;
@@ -360,6 +368,27 @@ export function indexApresExercice(etapes: Etape[], index: number): number {
     i += 1;
   }
   return i;
+}
+
+// ------------------------------------------------------------- Maintien
+
+/** Côté et temps restant d'une position tenue d'un seul côté puis de l'autre :
+ *  la première moitié du maintien à droite, la seconde à gauche. Renvoie null
+ *  pour tout le reste — une position bilatérale se tient d'un bloc, et un
+ *  exercice compté en répétitions relève du métronome. */
+export function etatMaintien(etape: Etape, ecouleSec: number): EtatMaintien | null {
+  if (etape.type !== 'serie') return null;
+  const exercice = exerciceDeSeance(etape.exerciceId);
+  if (exercice.unite !== 'secondes' || exercice.cotes !== 'unilateral') return null;
+  const parCote = etape.reps;
+  if (parCote <= 0) return null;
+  const ecoule = Math.max(0, ecouleSec);
+  const premier = ecoule < parCote;
+  return {
+    cote: premier ? 'droit' : 'gauche',
+    resteSec: Math.max(0, premier ? parCote - ecoule : parCote * 2 - ecoule),
+    parCoteSec: parCote,
+  };
 }
 
 // ------------------------------------------------------------- Métronome

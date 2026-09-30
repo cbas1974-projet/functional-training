@@ -10,6 +10,7 @@ import type {
   Zone,
 } from '../types';
 import {
+  DISCIPLINES,
   DUREES_MINUTES,
   FORMATS,
   GUIDES_VISUELS,
@@ -20,18 +21,22 @@ import {
   STYLES_CIRCUIT,
   TEMPOS,
   TAILLES_ROTATION,
+  TENUES_SEC,
   TOUTES_LES_ZONES,
   UNITES_POIDS,
 } from '../data/parametres';
 import { EXERCICES_PAR_ID, NOM_PATTERN, NOM_ZONE, ZONES } from '../data/exercices';
 import {
   analyserSeance,
+  disciplineDe,
   dureeSerieDuBloc,
+  estMobilite,
   exercicesDisponibles,
   formaterDuree,
   genererSeance,
   libelleBloc,
   remplacerExercice,
+  tenueDe,
 } from '../utils/generateurSeance';
 import type { AnalyseSeance } from '../utils/generateurSeance';
 import { formaterDateFr, graineAleatoire, libelleZones, messageErreur } from '../utils/formatage';
@@ -249,7 +254,15 @@ function LigneBudget({
  *  5 s / 5 s, une série de 8 répétitions dure 80 secondes — deux fois plus
  *  si l'exercice se fait un côté après l'autre. C'est l'arithmétique qui
  *  explique qu'une séance de 20 minutes ne contienne que deux exercices. */
-function BudgetSeance({ analyse, exemple }: { analyse: AnalyseSeance; exemple: string | null }) {
+function BudgetSeance({
+  analyse,
+  exemple,
+  mobilite,
+}: {
+  analyse: AnalyseSeance;
+  exemple: string | null;
+  mobilite: boolean;
+}) {
   return (
     <details className="mt-3">
       <summary
@@ -272,13 +285,13 @@ function BudgetSeance({ analyse, exemple }: { analyse: AnalyseSeance; exemple: s
           couleur="var(--texte-discret)"
         />
         <LigneBudget
-          libelle={`Travail · ${analyse.nombreSeries} séries`}
+          libelle={`Travail · ${analyse.nombreSeries} ${mobilite ? 'positions' : 'séries'}`}
           secondes={analyse.travailSec}
           totalSec={analyse.totalSec}
           couleur="var(--montee)"
         />
         <LigneBudget
-          libelle="Repos"
+          libelle={mobilite ? 'Transitions' : 'Repos'}
           secondes={analyse.reposSec}
           totalSec={analyse.totalSec}
           couleur="var(--descente)"
@@ -361,6 +374,9 @@ export default function Entrainement({ etat, onChange }: EntrainementProps) {
     : parametres.zones.length === 1
       ? `Séance ciblée : ${libelleZones(parametres)}.`
       : `En alternance : ${libelleZones(parametres)}.`;
+  const discipline = disciplineDe(parametres);
+  const mobilite = estMobilite(parametres);
+  const disciplineSelectionnee = DISCIPLINES.find((d) => d.id === discipline);
   const niveauSelectionne = NIVEAUX.find((n) => n.id === parametres.niveau);
   const formatSelectionne = FORMATS.find((f) => f.id === parametres.format);
   const uniteSelectionnee = UNITES_POIDS.find((u) => u.id === uniteDeSeance(parametres));
@@ -459,13 +475,23 @@ export default function Entrainement({ etat, onChange }: EntrainementProps) {
   /** Une ligne concrète pour rendre le tempo palpable : c'est elle qui
    *  explique tout le reste du budget. */
   const exempleTempo = useMemo(() => {
-    const bloc = seanceCourante?.blocs.find(
-      (b) => EXERCICES_PAR_ID[b.exerciceId]?.unite === 'reps',
-    );
-    if (!bloc || !seanceCourante) return null;
+    if (!seanceCourante) return null;
+    const tempo = seanceCourante.parametres.tempo;
+    if (estMobilite(seanceCourante.parametres)) {
+      // Ce qui surprend en mobilité, c'est le coût des positions unilatérales :
+      // une posture annoncée 30 s en prend soixante, trente de chaque côté.
+      const bloc = seanceCourante.blocs.find(
+        (b) => EXERCICES_PAR_ID[b.exerciceId]?.cotes === 'unilateral',
+      );
+      if (!bloc) return null;
+      const duree = formaterDuree(dureeSerieDuBloc(bloc, tempo));
+      return `Une position tenue ${bloc.reps} s de chaque côté dure ${duree}.`;
+    }
+    const bloc = seanceCourante.blocs.find((b) => EXERCICES_PAR_ID[b.exerciceId]?.unite === 'reps');
+    if (!bloc) return null;
     const exercice = EXERCICES_PAR_ID[bloc.exerciceId];
-    const { monteeSec, descenteSec } = seanceCourante.parametres.tempo;
-    const duree = formaterDuree(dureeSerieDuBloc(bloc, seanceCourante.parametres.tempo));
+    const { monteeSec, descenteSec } = tempo;
+    const duree = formaterDuree(dureeSerieDuBloc(bloc, tempo));
     const cotes = exercice.cotes === 'unilateral' ? ', droite puis gauche' : '';
     return `Une série de ${bloc.reps} répétitions à ${monteeSec} s / ${descenteSec} s${cotes} dure ${duree}.`;
   }, [seanceCourante]);
@@ -531,6 +557,22 @@ export default function Entrainement({ etat, onChange }: EntrainementProps) {
         </div>
 
         <div className="space-y-5 px-4">
+          {/* La discipline commande tout le reste : une séance de yoga n'a ni
+              tempo, ni séries, ni charge à saisir. */}
+          <Groupe titre="Discipline" aide={disciplineSelectionnee?.description}>
+            <div className="flex flex-wrap gap-2">
+              {DISCIPLINES.map((d) => (
+                <Pastille
+                  key={d.id}
+                  selectionne={discipline === d.id}
+                  onClick={() => mettreAJourParametres({ discipline: d.id })}
+                >
+                  {d.nom}
+                </Pastille>
+              ))}
+            </div>
+          </Groupe>
+
           <Groupe titre="Durée">
             <div className="flex flex-wrap gap-2">
               {DUREES_MINUTES.map((duree) => (
@@ -565,134 +607,161 @@ export default function Entrainement({ etat, onChange }: EntrainementProps) {
             </div>
           </Groupe>
 
-          <Groupe
-            titre="Séries par exercice"
-            aide={
-              SERIES_PAR_EXERCICE.find((o) => o.valeur === parametres.seriesParExercice)?.description
-            }
-          >
-            <div className="flex flex-wrap gap-2">
-              {SERIES_PAR_EXERCICE.map((option) => (
-                <Pastille
-                  key={String(option.valeur)}
-                  selectionne={parametres.seriesParExercice === option.valeur}
-                  onClick={() => mettreAJourParametres({ seriesParExercice: option.valeur })}
-                >
-                  <span className="chiffres">{option.nom}</span>
-                </Pastille>
-              ))}
-            </div>
-          </Groupe>
-
-          <Groupe
-            titre="Répétitions par série"
-            aide={REPS_PAR_SERIE.find((o) => o.valeur === parametres.repsParSerie)?.description}
-          >
-            <div className="flex flex-wrap gap-2">
-              {REPS_PAR_SERIE.map((option) => (
-                <Pastille
-                  key={String(option.valeur)}
-                  selectionne={parametres.repsParSerie === option.valeur}
-                  onClick={() => mettreAJourParametres({ repsParSerie: option.valeur })}
-                >
-                  <span className="chiffres">{option.nom}</span>
-                </Pastille>
-              ))}
-            </div>
-          </Groupe>
-
-          <Groupe titre="Tempo">
-            <div className="space-y-2">
-              {TEMPOS.map((t) => (
-                <Choix
-                  key={t.nom}
-                  selectionne={
-                    parametres.tempo.monteeSec === t.tempo.monteeSec &&
-                    parametres.tempo.descenteSec === t.tempo.descenteSec
-                  }
-                  onClick={() => mettreAJourParametres({ tempo: t.tempo })}
-                  nom={t.nom}
-                  description={t.description}
-                />
-              ))}
-            </div>
-          </Groupe>
-
-          <Groupe titre="Guide visuel pendant la série">
-            <div className="space-y-2">
-              {GUIDES_VISUELS.map((guide) => (
-                <Choix
-                  key={guide.id}
-                  selectionne={parametres.guideVisuel === guide.id}
-                  onClick={() => mettreAJourParametres({ guideVisuel: guide.id })}
-                  nom={guide.nom}
-                  description={guide.description}
-                />
-              ))}
-            </div>
-          </Groupe>
-
-          {/* Le format reste au premier plan : au tempo lent, c'est lui qui
-              décide combien d'exercices tiennent dans la durée demandée. */}
-          <Groupe titre="Format" aide={formatSelectionne?.description}>
-            <div className="flex flex-wrap gap-2">
-              {FORMATS.map((f) => (
-                <Pastille
-                  key={f.id}
-                  selectionne={parametres.format === f.id}
-                  onClick={() => mettreAJourParametres({ format: f.id })}
-                >
-                  {f.nom}
-                </Pastille>
-              ))}
-            </div>
-          </Groupe>
-
-          {(parametres.format === 'circuit' || parametres.format === 'mixte') && (
-            <Groupe titre="Style de circuit" aide={styleSelectionne?.description}>
+          {mobilite && (
+            <Groupe
+              titre="Durée de maintien"
+              aide={TENUES_SEC.find((t) => t.valeur === tenueDe(parametres))?.description}
+            >
               <div className="flex flex-wrap gap-2">
-                {STYLES_CIRCUIT.map((c) => (
+                {TENUES_SEC.map((t) => (
                   <Pastille
-                    key={c.id}
-                    selectionne={styleCircuit === c.id}
-                    onClick={() => mettreAJourParametres({ styleCircuit: c.id })}
+                    key={t.valeur}
+                    selectionne={tenueDe(parametres) === t.valeur}
+                    onClick={() => mettreAJourParametres({ tenueSec: t.valeur })}
                   >
-                    {c.nom}
+                    <span className="chiffres">{t.nom}</span>
                   </Pastille>
                 ))}
               </div>
             </Groupe>
           )}
 
-          {parametres.format === 'superset' && (
-            <Groupe titre="Exercices par enchaînement" aide={tailleSelectionnee?.description}>
-              <div className="flex flex-wrap gap-2">
-                {TAILLES_ROTATION.map((t) => (
-                  <Pastille
-                    key={t.nom}
-                    selectionne={parametres.tailleRotation === t.valeur}
-                    onClick={() => mettreAJourParametres({ tailleRotation: t.valeur })}
-                  >
-                    {t.nom}
-                  </Pastille>
-                ))}
-              </div>
-            </Groupe>
+          {!mobilite && (
+            <>
+              <Groupe
+                titre="Séries par exercice"
+                aide={
+                  SERIES_PAR_EXERCICE.find((o) => o.valeur === parametres.seriesParExercice)?.description
+                }
+              >
+                <div className="flex flex-wrap gap-2">
+                  {SERIES_PAR_EXERCICE.map((option) => (
+                    <Pastille
+                      key={String(option.valeur)}
+                      selectionne={parametres.seriesParExercice === option.valeur}
+                      onClick={() => mettreAJourParametres({ seriesParExercice: option.valeur })}
+                    >
+                      <span className="chiffres">{option.nom}</span>
+                    </Pastille>
+                  ))}
+                </div>
+              </Groupe>
+
+              <Groupe
+                titre="Répétitions par série"
+                aide={REPS_PAR_SERIE.find((o) => o.valeur === parametres.repsParSerie)?.description}
+              >
+                <div className="flex flex-wrap gap-2">
+                  {REPS_PAR_SERIE.map((option) => (
+                    <Pastille
+                      key={String(option.valeur)}
+                      selectionne={parametres.repsParSerie === option.valeur}
+                      onClick={() => mettreAJourParametres({ repsParSerie: option.valeur })}
+                    >
+                      <span className="chiffres">{option.nom}</span>
+                    </Pastille>
+                  ))}
+                </div>
+              </Groupe>
+            </>
           )}
 
-          <Groupe titre="Unité des charges" aide={uniteSelectionnee?.description}>
-            <div className="flex flex-wrap gap-2">
-              {UNITES_POIDS.map((u) => (
-                <Pastille
-                  key={u.id}
-                  selectionne={uniteDeSeance(parametres) === u.id}
-                  onClick={() => mettreAJourParametres({ unitePoids: u.id })}
-                >
-                  {u.nom}
-                </Pastille>
-              ))}
-            </div>
-          </Groupe>
+          {!mobilite && (
+            <>
+              <Groupe titre="Tempo">
+                <div className="space-y-2">
+                  {TEMPOS.map((t) => (
+                    <Choix
+                      key={t.nom}
+                      selectionne={
+                        parametres.tempo.monteeSec === t.tempo.monteeSec &&
+                        parametres.tempo.descenteSec === t.tempo.descenteSec
+                      }
+                      onClick={() => mettreAJourParametres({ tempo: t.tempo })}
+                      nom={t.nom}
+                      description={t.description}
+                    />
+                  ))}
+                </div>
+              </Groupe>
+
+              <Groupe titre="Guide visuel pendant la série">
+                <div className="space-y-2">
+                  {GUIDES_VISUELS.map((guide) => (
+                    <Choix
+                      key={guide.id}
+                      selectionne={parametres.guideVisuel === guide.id}
+                      onClick={() => mettreAJourParametres({ guideVisuel: guide.id })}
+                      nom={guide.nom}
+                      description={guide.description}
+                    />
+                  ))}
+                </div>
+              </Groupe>
+
+              {/* Le format reste au premier plan : au tempo lent, c'est lui qui
+                  décide combien d'exercices tiennent dans la durée demandée. */}
+              <Groupe titre="Format" aide={formatSelectionne?.description}>
+                <div className="flex flex-wrap gap-2">
+                  {FORMATS.map((f) => (
+                    <Pastille
+                      key={f.id}
+                      selectionne={parametres.format === f.id}
+                      onClick={() => mettreAJourParametres({ format: f.id })}
+                    >
+                      {f.nom}
+                    </Pastille>
+                  ))}
+                </div>
+              </Groupe>
+
+              {(parametres.format === 'circuit' || parametres.format === 'mixte') && (
+                <Groupe titre="Style de circuit" aide={styleSelectionne?.description}>
+                  <div className="flex flex-wrap gap-2">
+                    {STYLES_CIRCUIT.map((c) => (
+                      <Pastille
+                        key={c.id}
+                        selectionne={styleCircuit === c.id}
+                        onClick={() => mettreAJourParametres({ styleCircuit: c.id })}
+                      >
+                        {c.nom}
+                      </Pastille>
+                    ))}
+                  </div>
+                </Groupe>
+              )}
+
+              {parametres.format === 'superset' && (
+                <Groupe titre="Exercices par enchaînement" aide={tailleSelectionnee?.description}>
+                  <div className="flex flex-wrap gap-2">
+                    {TAILLES_ROTATION.map((t) => (
+                      <Pastille
+                        key={t.nom}
+                        selectionne={parametres.tailleRotation === t.valeur}
+                        onClick={() => mettreAJourParametres({ tailleRotation: t.valeur })}
+                      >
+                        {t.nom}
+                      </Pastille>
+                    ))}
+                  </div>
+                </Groupe>
+              )}
+
+              <Groupe titre="Unité des charges" aide={uniteSelectionnee?.description}>
+                <div className="flex flex-wrap gap-2">
+                  {UNITES_POIDS.map((u) => (
+                    <Pastille
+                      key={u.id}
+                      selectionne={uniteDeSeance(parametres) === u.id}
+                      onClick={() => mettreAJourParametres({ unitePoids: u.id })}
+                    >
+                      {u.nom}
+                    </Pastille>
+                  ))}
+                </div>
+              </Groupe>
+            </>
+          )}
 
           <details>
             <summary
@@ -734,14 +803,16 @@ export default function Entrainement({ etat, onChange }: EntrainementProps) {
                 </div>
               </Groupe>
 
-              <Groupe titre="Options">
-                <Bascule
-                  actif={parametres.explosifs}
-                  onClick={() => mettreAJourParametres({ explosifs: !parametres.explosifs })}
-                  nom="Mouvements explosifs"
-                  precision="Squat sauté, swing : incompatibles avec le tempo lent."
-                />
-              </Groupe>
+              {!mobilite && (
+                <Groupe titre="Options">
+                  <Bascule
+                    actif={parametres.explosifs}
+                    onClick={() => mettreAJourParametres({ explosifs: !parametres.explosifs })}
+                    nom="Mouvements explosifs"
+                    precision="Squat sauté, swing : incompatibles avec le tempo lent."
+                  />
+                </Groupe>
+              )}
             </div>
           </details>
 
@@ -830,14 +901,25 @@ export default function Entrainement({ etat, onChange }: EntrainementProps) {
             <span className="chiffres">{parametres.dureeMinutes} min</span>
           </Resume>
           <Resume>{libelleZones(parametres)}</Resume>
-          <Resume>
-            <span className="chiffres">{resumeVolume}</span>
-          </Resume>
-          <Resume>
-            <span className="chiffres">{resumeTempo}</span>
-          </Resume>
-          <Resume>{formatSelectionne?.nom}</Resume>
-          <Resume>{resumeMateriel}</Resume>
+          {mobilite ? (
+            <>
+              <Resume>{disciplineSelectionnee?.nom}</Resume>
+              <Resume>
+                <span className="chiffres">{tenueDe(parametres)} s</span>&nbsp;par position
+              </Resume>
+            </>
+          ) : (
+            <>
+              <Resume>
+                <span className="chiffres">{resumeVolume}</span>
+              </Resume>
+              <Resume>
+                <span className="chiffres">{resumeTempo}</span>
+              </Resume>
+              <Resume>{formatSelectionne?.nom}</Resume>
+              <Resume>{resumeMateriel}</Resume>
+            </>
+          )}
         </div>
 
         <p className="mt-3 text-xs" style={{ color: 'var(--texte-discret)' }}>
@@ -936,17 +1018,21 @@ export default function Entrainement({ etat, onChange }: EntrainementProps) {
             </Resume>
             <Resume>
               <span className="chiffres">{nbExercicesSeance}</span>
-              &nbsp;exercices
+              {mobilite ? <>&nbsp;positions</> : <>&nbsp;exercices</>}
             </Resume>
-            <Resume>
-              Tempo&nbsp;
-              <span className="chiffres">
-                {seanceCourante.parametres.tempo.monteeSec} s /{' '}
-                {seanceCourante.parametres.tempo.descenteSec} s
-              </span>
-            </Resume>
+            {!mobilite && (
+              <Resume>
+                Tempo&nbsp;
+                <span className="chiffres">
+                  {seanceCourante.parametres.tempo.monteeSec} s /{' '}
+                  {seanceCourante.parametres.tempo.descenteSec} s
+                </span>
+              </Resume>
+            )}
           </div>
-          {analyse && <BudgetSeance analyse={analyse} exemple={exempleTempo} />}
+          {analyse && (
+            <BudgetSeance analyse={analyse} exemple={exempleTempo} mobilite={mobilite} />
+          )}
 
           {seanceCourante.blocs.length > 0 && (
             <ul className="mt-3 space-y-2">

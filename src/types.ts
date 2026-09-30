@@ -73,6 +73,11 @@ export type Niveau = 'debutant' | 'intermediaire' | 'avance';
 
 export type Objectif = 'complet' | 'haut' | 'bas' | 'gainage' | 'dos';
 
+/** Ce qu'on vient travailler. La musculation compte des répétitions chargées ;
+ *  le yoga et les étirements tiennent des positions au temps, sans charge et
+ *  sans tempo. « mobilite » pioche dans les deux. */
+export type Discipline = 'musculation' | 'yoga' | 'etirement' | 'mobilite';
+
 export type FormatSeance = 'series' | 'superset' | 'circuit' | 'mixte';
 
 /** Façon de mener un circuit.
@@ -129,8 +134,14 @@ export interface ParametresSeance {
    *  enregistrées avant l'arrivée des zones. */
   objectif?: Objectif;
   niveau: Niveau;
+  /** Discipline travaillée ; 'musculation' si absente (séances enregistrées
+   *  avant l'arrivée du yoga et des étirements). */
+  discipline?: Discipline;
   format: FormatSeance;
   tempo: Tempo;
+  /** Durée de maintien d'une position, en secondes. Ne sert qu'aux disciplines
+   *  de mobilité ; absente = valeur par défaut. */
+  tenueSec?: number;
   /** Matériel dont dispose l'utilisateur. Les haltères et « aucun » sont
    *  toujours implicites. */
   materiels: Materiel[];

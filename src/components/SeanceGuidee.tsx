@@ -25,6 +25,7 @@ import {
   construireEtapes,
   dureeRestanteSec,
   dureeTotaleSec,
+  etatMaintien,
   etatMetronome,
   exerciceDeSeance,
   indexApresExercice,
@@ -32,8 +33,8 @@ import {
   indexReprise,
   premierePhase,
 } from '../utils/etapesSeance';
-import type { Etape, EtatMetronome, PhaseTempo, Suivant } from '../utils/etapesSeance';
-import { secondesParRep } from '../utils/generateurSeance';
+import type { Etape, EtatMaintien, EtatMetronome, PhaseTempo, Suivant } from '../utils/etapesSeance';
+import { estMobilite, secondesParRep } from '../utils/generateurSeance';
 import { SUFFIXE_UNITE, libellePoidsParSerie, uniteDeSeance } from '../utils/statistiques';
 import { ajouterTemps, useMoteurEtapes } from '../hooks/useMoteurEtapes';
 import { useVerrouEcran } from '../hooks/useVerrouEcran';
@@ -196,9 +197,17 @@ function pluriel(nombre: number, mot: string): string {
   return `${nombre} ${mot}${nombre > 1 ? 's' : ''}`;
 }
 
+/** Une posture de yoga ou un étirement : tenue au temps, sans charge, jamais
+ *  répétée. L'écran s'adapte — pas de saisie de poids, pas de « Série 1 / 1 ». */
+function estPosture(exercice: Exercice): boolean {
+  return (exercice.famille ?? 'musculation') !== 'musculation';
+}
+
 /** « 8 répétitions par côté », « 40 s » */
 function libelleReps(exercice: Exercice, reps: number): string {
-  if (exercice.unite === 'secondes') return `${reps} s`;
+  if (exercice.unite === 'secondes') {
+    return exercice.cotes === 'unilateral' ? `${reps} s par côté` : `${reps} s`;
+  }
   const base = pluriel(reps, 'répétition');
   if (exercice.cotes === 'unilateral') return `${base} par côté`;
   if (exercice.cotes === 'alterne') return `${base} en alternant`;
@@ -216,16 +225,18 @@ function libelleSuivant(suivant: Suivant): string {
   }
 }
 
-function libellePhase(etape: Etape): string {
+/** Le bandeau de l'écran : où on en est dans la séance. Une séance de mobilité
+ *  ne fait ni séries ni repos — elle tient des positions et se replace. */
+function libellePhase(etape: Etape, mobilite: boolean): string {
   switch (etape.type) {
     case 'echauffement':
       return 'Échauffement';
     case 'pret':
       return 'Préparation';
     case 'serie':
-      return 'Série';
+      return mobilite ? 'Position' : 'Série';
     case 'repos':
-      return 'Repos';
+      return mobilite ? 'Transition' : 'Repos';
     case 'station':
       return 'Circuit';
     case 'reposTour':
@@ -316,6 +327,7 @@ export default function SeanceGuidee({
     return ids.filter((id, i) => ids.indexOf(id) === i);
   }, [seanceActive]);
   const tempo = seanceActive.parametres.tempo;
+  const mobilite = estMobilite(seanceActive.parametres);
   // Les séances enregistrées avant l'arrivée du réglage n'ont pas de guide.
   const guideVisuel: GuideVisuel = seanceActive.parametres.guideVisuel ?? 'les-deux';
   const unitePoids = uniteDeSeance(seanceActive.parametres);
@@ -357,6 +369,7 @@ export default function SeanceGuidee({
   const tempsRestant = dureeRestanteSec(etapes, index, ecoule, prolongation);
 
   const metro = etatMetronome(etape, ecoule, tempo);
+  const maintien = etatMaintien(etape, ecoule);
   const mouvements: MouvementLibre[] | null =
     etape.type === 'echauffement' ? ECHAUFFEMENT : etape.type === 'retourCalme' ? RETOUR_CALME : null;
   const dureeMouvement = mouvements && dureeEff > 0 ? dureeEff / mouvements.length : 0;
@@ -630,6 +643,7 @@ export default function SeanceGuidee({
           etape={etape}
           exercice={exercice}
           metro={metro}
+          maintien={maintien}
           resteSec={reste}
           tempo={tempo}
           guideVisuel={guideVisuel}
@@ -660,7 +674,7 @@ export default function SeanceGuidee({
       style={{ background: ambiance.fond, color: 'var(--texte)' }}
     >
       <EnTete
-        phase={libellePhase(etape)}
+        phase={libellePhase(etape, mobilite)}
         position={libellePosition(etapes, index, ordreExercices)}
         exercice={etape.exerciceId ? exerciceDeSeance(etape.exerciceId).nomFr : undefined}
         couleur={ambiance.couleur}
@@ -953,9 +967,12 @@ interface CorpsPretProps {
 function CorpsPret({ etape, exercice, resteSec, onDemarrer, onPasser }: CorpsPretProps) {
   const cible = etape.suivant;
   const sousTitre =
-    cible.type === 'serie'
-      ? `Série ${cible.serie} / ${cible.series} · ${libelleReps(exercice, cible.reps)}`
-      : `Tour ${cible.tour} / ${cible.tours} · Station ${cible.station} / ${cible.stations}`;
+    cible.type !== 'serie'
+      ? `Tour ${cible.tour} / ${cible.tours} · Station ${cible.station} / ${cible.stations}`
+      : estPosture(exercice)
+        ? // Une position ne se répète pas : « Série 1 / 1 » n'apprendrait rien.
+          libelleReps(exercice, cible.reps)
+        : `Série ${cible.serie} / ${cible.series} · ${libelleReps(exercice, cible.reps)}`;
   const departDescente = exercice.unite === 'reps' && premierePhase(exercice) === 'descend';
 
   return (
@@ -1006,6 +1023,8 @@ interface CorpsTravailProps {
   etape: Extract<Etape, { type: 'serie' | 'station' }>;
   exercice: Exercice;
   metro: EtatMetronome | null;
+  /** Position tenue d'un côté puis de l'autre ; null sinon. */
+  maintien: EtatMaintien | null;
   resteSec: number;
   tempo: Tempo;
   guideVisuel: GuideVisuel;
@@ -1023,6 +1042,7 @@ function CorpsTravail({
   etape,
   exercice,
   metro,
+  maintien,
   resteSec,
   tempo,
   guideVisuel,
@@ -1062,10 +1082,15 @@ function CorpsTravail({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const posture = estPosture(exercice);
   const sousTitre =
-    etape.type === 'serie'
-      ? `Série ${etape.serie} / ${etape.series} · ${libelleReps(exercice, etape.reps)}`
-      : `Tour ${etape.tour} / ${etape.tours} · Station ${etape.station} / ${etape.stations} · ${etape.dureeSec} s`;
+    etape.type !== 'serie'
+      ? `Tour ${etape.tour} / ${etape.tours} · Station ${etape.station} / ${etape.stations} · ${etape.dureeSec} s`
+      : posture
+        ? // Une position ne se fait qu'une fois : afficher « Série 1 / 1 »
+          // n'apprendrait rien. On annonce la tenue, et le côté s'il y en a.
+          libelleReps(exercice, etape.reps)
+        : `Série ${etape.serie} / ${etape.series} · ${libelleReps(exercice, etape.reps)}`;
 
   return (
     <div className="space-y-4">
@@ -1091,20 +1116,30 @@ function CorpsTravail({
         <div className="select-none py-2 text-center">
           <div
             className="text-xs font-bold uppercase tracking-[0.18em]"
-            style={{ color: 'var(--texte-discret)' }}
+            style={{ color: maintien ? 'var(--accent)' : 'var(--texte-discret)' }}
           >
-            {etape.type === 'station' && etape.rythme === 'libre'
-              ? 'À fond jusqu’au signal'
-              : 'Maintenez l’effort'}
+            {maintien
+              ? `Côté ${maintien.cote}`
+              : etape.type === 'station' && etape.rythme === 'libre'
+                ? 'À fond jusqu’au signal'
+                : posture
+                  ? 'Tenez la position'
+                  : 'Maintenez l’effort'}
           </div>
           <div
             className="chiffres text-9xl font-bold leading-none"
-            style={{ color: couleurCompte(resteSec, 'var(--montee)') }}
+            style={{
+              color: couleurCompte(maintien ? maintien.resteSec : resteSec, 'var(--montee)'),
+            }}
           >
-            {Math.ceil(resteSec)}
+            {Math.ceil(maintien ? maintien.resteSec : resteSec)}
           </div>
           <div className="mt-3 text-sm" style={{ color: 'var(--texte-discret)' }}>
-            secondes restantes
+            {maintien
+              ? maintien.cote === 'droit'
+                ? 'secondes, puis on change de côté'
+                : 'secondes restantes'
+              : 'secondes restantes'}
           </div>
         </div>
       )}
@@ -1118,6 +1153,9 @@ function CorpsTravail({
         </ul>
       </details>
 
+      {/* Une posture de yoga ou un étirement ne se charge pas : la case de
+          saisie n'aurait rien à recevoir. */}
+      {!posture && (
       <label
         className="flex items-center justify-between gap-3 rounded-2xl px-4 py-3"
         style={{ background: 'var(--surface)' }}
@@ -1151,10 +1189,15 @@ function CorpsTravail({
           }}
         />
       </label>
+      )}
 
       <div className="grid grid-cols-2 gap-3">
         <Bouton variante="accent" taille="etroit" onClick={onTerminee}>
-          {etape.type === 'serie' ? 'Série terminée' : 'Station terminée'}
+          {etape.type !== 'serie'
+            ? 'Station terminée'
+            : posture
+              ? 'Position terminée'
+              : 'Série terminée'}
         </Bouton>
         <Bouton variante="neutre" taille="etroit" onClick={onPasser}>
           Passer l’exercice
@@ -1261,7 +1304,11 @@ function CorpsRepos({ etape, resteSec, onProlonger, onPasser }: CorpsReposProps)
   return (
     <div className="space-y-4 text-center">
       <div className="text-xs font-bold uppercase tracking-[0.18em]" style={{ color: 'var(--descente)' }}>
-        {etape.type === 'reposTour' ? `Fin du tour ${etape.tour} / ${etape.tours} · repos` : 'Repos'}
+        {etape.type === 'reposTour'
+          ? `Fin du tour ${etape.tour} / ${etape.tours} · repos`
+          : exerciceSuivant && estPosture(exerciceSuivant)
+            ? 'Changez de position'
+            : 'Repos'}
       </div>
       <div
         className="chiffres text-8xl font-bold leading-none"

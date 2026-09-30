@@ -9,6 +9,7 @@ import {
   construireEtapes,
   dureeRestanteSec,
   dureeTotaleSec,
+  etatMaintien,
   etatMetronome,
   indexApresExercice,
   indexEtapePrecedente,
@@ -426,6 +427,67 @@ describe('agregerRealisation', () => {
 });
 
 describe('accord entre la durée estimée et les étapes', () => {
+  it('une séance de mobilité dure aussi exactement ce qui est annoncé', () => {
+    for (const discipline of ['yoga', 'etirement', 'mobilite'] as const) {
+      for (const dureeMinutes of DUREES_MINUTES) {
+        for (const tenueSec of [20, 30, 45]) {
+          const seance = genererSeance(
+            {
+              ...PARAMETRES_PAR_DEFAUT,
+              discipline,
+              tenueSec,
+              dureeMinutes,
+              materiels: ['halteres', 'tapis', 'step', 'barre-fixe'],
+            },
+            123,
+          );
+          expect(dureeTotaleSec(construireEtapes(seance))).toBe(seance.dureeEstimeeSec);
+          expect(seance.dureeEstimeeSec).toBeLessThanOrEqual(dureeMinutes * 60);
+        }
+      }
+    }
+  });
+
+  it('tient une position unilatérale d’un côté puis de l’autre', () => {
+    const seance = genererSeance(
+      {
+        ...PARAMETRES_PAR_DEFAUT,
+        discipline: 'yoga',
+        tenueSec: 30,
+        dureeMinutes: 30,
+        materiels: ['halteres', 'tapis'],
+      },
+      123,
+    );
+    const etapes = construireEtapes(seance);
+    const travail = etapes.filter(
+      (etape): etape is Extract<Etape, { type: 'serie' }> => etape.type === 'serie',
+    );
+    const unilaterale = travail.find(
+      (etape) => EXERCICES_PAR_ID[etape.exerciceId].cotes === 'unilateral',
+    );
+    expect(unilaterale).toBeDefined();
+    if (!unilaterale) return;
+
+    // Le maintien dure deux fois la tenue annoncée : trente secondes par côté.
+    expect(unilaterale.dureeSec).toBe(60);
+    expect(etatMaintien(unilaterale, 0)).toEqual({ cote: 'droit', resteSec: 30, parCoteSec: 30 });
+    expect(etatMaintien(unilaterale, 29)).toMatchObject({ cote: 'droit' });
+    expect(etatMaintien(unilaterale, 30)).toEqual({ cote: 'gauche', resteSec: 30, parCoteSec: 30 });
+    expect(etatMaintien(unilaterale, 59)).toMatchObject({ cote: 'gauche', resteSec: 1 });
+    // Pas de bille à suivre : une position ne se compte pas en répétitions.
+    expect(etatMetronome(unilaterale, 10, PARAMETRES_PAR_DEFAUT.tempo)).toBeNull();
+
+    const bilaterale = travail.find(
+      (etape) => EXERCICES_PAR_ID[etape.exerciceId].cotes !== 'unilateral',
+    );
+    expect(bilaterale).toBeDefined();
+    if (bilaterale) {
+      expect(bilaterale.dureeSec).toBe(30);
+      expect(etatMaintien(bilaterale, 5)).toBeNull();
+    }
+  });
+
   it('la séance guidée dure exactement ce que le générateur annonce', () => {
     for (const format of FORMATS) {
       for (const dureeMinutes of DUREES_MINUTES) {

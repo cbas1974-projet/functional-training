@@ -8,8 +8,10 @@ import { EXERCICES, EXERCICES_PAR_ID } from '../data/exercices';
 import type {
   BlocSeries,
   Circuit,
+  Discipline,
   StyleCircuit,
   Exercice,
+  Famille,
   GroupeMusculaire,
   Materiel,
   PatternMoteur,
@@ -379,6 +381,13 @@ function echauffementSec(dureeMinutes: number): number {
   return limiter(arrondiDemiMinute(dureeMinutes * 0.12), 1, 5) * 60;
 }
 
+/** Une séance de mobilité n'a presque pas besoin de s'échauffer : elle est
+ *  elle-même un échauffement. Une minute de mise en route suffit, moins encore
+ *  sur une séance courte. */
+function echauffementMobiliteSec(dureeMinutes: number): number {
+  return Math.min(60, Math.round(dureeMinutes * 6 / 15) * 15);
+}
+
 /** Retour au calme : 8 % de la séance, entre 30 s et 4 min. */
 function retourCalmeSec(dureeMinutes: number): number {
   return limiter(arrondiDemiMinute(dureeMinutes * 0.08), 0.5, 4) * 60;
@@ -415,8 +424,11 @@ export function secondesParRep(tempo: Tempo): number {
 /** Durée d'une série en secondes : reps × tempo (doublée si unilatéral),
  *  ou directement `reps` secondes si l'exercice se mesure au temps. */
 export function dureeSerieSec(exercice: Exercice, reps: number, tempo: Tempo): number {
-  if (exercice.unite === 'secondes') return reps;
-  return reps * secondesParRep(tempo) * (exercice.cotes === 'unilateral' ? 2 : 1);
+  const deuxCotes = exercice.cotes === 'unilateral' ? 2 : 1;
+  // Une position tenue d'un seul côté se tient aussi de l'autre : la demi-lune
+  // ou l'étirement du quadriceps coûtent deux fois la durée annoncée.
+  if (exercice.unite === 'secondes') return reps * deuxCotes;
+  return reps * secondesParRep(tempo) * deuxCotes;
 }
 
 /** Répétitions réellement écrites dans le bloc : les exercices au temps
@@ -515,13 +527,32 @@ function dureeCircuitSec(circuit: Circuit): number {
 
 // ------------------------------------------------------------- Sélection
 
-/** Exercice de renforcement, par opposition aux postures de mobilité (yoga,
- *  étirements). Celles-ci se tiennent au temps, ne prennent pas de charge et
- *  n'ont rien à faire dans une séance de musculation : on ne veut pas d'un
- *  squat enchaîné avec la posture du cadavre. */
-function estMusculation(exercice: Exercice): boolean {
-  return (exercice.famille ?? 'musculation') === 'musculation';
+/** Famille de l'exercice ; 'musculation' pour les fiches écrites avant que les
+ *  familles existent. */
+export function familleDe(exercice: Exercice): Famille {
+  return exercice.famille ?? 'musculation';
 }
+
+/** Discipline demandée ; 'musculation' pour les séances enregistrées avant que
+ *  le yoga et les étirements arrivent. */
+export function disciplineDe(parametres: ParametresSeance): Discipline {
+  return parametres.discipline ?? 'musculation';
+}
+
+/** Une discipline de mobilité tient des positions au temps : pas de charge,
+ *  pas de tempo, pas d'enchaînement antagoniste. */
+export function estMobilite(parametres: ParametresSeance): boolean {
+  return disciplineDe(parametres) !== 'musculation';
+}
+
+/** Familles dans lesquelles pioche chaque discipline. Sans ce filtre, le
+ *  générateur enchaînerait un squat avec la posture du cadavre. */
+const FAMILLES_DE_DISCIPLINE: Record<Discipline, Famille[]> = {
+  musculation: ['musculation'],
+  yoga: ['yoga'],
+  etirement: ['etirement'],
+  mobilite: ['yoga', 'etirement'],
+};
 
 /** Matériel réellement disponible : ce que l'utilisateur a déclaré, plus les
  *  exercices qui n'en demandent aucun. Lit l'ancien réglage « banc » des
@@ -533,7 +564,11 @@ function materielsPossedes(parametres: ParametresSeance): Set<Materiel> {
       : parametres.banc
         ? (['halteres', 'banc', 'step'] as Materiel[])
         : (['halteres'] as Materiel[]);
-  return new Set<Materiel>(['aucun', ...declares]);
+  // En mobilité, le tapis va de soi : c'est le sol du dojo, un tapis de salon
+  // ou une serviette. Sans ça, ne pas avoir coché la case ferait disparaître
+  // les cinquante-sept postures de yoga, qui se font toutes au sol.
+  const implicites: Materiel[] = estMobilite(parametres) ? ['aucun', 'tapis'] : ['aucun'];
+  return new Set<Materiel>([...implicites, ...declares]);
 }
 
 /** Première liste non vide, pour appliquer des préférences en cascade. */
@@ -797,15 +832,91 @@ function construireCircuit(
 export function exercicesDisponibles(parametres: ParametresSeance): Exercice[] {
   const niveauMax = NIVEAU_MAX[parametres.niveau];
   const possedes = materielsPossedes(parametres);
+  const familles = FAMILLES_DE_DISCIPLINE[disciplineDe(parametres)];
   return EXERCICES.filter(
     (exercice) =>
-      estMusculation(exercice) &&
+      familles.includes(familleDe(exercice)) &&
       possedes.has(exercice.materiel) &&
       exercice.niveauMin <= niveauMax &&
       (parametres.explosifs || !exercice.explosif),
   );
 }
 
+
+/** Le temps de passer d'une position à la suivante et de s'y installer. Plus
+ *  long qu'une transition de superset : on s'allonge, on se replace. */
+export const TRANSITION_MOBILITE_SEC = 15;
+/** Durée de maintien par défaut, quand l'utilisateur ne l'a pas fixée. */
+export const TENUE_MOBILITE_SEC = 30;
+/** Nombre de positions au maximum : une heure d'étirements en tient déjà
+ *  beaucoup, et au-delà la bibliothèque se répète. */
+const POSTURES_MAXI = 40;
+
+/** Durée de maintien retenue : celle demandée, sinon la valeur par défaut. */
+export function tenueDe(parametres: ParametresSeance): number {
+  return parametres.tenueSec ?? TENUE_MOBILITE_SEC;
+}
+
+/** Enchaîne les positions : une « série » de `tenueSec` secondes chacune —
+ *  doublée si la position se tient d'un côté puis de l'autre — séparées par le
+ *  temps de se replacer.
+ *
+ *  On garde d'abord celles qui tiennent dans la durée, dans l'ordre où la
+ *  sélection les a choisies (elle alterne les zones, donc elle couvre le
+ *  corps), et on ne les remet dans l'ordre du poster qu'ensuite. Trier avant de
+ *  tronquer ne donnerait que le haut du poster — onze étirements de nuque et
+ *  d'épaule, et rien pour les jambes. */
+function construireBlocsMobilite(
+  retenus: Exercice[],
+  budgetSec: number,
+  tenueSec: number,
+): BlocSeries[] {
+  const gardes: Exercice[] = [];
+  let reste = budgetSec;
+  for (const exercice of retenus) {
+    const cotes = exercice.cotes === 'unilateral' ? 2 : 1;
+    const cout = DUREE_PRET_SEC + tenueSec * cotes + TRANSITION_MOBILITE_SEC;
+    if (cout > reste) continue;
+    gardes.push(exercice);
+    reste -= cout;
+  }
+  return dansLOrdreDuPoster(gardes).map((exercice) => ({
+    exerciceId: exercice.id,
+    series: 1,
+    reps: tenueSec,
+    reposSec: TRANSITION_MOBILITE_SEC,
+  }));
+}
+
+/** Avancement de chaque exercice dans son poster, de 0 (première case) à 1
+ *  (dernière). Ramener le rang à une fraction rend les deux posters
+ *  comparables : la posture du cadavre (fin du poster de yoga) et
+ *  l'allongement au sol (fin du poster d'étirements) valent tous deux 1, et se
+ *  retrouvent ensemble à la fin d'une séance qui mélange les deux. */
+const AVANCEMENT_DANS_LE_POSTER = new Map<string, number>(
+  Object.values(
+    EXERCICES.reduce<Record<string, Exercice[]>>((parFamille, exercice) => {
+      (parFamille[familleDe(exercice)] ??= []).push(exercice);
+      return parFamille;
+    }, {}),
+  ).flatMap((famille) =>
+    famille.map(
+      (exercice, rang) => [exercice.id, famille.length > 1 ? rang / (famille.length - 1) : 0] as const,
+    ),
+  ),
+);
+
+/** Remet les positions dans l'ordre du poster. Les posters de yoga et
+ *  d'étirement ne listent pas leurs postures au hasard : ils vont de
+ *  l'échauffement à la récupération, du debout au sol. La sélection par zones
+ *  garantit qu'on couvre le corps ; ce tri lui rend sa progression, pour que la
+ *  séance commence par le chat et finisse par le cadavre. */
+function dansLOrdreDuPoster(exercices: Exercice[]): Exercice[] {
+  return [...exercices].sort(
+    (a, b) =>
+      (AVANCEMENT_DANS_LE_POSTER.get(a.id) ?? 0) - (AVANCEMENT_DANS_LE_POSTER.get(b.id) ?? 0),
+  );
+}
 
 /** Tailles d'enchaînement à essayer pour ces paramètres : une seule si
  *  l'utilisateur l'a fixée, toutes si l'automatique choisit, et 1 (séries
@@ -820,7 +931,10 @@ export function genererSeance(parametres: ParametresSeance, graine?: number): Se
   const graineUtilisee = (graine ?? Date.now()) >>> 0;
   const alea = creerAleatoire(graineUtilisee);
   const reglages = reglagesEffectifs(parametres);
-  const echauffement = echauffementSec(parametres.dureeMinutes);
+  const mobilite = estMobilite(parametres);
+  const echauffement = mobilite
+    ? echauffementMobiliteSec(parametres.dureeMinutes)
+    : echauffementSec(parametres.dureeMinutes);
   const retourCalme = retourCalmeSec(parametres.dureeMinutes);
   const budget = Math.max(0, parametres.dureeMinutes * 60 - echauffement - retourCalme);
   const candidats = exercicesDisponibles(parametres);
@@ -829,7 +943,13 @@ export function genererSeance(parametres: ParametresSeance, graine?: number): Se
   let blocs: BlocSeries[] = [];
   let circuit: Circuit | null = null;
 
-  if (parametres.format === 'circuit') {
+  if (mobilite) {
+    // Yoga et étirements : des positions tenues, à la suite, sans tempo ni
+    // charge. Ni superset ni circuit — enchaîner deux postures antagonistes
+    // n'aurait aucun sens, on ne cherche pas à récupérer.
+    const retenus = selectionnerExercices(candidats, cycle, POSTURES_MAXI, alea);
+    blocs = construireBlocsMobilite(retenus, budget, tenueDe(parametres));
+  } else if (parametres.format === 'circuit') {
     const stations = selectionnerExercices(candidats, cycle, reglages.stationsMax, alea);
     circuit = construireCircuit(
       stations,
@@ -1081,7 +1201,13 @@ export function formaterDuree(sec: number): string {
 /** "3 × 8 reps par côté · repos 60 s", "3 × 40 s · repos 60 s". */
 export function libelleBloc(bloc: BlocSeries, exercice: Exercice): string {
   const repos = ` · repos ${bloc.reposSec} s`;
-  if (exercice.unite === 'secondes') return `${bloc.series} × ${bloc.reps} s${repos}`;
+  const cote = exercice.cotes === 'unilateral' ? ' par côté' : '';
+  // Une position ne se répète pas et ne se repose pas : annoncer « 1 × » et
+  // « repos » n'apprendrait rien. On dit la tenue et le temps de se replacer.
+  if (familleDe(exercice) !== 'musculation') {
+    return `${bloc.reps} s${cote} · transition ${bloc.reposSec} s`;
+  }
+  if (exercice.unite === 'secondes') return `${bloc.series} × ${bloc.reps} s${cote}${repos}`;
   if (exercice.cotes === 'unilateral') return `${bloc.series} × ${bloc.reps} reps par côté${repos}`;
   if (exercice.cotes === 'alterne') return `${bloc.series} × ${bloc.reps} reps en alternant${repos}`;
   return `${bloc.series} × ${bloc.reps} reps${repos}`;
