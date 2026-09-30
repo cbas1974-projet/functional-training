@@ -73,6 +73,13 @@ export type Objectif = 'complet' | 'haut' | 'bas' | 'gainage' | 'dos';
 
 export type FormatSeance = 'series' | 'superset' | 'circuit' | 'mixte';
 
+/** Façon de mener un circuit.
+ *  classique : travail moyen, repos court entre les stations.
+ *  tabata    : 20 s de travail, 10 s de repos, beaucoup de tours.
+ *  enchaine  : trois ou quatre stations d'affilée sans aucun repos, puis une
+ *              vraie pause avant de recommencer le tour. */
+export type StyleCircuit = 'classique' | 'tabata' | 'enchaine';
+
 /** Unité dans laquelle les charges sont saisies et affichées. Les haltères
  *  vendus au Québec sont marqués en livres ; le kilogramme reste disponible. */
 export type UnitePoids = 'lb' | 'kg';
@@ -139,6 +146,8 @@ export interface ParametresSeance {
   /** Unité des charges. Absente sur les séances enregistrées avant son
    *  arrivée : celles-là avaient été saisies en kilogrammes. */
   unitePoids?: UnitePoids;
+  /** Façon de mener le circuit ; 'classique' si absent. */
+  styleCircuit?: StyleCircuit;
   /** Nombre d'exercices par enchaînement au format superset : 2 (paire),
    *  3 (trio) ou 4 (rotation). Absent = automatique, l'appli prend la taille
    *  qui fait tenir le plus d'exercices dans la durée. */
@@ -175,6 +184,10 @@ export interface Circuit {
   travailSec: number;
   reposSec: number;
   reposEntreToursSec: number;
+  /** 'tempo' : les répétitions sont rythmées par la bille, comme en séries.
+   *  'libre' : le travail est trop court pour un tempo lent — on affiche le
+   *  décompte des secondes et chacun va à son rythme. 'tempo' si absent. */
+  rythme?: 'tempo' | 'libre';
 }
 
 export interface Seance {

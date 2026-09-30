@@ -17,6 +17,7 @@ import {
   REPS_PAR_SERIE,
   MATERIELS_DECLARABLES,
   SERIES_PAR_EXERCICE,
+  STYLES_CIRCUIT,
   TEMPOS,
   TAILLES_ROTATION,
   TOUTES_LES_ZONES,
@@ -364,6 +365,8 @@ export default function Entrainement({ etat, onChange }: EntrainementProps) {
   const formatSelectionne = FORMATS.find((f) => f.id === parametres.format);
   const uniteSelectionnee = UNITES_POIDS.find((u) => u.id === uniteDeSeance(parametres));
   const tailleSelectionnee = TAILLES_ROTATION.find((t) => t.valeur === parametres.tailleRotation);
+  const styleCircuit = parametres.styleCircuit ?? 'classique';
+  const styleSelectionne = STYLES_CIRCUIT.find((c) => c.id === styleCircuit);
 
   // Résumés de la carte « Ma séance ».
   const resumeVolume =
@@ -644,6 +647,22 @@ export default function Entrainement({ etat, onChange }: EntrainementProps) {
               ))}
             </div>
           </Groupe>
+
+          {(parametres.format === 'circuit' || parametres.format === 'mixte') && (
+            <Groupe titre="Style de circuit" aide={styleSelectionne?.description}>
+              <div className="flex flex-wrap gap-2">
+                {STYLES_CIRCUIT.map((c) => (
+                  <Pastille
+                    key={c.id}
+                    selectionne={styleCircuit === c.id}
+                    onClick={() => mettreAJourParametres({ styleCircuit: c.id })}
+                  >
+                    {c.nom}
+                  </Pastille>
+                ))}
+              </div>
+            </Groupe>
+          )}
 
           {parametres.format === 'superset' && (
             <Groupe titre="Exercices par enchaînement" aide={tailleSelectionnee?.description}>

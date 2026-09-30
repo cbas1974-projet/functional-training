@@ -71,6 +71,9 @@ export type Etape =
       station: number;
       stations: number;
       dureeSec: number;
+      /** 'libre' : travail trop court pour un tempo lent, on compte les
+       *  secondes au lieu de rythmer les répétitions. */
+      rythme?: 'tempo' | 'libre';
     }
   | {
       type: 'reposTour';
@@ -228,7 +231,16 @@ export function construireEtapes(seance: Seance): Etape[] {
     });
     for (let tour = 1; tour <= circuit.tours; tour += 1) {
       for (let station = 1; station <= nbStations; station += 1) {
-        etapes.push({ ...cibleStation(tour, station), dureeSec: circuit.travailSec });
+        etapes.push({
+          type: 'station',
+          exerciceId: circuit.stations[station - 1],
+          tour,
+          tours: circuit.tours,
+          station,
+          stations: nbStations,
+          dureeSec: circuit.travailSec,
+          rythme: circuit.rythme,
+        });
         if (station < nbStations) {
           if (circuit.reposSec > 0) {
             etapes.push({
@@ -358,6 +370,9 @@ export function indexApresExercice(etapes: Etape[], index: number): number {
  *  fait du côté droit, la seconde du côté gauche. */
 export function etatMetronome(etape: Etape, ecouleSec: number, tempo: Tempo): EtatMetronome | null {
   if (etape.type !== 'serie' && etape.type !== 'station') return null;
+  // Un circuit à rythme libre ne se compte pas en répétitions : vingt secondes
+  // de travail au tempo 4 s / 4 s ne feraient que deux répétitions et demie.
+  if (etape.type === 'station' && etape.rythme === 'libre') return null;
   const exercice = exerciceDeSeance(etape.exerciceId);
   if (exercice.unite === 'secondes') return null;
 

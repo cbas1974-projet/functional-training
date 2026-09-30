@@ -1093,7 +1093,9 @@ function CorpsTravail({
             className="text-xs font-bold uppercase tracking-[0.18em]"
             style={{ color: 'var(--texte-discret)' }}
           >
-            Maintenez l’effort
+            {etape.type === 'station' && etape.rythme === 'libre'
+              ? 'À fond jusqu’au signal'
+              : 'Maintenez l’effort'}
           </div>
           <div
             className="chiffres text-9xl font-bold leading-none"

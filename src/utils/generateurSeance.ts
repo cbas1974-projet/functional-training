@@ -8,6 +8,7 @@ import { EXERCICES, EXERCICES_PAR_ID } from '../data/exercices';
 import type {
   BlocSeries,
   Circuit,
+  StyleCircuit,
   Exercice,
   GroupeMusculaire,
   Materiel,
@@ -52,7 +53,7 @@ const REGLAGES: Record<Niveau, ReglagesNiveau> = {
     reps: [6, 8],
     series: [2, 3],
     repos: [60, 75, 90],
-    maxExercices: 6,
+    maxExercices: 8,
     tenueSec: 30,
     travailSec: 30,
     reposStationSec: 30,
@@ -64,7 +65,7 @@ const REGLAGES: Record<Niveau, ReglagesNiveau> = {
     reps: [8, 10],
     series: [2, 3, 4],
     repos: [60, 75, 90],
-    maxExercices: 8,
+    maxExercices: 10,
     tenueSec: 40,
     travailSec: 40,
     reposStationSec: 20,
@@ -76,7 +77,7 @@ const REGLAGES: Record<Niveau, ReglagesNiveau> = {
     reps: [8, 10, 12],
     series: [3, 4],
     repos: [45, 60, 75, 90],
-    maxExercices: 10,
+    maxExercices: 12,
     tenueSec: 45,
     travailSec: 50,
     reposStationSec: 20,
@@ -137,9 +138,6 @@ function cycleZones(parametres: ParametresSeance): Zone[] {
   if (choisies.length > 0) return ORDRE_ZONES.filter((zone) => choisies.includes(zone));
   return CYCLES_ZONES[parametres.objectif ?? 'complet'];
 }
-
-/** Repos entre deux tours de circuit. */
-const REPOS_ENTRE_TOURS_SEC = 60;
 
 /** Durée de la préparation (« Préparez-vous ») avant chaque série et avant
  *  le circuit. Elle est comptée dans le budget : sur trois séries de trois
@@ -309,6 +307,41 @@ const BORNES_CIRCUIT_MIXTE: BornesCircuit = {
   toursMin: 1,
   toursMax: 3,
 };
+
+/** Ce qu'un style de circuit impose. Les valeurs absentes viennent du niveau. */
+interface ReglagesStyle {
+  travailSec?: number;
+  reposSec?: number;
+  reposEntreToursSec: number;
+  rythme: 'tempo' | 'libre';
+  bornes?: Partial<BornesCircuit>;
+}
+
+const STYLES_CIRCUIT: Record<StyleCircuit, ReglagesStyle> = {
+  // Réglages du niveau, repos court entre les stations.
+  classique: { reposEntreToursSec: 60, rythme: 'tempo' },
+  // Ce que demandait la consigne : trois ou quatre exercices d'affilée sans
+  // aucun repos, puis une vraie pause. Le travail est court, donc pas de
+  // tempo lent : on compte les secondes.
+  enchaine: {
+    reposSec: 0,
+    reposEntreToursSec: 90,
+    rythme: 'libre',
+    bornes: { stationsMin: 3, stationsMax: 4, toursMax: 8 },
+  },
+  // Le protocole d'origine : 20 s de travail, 10 s de repos.
+  tabata: {
+    travailSec: 20,
+    reposSec: 10,
+    reposEntreToursSec: 60,
+    rythme: 'libre',
+    bornes: { stationsMin: 4, stationsMax: 8, toursMax: 8 },
+  },
+};
+
+function styleDe(parametres: ParametresSeance): ReglagesStyle {
+  return STYLES_CIRCUIT[parametres.styleCircuit ?? 'classique'];
+}
 
 // ------------------------------------------------------------- Aléatoire
 
@@ -710,18 +743,25 @@ function construireCircuit(
   stations: Exercice[],
   budgetSec: number,
   reglages: ReglagesNiveau,
-  bornes: BornesCircuit,
+  bornesDemandees: BornesCircuit,
+  style: ReglagesStyle,
 ): Circuit | null {
   if (stations.length === 0) return null;
-  const maximumStations = Math.min(bornes.stationsMax, stations.length);
+  const bornes = { ...bornesDemandees, ...style.bornes };
+  // Les stations s'enchaînent comme un superset : on les range par opposition
+  // pour qu'un muscle récupère pendant que le suivant travaille. C'est ce qui
+  // rend un circuit sans repos tenable.
+  const ordonnees = arranger(stations, Math.max(2, bornes.stationsMax)).exercices;
+  const maximumStations = Math.min(bornes.stationsMax, ordonnees.length);
   const minimumStations = Math.min(bornes.stationsMin, maximumStations);
 
   const essai = (tours: number, nombre: number): Circuit => ({
-    stations: stations.slice(0, nombre).map((e) => e.id),
+    stations: ordonnees.slice(0, nombre).map((e) => e.id),
     tours,
-    travailSec: reglages.travailSec,
-    reposSec: reglages.reposStationSec,
-    reposEntreToursSec: REPOS_ENTRE_TOURS_SEC,
+    travailSec: style.travailSec ?? reglages.travailSec,
+    reposSec: style.reposSec ?? reglages.reposStationSec,
+    reposEntreToursSec: style.reposEntreToursSec,
+    rythme: style.rythme,
   });
 
   let meilleur: { tours: number; nombre: number; cout: number } | null = null;
@@ -782,12 +822,18 @@ export function genererSeance(parametres: ParametresSeance, graine?: number): Se
 
   if (parametres.format === 'circuit') {
     const stations = selectionnerExercices(candidats, cycle, reglages.stationsMax, alea);
-    circuit = construireCircuit(stations, budget, reglages, {
-      stationsMin: reglages.stationsMin,
-      stationsMax: reglages.stationsMax,
-      toursMin: 1,
-      toursMax: reglages.toursMax,
-    });
+    circuit = construireCircuit(
+      stations,
+      budget,
+      reglages,
+      {
+        stationsMin: reglages.stationsMin,
+        stationsMax: reglages.stationsMax,
+        toursMin: 1,
+        toursMax: reglages.toursMax,
+      },
+      styleDe(parametres),
+    );
   } else if (parametres.format === 'mixte' && budget >= SEUIL_MIXTE_SEC) {
     const budgetSeries = Math.round(budget * PART_SERIES_MIXTE);
     const retenus = selectionnerExercices(candidats, cycle, reglages.maxExercices, alea);
@@ -804,7 +850,13 @@ export function genererSeance(parametres: ParametresSeance, graine?: number): Se
       BORNES_CIRCUIT_MIXTE.stationsMax,
       alea,
     );
-    circuit = construireCircuit(stations, budget - budgetSeries, reglages, BORNES_CIRCUIT_MIXTE);
+    circuit = construireCircuit(
+      stations,
+      budget - budgetSeries,
+      reglages,
+      BORNES_CIRCUIT_MIXTE,
+      styleDe(parametres),
+    );
   } else {
     // Format séries ou superset, et format mixte trop court pour un circuit.
     const retenus = selectionnerExercices(candidats, cycle, reglages.maxExercices, alea);

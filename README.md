@@ -11,7 +11,7 @@ sur l'appareil.
 ## Fonctionnalités
 
 ### Nouvelle séance
-- **Durée** : 5, 10, 15, 20, 30 ou 45 minutes.
+- **Durée** : 5, 10, 15, 20, 30, 45 ou 60 minutes.
 - **Zones travaillées** : tout le corps, ou une combinaison (haut du corps,
   bas du corps, dos, gainage, corps entier). Plusieurs zones alternent.
 - **Niveau** : débutant, intermédiaire, avancé.
@@ -21,6 +21,11 @@ sur l'appareil.
 - **Exercices par enchaînement** au format superset : paires, trios, rotation
   de 4, ou automatique — l'application prend alors la taille qui fait tenir
   le plus d'exercices.
+- **Style de circuit** : classique (stations au temps selon le niveau),
+  **enchaîné** (trois ou quatre exercices d'affilée sans aucun repos, puis une
+  vraie pause avant de recommencer le tour) ou **tabata** (20 s de travail,
+  10 s de repos). Les stations sont appariées par opposition, comme les
+  supersets : c'est ce qui rend un tour sans repos tenable.
 - **Tempo** : 4 s / 4 s recommandé ; 5 s / 5 s, 3 s / 3 s et 2 s / 4 s restent
   disponibles.
 - **Séries par exercice** (3 par défaut) et **répétitions par série**
@@ -78,6 +83,14 @@ enchaînement réunit des mouvements qui ne se gênent pas :
 
 Faute de partenaire acceptable, un exercice reste seul et redevient une série
 droite plutôt que d'être mal apparié.
+
+### Circuit à rythme libre
+
+En enchaîné et en tabata, le travail est trop court pour un tempo lent — vingt
+secondes à 4 s / 4 s ne feraient que deux répétitions et demie. Ces styles
+passent donc en **rythme libre** : la bille disparaît, l'écran affiche le
+décompte des secondes, et c'est le souffle qui mène. C'est l'outil des jours où
+tu travailles le cardio, pas le tendon : l'opposé exact du tempo lent.
 
 ### Pourquoi 4 s / 4 s et 6 répétitions par défaut
 

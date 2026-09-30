@@ -1,5 +1,6 @@
 import type {
   FormatSeance,
+  StyleCircuit,
   GuideVisuel,
   Materiel,
   Niveau,
@@ -13,7 +14,7 @@ import type {
 export const TOUTES_LES_ZONES: Zone[] = ['bas', 'haut', 'dos', 'gainage', 'complet'];
 
 /** Durées de séance proposées, en minutes. */
-export const DUREES_MINUTES = [5, 10, 15, 20, 30, 45] as const;
+export const DUREES_MINUTES = [5, 10, 15, 20, 30, 45, 60] as const;
 
 /** Tempos proposés : secondes de montée / secondes de descente. */
 export const TEMPOS: { tempo: Tempo; nom: string; description: string }[] = [
@@ -80,6 +81,28 @@ export const REPS_PAR_SERIE: { valeur: 6 | 8 | 9 | 10 | 12 | null; nom: string; 
   { valeur: null, nom: 'Auto', description: 'L’appli choisit selon le niveau et la durée.' },
 ];
 
+/** Façon de mener un circuit. Le style décide du rapport travail / repos, du
+ *  nombre de stations et du rythme affiché à l'écran. */
+export const STYLES_CIRCUIT: { id: StyleCircuit; nom: string; description: string }[] = [
+  {
+    id: 'classique',
+    nom: 'Classique',
+    description: 'Stations au temps selon le niveau, repos court entre chacune.',
+  },
+  {
+    id: 'enchaine',
+    nom: 'Enchaîné',
+    description:
+      'Recommandé pour le cardio : trois ou quatre exercices d’affilée sans aucun repos, muscles opposés, puis une vraie pause avant de recommencer le tour.',
+  },
+  {
+    id: 'tabata',
+    nom: 'Tabata',
+    description:
+      '20 s de travail, 10 s de repos, enchaînés. Très cardio et très explosif — l’opposé du tempo lent, à réserver aux jours où c’est le souffle que tu travailles.',
+  },
+];
+
 /** Nombre d'exercices enchaînés au format superset. Plus l'enchaînement est
  *  large, plus chaque muscle récupère longtemps — et plus il tient
  *  d'exercices dans la même durée. */
@@ -131,6 +154,7 @@ export const PARAMETRES_PAR_DEFAUT: ParametresSeance = {
   zones: [...TOUTES_LES_ZONES],
   niveau: 'intermediaire',
   format: 'series',
+  styleCircuit: 'classique',
   tempo: { monteeSec: 4, descenteSec: 4 },
   materiels: ['halteres'],
   explosifs: false,
