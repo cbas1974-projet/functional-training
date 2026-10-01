@@ -312,6 +312,8 @@ const BORNES_CIRCUIT_MIXTE: BornesCircuit = {
 
 /** Ce qu'un style de circuit impose. Les valeurs absentes viennent du niveau. */
 interface ReglagesStyle {
+  /** L'enchaîné ne produit pas un circuit mais des blocs enchaînés. */
+  enchainement?: boolean;
   travailSec?: number;
   reposSec?: number;
   reposEntreToursSec: number;
@@ -322,14 +324,16 @@ interface ReglagesStyle {
 const STYLES_CIRCUIT: Record<StyleCircuit, ReglagesStyle> = {
   // Réglages du niveau, repos court entre les stations.
   classique: { reposEntreToursSec: 60, rythme: 'tempo' },
-  // Ce que demandait la consigne : trois ou quatre exercices d'affilée sans
-  // aucun repos, puis une vraie pause. Le travail est court, donc pas de
-  // tempo lent : on compte les secondes.
+  // Trois ou quatre exercices d'affilée sans aucun repos, puis une vraie
+  // pause, et on recommence deux ou trois fois. Pas davantage : au-delà, ce
+  // n'est plus un enchaînement, c'est un circuit long où la forme se dégrade.
+  // Le travail est court, donc pas de tempo lent : on compte les secondes.
   enchaine: {
+    enchainement: true,
     reposSec: 0,
     reposEntreToursSec: 90,
     rythme: 'libre',
-    bornes: { stationsMin: 3, stationsMax: 4, toursMax: 8 },
+    bornes: { stationsMin: 3, stationsMax: 4, toursMax: 3 },
   },
   // Le protocole d'origine : 20 s de travail, 10 s de repos.
   tabata: {
@@ -638,6 +642,9 @@ interface OptionsBlocs {
   taillesRotation: number[];
   /** Un circuit suit : le dernier repos existe donc bel et bien. */
   suiviDUnCircuit: boolean;
+  /** Repos entre deux exercices d'un même enchaînement. 0 pour l'enchaîné,
+   *  où l'on passe d'un exercice au suivant sans s'arrêter. */
+  transitionSec?: number;
 }
 
 /** Construit les blocs de séries qui remplissent le mieux le budget. */
@@ -672,7 +679,7 @@ function construireBlocs(
       };
       if ((effectifs.get(numeros[index]) ?? 0) > 1) {
         bloc.superset = numeros[index];
-        bloc.transitionSec = TRANSITION_SUPERSET_SEC;
+        bloc.transitionSec = options.transitionSec ?? TRANSITION_SUPERSET_SEC;
       }
       return bloc;
     });
@@ -918,6 +925,29 @@ function dansLOrdreDuPoster(exercices: Exercice[]): Exercice[] {
   );
 }
 
+/** L'enchaîné n'est pas un circuit : c'est un enchaînement sans aucun repos
+ *  entre les exercices, répété deux ou trois fois, puis une vraie pause avant
+ *  le bloc suivant. Le modèle du superset le décrit exactement, et sait en
+ *  aligner plusieurs blocs à la suite — ce qu'un circuit à trois tours ne peut
+ *  pas faire : il ne remplirait jamais une heure. Les exercices y gardent le
+ *  tempo choisi, contrairement aux stations chronométrées d'un circuit. */
+const REPOS_ENCHAINE_SEC = [90, 120];
+const SERIES_ENCHAINE = [2, 3];
+const TAILLES_ENCHAINE = [3, 4];
+
+function reglagesEnchaine(reglages: ReglagesNiveau): ReglagesNiveau {
+  return {
+    ...reglages,
+    series: SERIES_ENCHAINE,
+    repos: REPOS_ENCHAINE_SEC,
+    // Le nombre de séries demandé ne s'impose pas ici : sur une séance courte,
+    // insister sur trois tours ne laisse de place que pour un seul exercice,
+    // et un enchaînement d'un exercice n'est plus un enchaînement. La taille
+    // du bloc prime sur le nombre de tours.
+    seriesPreferees: undefined,
+  };
+}
+
 /** Tailles d'enchaînement à essayer pour ces paramètres : une seule si
  *  l'utilisateur l'a fixée, toutes si l'automatique choisit, et 1 (séries
  *  droites) hors du format superset. */
@@ -949,6 +979,15 @@ export function genererSeance(parametres: ParametresSeance, graine?: number): Se
     // n'aurait aucun sens, on ne cherche pas à récupérer.
     const retenus = selectionnerExercices(candidats, cycle, POSTURES_MAXI, alea);
     blocs = construireBlocsMobilite(retenus, budget, tenueDe(parametres));
+  } else if (parametres.format === 'circuit' && styleDe(parametres).enchainement) {
+    // Enchaîné : des blocs de trois ou quatre exercices sans aucun repos,
+    // répétés deux ou trois fois, et autant de blocs que la durée en accepte.
+    const retenus = selectionnerExercices(candidats, cycle, reglages.maxExercices, alea);
+    blocs = construireBlocs(retenus, budget, reglagesEnchaine(reglages), parametres.tempo, {
+      taillesRotation: TAILLES_ENCHAINE,
+      suiviDUnCircuit: false,
+      transitionSec: 0,
+    });
   } else if (parametres.format === 'circuit') {
     const stations = selectionnerExercices(candidats, cycle, reglages.stationsMax, alea);
     circuit = construireCircuit(

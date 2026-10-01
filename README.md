@@ -21,11 +21,12 @@ sur l'appareil.
 - **Exercices par enchaînement** au format superset : paires, trios, rotation
   de 4, ou automatique — l'application prend alors la taille qui fait tenir
   le plus d'exercices.
-- **Style de circuit** : classique (stations au temps selon le niveau),
-  **enchaîné** (trois ou quatre exercices d'affilée sans aucun repos, puis une
-  vraie pause avant de recommencer le tour) ou **tabata** (20 s de travail,
-  10 s de repos). Les stations sont appariées par opposition, comme les
-  supersets : c'est ce qui rend un tour sans repos tenable.
+- **Style de circuit** : **enchaîné** par défaut (trois ou quatre exercices
+  d'affilée sans aucun repos, puis une vraie pause, et on recommence deux ou
+  trois fois — autant de blocs que la durée en accepte), classique (stations au
+  temps selon le niveau) ou tabata (20 s de travail, 10 s de repos). Les
+  exercices sont appariés par opposition : c'est ce qui rend un bloc sans repos
+  tenable.
 - **Tempo** : 4 s / 4 s recommandé ; 5 s / 5 s, 3 s / 3 s et 2 s / 4 s restent
   disponibles.
 - **Séries par exercice** (3 par défaut) et **répétitions par série**
@@ -84,13 +85,31 @@ enchaînement réunit des mouvements qui ne se gênent pas :
 Faute de partenaire acceptable, un exercice reste seul et redevient une série
 droite plutôt que d'être mal apparié.
 
+### L'enchaîné n'est pas un circuit
+
+Un circuit à trois tours ne remplira jamais une heure : quatre stations de 40 s
+répétées trois fois, c'est douze minutes. L'enchaîné est donc construit comme un
+**superset sans repos** plutôt que comme un circuit — trois ou quatre exercices
+d'affilée, une vraie pause de 90 à 120 s, deux ou trois tours, puis un bloc
+suivant avec d'autres exercices. Le modèle du superset sait aligner plusieurs
+blocs ; celui du circuit n'en connaît qu'un.
+
+Conséquence volontaire : **les exercices y gardent le tempo choisi**. Six
+répétitions à 4 s / 4 s, c'est quarante-huit secondes de travail — la bonne
+durée pour une station, sans sacrifier la tension lente qui fait le tendon.
+L'effet cardio vient de l'absence de repos entre les trois exercices, pas de la
+vitesse d'exécution.
+
+En dessous d'un quart d'heure, le bloc se réduit : au tempo lent, trois
+exercices dont un unilatéral coûtent déjà huit minutes pour deux tours.
+
 ### Circuit à rythme libre
 
-En enchaîné et en tabata, le travail est trop court pour un tempo lent — vingt
-secondes à 4 s / 4 s ne feraient que deux répétitions et demie. Ces styles
-passent donc en **rythme libre** : la bille disparaît, l'écran affiche le
-décompte des secondes, et c'est le souffle qui mène. C'est l'outil des jours où
-tu travailles le cardio, pas le tendon : l'opposé exact du tempo lent.
+En tabata, le travail est trop court pour un tempo lent — vingt secondes à
+4 s / 4 s ne feraient que deux répétitions et demie. Ce style passe donc en
+**rythme libre** : la bille disparaît, l'écran affiche le décompte des secondes,
+et c'est le souffle qui mène. C'est l'opposé exact du tempo lent, à réserver aux
+jours où c'est le cardio que tu travailles — et pas le tendon.
 
 ### Pourquoi 4 s / 4 s et 6 répétitions par défaut
 

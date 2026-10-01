@@ -259,7 +259,15 @@ describe('genererSeance : toutes les durées, niveaux et formats', () => {
   for (const dureeMinutes of DUREES_MINUTES) {
     for (const niveau of NIVEAUX) {
       for (const format of FORMATS) {
-        const parametres = avec({ dureeMinutes, niveau: niveau.id, format: format.id });
+        // Le style « enchaîné » ne produit pas un circuit mais des blocs
+        // enchaînés : il a son propre describe plus bas. Ici on vérifie le
+        // circuit proprement dit.
+        const parametres = avec({
+          dureeMinutes,
+          niveau: niveau.id,
+          format: format.id,
+          styleCircuit: 'classique',
+        });
         const titre = `${dureeMinutes} min · ${niveau.id} · ${format.id}`;
 
         it(`${titre} : produit une séance non vide et cohérente`, () => {
@@ -434,7 +442,7 @@ describe('genererSeance : toutes les durées, niveaux et formats', () => {
   it('descend à trois stations pour tenir dans une séance courte en circuit', () => {
     for (const niveau of NIVEAUX) {
       const seance = genererSeance(
-        avec({ dureeMinutes: 5, niveau: niveau.id, format: 'circuit' }),
+        avec({ dureeMinutes: 5, niveau: niveau.id, format: 'circuit', styleCircuit: 'classique' }),
         GRAINE,
       );
       expect(seance.circuit?.stations.length).toBe(3);
@@ -444,7 +452,7 @@ describe('genererSeance : toutes les durées, niveaux et formats', () => {
 
   it('remplit un circuit de 45 min au niveau débutant', () => {
     const seance = genererSeance(
-      avec({ dureeMinutes: 45, niveau: 'debutant', format: 'circuit' }),
+      avec({ dureeMinutes: 45, niveau: 'debutant', format: 'circuit', styleCircuit: 'classique' }),
       GRAINE,
     );
     expect(seance.dureeEstimeeSec).toBeGreaterThanOrEqual(0.7 * 45 * 60);
@@ -470,6 +478,66 @@ describe('genererSeance : toutes les durées, niveaux et formats', () => {
   });
 });
 
+describe('circuit enchaîné', () => {
+  for (const dureeMinutes of DUREES_MINUTES) {
+    it(`${dureeMinutes} min : des blocs de trois ou quatre exercices, répétés deux ou trois fois`, () => {
+      const seance = genererSeance(
+        avec({ dureeMinutes, format: 'circuit', styleCircuit: 'enchaine' }),
+        GRAINE,
+      );
+      // Un enchaînement n'est pas un circuit : pas de stations chronométrées.
+      expect(seance.circuit).toBeNull();
+      expect(seance.blocs.length).toBeGreaterThan(0);
+
+      const groupes = groupesDeBlocs(seance.blocs);
+      groupes.forEach((groupe, index) => {
+        // Le dernier bloc peut être incomplet : ce qui reste de budget ne fait
+        // pas toujours trois exercices de plus.
+        if (index < groupes.length - 1) expect(groupe.length).toBeGreaterThanOrEqual(3);
+        expect(groupe.length).toBeLessThanOrEqual(4);
+        if (groupe.length === 1) return; // un exercice seul redevient une série droite
+        for (const bloc of groupe) {
+          // Aucun repos entre deux exercices du même bloc.
+          expect(bloc.transitionSec).toBe(0);
+          // On refait le bloc deux ou trois fois, pas huit.
+          expect(bloc.series).toBeGreaterThanOrEqual(2);
+          expect(bloc.series).toBeLessThanOrEqual(3);
+          // Puis une vraie pause.
+          expect(bloc.reposSec).toBeGreaterThanOrEqual(90);
+        }
+      });
+      // À partir d'un quart d'heure, au moins un bloc complet. En dessous, le
+      // budget ne le permet pas toujours : au tempo lent, trois exercices dont
+      // un unilatéral coûtent déjà huit minutes pour deux tours.
+      if (dureeMinutes >= 15) expect(groupes.some((g) => g.length >= 3)).toBe(true);
+    });
+  }
+
+  it('remplit une heure avec plusieurs blocs, là où trois tours n’y suffiraient pas', () => {
+    const seance = genererSeance(
+      avec({ dureeMinutes: 60, format: 'circuit', styleCircuit: 'enchaine', niveau: 'avance' }),
+      GRAINE,
+    );
+    const groupes = groupesDeBlocs(seance.blocs).filter((g) => g.length > 1);
+    expect(groupes.length).toBeGreaterThanOrEqual(2);
+    expect(seance.dureeEstimeeSec).toBeGreaterThan(50 * 60);
+    expect(seance.dureeEstimeeSec).toBeLessThanOrEqual(60 * 60);
+  });
+
+  it('garde le tempo choisi, contrairement à une station chronométrée', () => {
+    const seance = genererSeance(
+      avec({ dureeMinutes: 20, format: 'circuit', styleCircuit: 'enchaine' }),
+      GRAINE,
+    );
+    for (const bloc of seance.blocs) {
+      const exercice = EXERCICES_PAR_ID[bloc.exerciceId];
+      if (exercice.unite === 'reps') expect(bloc.reps).toBeGreaterThan(0);
+    }
+    // Les étapes suivent le tempo : le métronome a donc de quoi compter.
+    expect(seance.parametres.tempo).toEqual(PARAMETRES_PAR_DEFAUT.tempo);
+  });
+});
+
 describe('remplacerExercice', () => {
   it('remplace un bloc par un exercice de la même zone sans muter la séance', () => {
     const seance = genererSeance(avec({ dureeMinutes: 45, niveau: 'avance' }), GRAINE);
@@ -492,7 +560,10 @@ describe('remplacerExercice', () => {
   });
 
   it('remplace aussi une station de circuit', () => {
-    const seance = genererSeance(avec({ dureeMinutes: 30, format: 'circuit' }), GRAINE);
+    const seance = genererSeance(
+      avec({ dureeMinutes: 30, format: 'circuit', styleCircuit: 'classique' }),
+      GRAINE,
+    );
     const cible = seance.circuit?.stations[1] as string;
     const modifiee = remplacerExercice(seance, cible, 11);
     expect(modifiee.circuit?.stations).toHaveLength(seance.circuit?.stations.length ?? 0);
@@ -612,11 +683,33 @@ describe('tableau récapitulatif (lecture humaine)', () => {
     }
 
     lignes.push('');
+    lignes.push('  CIRCUIT ENCHAÎNÉ (blocs sans repos, puis une pause)');
+    lignes.push('  durée | blocs | tours | pause | estimée');
+    lignes.push('  ------+-------+-------+-------+--------');
+    for (const dureeMinutes of DUREES_MINUTES) {
+      const seance = genererSeance(
+        avec({ dureeMinutes, format: 'circuit', styleCircuit: 'enchaine' }),
+        GRAINE,
+      );
+      const groupes = groupesDeBlocs(seance.blocs);
+      lignes.push(
+        `  ${String(dureeMinutes).padStart(3)}mn |` +
+          `${groupes.map((g) => g.length).join('+').padStart(6)} |` +
+          `${String(seance.blocs[0]?.series ?? 0).padStart(6)} |` +
+          `${`${seance.blocs[0]?.reposSec ?? 0} s`.padStart(6)} |` +
+          `${minSec(seance.dureeEstimeeSec).padStart(8)}`,
+      );
+    }
+
+    lignes.push('');
     lignes.push('  FORMAT CIRCUIT');
     lignes.push('  durée | stations | tours | travail/repos | entre tours | estimée');
     lignes.push('  ------+----------+-------+---------------+-------------+--------');
     for (const dureeMinutes of DUREES_MINUTES) {
-      const seance = genererSeance(avec({ dureeMinutes, format: 'circuit' }), GRAINE);
+      const seance = genererSeance(
+        avec({ dureeMinutes, format: 'circuit', styleCircuit: 'classique' }),
+        GRAINE,
+      );
       const circuit = seance.circuit!;
       lignes.push(
         `  ${String(dureeMinutes).padStart(3)}mn |` +

@@ -122,15 +122,15 @@ export const REPS_PAR_SERIE: { valeur: 6 | 8 | 9 | 10 | 12 | null; nom: string; 
  *  nombre de stations et du rythme affiché à l'écran. */
 export const STYLES_CIRCUIT: { id: StyleCircuit; nom: string; description: string }[] = [
   {
-    id: 'classique',
-    nom: 'Classique',
-    description: 'Stations au temps selon le niveau, repos court entre chacune.',
-  },
-  {
     id: 'enchaine',
     nom: 'Enchaîné',
     description:
-      'Recommandé pour le cardio : trois ou quatre exercices d’affilée sans aucun repos, muscles opposés, puis une vraie pause avant de recommencer le tour.',
+      'Recommandé : trois ou quatre exercices d’affilée sans aucun repos, muscles opposés, puis une vraie pause — et on recommence deux ou trois fois. L’effet cardio sans courir après le chrono.',
+  },
+  {
+    id: 'classique',
+    nom: 'Classique',
+    description: 'Stations au temps selon le niveau, repos court entre chacune.',
   },
   {
     id: 'tabata',
@@ -193,7 +193,7 @@ export const PARAMETRES_PAR_DEFAUT: ParametresSeance = {
   discipline: 'musculation',
   format: 'series',
   tenueSec: 30,
-  styleCircuit: 'classique',
+  styleCircuit: 'enchaine',
   tempo: { monteeSec: 4, descenteSec: 4 },
   materiels: ['halteres'],
   explosifs: false,
