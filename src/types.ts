@@ -24,6 +24,35 @@ export type GroupeMusculaire =
   | 'mollets'
   | 'corps-entier';
 
+/** Muscle ou région musculaire, telle que les posters la colorient sur leur
+ *  planche anatomique — chaque case en porte une, vue de face et de dos, avec
+ *  les muscles travaillés en noir et les muscles secondaires en gris.
+ *
+ *  Beaucoup plus fin que `GroupeMusculaire`, qui sert à équilibrer une séance
+ *  et n'a qu'une valeur par exercice. C'est cette liste qui permet de répondre
+ *  à « renforce mon bas du dos » : les lombaires n'étaient représentables par
+ *  aucun groupe — « dorsaux » désigne le grand dorsal, le muscle des tractions,
+ *  pas celui du bas du dos. */
+export type Muscle =
+  | 'nuque'
+  | 'trapezes'
+  | 'epaules'
+  | 'coiffe-rotateurs'
+  | 'pectoraux'
+  | 'dorsaux'
+  | 'lombaires'
+  | 'biceps'
+  | 'triceps'
+  | 'avant-bras'
+  | 'abdominaux'
+  | 'obliques'
+  | 'fessiers'
+  | 'ischios'
+  | 'quadriceps'
+  | 'adducteurs'
+  | 'flechisseurs-hanche'
+  | 'mollets';
+
 /** Matériel nécessaire pour réaliser l'exercice. L'utilisateur déclare ce
  *  qu'il possède ; seuls les exercices réalisables lui sont proposés. */
 export type Materiel =
@@ -98,6 +127,11 @@ export interface Exercice {
   zone: Zone;
   groupe: GroupeMusculaire;
   muscles: string;
+  /** Muscles que la planche anatomique du poster noircit : ceux que
+   *  l'exercice travaille directement. */
+  musclesPrincipaux?: Muscle[];
+  /** Ceux qu'elle grise : sollicités, sans être la cible. */
+  musclesSecondaires?: Muscle[];
   materiel: Materiel;
   /** Schéma de mouvement, pour équilibrer la séance et proposer des
    *  équivalents avec un autre matériel. */

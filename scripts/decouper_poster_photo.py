@@ -56,6 +56,13 @@ DISPOSITIONS: dict[str, list[tuple[str, list[Rangee]]]] = {
         # à la règle sur la photo.
         ("Corps entier", [[0.405, 0.611, 0.813]]),
     ],
+    "dumbbell-v1": [
+        ("Haut du corps", [5, 5, 5]),
+        ("Gainage", [5]),
+        ("Dos", [5]),
+        ("Bas du corps", [5, 5]),
+        ("Corps entier", [5]),
+    ],
     "yoga": [
         ("Échauffement", [5]),
         ("Étirements", [5, 4]),
@@ -92,6 +99,16 @@ IDENTIFIANTS: dict[str, list[str]] = {
         "single-leg-deadlift-db",
         # Corps entier
         "dumbbell-burpee", "high-pull", "side-lunge-thruster", "dumbbell-snatch",
+    ],
+    "dumbbell-v1": [
+        "hammer-curl", "grip-curl", "concentration-curl", "tricep-kickback", "tricep-extension",
+        "alternating-front-raise", "side-raise", "shoulder-press", "shoulder-shrug", "wrist-curl",
+        "dumbbell-pullover", "bench-press", "incline-bench-press", "chest-fly", "reverse-fly",
+        "side-bend", "bow-extension", "russian-twist", "v-up", "v-sit-cross-jab",
+        "single-arm-row", "incline-row", "floor-t-raise", "renegade-row", "seesaw-row",
+        "squat", "goblet-squat", "sumo-squat", "jump-squat", "romanian-deadlift",
+        "glute-bridge", "reverse-lunge", "side-lunge", "step-up", "calf-raise",
+        "plank-t", "swing", "farmers-walk", "thruster", "woodchop",
     ],
     "stretching": [
         # Nuque

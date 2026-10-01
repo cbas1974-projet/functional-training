@@ -2,7 +2,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import type { ReactNode } from 'react';
 import type { Exercice, Famille, SeanceRealisee, UnitePoids } from '../types';
-import { EXERCICES, NOM_MATERIEL, NOM_PATTERN, POSTERS, ZONES } from '../data/exercices';
+import { EXERCICES, NOM_MATERIEL, NOM_MUSCLE, NOM_PATTERN, POSTERS, ZONES } from '../data/exercices';
+import { OBJECTIFS_MUSCULAIRES, exercicesPourMuscles, sollicitation } from '../utils/muscles';
 import { formaterDateFr, libelleNiveauMin } from '../utils/formatage';
 import { SUFFIXE_UNITE, frequencesParExercice } from '../utils/statistiques';
 import type { FrequenceExercice } from '../utils/statistiques';
@@ -81,6 +82,98 @@ function Frequence({ frequence }: { frequence: FrequenceExercice | undefined }) 
   );
 }
 
+/** Le détail d'un exercice, déplié sous sa vignette : fréquence, position,
+ *  muscles lus sur la planche anatomique du poster, points d'attention. */
+function DetailExercice({
+  exercice,
+  frequence,
+  onFermer,
+}: {
+  exercice: Exercice;
+  frequence: FrequenceExercice | undefined;
+  onFermer: () => void;
+}) {
+  const principaux = exercice.musclesPrincipaux ?? [];
+  const secondaires = exercice.musclesSecondaires ?? [];
+  return (
+    <div
+      className="mt-3 p-4"
+      style={{
+        background: 'var(--surface-haute)',
+        border: '1px solid var(--bordure)',
+        borderRadius: 14,
+      }}
+    >
+      <div className="flex items-start justify-between gap-2">
+        <h4 className="font-bold" style={{ color: 'var(--texte)' }}>
+          {exercice.nomFr}
+        </h4>
+        <button
+          type="button"
+          onClick={onFermer}
+          className="shrink-0 rounded-xl px-3 text-sm font-semibold"
+          style={{
+            minHeight: 44,
+            background: 'var(--surface)',
+            border: '1px solid var(--bordure)',
+            color: 'var(--texte)',
+          }}
+        >
+          Fermer
+        </button>
+      </div>
+      <Frequence frequence={frequence} />
+      <p className="mt-2 text-sm" style={{ color: 'var(--texte-discret)' }}>
+        <span className="font-semibold" style={{ color: 'var(--texte)' }}>
+          Position :{' '}
+        </span>
+        {exercice.position}
+      </p>
+      <p className="mt-1 text-sm" style={{ color: 'var(--texte-discret)' }}>
+        <span className="font-semibold" style={{ color: 'var(--texte)' }}>
+          Muscles :{' '}
+        </span>
+        {exercice.muscles}
+      </p>
+      {principaux.length > 0 && (
+        <div className="mt-2 flex flex-wrap items-center gap-1">
+          {principaux.map((muscle) => (
+            <Badge key={muscle}>{NOM_MUSCLE[muscle]}</Badge>
+          ))}
+          {secondaires.length > 0 && (
+            <>
+              <span className="text-xs" style={{ color: 'var(--texte-discret)' }}>
+                aussi
+              </span>
+              {secondaires.map((muscle) => (
+                <Badge key={muscle}>{NOM_MUSCLE[muscle]}</Badge>
+              ))}
+            </>
+          )}
+        </div>
+      )}
+      <div className="mt-2">
+        <p className="text-sm font-semibold" style={{ color: 'var(--texte)' }}>
+          Points d'attention
+        </p>
+        <ul
+          className="ml-4 mt-1 list-disc space-y-0.5 text-sm"
+          style={{ color: 'var(--texte-discret)' }}
+        >
+          {exercice.pointsAttention.map((point, index) => (
+            <li key={index}>{point}</li>
+          ))}
+        </ul>
+      </div>
+      {exercice.interetJjb && (
+        <p className="mt-2 text-sm italic" style={{ color: 'var(--accent)' }}>
+          {exercice.interetJjb}
+        </p>
+      )}
+    </div>
+  );
+}
+
 /** Le yoga et les étirements se tiennent au temps, sans charge : ce sont deux
  *  familles à part. Sans ce filtre, elles noieraient les exercices de
  *  renforcement dans une liste de près de deux cents fiches. */
@@ -100,6 +193,8 @@ export default function BibliothequeExercices({
   const [exerciceOuvertId, setExerciceOuvertId] = useState<string | null>(null);
   const [posterOuvert, setPosterOuvert] = useState<string | null>(null);
   const [famille, setFamille] = useState<FiltreFamille>('toutes');
+  const [objectifId, setObjectifId] = useState<string | null>(null);
+  const objectif = OBJECTIFS_MUSCULAIRES.find((o) => o.id === objectifId) ?? null;
   const exercices = useMemo(
     () =>
       famille === 'toutes'
@@ -107,6 +202,13 @@ export default function BibliothequeExercices({
         : EXERCICES.filter((e) => (e.famille ?? 'musculation') === famille),
     [famille],
   );
+  // Avec un objectif, la bibliothèque cesse d'être un catalogue classé par zone
+  // et devient une réponse classée : du plus direct au plus accessoire.
+  const classes = useMemo(
+    () => (objectif ? exercicesPourMuscles(exercices, objectif.muscles) : []),
+    [exercices, objectif],
+  );
+  const exerciceOuvertClasse = classes.find((e) => e.id === exerciceOuvertId);
   const frequences = useMemo(
     () => frequencesParExercice(historique, unitePoids),
     [historique, unitePoids],
@@ -153,7 +255,8 @@ export default function BibliothequeExercices({
           Bibliothèque
         </h2>
         <p className="text-sm" style={{ color: 'var(--texte-discret)' }}>
-          <span className="chiffres">{exercices.length}</span> exercices
+          <span className="chiffres">{objectif ? classes.length : exercices.length}</span>{' '}
+          exercices
         </p>
       </div>
 
@@ -183,6 +286,88 @@ export default function BibliothequeExercices({
         })}
       </div>
 
+      {/* Les posters portent une planche anatomique par exercice : muscles
+          travaillés en noir, secondaires en gris. C'est elle qui permet de
+          demander « ce qui renforce le bas du dos » plutôt que de parcourir
+          les zones. */}
+      <div className="mt-3">
+        <p className="mb-2 text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--texte-discret)' }}>
+          Chercher par muscle
+        </p>
+        <div className="flex flex-wrap gap-2">
+          {OBJECTIFS_MUSCULAIRES.map((o) => {
+            const actif = o.id === objectifId;
+            return (
+              <button
+                key={o.id}
+                type="button"
+                onClick={() => {
+                  setObjectifId(actif ? null : o.id);
+                  setExerciceOuvertId(null);
+                }}
+                aria-pressed={actif}
+                className="rounded-xl px-3 text-sm font-semibold"
+                style={{
+                  minHeight: 44,
+                  background: actif ? 'var(--accent)' : 'var(--surface-haute)',
+                  border: `1px solid ${actif ? 'var(--accent)' : 'var(--bordure)'}`,
+                  color: actif ? 'var(--accent-texte)' : 'var(--texte)',
+                }}
+              >
+                {o.nom}
+              </button>
+            );
+          })}
+        </div>
+        {objectif && (
+          <p className="mt-2 text-sm" style={{ color: 'var(--texte-discret)' }}>
+            {objectif.description} Du plus direct au plus accessoire.
+          </p>
+        )}
+      </div>
+
+      {objectif ? (
+        <div className="mt-4">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+            {classes.map((exercice) => (
+              <FicheExercice
+                key={exercice.id}
+                exercice={exercice}
+                taille="grande"
+                onClick={() => basculerExercice(exercice.id)}
+              >
+                <div className="mt-1 flex flex-wrap gap-1">
+                  {objectif.muscles.map((muscle) => {
+                    const degre = sollicitation(exercice, muscle);
+                    if (!degre) return null;
+                    return (
+                      <Badge key={muscle}>
+                        {NOM_MUSCLE[muscle]}
+                        {degre === 'secondaire' ? ' (indirect)' : ''}
+                      </Badge>
+                    );
+                  })}
+                  {exercice.materiel !== 'halteres' && (
+                    <Badge>{NOM_MATERIEL[exercice.materiel]}</Badge>
+                  )}
+                </div>
+              </FicheExercice>
+            ))}
+          </div>
+          {classes.length === 0 && (
+            <p className="text-sm" style={{ color: 'var(--texte-discret)' }}>
+              Aucun exercice de cette famille ne sollicite ces muscles.
+            </p>
+          )}
+          {exerciceOuvertClasse && (
+            <DetailExercice
+              exercice={exerciceOuvertClasse}
+              frequence={frequences.get(exerciceOuvertClasse.id)}
+              onFermer={() => setExerciceOuvertId(null)}
+            />
+          )}
+        </div>
+      ) : (
       <div className="mt-4 space-y-6">
         {ZONES.map((zone) => {
           const exercicesZone = exercices.filter((e) => e.zone === zone.id);
@@ -223,69 +408,19 @@ export default function BibliothequeExercices({
               </div>
 
               {exerciceOuvert && (
-                <div
-                  className="mt-3 p-4"
-                  style={{
-                    background: 'var(--surface-haute)',
-                    border: '1px solid var(--bordure)',
-                    borderRadius: 14,
-                  }}
-                >
-                  <div className="flex items-start justify-between gap-2">
-                    <h4 className="font-bold" style={{ color: 'var(--texte)' }}>
-                      {exerciceOuvert.nomFr}
-                    </h4>
-                    <button
-                      type="button"
-                      onClick={() => setExerciceOuvertId(null)}
-                      className="shrink-0 rounded-xl px-3 text-sm font-semibold"
-                      style={{
-                        minHeight: 44,
-                        background: 'var(--surface)',
-                        border: '1px solid var(--bordure)',
-                        color: 'var(--texte)',
-                      }}
-                    >
-                      Fermer
-                    </button>
-                  </div>
-                  <Frequence frequence={frequences.get(exerciceOuvert.id)} />
-                  <p className="mt-2 text-sm" style={{ color: 'var(--texte-discret)' }}>
-                    <span className="font-semibold" style={{ color: 'var(--texte)' }}>
-                      Position :{' '}
-                    </span>
-                    {exerciceOuvert.position}
-                  </p>
-                  <p className="mt-1 text-sm" style={{ color: 'var(--texte-discret)' }}>
-                    <span className="font-semibold" style={{ color: 'var(--texte)' }}>
-                      Muscles :{' '}
-                    </span>
-                    {exerciceOuvert.muscles}
-                  </p>
-                  <div className="mt-2">
-                    <p className="text-sm font-semibold" style={{ color: 'var(--texte)' }}>
-                      Points d'attention
-                    </p>
-                    <ul
-                      className="ml-4 mt-1 list-disc space-y-0.5 text-sm"
-                      style={{ color: 'var(--texte-discret)' }}
-                    >
-                      {exerciceOuvert.pointsAttention.map((point, index) => (
-                        <li key={index}>{point}</li>
-                      ))}
-                    </ul>
-                  </div>
-                  {exerciceOuvert.interetJjb && (
-                    <p className="mt-2 text-sm italic" style={{ color: 'var(--accent)' }}>
-                      {exerciceOuvert.interetJjb}
-                    </p>
-                  )}
-                </div>
+                <DetailExercice
+                  exercice={exerciceOuvert}
+                  frequence={frequences.get(exerciceOuvert.id)}
+                  onFermer={() => setExerciceOuvertId(null)}
+                />
               )}
             </div>
           );
         })}
+      </div>
+      )}
 
+      <div className="mt-4">
         <div className="flex flex-wrap gap-2">
           {POSTERS.map((poster) => (
             <button

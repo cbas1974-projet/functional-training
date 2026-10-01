@@ -168,6 +168,37 @@ fiche indique **combien de fois l'exercice a été fait sur
 charge utilisée et le record, ramenés à l'unité courante. Les exercices travaillés dans le mois portent
 une pastille sur leur vignette : ce qui n'en a pas est ce qu'on néglige.
 
+## Chercher par muscle
+
+Chaque case des posters porte une **planche anatomique** : une silhouette de
+face et de dos, les muscles travaillés en noir, les secondaires en gris. Ces
+77 planches ont été relues une à une, et leur lecture est inscrite dans chaque
+fiche (`musclesPrincipaux`, `musclesSecondaires`).
+
+C'est ce qui permet de répondre à « renforce mon bas du dos ». La zone « dos »
+ne le permettait pas : elle mélange le grand dorsal — le muscle des tractions —
+et les érecteurs du rachis, qui n'ont rien à voir. Le vocabulaire est maintenant
+celui de la planche : nuque, trapèzes, épaules, coiffe des rotateurs, pectoraux,
+grand dorsal, bas du dos, biceps, triceps, avant-bras, abdominaux, obliques,
+fessiers, ischio-jambiers, quadriceps, adducteurs, fléchisseurs de hanche,
+mollets.
+
+Six objectifs prêts à l'emploi dans la bibliothèque — bas du dos, épaules, bras,
+tronc, jambes, haut du dos — classent les exercices **du plus direct au plus
+accessoire** : un muscle noirci vaut trois fois un muscle grisé, et à note
+égale, l'exercice qui vise le moins de muscles à la fois passe devant.
+
+Une chose que la lecture des planches a révélée : **aucun exercice aux haltères
+n'a le bas du dos pour cible principale**. Les posters le grisent toujours, sans
+exception — il travaille en soutien d'un soulevé de terre ou d'un rowing, jamais
+en tête d'affiche. C'est une information en soi, et il faudra probablement le
+poster de barre pour trouver mieux.
+
+La lecture des planches est volontairement grossière : elle distingue des
+régions (haut du dos, bas du dos, grand dorsal, quadriceps, ischios, fessiers,
+adducteurs, mollets…), pas des muscles individuels. C'est la précision que
+l'image permet, et elle suffit à la question posée.
+
 ## Yoga et étirements
 
 Le réglage **Discipline** change la nature de la séance : *Musculation* tire
