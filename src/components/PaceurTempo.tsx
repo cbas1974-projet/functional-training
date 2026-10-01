@@ -54,8 +54,9 @@ export default function PaceurTempo({
         let p = Math.min(1, Math.max(0, lecture.progression));
         if (crans > 0) p = Math.round(p * crans) / crans;
         // Le haut du rail est la fin de la montée : on descend l'objet
-        // d'autant plus que la montée commence.
-        const fraction = lecture.phase === 'monte' ? 1 - p : p;
+        // d'autant plus que la montée commence. La pause se tient en bas,
+        // là où la descente a laissé la bille.
+        const fraction = lecture.phase === 'monte' ? 1 - p : lecture.phase === 'pause' ? 1 : p;
         bille.style.transform = `translateY(${(fraction * course).toFixed(2)}px)`;
       }
       image = requestAnimationFrame(placer);
@@ -64,7 +65,8 @@ export default function PaceurTempo({
     return () => cancelAnimationFrame(image);
   }, [lire, course]);
 
-  const couleur = phase === 'monte' ? 'var(--montee)' : 'var(--descente)';
+  const couleur =
+    phase === 'monte' ? 'var(--montee)' : phase === 'pause' ? 'var(--tenue)' : 'var(--descente)';
 
   return (
     <div

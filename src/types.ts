@@ -164,6 +164,10 @@ export interface Exercice {
 export interface Tempo {
   monteeSec: number;
   descenteSec: number;
+  /** Arrêt en bas, juste après la descente : la position étirée, d'où l'on
+   *  repart sans élan. Absent ou 0 = pas de pause (c'est le cas de toutes
+   *  les séances enregistrées avant son arrivée). */
+  pauseSec?: number;
 }
 
 export interface ParametresSeance {

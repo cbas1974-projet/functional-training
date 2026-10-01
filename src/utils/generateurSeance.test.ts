@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import { EXERCICES, EXERCICES_PAR_ID } from '../data/exercices';
-import { DUREES_MINUTES, FORMATS, NIVEAUX, PARAMETRES_PAR_DEFAUT } from '../data/parametres';
+import {
+  DUREES_MINUTES,
+  FORMATS,
+  NIVEAUX,
+  PARAMETRES_PAR_DEFAUT,
+  REPS_PAR_SERIE,
+  TEMPOS,
+} from '../data/parametres';
 import type {
   BlocSeries,
   Circuit,
@@ -691,6 +698,27 @@ describe('durée d’une série', () => {
     expect(dureeSerieSec(EXERCICES_PAR_ID['farmers-walk'], 40, tempo)).toBe(40);
     expect(dureeSerieSec(EXERCICES_PAR_ID['squat'], 8, { monteeSec: 3, descenteSec: 3 })).toBe(48);
   });
+
+  it('compte la pause en bas dans chaque répétition', () => {
+    const avecPause = { monteeSec: 3, descenteSec: 3, pauseSec: 2 };
+    expect(secondesParRep(avecPause)).toBe(8);
+    expect(dureeSerieSec(EXERCICES_PAR_ID['squat'], 8, avecPause)).toBe(64);
+    // Unilatéral : la pause se tient de chaque côté.
+    expect(dureeSerieSec(EXERCICES_PAR_ID['single-arm-row'], 8, avecPause)).toBe(128);
+    expect(secondesParRep({ monteeSec: 4, descenteSec: 4, pauseSec: 2 })).toBe(10);
+  });
+
+  it('recommande 8 répétitions au tempo lent avec pause', () => {
+    expect(PARAMETRES_PAR_DEFAUT.repsParSerie).toBe(8);
+    expect(PARAMETRES_PAR_DEFAUT.tempo).toEqual({ monteeSec: 3, descenteSec: 3, pauseSec: 2 });
+    // Le premier tempo et la première série proposés sont les recommandés.
+    expect(TEMPOS[0].tempo).toEqual(PARAMETRES_PAR_DEFAUT.tempo);
+    expect(TEMPOS[0].description.startsWith('Recommandé')).toBe(true);
+    const huit = REPS_PAR_SERIE.find((option) => option.valeur === 8);
+    expect(huit?.description.startsWith('Recommandé')).toBe(true);
+    expect(REPS_PAR_SERIE.filter((o) => o.description.startsWith('Recommandé'))).toHaveLength(1);
+    expect(TEMPOS.filter((t) => t.description.startsWith('Recommandé'))).toHaveLength(1);
+  });
 });
 
 describe('tableau récapitulatif (lecture humaine)', () => {
@@ -971,7 +999,17 @@ describe('composition des enchaînements', () => {
       avec({ dureeMinutes: 20, format: 'series', tempo: { monteeSec: 5, descenteSec: 5 }, repsParSerie: 8 }),
       GRAINE,
     );
-    const nouveau = genererSeance(avec({ dureeMinutes: 20, format: 'superset' }), GRAINE);
+    // Réglages de l'époque : 4 s / 4 s et 6 répétitions, les valeurs par
+    // défaut quand le superset est arrivé.
+    const nouveau = genererSeance(
+      avec({
+        dureeMinutes: 20,
+        format: 'superset',
+        tempo: { monteeSec: 4, descenteSec: 4 },
+        repsParSerie: 6,
+      }),
+      GRAINE,
+    );
     expect(ancien.blocs.length).toBe(2);
     expect(nouveau.blocs.length).toBeGreaterThan(ancien.blocs.length);
     expect(nouveau.blocs.length).toBeGreaterThanOrEqual(3);

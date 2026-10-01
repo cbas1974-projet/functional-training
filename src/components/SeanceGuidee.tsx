@@ -31,10 +31,12 @@ import {
   indexApresExercice,
   indexEtapePrecedente,
   indexReprise,
+  lirePhase,
   premierePhase,
 } from '../utils/etapesSeance';
 import type { Etape, EtatMaintien, EtatMetronome, PhaseTempo, Suivant } from '../utils/etapesSeance';
 import { estMobilite, secondesParRep } from '../utils/generateurSeance';
+import { libelleTempo } from '../utils/formatage';
 import { SUFFIXE_UNITE, libellePoidsParSerie, uniteDeSeance } from '../utils/statistiques';
 import { ajouterTemps, useMoteurEtapes } from '../hooks/useMoteurEtapes';
 import { useVerrouEcran } from '../hooks/useVerrouEcran';
@@ -785,7 +787,9 @@ function EcranAccueil({
             <div className={chiffreCle}>
               {tempo.monteeSec} / {tempo.descenteSec}
             </div>
-            <div className={legende} style={{ color: 'var(--texte-discret)' }}>tempo (s)</div>
+            <div className={legende} style={{ color: 'var(--texte-discret)' }}>
+              tempo (s){tempo.pauseSec ? ` + ${tempo.pauseSec} s en bas` : ''}
+            </div>
           </div>
         </div>
 
@@ -813,6 +817,13 @@ function EcranAccueil({
         <p className="text-sm" style={{ color: 'var(--texte-discret)' }}>
           L’application dicte le tempo : suivez la bille et les bips, elle compte les répétitions à votre
           place. Séries lentes, sans rebond, pour protéger tendons et ligaments.
+        </p>
+        <p className="text-sm" style={{ color: 'var(--texte-discret)' }}>
+          La bonne charge : les deux dernières répétitions sont dures, la forme reste intacte, et il
+          vous en resterait deux. Jamais jusqu’à l’échec.
+          {tempo.pauseSec
+            ? ' Pendant la pause en bas, les muscles restent engagés ; si le dos s’arrondit, pas de pause sur cet exercice.'
+            : ''}
         </p>
 
         {progression && etapeSauvee ? (
@@ -1215,44 +1226,48 @@ interface MetronomeProps {
   lireEcouleSec: () => number;
 }
 
+/** Le mot dicté en grand pour chaque phase, et sa couleur de signal. */
+const MOT_DE_PHASE: Record<PhaseTempo, { mot: string; couleur: string }> = {
+  monte: { mot: 'MONTE', couleur: 'var(--montee)' },
+  descend: { mot: 'DESCENDS', couleur: 'var(--descente)' },
+  pause: { mot: 'TIENS', couleur: 'var(--tenue)' },
+};
+
 /** Le cœur de l'écran pendant une série : le mot de la phase en grand, puis
  *  la bille, le décompte, ou les deux, selon le guide visuel choisi. */
 function Metronome({ metro, exercice, tempo, guideVisuel, lireEcouleSec }: MetronomeProps) {
-  const monte = metro.phase === 'monte';
-  const couleur = monte ? 'var(--montee)' : 'var(--descente)';
+  const { mot, couleur } = MOT_DE_PHASE[metro.phase];
   const avecBille = guideVisuel !== 'chiffre';
 
-  // Les trois valeurs dont dépend le placement de la bille, réduites à des
-  // nombres : `lire` garde ainsi la même identité d'un rendu à l'autre et la
-  // boucle d'animation du paceur n'est pas relancée cinq fois par seconde.
+  // Les valeurs dont dépend le placement de la bille, réduites à des nombres :
+  // `lire` garde ainsi la même identité d'un rendu à l'autre et la boucle
+  // d'animation du paceur n'est pas relancée cinq fois par seconde.
+  const { monteeSec, descenteSec } = tempo;
+  const pauseSec = tempo.pauseSec ?? 0;
   const parRep = secondesParRep(tempo);
   const premiere = premierePhase(exercice);
-  const dureePremiere = premiere === 'monte' ? tempo.monteeSec : tempo.descenteSec;
 
   /** Position de la bille à l'instant présent. Le calcul est exactement celui
    *  de `etatMetronome`, appliqué à l'horloge de l'étape lue à chaque image :
-   *  même découpage en cycles, même première phase, même durée de phase. Les
-   *  deux basculent donc au même instant que les bips, qui sortent du même
-   *  calcul ; les bips partent seulement au rendu qui suit (au plus 200 ms),
-   *  puisqu'ils sont déclenchés par l'état React et non par l'animation. */
+   *  même découpage en répétitions, même `lirePhase`. Les deux basculent donc
+   *  au même instant que les bips, qui sortent du même calcul ; les bips
+   *  partent seulement au rendu qui suit (au plus 200 ms), puisqu'ils sont
+   *  déclenchés par l'état React et non par l'animation. */
   const lire = useCallback((): LectureTempo | null => {
     if (parRep <= 0) return null;
     const ecoule = Math.max(0, lireEcouleSec());
     const dansCycle = ecoule - Math.floor(ecoule / parRep) * parRep;
-    const enPremiere = dansCycle < dureePremiere;
-    const dureePhase = enPremiere ? dureePremiere : parRep - dureePremiere;
-    const ecouleDansPhase = enPremiere ? dansCycle : dansCycle - dureePremiere;
-    const seconde: PhaseTempo = premiere === 'monte' ? 'descend' : 'monte';
+    const lecture = lirePhase({ monteeSec, descenteSec, pauseSec }, premiere, dansCycle);
     return {
-      phase: enPremiere ? premiere : seconde,
-      progression: dureePhase > 0 ? ecouleDansPhase / dureePhase : 0,
+      phase: lecture.phase,
+      progression: lecture.dureePhaseSec > 0 ? lecture.ecouleDansPhaseSec / lecture.dureePhaseSec : 0,
     };
-  }, [lireEcouleSec, parRep, premiere, dureePremiere]);
+  }, [lireEcouleSec, parRep, premiere, monteeSec, descenteSec, pauseSec]);
 
   return (
     <div className="select-none py-2 text-center">
       <div className="text-5xl font-extrabold tracking-[0.12em]" style={{ ...ARCHIVO, color: couleur }}>
-        {monte ? 'MONTE' : 'DESCENDS'}
+        {mot}
       </div>
 
       {avecBille ? (
@@ -1285,7 +1300,7 @@ function Metronome({ metro, exercice, tempo, guideVisuel, lireEcouleSec }: Metro
         </div>
       )}
       <div className="chiffres mt-3 text-sm" style={{ color: 'var(--texte-discret)' }}>
-        Tempo {tempo.monteeSec} s / {tempo.descenteSec} s · sans rebond
+        Tempo {libelleTempo(tempo)} · sans rebond
       </div>
     </div>
   );

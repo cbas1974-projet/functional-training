@@ -17,13 +17,30 @@ export const TOUTES_LES_ZONES: Zone[] = ['bas', 'haut', 'dos', 'gainage', 'compl
 /** Durées de séance proposées, en minutes. */
 export const DUREES_MINUTES = [5, 10, 15, 20, 30, 45, 60] as const;
 
-/** Tempos proposés : secondes de montée / secondes de descente. */
+/** Tempos proposés : secondes de montée / secondes de descente, et l'arrêt
+ *  en bas quand il y en a un. */
 export const TEMPOS: { tempo: Tempo; nom: string; description: string }[] = [
+  {
+    tempo: { monteeSec: 3, descenteSec: 3, pauseSec: 2 },
+    nom: '3 s / 3 s + 2 s en bas',
+    description:
+      'Recommandé : le tempo des protocoles cliniques pour le tendon, plus un arrêt en position étirée. On repart sans élan : plus dur, donc un peu plus léger. Une série de 8 dure 64 s.',
+  },
   {
     tempo: { monteeSec: 4, descenteSec: 4 },
     nom: '4 s / 4 s',
+    description: 'Lent et régulier, sans arrêt en bas. Une série de 8 dure 64 s.',
+  },
+  {
+    tempo: { monteeSec: 4, descenteSec: 4, pauseSec: 2 },
+    nom: '4 s / 4 s + 2 s en bas',
     description:
-      'Recommandé : assez lent pour charger le tendon, assez court pour garder une charge sérieuse. Une série de 6 dure 48 s.',
+      'Le plus lent. Il faut nettement alléger, et une charge trop légère sollicite moins le tendon. Une série de 8 dure 80 s.',
+  },
+  {
+    tempo: { monteeSec: 3, descenteSec: 3 },
+    nom: '3 s / 3 s',
+    description: 'Le tempo des protocoles cliniques pour le tendon, avec une charge lourde.',
   },
   {
     tempo: { monteeSec: 5, descenteSec: 5 },
@@ -32,14 +49,10 @@ export const TEMPOS: { tempo: Tempo; nom: string; description: string }[] = [
       'Très lent. Oblige à alléger : le temps sous tension monte, la contrainte sur le tendon descend.',
   },
   {
-    tempo: { monteeSec: 3, descenteSec: 3 },
-    nom: '3 s / 3 s',
-    description: 'Le tempo des protocoles cliniques pour le tendon, avec une charge lourde.',
-  },
-  {
     tempo: { monteeSec: 2, descenteSec: 4 },
     nom: '2 s / 4 s',
-    description: 'Montée normale, descente lente (excentrique).',
+    description:
+      'Descente lente, montée plus décidée : on garde de la vitesse, la qualité qui décline le plus tôt avec l’âge.',
   },
 ];
 
@@ -108,10 +121,14 @@ export const REPS_PAR_SERIE: { valeur: 6 | 8 | 9 | 10 | 12 | null; nom: string; 
   {
     valeur: 6,
     nom: '6 reps',
-    description:
-      'Recommandé : séries courtes et charge plus lourde. C’est la charge qui construit le tendon, pas le nombre de répétitions.',
+    description: 'Séries courtes et charge plus lourde : la force. La technique doit être solide.',
   },
-  { valeur: 8, nom: '8 reps', description: 'Un peu plus de volume, charge moyenne.' },
+  {
+    valeur: 8,
+    nom: '8 reps',
+    description:
+      'Recommandé : dans la fourchette des lignes directrices (8 à 12), assez lourd pour le tendon, assez court pour garder la forme. Gardez-en deux en réserve.',
+  },
   { valeur: 9, nom: '9 reps', description: 'Le compromis entre 8 et 10.' },
   { valeur: 10, nom: '10 reps', description: 'Plus de temps sous tension, charge plus légère.' },
   { valeur: 12, nom: '12 reps', description: 'Endurance musculaire, charge légère.' },
@@ -199,11 +216,11 @@ export const PARAMETRES_PAR_DEFAUT: ParametresSeance = {
   format: 'series',
   tenueSec: 30,
   styleCircuit: 'enchaine',
-  tempo: { monteeSec: 4, descenteSec: 4 },
+  tempo: { monteeSec: 3, descenteSec: 3, pauseSec: 2 },
   materiels: ['halteres'],
   explosifs: false,
   seriesParExercice: 3,
-  repsParSerie: 6,
+  repsParSerie: 8,
   unitePoids: 'lb',
   guideVisuel: 'les-deux',
 };

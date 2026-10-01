@@ -420,9 +420,9 @@ function retourCalmeAllonge(
   return Math.max(retourCalmeInitialSec, Math.min(plafond, vise));
 }
 
-/** Secondes par répétition au tempo donné (montée + descente). */
+/** Secondes par répétition au tempo donné (montée + descente + pause en bas). */
 export function secondesParRep(tempo: Tempo): number {
-  return tempo.monteeSec + tempo.descenteSec;
+  return tempo.monteeSec + tempo.descenteSec + (tempo.pauseSec ?? 0);
 }
 
 /** Durée d'une série en secondes : reps × tempo (doublée si unilatéral),

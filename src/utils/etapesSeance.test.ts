@@ -14,6 +14,8 @@ import {
   indexApresExercice,
   indexEtapePrecedente,
   indexReprise,
+  lirePhase,
+  phasesDeRep,
   premierePhase,
 } from './etapesSeance';
 import type { Etape } from './etapesSeance';
@@ -266,6 +268,46 @@ describe('etatMetronome', () => {
     expect(etatMetronome(curl, 1, tempo)).toMatchObject({ rep: 1, phase: 'monte', resteDansPhaseSec: 1 });
     expect(etatMetronome(curl, 3, tempo)).toMatchObject({ rep: 1, phase: 'descend', resteDansPhaseSec: 3 });
     expect(etatMetronome(curl, 6, tempo)).toMatchObject({ rep: 2, phase: 'monte', resteDansPhaseSec: 2 });
+  });
+
+  it('tient la pause en bas, juste après la descente', () => {
+    const tempo = { monteeSec: 3, descenteSec: 3, pauseSec: 2 };
+    // Squat : on descend, on tient en bas, on remonte sans élan.
+    const squat: Etape = { type: 'serie', exerciceId: 'goblet-squat', serie: 1, series: 1, reps: 8, dureeSec: 64 };
+    expect(etatMetronome(squat, 1, tempo)).toMatchObject({ rep: 1, phase: 'descend', resteDansPhaseSec: 2 });
+    expect(etatMetronome(squat, 3.5, tempo)).toMatchObject({ rep: 1, phase: 'pause', resteDansPhaseSec: 1.5 });
+    expect(etatMetronome(squat, 6, tempo)).toMatchObject({ rep: 1, phase: 'monte', resteDansPhaseSec: 2 });
+    expect(etatMetronome(squat, 8, tempo)).toMatchObject({ rep: 2, phase: 'descend', resteDansPhaseSec: 3, cycle: 1 });
+
+    // Curl : on monte, on redescend, puis on tient bras tendus avant la suivante.
+    const curl: Etape = { type: 'serie', exerciceId: 'hammer-curl', serie: 1, series: 1, reps: 8, dureeSec: 64 };
+    expect(etatMetronome(curl, 1, tempo)).toMatchObject({ rep: 1, phase: 'monte', resteDansPhaseSec: 2 });
+    expect(etatMetronome(curl, 4, tempo)).toMatchObject({ rep: 1, phase: 'descend', resteDansPhaseSec: 2 });
+    expect(etatMetronome(curl, 7, tempo)).toMatchObject({ rep: 1, phase: 'pause', resteDansPhaseSec: 1 });
+    expect(etatMetronome(curl, 63.5, tempo)).toMatchObject({ rep: 8, phase: 'pause', resteDansPhaseSec: 0.5 });
+  });
+
+  it('découpe une répétition en phases, sans phase vide', () => {
+    expect(phasesDeRep({ monteeSec: 3, descenteSec: 3, pauseSec: 2 }, 'descend')).toEqual([
+      { phase: 'descend', dureeSec: 3 },
+      { phase: 'pause', dureeSec: 2 },
+      { phase: 'monte', dureeSec: 3 },
+    ]);
+    expect(phasesDeRep({ monteeSec: 3, descenteSec: 3, pauseSec: 2 }, 'monte').map((p) => p.phase)).toEqual([
+      'monte',
+      'descend',
+      'pause',
+    ]);
+    // Une séance enregistrée avant l'arrivée de la pause se relit à l'identique.
+    expect(phasesDeRep({ monteeSec: 4, descenteSec: 4 }, 'monte').map((p) => p.phase)).toEqual([
+      'monte',
+      'descend',
+    ]);
+    expect(lirePhase({ monteeSec: 4, descenteSec: 4 }, 'monte', 5)).toEqual({
+      phase: 'descend',
+      ecouleDansPhaseSec: 1,
+      dureePhaseSec: 4,
+    });
   });
 
   it('compte les répétitions d’une station au temps et reste muet pour un exercice au temps', () => {

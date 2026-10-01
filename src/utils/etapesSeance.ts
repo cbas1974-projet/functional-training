@@ -22,7 +22,12 @@ import {
 // elle est réexportée ici parce que c'est l'étape qui la matérialise.
 export { DUREE_PRET_SEC };
 
-export type PhaseTempo = 'monte' | 'descend';
+/** Sens par lequel commence une répétition. */
+export type SensTempo = 'monte' | 'descend';
+
+/** Phase d'une répétition. La pause se tient en bas, juste après la
+ *  descente : c'est la position étirée, d'où l'on repart sans élan. */
+export type PhaseTempo = SensTempo | 'pause';
 
 /** Travail annoncé après une préparation ou un repos. */
 export type Suivant =
@@ -104,9 +109,17 @@ export interface EtatMetronome {
   phase: PhaseTempo;
   resteDansPhaseSec: number;
   cote?: 'droit' | 'gauche';
-  /** Numéro de cycle montée + descente depuis le début de l'étape (0, 1, 2…),
-   *  non borné : sert de clé pour ne jouer chaque bip qu'une seule fois. */
+  /** Numéro de répétition (montée, descente, pause) depuis le début de
+   *  l'étape (0, 1, 2…), non borné : sert de clé pour ne jouer chaque bip
+   *  qu'une seule fois. */
   cycle: number;
+}
+
+/** Où en est une répétition à un instant donné. */
+export interface LecturePhase {
+  phase: PhaseTempo;
+  ecouleDansPhaseSec: number;
+  dureePhaseSec: number;
 }
 
 // ------------------------------------------------------------- Exercices
@@ -136,8 +149,41 @@ export function exerciceDeSeance(exerciceId: string): Exercice {
 
 /** Phase par laquelle commence chaque répétition de l'exercice : portée par
  *  la fiche (`premierePhase`), montée par défaut. */
-export function premierePhase(exercice: Pick<Exercice, 'premierePhase'>): PhaseTempo {
+export function premierePhase(exercice: Pick<Exercice, 'premierePhase'>): SensTempo {
   return exercice.premierePhase ?? 'monte';
+}
+
+/** Les phases d'une répétition, dans l'ordre, avec leur durée. La pause suit
+ *  toujours la descente : un squat descend, tient, puis remonte ; un curl
+ *  monte, redescend, puis tient bras tendus avant la répétition suivante.
+ *  Une phase de durée nulle n'existe pas. */
+export function phasesDeRep(
+  tempo: Tempo,
+  premiere: SensTempo,
+): { phase: PhaseTempo; dureeSec: number }[] {
+  const descente = { phase: 'descend' as const, dureeSec: tempo.descenteSec };
+  const pause = { phase: 'pause' as const, dureeSec: tempo.pauseSec ?? 0 };
+  const montee = { phase: 'monte' as const, dureeSec: tempo.monteeSec };
+  const ordre = premiere === 'descend' ? [descente, pause, montee] : [montee, descente, pause];
+  return ordre.filter((p) => p.dureeSec > 0);
+}
+
+/** Phase en cours `dansRepSec` secondes après le début d'une répétition.
+ *  Le métronome, les bips et la bille lisent tous ce même découpage : ils
+ *  basculent donc au même instant. */
+export function lirePhase(tempo: Tempo, premiere: SensTempo, dansRepSec: number): LecturePhase {
+  const phases = phasesDeRep(tempo, premiere);
+  let debut = 0;
+  for (const { phase, dureeSec } of phases) {
+    if (dansRepSec < debut + dureeSec) {
+      return { phase, ecouleDansPhaseSec: Math.max(0, dansRepSec - debut), dureePhaseSec: dureeSec };
+    }
+    debut += dureeSec;
+  }
+  // Au-delà de la répétition (arrondi de l'horloge) : fin de la dernière phase.
+  const derniere = phases[phases.length - 1];
+  if (!derniere) return { phase: premiere, ecouleDansPhaseSec: 0, dureePhaseSec: 0 };
+  return { phase: derniere.phase, ecouleDansPhaseSec: derniere.dureeSec, dureePhaseSec: derniere.dureeSec };
 }
 
 // ------------------------------------------------------------- Étapes
@@ -416,11 +462,9 @@ export function etatMetronome(etape: Etape, ecouleSec: number, tempo: Tempo): Et
   const ecoule = Math.max(0, ecouleSec);
   const cycle = Math.floor(ecoule / parRep);
   const dansCycle = ecoule - cycle * parRep;
-  const premiere = premierePhase(exercice);
-  const seconde: PhaseTempo = premiere === 'monte' ? 'descend' : 'monte';
-  const dureePremiere = premiere === 'monte' ? tempo.monteeSec : tempo.descenteSec;
-  const phase = dansCycle < dureePremiere ? premiere : seconde;
-  const resteDansPhaseSec = phase === premiere ? dureePremiere - dansCycle : parRep - dansCycle;
+  const lecture = lirePhase(tempo, premierePhase(exercice), dansCycle);
+  const phase = lecture.phase;
+  const resteDansPhaseSec = lecture.dureePhaseSec - lecture.ecouleDansPhaseSec;
 
   // Une station dont la durée n'est pas un multiple du tempo a une « queue » :
   // le compteur y reste sur la dernière répétition.

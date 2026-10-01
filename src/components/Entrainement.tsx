@@ -39,7 +39,14 @@ import {
   tenueDe,
 } from '../utils/generateurSeance';
 import type { AnalyseSeance } from '../utils/generateurSeance';
-import { formaterDateFr, graineAleatoire, libelleZones, messageErreur } from '../utils/formatage';
+import {
+  formaterDateFr,
+  graineAleatoire,
+  libelleTempo,
+  libelleZones,
+  memeTempo,
+  messageErreur,
+} from '../utils/formatage';
 import { frequencesParExercice, libelleFrequenceCourte, uniteDeSeance } from '../utils/statistiques';
 import type { FrequenceExercice } from '../utils/statistiques';
 import SeanceGuidee from './SeanceGuidee';
@@ -393,7 +400,7 @@ export default function Entrainement({ etat, onChange }: EntrainementProps) {
         : parametres.repsParSerie
           ? `séries auto · ${parametres.repsParSerie} reps`
           : 'séries et reps auto';
-  const resumeTempo = `${parametres.tempo.monteeSec} s / ${parametres.tempo.descenteSec} s`;
+  const resumeTempo = libelleTempo(parametres.tempo);
   const resumeMateriel =
     MATERIELS_DECLARABLES.filter((m) => materielsChoisis.includes(m.id))
       .map((m) => m.nom)
@@ -490,10 +497,9 @@ export default function Entrainement({ etat, onChange }: EntrainementProps) {
     const bloc = seanceCourante.blocs.find((b) => EXERCICES_PAR_ID[b.exerciceId]?.unite === 'reps');
     if (!bloc) return null;
     const exercice = EXERCICES_PAR_ID[bloc.exerciceId];
-    const { monteeSec, descenteSec } = tempo;
     const duree = formaterDuree(dureeSerieDuBloc(bloc, tempo));
     const cotes = exercice.cotes === 'unilateral' ? ', droite puis gauche' : '';
-    return `Une série de ${bloc.reps} répétitions à ${monteeSec} s / ${descenteSec} s${cotes} dure ${duree}.`;
+    return `Une série de ${bloc.reps} répétitions à ${libelleTempo(tempo)}${cotes} dure ${duree}.`;
   }, [seanceCourante]);
 
   /** Combien de fois chaque exercice a déjà été fait, par fenêtre glissante.
@@ -673,10 +679,7 @@ export default function Entrainement({ etat, onChange }: EntrainementProps) {
                   {TEMPOS.map((t) => (
                     <Choix
                       key={t.nom}
-                      selectionne={
-                        parametres.tempo.monteeSec === t.tempo.monteeSec &&
-                        parametres.tempo.descenteSec === t.tempo.descenteSec
-                      }
+                      selectionne={memeTempo(parametres.tempo, t.tempo)}
                       onClick={() => mettreAJourParametres({ tempo: t.tempo })}
                       nom={t.nom}
                       description={t.description}
@@ -1023,10 +1026,7 @@ export default function Entrainement({ etat, onChange }: EntrainementProps) {
             {!mobilite && (
               <Resume>
                 Tempo&nbsp;
-                <span className="chiffres">
-                  {seanceCourante.parametres.tempo.monteeSec} s /{' '}
-                  {seanceCourante.parametres.tempo.descenteSec} s
-                </span>
+                <span className="chiffres">{libelleTempo(seanceCourante.parametres.tempo)}</span>
               </Resume>
             )}
           </div>

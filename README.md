@@ -27,10 +27,11 @@ sur l'appareil.
   temps selon le niveau) ou tabata (20 s de travail, 10 s de repos). Les
   exercices sont appariés par opposition : c'est ce qui rend un bloc sans repos
   tenable.
-- **Tempo** : 4 s / 4 s recommandé ; 5 s / 5 s, 3 s / 3 s et 2 s / 4 s restent
-  disponibles.
+- **Tempo** : 3 s / 3 s **+ 2 s en bas** recommandé — la pause se tient en
+  position étirée, et l'on repart sans élan. 4 s / 4 s, 4 s / 4 s + 2 s en bas,
+  3 s / 3 s, 5 s / 5 s et 2 s / 4 s restent disponibles.
 - **Séries par exercice** (3 par défaut) et **répétitions par série**
-  (6 par défaut). L'application ajuste le nombre d'exercices pour tenir dans
+  (8 par défaut). L'application ajuste le nombre d'exercices pour tenir dans
   la durée demandée, et revient au calcul automatique si le réglage ne tient
   pas.
 - **Unité des charges** : livres par défaut (le marquage des haltères vendus
@@ -43,9 +44,9 @@ Au tempo lent, l'arithmétique est impitoyable et c'est elle qui décide :
 
 | | calcul | durée |
 |---|---|---|
-| Une répétition à 4 s / 4 s | montée + descente | **8 s** |
-| Une série de 6 | 6 × 8 s | **48 s** |
-| La même à 5 s / 5 s en 8 reps | 8 × 10 s | **1 min 20 s** |
+| Une répétition à 3 s / 3 s + 2 s en bas | montée + descente + pause | **8 s** |
+| Une série de 8 | 8 × 8 s | **1 min 4 s** |
+| La même à 4 s / 4 s + 2 s en bas | 8 × 10 s | **1 min 20 s** |
 | Une série unilatérale | droite puis gauche | **× 2** |
 
 Voilà ce que ça donne sur une séance de 20 minutes, échauffement et
@@ -54,16 +55,18 @@ Voilà ce que ça donne sur une séance de 20 minutes, échauffement et
 | Réglage | Exercices | Repos réel de chaque muscle |
 |---|---|---|
 | 5 s / 5 s, 8 reps, séries droites | 2 | 1 min 30 |
-| 4 s / 4 s, 6 reps, séries droites | 3 | 1 min 30 |
-| **4 s / 4 s, 6 reps, superset** | **4** | **3 à 4 min** |
+| 3 s / 3 s + 2 s, 8 reps, séries droites | 2 | 1 min 30 |
+| 4 s / 4 s, 6 reps, séries droites | 2 à 3 | 1 min 30 |
+| **4 s / 4 s, 6 reps, superset** | **3 à 4** | **3 à 4 min** |
+| **3 s / 3 s + 2 s, 8 reps, enchaîné** | **4 à 5** | **4 à 5 min** |
 
 Le superset n'ajoute pas de la fatigue, il enlève du temps mort : pendant que
 le biceps se repose, le triceps travaille. Le muscle, lui, récupère plus
 longtemps qu'en séries droites.
 
-Les autres leviers : une **durée plus longue** (30 min → 4 à 5 exercices,
-45 min → 6 à 7), et **moins de répétitions** — l'application descend d'elle-même
-à 6 plutôt que de ne proposer qu'un seul exercice, et le signale.
+Les autres leviers : une **durée plus longue** (en enchaîné, 30 min → 7 à 8
+exercices, 45 min → 9 à 10), et **moins de répétitions** — l'application descend
+d'elle-même à 6 plutôt que de ne proposer qu'un seul exercice, et le signale.
 
 Le panneau « Pourquoi cette durée ? » sous la séance proposée montre où
 passent les minutes : échauffement, mise en place, travail, repos, étirements.
@@ -94,9 +97,10 @@ d'affilée, une vraie pause de 90 à 120 s, deux ou trois tours, puis un bloc
 suivant avec d'autres exercices. Le modèle du superset sait aligner plusieurs
 blocs ; celui du circuit n'en connaît qu'un.
 
-Conséquence volontaire : **les exercices y gardent le tempo choisi**. Six
-répétitions à 4 s / 4 s, c'est quarante-huit secondes de travail — la bonne
-durée pour une station, sans sacrifier la tension lente qui fait le tendon.
+Conséquence volontaire : **les exercices y gardent le tempo choisi**. Huit
+répétitions à 3 s / 3 s avec 2 s en bas, c'est une minute de travail — la
+bonne durée pour une station, sans sacrifier la tension lente qui fait le
+tendon.
 L'effet cardio vient de l'absence de repos entre les trois exercices, pas de la
 vitesse d'exécution.
 
@@ -111,18 +115,33 @@ En tabata, le travail est trop court pour un tempo lent — vingt secondes à
 et c'est le souffle qui mène. C'est l'opposé exact du tempo lent, à réserver aux
 jours où c'est le cardio que tu travailles — et pas le tendon.
 
-### Pourquoi 4 s / 4 s et 6 répétitions par défaut
+### Pourquoi 8 répétitions à 3 s / 3 s + 2 s en bas par défaut
 
-Ce qui fait progresser un tendon, c'est surtout **l'amplitude de la contrainte**
-maintenue quelques secondes — donc la charge — plus que la lenteur en
-elle-même. Les protocoles cliniques de référence pour la tendinopathie
-travaillent autour de 3 s de montée / 3 s de descente avec une charge lourde.
+Ce qui fait progresser un tendon, c'est une **contrainte élevée tenue quelques
+secondes** : il faut les deux, la charge et la durée. Une charge trop légère ne
+suffit pas, si lente soit-elle. Les protocoles cliniques de référence pour la
+tendinopathie (*heavy slow resistance*) travaillent à 3 s de montée / 3 s de
+descente, de 15 à 6 répétitions maximales, trois fois par semaine.
 
-Un tempo 5 s / 5 s oblige à alléger : le temps sous tension monte, la
-contrainte descend. 4 s / 4 s avec 6 répétitions garde la lenteur et le
-contrôle tout en permettant une charge sérieuse — et libère 40 % du temps
-d'une série, ce qui fait tenir deux fois plus d'exercices. Les autres tempos
-et nombres de répétitions restent disponibles.
+**La pause en bas** ajoute deux choses. Elle supprime le rebond : on repart d'un
+arrêt complet, la remontée est plus dure, donc la charge un peu plus légère pour
+le même effort. Et elle charge la position étirée : la musculation en amplitude
+complète améliore l'amplitude autant que les étirements. Elle se tient muscles
+engagés ; si le dos s'arrondit en bas (soulevé de terre), on la supprime pour
+cet exercice.
+
+**Huit répétitions** tombent dans la fourchette des lignes directrices pour les
+adultes vieillissants (8 à 12 répétitions, 60 à 80 % du maximum, vitesse lente à
+modérée), et restent assez lourdes pour le tendon. On s'arrête quand il en
+resterait deux : aller jusqu'à l'échec n'apporte rien de plus en force, et
+coûte en récupération. Les lignes directrices 2026 de l'ACSM le disent
+autrement : la régularité compte plus que n'importe quel réglage, et le meilleur
+nombre de répétitions est celui qu'on tiendra des années.
+
+Ce que le tempo lent ne travaille pas, c'est la **vitesse**, la qualité qui
+décline le plus tôt avec l'âge. Le 2 s / 4 s, avec une montée décidée, et les
+mouvements explosifs du kettlebell sont là pour ça. Les autres tempos et
+nombres de répétitions restent disponibles.
 
 ### Séance proposée
 Chaque exercice est présenté avec sa vignette, les séries et répétitions, les
@@ -132,10 +151,11 @@ exercice par un autre de la même zone.
 ### Séance guidée (plein écran)
 - Échauffement articulaire puis, pour chaque série, un compte à rebours
   « Préparez-vous ».
-- **Métronome de tempo** : affichage MONTE / DESCENDS avec les secondes, et
-  comptage automatique des répétitions. Les exercices unilatéraux annoncent le
+- **Métronome de tempo** : affichage MONTE / DESCENDS / TIENS avec les
+  secondes, et comptage automatique des répétitions. Pendant la pause en bas,
+  la bille s'arrête au pied du rail. Les exercices unilatéraux annoncent le
   côté droit puis le côté gauche.
-- Bips de montée et de descente, cloche de fin de série.
+- Bips de montée, de descente et de pause, cloche de fin de série.
 - Repos chronométré avec aperçu de l'exercice suivant et bouton « +15 s ».
 - Pause, précédent, suivant, « Passer l'exercice ».
 - **Poids saisi série par série**, en livres : le champ est pré-rempli avec la

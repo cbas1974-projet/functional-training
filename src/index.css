@@ -23,6 +23,8 @@
     --montee-fond: #0c1410;
     --descente: #3f8fcc;
     --descente-fond: #0b1016;
+    /* La pause en bas d'une répétition : ni montée ni descente, on tient. */
+    --tenue: #b48cf0;
     --pause: #e8b93c;
     --alerte: #e35b5b;
   }
@@ -43,6 +45,7 @@
       --montee-fond: #f2f7f3;
       --descente: #1d5f92;
       --descente-fond: #f1f5f9;
+      --tenue: #6b46c1;
       --pause: #9a6f0f;
       --alerte: #b42318;
     }
