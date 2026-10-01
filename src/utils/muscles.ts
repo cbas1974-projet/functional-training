@@ -63,9 +63,10 @@ export function exercicesPourMuscles(exercices: Exercice[], vises: Muscle[]): Ex
 }
 
 /** Objectifs musculaires prêts à l'emploi : une poignée de muscles qui se
- *  travaillent ensemble et que l'on vise d'un bloc. Les deux premiers sont
- *  ceux qui lâchent le plus souvent après la cinquantaine et sous le grappling
- *  — le bas du dos et la ceinture scapulaire. */
+ *  travaillent ensemble et que l'on vise d'un bloc. Les premiers sont les
+ *  faiblesses déclarées — le bas du dos, les épaules, l'extérieur et
+ *  l'intérieur de cuisse — et ceux qui lâchent le plus souvent après la
+ *  cinquantaine et sous le grappling. */
 export const OBJECTIFS_MUSCULAIRES: {
   id: string;
   nom: string;
@@ -86,6 +87,19 @@ export const OBJECTIFS_MUSCULAIRES: {
     description: 'Deltoïdes, coiffe des rotateurs et trapèzes, l’articulation la plus mobile.',
   },
   {
+    id: 'exterieur-cuisse',
+    nom: 'Extérieur de cuisse',
+    muscles: ['abducteurs'],
+    description:
+      'Moyen fessier et tenseur du fascia lata. Quand « la bandelette » tire, ce sont eux qui manquent : la bandelette elle-même est un tendon plat, elle ne se renforce pas.',
+  },
+  {
+    id: 'interieur-cuisse',
+    nom: 'Intérieur de cuisse',
+    muscles: ['adducteurs'],
+    description: 'Les adducteurs : la garde fermée, les ouvertures, et l’aine qui se froisse.',
+  },
+  {
     id: 'bras',
     nom: 'Bras',
     muscles: ['biceps', 'triceps', 'avant-bras'],
@@ -100,7 +114,7 @@ export const OBJECTIFS_MUSCULAIRES: {
   {
     id: 'jambes',
     nom: 'Jambes',
-    muscles: ['quadriceps', 'ischios', 'fessiers', 'adducteurs', 'mollets'],
+    muscles: ['quadriceps', 'ischios', 'fessiers', 'abducteurs', 'adducteurs', 'mollets'],
     description: 'Tout le bas du corps, des fessiers aux mollets.',
   },
   {

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { EXERCICES, EXERCICES_PAR_ID, POSTERS } from './exercices';
 import { EXERCICES_ETIREMENTS } from './etirements';
+import { EXERCICES_KETTLEBELL } from './kettlebell';
 import { EXERCICES_YOGA } from './yoga';
 
 /** Noms des fichiers réellement présents dans public/exercices. Passer par
@@ -95,5 +96,32 @@ describe('étirements', () => {
     expect(EXERCICES_PAR_ID['etir-nuque-flexion'].groupe).toBe('trapezes');
     expect(EXERCICES_PAR_ID['etir-mollet-marche'].materiel).toBe('step');
     expect(EXERCICES_PAR_ID['etir-suspension-barre'].materiel).toBe('barre-fixe');
+  });
+});
+
+describe('kettlebell', () => {
+  it('compte les 68 cases des deux posters', () => {
+    expect(EXERCICES_KETTLEBELL).toHaveLength(68);
+  });
+
+  it('les range en musculation, au kettlebell, avec une lecture anatomique', () => {
+    for (const exercice of EXERCICES_KETTLEBELL) {
+      expect(exercice.id.startsWith('kb-')).toBe(true);
+      expect(exercice.materiel).toBe('kettlebell');
+      expect(exercice.famille ?? 'musculation').toBe('musculation');
+      expect((exercice.musclesPrincipaux ?? []).length).toBeGreaterThan(0);
+    }
+  });
+
+  it('marque explosifs tous les mouvements balistiques', () => {
+    const balistiques = [
+      'kb-double-arm-swing', 'kb-single-arm-swing', 'kb-snatch', 'kb-clean',
+      'kb-side-swing', 'kb-golfer-swing', 'kb-jump-squat', 'kb-frog-jump',
+      'kb-power-jump-squat', 'kb-speed-skater', 'kb-log-jump',
+    ];
+    for (const id of balistiques) expect(EXERCICES_PAR_ID[id].explosif, id).toBe(true);
+    // Le soulevé de terre et le good morning, eux, se font lentement.
+    expect(EXERCICES_PAR_ID['kb-deadlift'].explosif).toBeUndefined();
+    expect(EXERCICES_PAR_ID['kb-good-morning'].explosif).toBeUndefined();
   });
 });

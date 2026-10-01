@@ -47,6 +47,11 @@ export type Muscle =
   | 'abdominaux'
   | 'obliques'
   | 'fessiers'
+  /** Extérieur de la hanche et de la cuisse : moyen et petit fessier, tenseur
+   *  du fascia lata. C'est eux qu'on renforce quand « la bandelette » tire —
+   *  la bandelette ilio-tibiale elle-même est un tendon plat, pas un muscle :
+   *  elle ne se renforce pas, elle se soulage. */
+  | 'abducteurs'
   | 'ischios'
   | 'quadriceps'
   | 'adducteurs'
@@ -58,6 +63,7 @@ export type Muscle =
 export type Materiel =
   | 'aucun'
   | 'halteres'
+  | 'kettlebell'
   | 'banc'
   | 'step'
   | 'barre-fixe'

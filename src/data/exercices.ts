@@ -1,5 +1,6 @@
 import type { Exercice, Materiel, Muscle, Objectif, PatternMoteur, Zone } from '../types';
 import { EXERCICES_ETIREMENTS } from './etirements';
+import { EXERCICES_KETTLEBELL } from './kettlebell';
 import { EXERCICES_YOGA } from './yoga';
 
 // Les 40 exercices du poster « Dumbbell Workouts », dans l'ordre de lecture.
@@ -752,7 +753,7 @@ export const EXERCICES: Exercice[] = [
     groupe: 'adducteurs',
     muscles: 'Adducteurs, fessiers, quadriceps',
     musclesPrincipaux: ['adducteurs', 'quadriceps'],
-    musclesSecondaires: ['fessiers'],
+    musclesSecondaires: ['fessiers', 'abducteurs'],
     materiel: 'halteres',
     pattern: 'fente',
     niveauMin: 2,
@@ -1464,7 +1465,7 @@ export const EXERCICES: Exercice[] = [
     groupe: 'quadriceps',
     muscles: 'Quadriceps, fessiers, adducteurs',
     musclesPrincipaux: ['quadriceps', 'fessiers'],
-    musclesSecondaires: ['ischios'],
+    musclesSecondaires: ['ischios', 'abducteurs'],
     materiel: 'banc',
     pattern: 'fente',
     niveauMin: 3,
@@ -1511,7 +1512,7 @@ export const EXERCICES: Exercice[] = [
     groupe: 'ischios-fessiers',
     muscles: 'Fessiers moyen et grand, quadriceps',
     musclesPrincipaux: ['fessiers', 'quadriceps'],
-    musclesSecondaires: ['adducteurs'],
+    musclesSecondaires: ['adducteurs', 'abducteurs'],
     materiel: 'halteres',
     pattern: 'fente',
     niveauMin: 2,
@@ -1557,7 +1558,7 @@ export const EXERCICES: Exercice[] = [
     groupe: 'adducteurs',
     muscles: 'Adducteurs, quadriceps, fessiers',
     musclesPrincipaux: ['adducteurs', 'quadriceps'],
-    musclesSecondaires: ['fessiers'],
+    musclesSecondaires: ['fessiers', 'abducteurs'],
     materiel: 'halteres',
     pattern: 'squat',
     niveauMin: 3,
@@ -1580,7 +1581,7 @@ export const EXERCICES: Exercice[] = [
     zone: 'bas',
     groupe: 'ischios-fessiers',
     muscles: 'Fessier moyen, rotateurs de hanche',
-    musclesPrincipaux: ['fessiers'],
+    musclesPrincipaux: ['abducteurs', 'fessiers'],
     materiel: 'halteres',
     pattern: 'isolation',
     niveauMin: 1,
@@ -1668,7 +1669,7 @@ export const EXERCICES: Exercice[] = [
     groupe: 'ischios-fessiers',
     muscles: 'Ischio-jambiers, fessiers, gainage',
     musclesPrincipaux: ['ischios', 'fessiers'],
-    musclesSecondaires: ['lombaires'],
+    musclesSecondaires: ['lombaires', 'abducteurs'],
     materiel: 'halteres',
     pattern: 'charniere',
     niveauMin: 3,
@@ -1740,7 +1741,7 @@ export const EXERCICES: Exercice[] = [
     groupe: 'corps-entier',
     muscles: 'Adducteurs, quadriceps, épaules',
     musclesPrincipaux: ['adducteurs', 'quadriceps', 'epaules'],
-    musclesSecondaires: ['fessiers', 'lombaires'],
+    musclesSecondaires: ['fessiers', 'lombaires', 'abducteurs'],
     materiel: 'halteres',
     pattern: 'fente',
     niveauMin: 3,
@@ -1778,6 +1779,8 @@ export const EXERCICES: Exercice[] = [
       'Mouvement explosif et technique : incompatible avec le tempo lent.',
     ],
   },
+  // Les 68 exercices des deux posters « Kettlebell Workouts ».
+  ...EXERCICES_KETTLEBELL,
   // Les 57 postures du poster « Yoga Poses » et les 52 étirements du poster
   // « Stretching Exercises ». Famille « mobilité » : tenues au temps, sans
   // charge, et écartées des séances de musculation.
@@ -1813,6 +1816,7 @@ export const NOM_MUSCLE: Record<Muscle, string> = {
   abdominaux: 'Abdominaux',
   obliques: 'Obliques',
   fessiers: 'Fessiers',
+  abducteurs: 'Extérieur de cuisse',
   ischios: 'Ischio-jambiers',
   quadriceps: 'Quadriceps',
   adducteurs: 'Adducteurs',
@@ -1840,6 +1844,7 @@ export const NOM_PATTERN: Record<PatternMoteur, string> = {
 export const NOM_MATERIEL: Record<Materiel, string> = {
   aucun: 'Sans matériel',
   halteres: 'Haltères',
+  kettlebell: 'Kettlebell',
   banc: 'Banc',
   step: 'Marche ou step',
   'barre-fixe': 'Barre de traction',
@@ -1882,6 +1887,20 @@ export const POSTERS: { id: string; nom: string; chemin: string }[] = [
     nom: 'Haltères — volume 2',
     chemin:
       IMAGES_INTEGREES?.['_poster-v2'] ?? `${import.meta.env.BASE_URL}exercices/_poster-v2.jpg`,
+  },
+  {
+    id: '_poster-kettlebell-v1',
+    nom: 'Kettlebell — volume 1',
+    chemin:
+      IMAGES_INTEGREES?.['_poster-kettlebell-v1'] ??
+      `${import.meta.env.BASE_URL}exercices/_poster-kettlebell-v1.jpg`,
+  },
+  {
+    id: '_poster-kettlebell-v2',
+    nom: 'Kettlebell — volume 2',
+    chemin:
+      IMAGES_INTEGREES?.['_poster-kettlebell-v2'] ??
+      `${import.meta.env.BASE_URL}exercices/_poster-kettlebell-v2.jpg`,
   },
   {
     id: '_poster-yoga',

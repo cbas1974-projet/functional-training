@@ -12,6 +12,7 @@ import type {
 } from '../types';
 import {
   analyserSeance,
+  cleMouvement,
   dureeSerieSec,
   groupesDeBlocs,
   estimerDureeSec,
@@ -475,6 +476,40 @@ describe('genererSeance : toutes les durées, niveaux et formats', () => {
         }
       }
     }
+  });
+});
+
+describe('haltères et kettlebell ensemble', () => {
+  it('ne tire jamais deux fois le même mouvement avec deux matériels', () => {
+    // Vingt et un exercices existent aux deux : squat gobelet, rowing, swing…
+    for (let graine = 1; graine <= 200; graine += 1) {
+      for (const dureeMinutes of [30, 45, 60]) {
+        const seance = genererSeance(
+          avec({
+            dureeMinutes,
+            niveau: 'avance',
+            materiels: ['halteres', 'kettlebell', 'banc', 'step'],
+          }),
+          graine,
+        );
+        const mouvements = identifiantsSeance(seance).map((id) => cleMouvement(EXERCICES_PAR_ID[id]));
+        expect(new Set(mouvements).size, `graine ${graine}, ${dureeMinutes} min`).toBe(
+          mouvements.length,
+        );
+      }
+    }
+  });
+
+  it('reconnaît le même mouvement d’un poster à l’autre', () => {
+    expect(cleMouvement(EXERCICES_PAR_ID['goblet-squat'])).toBe(
+      cleMouvement(EXERCICES_PAR_ID['kb-goblet-squat']),
+    );
+    expect(cleMouvement(EXERCICES_PAR_ID['dumbbell-snatch'])).toBe(
+      cleMouvement(EXERCICES_PAR_ID['kb-snatch']),
+    );
+    expect(cleMouvement(EXERCICES_PAR_ID['goblet-squat'])).not.toBe(
+      cleMouvement(EXERCICES_PAR_ID['sumo-squat']),
+    );
   });
 });
 

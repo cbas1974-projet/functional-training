@@ -12,8 +12,9 @@ import {
 const MUSCULATION = EXERCICES.filter((e) => (e.famille ?? 'musculation') === 'musculation');
 
 describe('lecture des planches anatomiques', () => {
-  it('les 77 exercices chargés ont au moins un muscle principal', () => {
-    expect(MUSCULATION).toHaveLength(77);
+  it('les 145 exercices chargés ont au moins un muscle principal', () => {
+    // 77 aux haltères, 68 au kettlebell.
+    expect(MUSCULATION).toHaveLength(145);
     const sans = MUSCULATION.filter((e) => (e.musclesPrincipaux ?? []).length === 0);
     expect(sans.map((e) => e.id)).toEqual([]);
   });
@@ -90,6 +91,40 @@ describe('recherche par muscle', () => {
     const postures = EXERCICES.filter((e) => (e.famille ?? 'musculation') !== 'musculation');
     const avecMuscles = postures.filter((e: Exercice) => (e.musclesPrincipaux ?? []).length > 0);
     expect(avecMuscles).toEqual([]);
+  });
+});
+
+describe('faiblesses déclarées', () => {
+  it('la Superman et le Good Morning visent le bas du dos en premier', () => {
+    // La planche les montre en gris clair ; l'extension du dos est pourtant le
+    // travail même des érecteurs. Corrigé — et c'est ce qui les met en tête.
+    expect(sollicitation(EXERCICES_PAR_ID['kb-superman'], 'lombaires')).toBe('principal');
+    expect(sollicitation(EXERCICES_PAR_ID['kb-good-morning'], 'lombaires')).toBe('principal');
+    const bas = OBJECTIFS_MUSCULAIRES.find((o) => o.id === 'bas-du-dos')!;
+    const tete = exercicesPourMuscles(MUSCULATION, bas.muscles).slice(0, 3).map((e) => e.id);
+    expect(tete).toContain('kb-good-morning');
+  });
+
+  it('l’extérieur de cuisse a des exercices qui le visent directement', () => {
+    const exterieur = OBJECTIFS_MUSCULAIRES.find((o) => o.id === 'exterieur-cuisse')!;
+    const trouves = exercicesPourMuscles(MUSCULATION, exterieur.muscles);
+    const directs = trouves.filter((e) => sollicitation(e, 'abducteurs') === 'principal');
+    expect(directs.map((e) => e.id)).toEqual(
+      expect.arrayContaining(['kb-side-leg-raise', 'fire-hydrant', 'kb-low-side-step-row']),
+    );
+    expect(trouves.length).toBeGreaterThanOrEqual(15);
+  });
+
+  it('l’intérieur de cuisse a des exercices qui le visent directement', () => {
+    const interieur = OBJECTIFS_MUSCULAIRES.find((o) => o.id === 'interieur-cuisse')!;
+    const directs = exercicesPourMuscles(MUSCULATION, interieur.muscles).filter(
+      (e) => sollicitation(e, 'adducteurs') === 'principal',
+    );
+    expect(directs.length).toBeGreaterThanOrEqual(5);
+  });
+
+  it('ne confond pas la ruade avec un travail d’abducteurs', () => {
+    expect(sollicitation(EXERCICES_PAR_ID['donkey-kick'], 'abducteurs')).toBeNull();
   });
 });
 

@@ -580,6 +580,17 @@ function premierNonVide<T>(...listes: T[][]): T[] {
   return listes.find((liste) => liste.length > 0) ?? [];
 }
 
+/** Le mouvement d'un exercice, indépendamment du matériel : le squat gobelet
+ *  aux haltères et au kettlebell portent le même nom anglais sur leurs posters.
+ *  Une séance ne doit pas les tirer tous les deux. */
+export function cleMouvement(exercice: Exercice): string {
+  return exercice.nomEn
+    .toLowerCase()
+    .replace(/[’']/g, '')
+    .replace(/^(dumbbell|weighted)\s+/, '')
+    .trim();
+}
+
 /** Parcourt le cycle de zones et retient au plus `maximum` exercices, en
  *  préférant à chaque fois un groupe musculaire pas encore sollicité. */
 function selectionnerExercices(
@@ -590,6 +601,7 @@ function selectionnerExercices(
 ): Exercice[] {
   const retenus: Exercice[] = [];
   const idsRetenus = new Set<string>();
+  const mouvementsRetenus = new Set<string>();
   const groupesUtilises = new Set<GroupeMusculaire>();
   const patternsUtilises = new Set<PatternMoteur>();
   let position = 0;
@@ -598,7 +610,9 @@ function selectionnerExercices(
   while (retenus.length < maximum && zonesVides < cycle.length) {
     const zone = cycle[position % cycle.length];
     position += 1;
-    const disponibles = candidats.filter((e) => e.zone === zone && !idsRetenus.has(e.id));
+    const disponibles = candidats.filter(
+      (e) => e.zone === zone && !idsRetenus.has(e.id) && !mouvementsRetenus.has(cleMouvement(e)),
+    );
     if (disponibles.length === 0) {
       zonesVides += 1;
       continue;
@@ -618,6 +632,7 @@ function selectionnerExercices(
     );
     retenus.push(choisi);
     idsRetenus.add(choisi.id);
+    mouvementsRetenus.add(cleMouvement(choisi));
     groupesUtilises.add(choisi.groupe);
     patternsUtilises.add(choisi.pattern);
   }

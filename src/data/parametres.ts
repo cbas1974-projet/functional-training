@@ -162,7 +162,12 @@ export const TAILLES_ROTATION: { valeur: 2 | 3 | 4 | undefined; nom: string; des
  *  sont toujours disponibles ; les haltères sont la base de la bibliothèque
  *  actuelle et restent cochés par défaut. */
 export const MATERIELS_DECLARABLES: { id: Materiel; nom: string; precision: string }[] = [
-  { id: 'halteres', nom: 'Haltères', precision: 'La base de la bibliothèque actuelle.' },
+  { id: 'halteres', nom: 'Haltères', precision: 'La base de la bibliothèque.' },
+  {
+    id: 'kettlebell',
+    nom: 'Kettlebell',
+    precision: 'Soulevés, rowings, gainage. Presque tout se fait aussi avec un haltère.',
+  },
   { id: 'banc', nom: 'Banc', precision: 'Développés, écartés, pull-over, rowing incliné.' },
   { id: 'step', nom: 'Marche ou step', precision: 'Montées sur marche.' },
   { id: 'barre-fixe', nom: 'Barre de traction', precision: 'Relevés de jambes suspendu.' },

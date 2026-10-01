@@ -110,6 +110,44 @@ IDENTIFIANTS: dict[str, list[str]] = {
         "glute-bridge", "reverse-lunge", "side-lunge", "step-up", "calf-raise",
         "plank-t", "swing", "farmers-walk", "thruster", "woodchop",
     ],
+    "kettlebell-v1": [
+        # Haut du corps
+        "kb-alternating-curl", "kb-push-up", "kb-tricep-dip", "kb-tricep-extension",
+        "kb-chest-press",
+        "kb-shoulder-press", "kb-side-raise", "kb-front-raise", "kb-side-bend",
+        "kb-around-the-body",
+        # Gainage
+        "kb-russian-twist", "kb-straight-arm-sit", "kb-side-swing", "kb-pullover",
+        "kb-half-turkish-get-up",
+        # Dos
+        "kb-bent-over-row", "kb-renegade-row", "kb-single-arm-row",
+        # Bas du corps (case seule à droite du dos)
+        "kb-bob-and-weave",
+        # Bas du corps
+        "kb-goblet-squat", "kb-deadlift", "kb-single-leg-deadlift", "kb-lunge", "kb-side-lunge",
+        # Corps entier
+        "kb-double-arm-swing", "kb-turkish-get-up",
+        "kb-single-arm-swing", "kb-thruster", "kb-windmill", "kb-wood-chop", "kb-lunge-press",
+        "kb-overhead-squat", "kb-farmers-walk", "kb-snatch", "kb-clean",
+    ],
+    "kettlebell-v2": [
+        # Haut du corps
+        "kb-arnold-press", "kb-concentration-curl", "kb-incline-curl", "kb-tricep-kickback",
+        "kb-t-push-up",
+        # Gainage
+        "kb-v-up", "kb-alternating-v-up", "kb-isometric-crunch", "kb-oblique-crunch",
+        "kb-high-knee-crunch",
+        "kb-x-crunch", "kb-plank-oblique-pull-through", "kb-side-plank-twist", "kb-commando",
+        # Dos
+        "kb-superman", "kb-golfer-swing", "kb-lawn-mower", "kb-rear-fly", "kb-halo",
+        # Bas du corps
+        "kb-good-morning", "kb-single-leg-glute-bridge", "kb-side-leg-raise",
+        "kb-single-leg-calf-raise", "kb-pistol-bench-squat",
+        "kb-jump-squat", "kb-rotating-side-lunge-press", "kb-around-the-world",
+        # Corps entier
+        "kb-frog-jump", "kb-wall-squat-press", "kb-power-jump-squat",
+        "kb-low-side-step-row", "kb-speed-skater", "kb-log-jump",
+    ],
     "stretching": [
         # Nuque
         "etir-nuque-inclinaison", "etir-nuque-flexion", "etir-nuque-oblique",
@@ -188,6 +226,30 @@ IDENTIFIANTS: dict[str, list[str]] = {
 #: section ordinaire.
 Panneau = tuple[str, tuple[float, float, float, float], list[Rangee]]
 PANNEAUX: dict[str, list[Panneau]] = {
+    # Mesuré après redressement de la perspective. La rangée du milieu porte
+    # deux sections côte à côte : le dos à gauche, une case de bas du corps à
+    # droite. La dernière section a trois rangées inégales — la première
+    # n'a que deux cases, la seconde très large (le relevé turc en huit temps).
+    "kettlebell-v1": [
+        ("Haut du corps", (0.0330, 0.9670, 0.1238, 0.3225), [5, 5]),
+        ("Gainage", (0.0400, 0.9600, 0.3435, 0.4403), [5]),
+        ("Dos", (0.0400, 0.5920, 0.4613, 0.5588), [3]),
+        ("Bas du corps", (0.5980, 0.9600, 0.4613, 0.5588), [1]),
+        ("Bas du corps", (0.0350, 0.9650, 0.5790, 0.6788), [5]),
+        # Dernière rangée : quatre cases inégales, coupes relevées sur les traits
+        # de grille (le découpage régulier débordait d'une case sur l'autre).
+        ("Corps entier", (0.0330, 0.9670, 0.6990, 0.9988), [[0.19], 5, [0.186, 0.399, 0.702]]),
+    ],
+    # Mesuré après redressement. Trois rangées ont des cases inégales — une
+    # case large en fin de rangée (le commando, le tour du monde) ou deux
+    # étroites au milieu — d'où des coupes relevées sur la règle.
+    "kettlebell-v2": [
+        ("Haut du corps", (0.0030, 0.9750, 0.0840, 0.1890), [5]),
+        ("Gainage", (0.0030, 0.9750, 0.2138, 0.4200), [5, [0.208, 0.410, 0.610]]),
+        ("Dos", (0.0150, 0.9700, 0.4410, 0.5415), [5]),
+        ("Bas du corps", (0.0150, 0.9700, 0.5640, 0.7665), [5, [0.309, 0.613]]),
+        ("Corps entier", (0.0150, 0.9750, 0.7890, 0.9988), [[0.406, 0.609], [0.406, 0.609]]),
+    ],
     "stretching": [
         ("Nuque", (0.0483, 0.4977, 0.1250, 0.2185), [4]),
         ("Épaules et bras", (0.5040, 0.9617, 0.1250, 0.2185), [4]),
@@ -211,6 +273,20 @@ PANNEAUX: dict[str, list[Panneau]] = {
     ],
 }
 
+#: Cases où le retrait automatique du libellé se trompe, et la hauteur où
+#: couper — en fraction de la case une fois rognée au blanc. Deux situations
+#: le piègent : deux dessins couchés empilés, dont l'écart dépasse celui qui
+#: précède la légende (on coupe alors un dessin), et une légende sur deux lignes
+#: tassée contre le dessin (l'interligne devient le plus grand blanc, et la
+#: première ligne reste). Cinq cases sur les deux posters de kettlebell.
+COUPES_LIBELLE: dict[str, float] = {
+    "kb-alternating-v-up": 0.87,
+    "kb-plank-oblique-pull-through": 0.75,
+    "kb-superman": 0.83,
+    "kb-side-leg-raise": 0.80,
+    "kb-single-leg-calf-raise": 0.775,
+}
+
 #: Posters dont les cases ne portent aucun libellé imprimé : rien à retirer
 #: sous le dessin.
 SANS_LIBELLE = {"stretching"}
@@ -226,6 +302,39 @@ LARGEUR_VIGNETTE = 320
 
 
 # ------------------------------------------------------------- Prétraitement
+
+#: Photos prises de biais : quatre points relevés à la main sur la photo
+#: d'origine — le bord inférieur des bandeaux de la première et de la dernière
+#: section, à leurs deux bouts — et l'endroit où ils doivent tomber. Quand la
+#: bande du haut penche de 144 px et celle du bas de 13, ce n'est pas une
+#: rotation mais de la perspective : une coupe horizontale tomberait au milieu
+#: des dessins d'un côté et dans les légendes de l'autre.
+Quadrilatere = tuple[tuple[float, float], tuple[float, float], tuple[float, float], tuple[float, float]]
+REDRESSEMENTS: dict[str, tuple[Quadrilatere, Quadrilatere]] = {
+    "kettlebell-v1": (
+        ((79, 533), (2867, 387), (137, 2780), (2917, 2767)),
+        ((100, 500), (2900, 500), (100, 2810), (2900, 2810)),
+    ),
+    "kettlebell-v2": (
+        ((33, 382), (2913, 293), (33, 3153), (2933, 3173)),
+        ((40, 340), (2930, 340), (40, 3166), (2930, 3166)),
+    ),
+}
+
+
+def redresser(img: Image.Image, source: Quadrilatere, cible: Quadrilatere) -> Image.Image:
+    """Corrige la perspective : envoie le quadrilatère `source` sur `cible`.
+    PIL attend, pour chaque point de l'image produite, l'endroit où lire dans
+    l'image d'origine — d'où un système résolu de la cible vers la source."""
+    lignes, valeurs = [], []
+    for (x, y), (u, v) in zip(cible, source):
+        lignes.append([x, y, 1, 0, 0, 0, -u * x, -u * y]); valeurs.append(u)
+        lignes.append([0, 0, 0, x, y, 1, -v * x, -v * y]); valeurs.append(v)
+    coefficients = np.linalg.solve(np.array(lignes, float), np.array(valeurs, float))
+    return img.transform(
+        img.size, Image.PERSPECTIVE, coefficients.tolist(), Image.BICUBIC, fillcolor=(255, 255, 255)
+    )
+
 
 def aplanir(img: Image.Image, rayon: int = 120) -> Image.Image:
     """Corrige l'illumination en divisant par une version très floue. Supprime
@@ -451,6 +560,8 @@ def main() -> None:
     args = p.parse_args()
 
     brute = ImageOps.exif_transpose(Image.open(args.photo)).convert("RGB")
+    if args.disposition in REDRESSEMENTS:
+        brute = redresser(brute, *REDRESSEMENTS[args.disposition])
     img = aplanir(brute)
     gris = np.asarray(img.convert("L"), dtype=float)
 
@@ -517,15 +628,20 @@ def main() -> None:
                 if cb - ca < 40 or rb - ra < 40:
                     sys.exit(f"Cellule dégénérée en {nom_section} : x={ca}..{cb}, y={ra}..{rb}")
                 cellule = img.crop((ca + 6, ra + 4, cb - 6, rb - 2))
-                if not args.garder_libelle and args.disposition not in SANS_LIBELLE:
-                    cellule = retirer_libelle(cellule)
-                cellule = rogner_blanc(cellule)
+                nom = identifiants[index]
+                if args.garder_libelle or args.disposition in SANS_LIBELLE:
+                    cellule = rogner_blanc(cellule)
+                elif nom in COUPES_LIBELLE:
+                    cellule = rogner_blanc(cellule)
+                    coupe = int(COUPES_LIBELLE[nom] * cellule.height)
+                    cellule = rogner_blanc(cellule.crop((0, 0, cellule.width, coupe)))
+                else:
+                    cellule = rogner_blanc(retirer_libelle(cellule))
                 echelle = LARGEUR_VIGNETTE / cellule.width
                 cellule = cellule.resize(
                     (LARGEUR_VIGNETTE, max(1, int(round(cellule.height * echelle)))), Image.LANCZOS
                 )
                 cellule = cellule.filter(ImageFilter.UnsharpMask(radius=1.6, percent=90, threshold=3))
-                nom = identifiants[index]
                 cellule.save(args.sortie / f"{nom}.png")
                 vignettes.append((nom, cellule))
                 index += 1

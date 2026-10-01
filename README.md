@@ -151,13 +151,13 @@ chaque exercice les séries faites, le temps passé et la charge de chaque séri
 saisie : changer d'unité ne réécrit pas le passé, et les statistiques
 convertissent ce qu'il faut pour rester comparables.
 
-La bibliothèque présente les **186 exercices** classés par zone, avec les
-quatre posters d'origine consultables en entier. Un filtre sépare les trois
+La bibliothèque présente les **254 exercices** classés par zone, avec les
+six posters d'origine consultables en entier. Un filtre sépare les trois
 familles :
 
 | Famille | Nombre | Comment ça se travaille |
 | --- | --- | --- |
-| Musculation | 77 | Répétitions au tempo, avec une charge |
+| Musculation | 145 | Répétitions au tempo, avec une charge — 77 aux haltères, 68 au kettlebell |
 | Yoga | 57 | Postures tenues au temps, sans charge |
 | Étirements | 52 | Positions tenues au temps, sans charge |
 
@@ -171,38 +171,78 @@ une pastille sur leur vignette : ce qui n'en a pas est ce qu'on néglige.
 ## Chercher par muscle
 
 Chaque case des posters porte une **planche anatomique** : une silhouette de
-face et de dos, les muscles travaillés en noir, les secondaires en gris. Ces
-77 planches ont été relues une à une, et leur lecture est inscrite dans chaque
-fiche (`musclesPrincipaux`, `musclesSecondaires`).
+face et de dos, les muscles travaillés en noir, les secondaires en gris. Les
+145 planches — 77 aux haltères, 68 au kettlebell — ont été relues une à une, et
+leur lecture est inscrite dans chaque fiche (`musclesPrincipaux`,
+`musclesSecondaires`).
 
 C'est ce qui permet de répondre à « renforce mon bas du dos ». La zone « dos »
 ne le permettait pas : elle mélange le grand dorsal — le muscle des tractions —
 et les érecteurs du rachis, qui n'ont rien à voir. Le vocabulaire est maintenant
 celui de la planche : nuque, trapèzes, épaules, coiffe des rotateurs, pectoraux,
 grand dorsal, bas du dos, biceps, triceps, avant-bras, abdominaux, obliques,
-fessiers, ischio-jambiers, quadriceps, adducteurs, fléchisseurs de hanche,
-mollets.
+fessiers, **extérieur de cuisse** (moyen fessier, tenseur du fascia lata),
+ischio-jambiers, quadriceps, adducteurs, fléchisseurs de hanche, mollets.
 
-Six objectifs prêts à l'emploi dans la bibliothèque — bas du dos, épaules, bras,
-tronc, jambes, haut du dos — classent les exercices **du plus direct au plus
-accessoire** : un muscle noirci vaut trois fois un muscle grisé, et à note
+Huit objectifs prêts à l'emploi dans la bibliothèque — bas du dos, épaules,
+extérieur de cuisse, intérieur de cuisse, bras, tronc, jambes, haut du dos —
+classent les exercices **du plus direct au plus accessoire** : un muscle noirci vaut trois fois un muscle grisé, et à note
 égale, l'exercice qui vise le moins de muscles à la fois passe devant.
 
-Une chose que la lecture des planches a révélée : **aucun exercice aux haltères
-n'a le bas du dos pour cible principale**. Les posters le grisent toujours, sans
-exception — il travaille en soutien d'un soulevé de terre ou d'un rowing, jamais
-en tête d'affiche. C'est une information en soi, et il faudra probablement le
-poster de barre pour trouver mieux.
+### Là où la planche se trompe
+
+La planche est un indice, pas une vérité. Sur les **145** planches, aucune ne
+noircit les érecteurs du rachis — pas même celles de la **Superman** et du
+**Good Morning**, deux exercices dont l'extension du dos est précisément le
+travail. Lus à pleine résolution, ils montrent les fessiers et les ischios en
+noir, le bas du dos en gris clair. C'est une convention de l'illustrateur, pas
+de la biomécanique : ces deux fiches sont corrigées, et c'est ce qui les met en
+tête de l'objectif « bas du dos ».
+
+Deuxième limite : la planche ne sépare pas le moyen fessier du grand fessier —
+la fesse est une seule zone. Or c'est le moyen fessier, avec le tenseur du
+fascia lata, qui tient l'**extérieur de la cuisse**. Il est donc déduit du
+mouvement : une abduction de hanche (élévation latérale de jambe, bouche
+d'incendie), un pas chassé, ou un appui sur une seule jambe qui oblige à tenir
+le bassin. Ces déductions sont signalées en commentaire dans les fiches.
+
+Et un mot sur la **bandelette ilio-tibiale** : c'est un tendon plat, pas un
+muscle. Elle ne se renforce pas et ne s'étire pratiquement pas. Quand elle
+« tire », c'est presque toujours le moyen fessier qui manque, et le tenseur du
+fascia lata qui compense. D'où l'objectif « extérieur de cuisse » plutôt que
+« bandelette ».
 
 La lecture des planches est volontairement grossière : elle distingue des
 régions (haut du dos, bas du dos, grand dorsal, quadriceps, ischios, fessiers,
 adducteurs, mollets…), pas des muscles individuels. C'est la précision que
 l'image permet, et elle suffit à la question posée.
 
+## Kettlebell
+
+Les deux posters de kettlebell ont été photographiés de biais : la bande du
+haut penchait de 144 px quand celle du bas n'en penchait que 13. Ce n'est pas
+une rotation mais de la **perspective**, et aucune coupe horizontale ne tombe
+juste sur une image pareille. Le script corrige donc d'abord la perspective
+(quatre points relevés à la main sur les bandeaux, envoyés sur un rectangle),
+avant toute découpe.
+
+Vingt et un exercices existent aux deux matériels — squat gobelet, rowing,
+arraché… La séance n'en tire jamais qu'un : le mouvement est reconnu à son nom
+anglais, identique d'un poster à l'autre. Les versions au kettlebell portent
+« au kettlebell » dans leur nom, pour qu'on ne lise pas deux fois « Fente
+latérale » côte à côte.
+
+Les onze mouvements balistiques — swings, arraché, épaulé, balanciers en
+rotation, sauts — sont marqués **explosifs** : la séance les écarte tant que
+l'option n'est pas cochée.
+
+Pour les voir dans les séances, cocher **Kettlebell** dans *Réglages avancés →
+Mon matériel*.
+
 ## Yoga et étirements
 
 Le réglage **Discipline** change la nature de la séance : *Musculation* tire
-dans les 77 exercices chargés, *Yoga et étirements* dans les 109 positions,
+dans les 145 exercices chargés, *Yoga et étirements* dans les 109 positions,
 *Yoga seul* et *Étirements seuls* dans un seul poster.
 
 En mobilité, l'application ne propose plus ni tempo, ni séries, ni format, ni
