@@ -1,6 +1,7 @@
 // Ouvre une ou plusieurs adresses de l'application dans un vrai navigateur et
-// vérifie que l'onglet Entraînement fonctionne (génération d'une séance,
-// images chargées, aucune erreur JavaScript). Rapporte tout ce qui aide à
+// vérifie que le programme s'affiche et que la séance libre fonctionne
+// (génération d'une séance, images chargées, aucune erreur JavaScript).
+// Rapporte tout ce qui aide à
 // diagnostiquer un échec : messages de console, requêtes bloquées, contenu
 // de la page et une capture d'écran encodée en base64.
 // Usage : node scripts/verifier_lien.mjs <url1> [url2 ...]
@@ -50,6 +51,17 @@ for (const url of urls) {
       await page.waitForTimeout(3000);
       console.log('    avertissement githack franchi, url :', page.url());
     }
+    // Depuis le programme à deux, l'application s'ouvre sur « Programme » :
+    // on vérifie qu'il affiche la séance du jour, puis on passe en séance
+    // libre pour générer une séance. Les versions plus anciennes n'ont pas ce
+    // sélecteur de mode.
+    const libre = page.getByRole('button', { name: /^Séance libre$/ });
+    const avecProgramme = (await libre.count()) > 0;
+    const programme = avecProgramme ? await page.getByText(/Aujourd’hui ·/).count() : 0;
+    if (avecProgramme) {
+      console.log(`    programme ${programme ? 'affiché' : 'absent'}`);
+      await libre.click({ timeout: 20000 });
+    }
     // L'ancienne version vivait dans un onglet ; la version autonome ouvre
     // directement le formulaire.
     const onglet = page.getByRole('button', { name: /^Entraînement$/ });
@@ -58,7 +70,13 @@ for (const url of urls) {
     await page.waitForTimeout(800);
     const images = await page.evaluate(() => [...document.images].map((i) => i.complete && i.naturalWidth > 0));
     const seance = await page.getByText('Séance proposée').count();
-    ok = statut === 200 && seance > 0 && images.length > 0 && images.every(Boolean) && erreurs.length === 0;
+    ok =
+      statut === 200 &&
+      (!avecProgramme || programme > 0) &&
+      seance > 0 &&
+      images.length > 0 &&
+      images.every(Boolean) &&
+      erreurs.length === 0;
     console.log(`    séance ${seance ? 'affichée' : 'absente'}, images ${images.filter(Boolean).length}/${images.length}, erreurs JS ${erreurs.length}`);
   } catch (e) {
     console.log(`--- ${url}`);
