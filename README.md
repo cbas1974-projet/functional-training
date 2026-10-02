@@ -10,7 +10,39 @@ sur l'appareil.
 
 ## Fonctionnalités
 
-### Nouvelle séance
+L'application a deux modes, en haut de l'écran : **Programme**, le vrai
+entraînement en salle à deux, et **Séance libre**, une séance tirée de la
+bibliothèque.
+
+### Programme : l'entraînement à deux
+
+Un cycle de séances fixes (six par défaut, de A à F, sur deux semaines), fait
+à deux. L'application s'ouvre sur la séance du jour, la suivante du cycle.
+
+- **Chacun ses cibles** : sur le même exercice, chacun a ses séries et ses
+  répétitions (« Moi 3 × 8 · Mon ami 3 × 6 »).
+- **Deux façons de faire un exercice** : *chacun son tour* sur le même
+  appareil (bench press, leg press, trap bar, traîneau) — l'ami commence, puis
+  on alterne, et la série de l'un est le repos de l'autre — ou *en même temps*,
+  côte à côte aux poids libres ou sur deux machines opposées.
+- **La version du jour** : les soirs de jiu-jitsu (dimanche, mardi et jeudi par
+  défaut), la séance du matin perd une série pour « moi » ; l'ami garde la
+  sienne et fait sa dernière série seul. Un lien permet de faire quand même la
+  version complète.
+- **Les charges de chacun** : chaque série se valide d'un « Fait ». La charge
+  proposée est celle de la série précédente, sinon celle de la dernière fois —
+  retrouvée par le nom de l'exercice, dans n'importe quelle séance du cycle.
+- **Le tempo à la demande** : un bouton lance la bille (MONTE, DESCENDS,
+  TIENS) quand on est prêt sous la charge. L'endroit où commence la répétition
+  (en haut pour un bench press, en bas pour un trap bar) est deviné d'après le
+  nom et se corrige d'un toucher.
+- **Saisie rapide** : une liste se tape ou se dicte d'un coup, un exercice par
+  ligne ou séparés par des virgules — « trap bar trois fois huit, bench press
+  3x8, leg press ».
+- **Nos séances** : l'historique des séances faites, avec les charges de
+  chacun.
+
+### Séance libre
 - **Durée** : 5, 10, 15, 20, 30, 45 ou 60 minutes.
 - **Zones travaillées** : tout le corps, ou une combinaison (haut du corps,
   bas du corps, dos, gainage, corps entier). Plusieurs zones alternent.
@@ -335,7 +367,10 @@ aussi remplacer un fichier PNG par votre propre photo en gardant son nom.
 ```
 src/
 ├── components/
-│   ├── Entrainement.tsx          # Écran principal : réglages, plan, historique
+│   ├── Programme.tsx             # Programme à deux : la séance du jour, l'historique
+│   ├── SeanceADeux.tsx           # Séance à deux, série par série, avec le tempo
+│   ├── EditeurProgramme.tsx      # Les séances du cycle, les prénoms, les soirs de jiu-jitsu
+│   ├── Entrainement.tsx          # Séance libre : réglages, plan, historique
 │   ├── SeanceGuidee.tsx          # Séance guidée plein écran et métronome
 │   ├── FicheExercice.tsx         # Vignette et nom d'un exercice
 │   ├── PaceurTempo.tsx           # La bille qui monte et descend au tempo
@@ -347,6 +382,7 @@ src/
 ├── utils/
 │   ├── generateurSeance.ts       # Choix des exercices et calcul des volumes
 │   ├── etapesSeance.ts           # Machine à étapes de la séance guidée
+│   ├── programme.ts              # Ordre des séries à deux, cycle, charges, saisie rapide
 │   ├── statistiques.ts           # Fréquence d'un exercice, charges par série
 │   ├── formatage.ts              # Dates, durées, libellés
 │   ├── sounds.ts                 # Cloche et bips (Web Audio)

@@ -307,3 +307,96 @@ export interface EntrainementState {
   enCours: ProgressionSeance | null;
   historique: SeanceRealisee[];
 }
+
+// ------------------------------------------------------------- Programme à deux
+//
+// Le vrai entraînement en salle : un cycle de séances fixes (six, sur deux
+// semaines), fait à deux. Chacun a ses séries, ses répétitions et ses charges
+// sur les mêmes exercices.
+
+/** Les deux personnes qui s'entraînent ensemble. */
+export type Personne = 'moi' | 'ami';
+
+/** Comment un exercice se fait à deux.
+ *  tour     : chacun son tour sur le même appareil (bench press, leg press,
+ *             trap bar, traîneau) ; la série de l'un est le repos de l'autre.
+ *  ensemble : en même temps, côte à côte aux poids libres ou sur deux machines
+ *             opposées que l'on échange. */
+export type FaconADeux = 'tour' | 'ensemble';
+
+/** Séries et répétitions visées par une personne pour un exercice. */
+export interface Cible {
+  series: number;
+  reps: number;
+}
+
+export interface ExerciceProgramme {
+  id: string;
+  /** Nom libre, tel qu'on le dit en salle : « Trap bar », « Leg press ». */
+  nom: string;
+  facon: FaconADeux;
+  cibles: Record<Personne, Cible>;
+  /** Où commence une répétition, pour le tempo : 'haut' (bench press, leg
+   *  press) ou 'bas' (trap bar, rowing). Absent = deviné d'après le nom. */
+  depart?: 'haut' | 'bas';
+}
+
+export interface SeanceProgramme {
+  id: string;
+  nom: string;
+  exercices: ExerciceProgramme[];
+}
+
+export interface Programme {
+  noms: Record<Personne, string>;
+  seances: SeanceProgramme[];
+  /** Index de la prochaine séance du cycle. */
+  prochaine: number;
+  /** Jours où il y a du jiu-jitsu le soir (0 = dimanche … 6 = samedi). Ces
+   *  jours-là, la version de « moi » perd une série. */
+  joursJiuJitsu: number[];
+}
+
+/** Une série faite par une personne ; poids 0 = charge non saisie. */
+export interface SerieFaite {
+  personne: Personne;
+  serie: number;
+  poids: number;
+}
+
+export interface ExerciceFait {
+  exerciceId: string;
+  nom: string;
+  series: SerieFaite[];
+}
+
+export interface SeanceProgrammeFaite {
+  id: string;
+  /** Fin de la séance (ISO). */
+  date: string;
+  seanceId: string;
+  nomSeance: string;
+  allegee: boolean;
+  exercices: ExerciceFait[];
+}
+
+/** Séance à deux en cours, sauvegardée pour survivre à un rechargement. */
+export interface SeanceADeuxEnCours {
+  seanceId: string;
+  allegee: boolean;
+  /** Étape affichée, dans la liste plate des étapes de la séance. */
+  etape: number;
+  /** Charges saisies, par clé `exerciceId:personne:serie`. */
+  poids: Record<string, number>;
+  /** Clés des séries faites (même clé que `poids`). */
+  faites: string[];
+  demarreeLe: string;
+  /** Dernière série validée (ISO) : le repos se compte à partir d'elle. */
+  derniereSerieLe?: string;
+}
+
+export interface EtatProgramme {
+  programme: Programme;
+  historique: SeanceProgrammeFaite[];
+  enCours: SeanceADeuxEnCours | null;
+}
