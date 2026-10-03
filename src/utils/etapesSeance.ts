@@ -380,6 +380,22 @@ function construireEtapesHorloge(seance: Seance): Etape[] {
   return etapes;
 }
 
+/** Attendre l'autre assez longtemps pour s'étirer. */
+const ATTENTE_ETIREMENT_SEC = 45;
+/** Une grosse pause : les deux minutes de la trap bar. */
+const GROSSE_PAUSE_SEC = 120;
+
+/** Une pause où l'on peut s'étirer : pendant la série de l'autre — chacun son
+ *  tour, sa série de plus —, ou une grosse pause, comme les deux minutes de la
+ *  trap bar, y compris celle qui suit sa dernière série. */
+export function pauseAEtirement(etape: Etape): boolean {
+  if (etape.type !== 'repos') return false;
+  if (etape.motif === 'tour' || etape.motif === 'serie-de-plus') return etape.dureeSec >= ATTENTE_ETIREMENT_SEC;
+  // Avant un nouvel exercice, la pause se compte sans l'installation.
+  if (etape.motif === 'installation') return etape.dureeSec - INSTALLATION_SEC >= GROSSE_PAUSE_SEC;
+  return etape.motif === 'repos' && etape.dureeSec >= GROSSE_PAUSE_SEC;
+}
+
 /** Produit la liste plate des étapes de la séance, dans l'ordre. */
 export function construireEtapes(seance: Seance): Etape[] {
   if (seance.horloge) return construireEtapesHorloge(seance);

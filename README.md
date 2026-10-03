@@ -92,9 +92,10 @@ En haut de l'accueil, **Seul** ou **Avec Max** :
   l'écran de Sébastien annonce « Repos prolongé — Max fait sa série de plus ».
   La durée annoncée est la même sur les deux téléphones, et appuyer sur « Go »
   ensemble à chaque nouvel exercice les remet à la même seconde.
-- **Pendant la série de l'autre et les grandes pauses**, l'écran propose un
+- **Pendant la série de l'autre et les grosses pauses** — les deux minutes de
+  la trap bar, et celle qui suit sa dernière série —, l'écran propose un
   étirement, avec son image : le dos pour Sébastien, les cuisses et les
-  mollets pour Max, dont les genoux le demandent. 20 s de chaque côté, en
+  mollets pour Max, comme le physio le lui a demandé. 20 s de chaque côté, en
   douceur, jamais jusqu'à la douleur.
 
 **Envoyer à Max** (ou à Sébastien) partage un lien qui contient tout le

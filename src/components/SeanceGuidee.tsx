@@ -33,6 +33,7 @@ import {
   indexEtapePrecedente,
   indexReprise,
   lirePhase,
+  pauseAEtirement,
   premierePhase,
 } from '../utils/etapesSeance';
 import type { Etape, EtatMaintien, EtatMetronome, PhaseTempo, Suivant } from '../utils/etapesSeance';
@@ -77,10 +78,6 @@ const PROLONGATION_REPOS_SEC = 15;
 const TOLERANCE_FIN_MS = 1000;
 /** Les dernières secondes d'un compte à rebours passent en rouge. */
 const SECONDES_ALERTE = 3;
-/** Une pause assez longue pour s'étirer : pendant la série de l'autre, ou
- *  un grand repos. */
-const PAUSE_ETIREMENT_SEC = 45;
-const GRAND_REPOS_SEC = 90;
 /** Hauteur du rail de la bille. Mesurée pour que « Série terminée » reste
  *  au-dessus de la barre du bas sur un écran de 390 × 844 : la vignette, le
  *  compteur, les points d'attention et la saisie du poids passent avant. */
@@ -337,13 +334,6 @@ function couleurCompte(resteSec: number, normale: string): string {
   return resteSec <= SECONDES_ALERTE ? 'var(--alerte)' : normale;
 }
 
-/** Une pause où l'on peut s'étirer : pendant la série de l'autre — chacun son
- *  tour, sa série de plus —, ou un grand repos. Jamais quand on installe. */
-function pauseAEtirement(etape: Etape): boolean {
-  if (etape.type !== 'repos' || etape.manuel) return false;
-  if (etape.motif === 'tour' || etape.motif === 'serie-de-plus') return etape.dureeSec >= PAUSE_ETIREMENT_SEC;
-  return etape.motif === 'repos' && etape.dureeSec >= GRAND_REPOS_SEC;
-}
 
 // ------------------------------------------------------------- Composant
 
@@ -1515,29 +1505,47 @@ function CorpsRepos({ etape, resteSec, partenaire, charge, etirement, onProlonge
         </div>
       )}
 
-      <div className="rounded-2xl p-4" style={{ background: 'var(--surface)' }}>
-        <div className="mb-2 text-xs font-bold uppercase tracking-[0.18em]" style={{ color: 'var(--texte-discret)' }}>
-          Prochain
+      {attendGo && etire && exerciceSuivant ? (
+        // Étirement et installation sur le même écran : le prochain exercice
+        // en petit, pour que « Go » reste à portée de pouce.
+        <div className="flex items-center gap-3 rounded-2xl p-3 text-left" style={{ background: 'var(--surface)' }}>
+          <Vignette exerciceId={exerciceSuivant.id} alt={exerciceSuivant.nomFr} className="w-24 shrink-0 rounded-xl" />
+          <div className="min-w-0">
+            <div className="text-xs font-bold uppercase tracking-[0.14em]" style={{ color: 'var(--texte-discret)' }}>
+              Prochain
+            </div>
+            <div className="font-bold">{exerciceSuivant.nomFr}</div>
+            <div className="text-sm" style={{ color: 'var(--texte-discret)' }}>
+              {libelleSuivant(suivant)}
+            </div>
+            {charge && <div className="chiffres font-bold">Charge : {charge}</div>}
+          </div>
         </div>
-        {exerciceSuivant ? (
-          <>
-            <Vignette
-              exerciceId={exerciceSuivant.id}
-              alt={exerciceSuivant.nomFr}
-              className="mx-auto w-full max-w-xs rounded-xl"
-            />
-            <div className="mt-2 text-xl font-bold">{exerciceSuivant.nomFr}</div>
-            <div style={{ color: 'var(--texte-discret)' }}>{libelleSuivant(suivant)}</div>
-            {charge && (
-              <div className="chiffres mt-1 text-lg font-bold" style={{ color: 'var(--texte)' }}>
-                Charge : {charge}
-              </div>
-            )}
-          </>
-        ) : (
-          <div className="text-xl font-bold">Retour au calme</div>
-        )}
-      </div>
+      ) : (
+        <div className="rounded-2xl p-4" style={{ background: 'var(--surface)' }}>
+          <div className="mb-2 text-xs font-bold uppercase tracking-[0.18em]" style={{ color: 'var(--texte-discret)' }}>
+            Prochain
+          </div>
+          {exerciceSuivant ? (
+            <>
+              <Vignette
+                exerciceId={exerciceSuivant.id}
+                alt={exerciceSuivant.nomFr}
+                className="mx-auto w-full max-w-xs rounded-xl"
+              />
+              <div className="mt-2 text-xl font-bold">{exerciceSuivant.nomFr}</div>
+              <div style={{ color: 'var(--texte-discret)' }}>{libelleSuivant(suivant)}</div>
+              {charge && (
+                <div className="chiffres mt-1 text-lg font-bold" style={{ color: 'var(--texte)' }}>
+                  Charge : {charge}
+                </div>
+              )}
+            </>
+          ) : (
+            <div className="text-xl font-bold">Retour au calme</div>
+          )}
+        </div>
+      )}
       {attendGo ? (
         <Bouton variante="montee" taille="vedette" onClick={onPasser} className="w-full">
           Go

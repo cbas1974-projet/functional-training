@@ -19,6 +19,7 @@ import {
   indexEtapePrecedente,
   indexReprise,
   lirePhase,
+  pauseAEtirement,
   phasesDeRep,
   premierePhase,
 } from './etapesSeance';
@@ -700,6 +701,25 @@ describe('l’horloge des séances du programme', () => {
         expect(a.fin <= b.debut || b.fin <= a.debut).toBe(true);
       }
     }
+  });
+
+  it('propose de s’étirer pendant la série de l’autre et les grosses pauses, pas à chaque repos', () => {
+    const avecEtirement = (etapes: Etape[]) => etapes.filter(pauseAEtirement);
+    // À deux : chaque attente de la série de l'autre à la trap bar, puis la
+    // pause qui suit sa dernière série, avant d'installer le suivant.
+    const seb = etapesDe();
+    const attentes = seb.filter((e) => e.type === 'repos' && e.motif === 'tour' && e.exerciceId === 'trap-bar-deadlift');
+    expect(attentes.length).toBeGreaterThan(0);
+    expect(attentes.every(pauseAEtirement)).toBe(true);
+    const installations = seb.filter((e) => e.type === 'repos' && e.manuel);
+    expect(installations.map(pauseAEtirement)).toEqual(
+      installations.map((_, g) => g > 0 && jeudiMois.exercices[g - 1] === 'trap-bar-deadlift'),
+    );
+    // Seul : les deux minutes de la trap bar, jamais la minute trente des autres.
+    const seul = construireEtapes(seancePourPersonne(jeudiMois, parametres, { personne: 'sebastien' }));
+    const grossesPauses = avecEtirement(seul).filter((e) => !(e.type === 'repos' && e.manuel));
+    expect(grossesPauses.length).toBe(2);
+    expect(grossesPauses.every((e) => e.exerciceId === 'trap-bar-deadlift' && e.dureeSec === 120)).toBe(true);
   });
 
   it('« Passer l’exercice » mène à l’installation du suivant', () => {
