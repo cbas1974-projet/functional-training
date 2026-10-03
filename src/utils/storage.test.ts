@@ -67,18 +67,27 @@ describe('chargerEtat', () => {
     expect(chargerEtat().enCours?.poids).toEqual({ 'goblet-squat': [16, 16, 18] });
   });
 
-  it('fait l’aller-retour sans rien perdre, programme et personne compris', () => {
+  it('fait l’aller-retour sans rien perdre, programme, personne et duo compris', () => {
     const etat: EntrainementState = {
-      parametres: { ...PARAMETRES_PAR_DEFAUT, format: 'superset', seriesJourFacile: 2 },
+      parametres: { ...PARAMETRES_PAR_DEFAUT, format: 'superset' },
       seanceCourante: null,
       enCours: null,
       historique: [],
-      programme: genererProgramme({ graine: 4, aujourdhui: new Date(2026, 9, 5) }),
+      programme: {
+        ...genererProgramme({ graine: 4, aujourdhui: new Date(2026, 9, 5) }),
+        duo: { reps: { sebastien: 8, max: 12 } },
+      },
       personne: 'sebastien',
       programmeARenvoyer: true,
+      aDeux: false,
     };
     enregistrerEtat(etat);
     expect(chargerEtat()).toEqual(etat);
+  });
+
+  it('s’entraîne à deux par défaut', () => {
+    localStorage.setItem(CLE, JSON.stringify(ANCIENNE_SAUVEGARDE));
+    expect(chargerEtat().aDeux).toBe(true);
   });
 
   it('écarte un programme illisible et une personne inconnue', () => {

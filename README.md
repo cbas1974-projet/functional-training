@@ -24,18 +24,34 @@ du dos, épaules, extérieur et intérieur de cuisse. Rien à taper.
   d'étirements** du poster, avec leur image — trente secondes de chaque côté
   quand l'étirement se fait d'un côté. Juste avant, **les jambes pour finir** :
   presse à cuisses, hack squat, traîneau ou marche du fermier.
-- **Lundi, la séance dure**, toujours la même, en séries droites : le
-  **soulevé de terre à la trap bar en premier**, quand le dos est frais, un
-  développé sur banc, un tirage, le bas du dos, les épaules au-dessus de la
-  tête, puis la presse ou le hack squat. Elle tient dans l'heure.
-- **Mardi et jeudi, plus faciles**, en **enchaîné** : trois exercices à la
-  suite, 90 s de pause, deux ou trois tours. Mardi le bas du corps (bas du
-  dos, extérieur et intérieur de cuisse), jeudi le haut (épaules d'abord).
-  Les machines restent hors des enchaînements.
-- **Semaines A et B** : mardi et jeudi alternent d'une semaine à l'autre —
+- **Jeudi, la séance de référence**, toujours la même, lourde, en séries
+  droites : le **soulevé de terre à la trap bar en premier**, quand le dos est
+  frais, un rowing poitrine contre le banc (la trap bar a déjà chargé le bas
+  du dos), le bas du dos, les épaules au-dessus de la tête, puis la presse ou
+  le hack squat. Le jeudi est le dernier entraînement avant trois jours de
+  repos ; les autres séances le préparent et l'entretiennent.
+- **Lundi, le bas du corps** (bas du dos, extérieur et intérieur de cuisse),
+  et **mardi, le haut** (épaules d'abord), en **enchaîné** : trois exercices à
+  la suite, puis 1 min 30 de pause, trois tours. Le mardi, jiu-jitsu des
+  adultes le soir : rien qui charge le bas du dos, et la marche du fermier pour
+  finir. Les machines restent hors des enchaînements.
+- **Semaines A et B** : lundi et mardi alternent d'une semaine à l'autre —
   mêmes muscles, autres exercices. Le programme dure quatre semaines, puis
   l'application propose d'en refaire un. Commencé un vendredi ou un week-end,
   il part du lundi suivant.
+- **La semaine dure**, le jeudi une semaine sur deux (semaine B) : **même
+  poids, deux répétitions de plus** — Max 12, Sébastien 10. Si le dos
+  s'arrondit, on arrête la série. Quand toutes les séries sont faites, le
+  jeudi suivant propose **un cran de plus** : 5 lb (2,5 kg).
+- **Les pauses** : 2 min à la trap bar, 1 min 30 aux gros exercices, 1 min aux
+  petits muscles. Dans un exercice, ou un groupe enchaîné ou lié, le chrono ne
+  s'arrête pas. À chaque nouvel exercice, l'écran montre le suivant et **la
+  charge à installer**, et la séance repart seulement sur **« Go »**.
+- **Lier deux exercices**, le jeudi : « Lier » sur un exercice allume les
+  autres en **vert** (bons partenaires : pousser et tirer, le haut et le bas)
+  ou en **rouge** (mêmes muscles, ou deux fois le bas du dos). Liés, ils
+  s'enchaînent sans pause ; la pause vient après la paire, et l'accueil dit
+  le temps gagné.
 - **Jamais deux exercices qui chargent le bas du dos dans le même
   enchaînement**, aucun mouvement explosif, rien au-delà du niveau
   intermédiaire, et seulement le matériel de la salle : haltères, kettlebells,
@@ -44,9 +60,11 @@ du dos, épaules, extérieur et intérieur de cuisse. Rien à taper.
   à remplacer par une photo du même nom dans `public/exercices/`.
 - **En même temps ou chacun son tour** : chaque exercice porte sa façon de se
   faire à deux. Les poids libres, le kettlebell et les étirements se font
-  côte à côte ; les machines, une pour deux, chacun son tour — le repos devient
-  la série de l'autre, et pendant ce temps l'écran annonce « Au tour de Max ».
-  Un toucher change la façon de faire, et la durée de la séance suit.
+  côte à côte ; les machines, une pour deux, chacun son tour — **Max
+  commence**, et la série de l'un est le repos de l'autre. Sur un groupe lié
+  qui compte une machine, on se croise : Max au premier exercice, Sébastien
+  au second, puis on échange. Un toucher change la façon de faire, et la durée
+  de la séance suit.
 - **Toucher une image** l'ouvre en grand, avec les consignes : pour voir le
   détail du mouvement avant de commencer.
 - **Changer** un exercice ouvre la liste des exercices des mêmes muscles, avec
@@ -59,12 +77,29 @@ du dos, épaules, extérieur et intérieur de cuisse. Rien à taper.
 ### Sébastien et Max, chacun sur son téléphone
 
 Au premier lancement, l'application demande qui s'entraîne sur ce téléphone.
-Les jours faciles, Sébastien fait **une série de moins** que Max — le
-jiu-jitsu vient le soir. Tout se règle dans *Réglages* : séries du lundi,
-séries de mardi et jeudi, répétitions, tempo, unité.
+Trois séries par exercice ; **Max fait deux répétitions de plus** (10 contre
+8, ce qui laisse à Sébastien une quinzaine de secondes de repos en plus) et
+**une série de plus aux poussées** — pectoraux, épaules, triceps : le haut du
+corps est son point faible. Le mardi, **la dernière série de Sébastien se
+fait à la moitié de la charge**, pré-remplie : on garde du jus pour le
+jiu-jitsu. Les répétitions de chacun se règlent dans *Réglages*.
+
+En haut de l'accueil, **Seul** ou **Avec Max** :
+
+- **Seul** : ses répétitions, ses pauses, son temps.
+- **À deux** : **une horloge commune**. Chaque série commence ensemble ;
+  celui qui a fini avant attend l'autre. Pendant la série de plus de Max,
+  l'écran de Sébastien annonce « Repos prolongé — Max fait sa série de plus ».
+  La durée annoncée est la même sur les deux téléphones, et appuyer sur « Go »
+  ensemble à chaque nouvel exercice les remet à la même seconde.
+- **Pendant la série de l'autre et les grandes pauses**, l'écran propose un
+  étirement, avec son image : le dos pour Sébastien, les cuisses et les
+  mollets pour Max, dont les genoux le demandent. 20 s de chaque côté, en
+  douceur, jamais jusqu'à la douleur.
 
 **Envoyer à Max** (ou à Sébastien) partage un lien qui contient tout le
-programme : Max l'ouvre et a les mêmes séances, les mêmes semaines A et B. S'il
+programme, liens et répétitions de chacun compris : Max l'ouvre et a les
+mêmes séances, les mêmes semaines A et B, la même horloge. S'il
 avait déjà un programme, l'application lui demande s'il prend celui-ci. Tant
 que l'autre téléphone n'a pas le programme — au premier jour, ou après un
 changement —, l'accueil le rappelle. Une application installée sur l'écran

@@ -200,9 +200,6 @@ export interface ParametresSeance {
   /** Nombre de séries souhaité par exercice ; null = automatique selon la
    *  durée. Si ce nombre ne tient pas dans la durée, l'automatique reprend. */
   seriesParExercice: 2 | 3 | 4 | null;
-  /** Séries par exercice les jours faciles du programme (mardi, jeudi).
-   *  Absent = une de moins que `seriesParExercice`. */
-  seriesJourFacile?: number;
   /** Répétitions souhaitées par série ; null = automatique selon le niveau.
    *  Si ce nombre ne tient pas dans la durée, l'automatique reprend. */
   repsParSerie: 6 | 8 | 9 | 10 | 12 | null;
@@ -242,6 +239,14 @@ export interface BlocSeries {
   /** À deux, chacun son tour sur le même appareil : le repos de l'un est la
    *  série de l'autre. Absent = en même temps, côte à côte. */
   tour?: boolean;
+  /** À deux : les séries et les répétitions de l'autre sur cet exercice. Les
+   *  deux téléphones en tirent la même horloge. Absent = seul. */
+  autre?: { series: number; reps: number };
+  /** Ma dernière série se fait à la moitié de la charge : un soir de
+   *  jiu-jitsu, on suit le rythme sans se vider. */
+  derniereLegere?: boolean;
+  /** Semaine dure réussie : la charge de la dernière fois, plus ce cran. */
+  ajoutCharge?: number;
 }
 
 /** Un temps de l'échauffement ou du retour au calme. */
@@ -281,6 +286,18 @@ export interface Seance {
   echauffement?: MouvementGuide[];
   /** Étirements de fin, avec leur image ; absents, ceux d'usage. */
   retourCalme?: MouvementGuide[];
+  /** Séance du programme : l'horloge attend « Go » à chaque nouvel exercice,
+   *  et à deux elle est commune aux deux téléphones. Absente pour une séance
+   *  libre. */
+  horloge?: {
+    /** Qui fait la séance sur ce téléphone. */
+    personne?: Personne;
+    /** À deux : le prénom de l'autre. */
+    partenaire?: string;
+    /** À deux : c'est moi qui commence quand c'est chacun son tour sur une
+     *  machine, et moi qui prends le premier exercice d'un groupe lié. */
+    jeCommence?: boolean;
+  };
   blocs: BlocSeries[];
   circuit: Circuit | null;
   dureeEstimeeSec: number;
@@ -342,15 +359,18 @@ export interface EntrainementState {
   /** L'autre téléphone n'a pas ce programme-ci : il vient d'être composé, ou
    *  il a changé depuis le dernier envoi. */
   programmeARenvoyer?: boolean;
+  /** On s'entraîne à deux (horloge commune) ou seul (son propre temps). */
+  aDeux?: boolean;
 }
 
 // ------------------------------------------------------------- Programme du mois
 //
 // Le vrai entraînement : l'application choisit les exercices dans la
-// bibliothèque des posters, à partir d'objectifs musculaires. Une séance dure
-// le lundi, toujours la même ; des séances plus faciles le mardi et le jeudi,
-// qui alternent d'une semaine à l'autre — mêmes muscles, autres exercices.
-// Chacun s'entraîne avec l'application sur son propre téléphone.
+// bibliothèque des posters, à partir d'objectifs musculaires. Le jeudi, la
+// séance de référence, lourde, toujours la même ; le bas du corps le lundi et
+// le haut le mardi, qui alternent d'une semaine à l'autre — mêmes muscles,
+// autres exercices. Chacun s'entraîne avec l'application sur son propre
+// téléphone, seul ou à deux sur une horloge commune.
 
 /** Qui s'entraîne sur ce téléphone. */
 export type Personne = 'sebastien' | 'max';
@@ -358,7 +378,7 @@ export type Personne = 'sebastien' | 'max';
 export type TypeSeanceMois = 'dure' | 'facile';
 
 export interface SeanceDuMois {
-  /** 'lundi', 'mardi-a', 'jeudi-a', 'mardi-b', 'jeudi-b'. */
+  /** 'lundi-a', 'mardi-a', 'jeudi', 'lundi-b', 'mardi-b'. */
   id: string;
   nom: string;
   /** Jour de la semaine : 1 = lundi, 2 = mardi, 4 = jeudi. */
@@ -366,15 +386,21 @@ export interface SeanceDuMois {
   /** Semaine A ou B ; absente, la séance revient toutes les semaines. */
   semaine?: 'A' | 'B';
   type: TypeSeanceMois;
-  /** 'series' : séries droites, repos entre chacune — chacun son tour sur
-   *  l'appareil. 'enchaine' : blocs de trois exercices à la suite, puis une
-   *  pause. */
+  /** 'series' : séries droites, repos entre chacune — le jeudi.
+   *  'enchaine' : blocs de trois exercices à la suite, puis une pause — le
+   *  lundi et le mardi. */
   format: 'series' | 'enchaine';
   /** Identifiants d'exercices de la bibliothèque, dans l'ordre de la séance. */
   exercices: string[];
   /** Le dernier exercice, pour les jambes : presse, hack squat, traîneau ou
    *  marche du fermier. En séries, après les enchaînements. */
   finale?: string;
+  /** La partie du corps du jour : le bas le lundi, le haut le mardi, tout le
+   *  corps le jeudi. */
+  partie?: 'bas' | 'haut' | 'complet';
+  /** Exercices liés, qui s'enchaînent sans pause : la pause vient après le
+   *  groupe. Deux ou trois exercices chacun. */
+  liens?: string[][];
   /** Exercices faits chacun son tour (une machine pour deux) ; les autres se
    *  font en même temps. */
   tour?: string[];
@@ -393,4 +419,7 @@ export interface ProgrammeMois {
   /** Version de la composition ; un programme plus ancien est recomposé
    *  avec la même graine. */
   version?: number;
+  /** À deux : les répétitions de chacun. Le lien les transporte, pour que
+   *  les deux téléphones calculent la même horloge. */
+  duo?: { reps: Record<Personne, number> };
 }

@@ -42,6 +42,14 @@ export type Suivant =
     }
   | { type: 'retourCalme' };
 
+/** Ce qui retient quelqu'un entre deux séries d'une séance du programme.
+ *  repos         : la pause entre deux séries ;
+ *  tour          : chacun son tour, l'autre fait sa série ;
+ *  serie-de-plus : l'autre fait une série de plus que soi ;
+ *  attente       : l'autre finit sa série, plus longue ;
+ *  installation  : nouvel exercice — poids à changer, machine à régler. */
+export type MotifRepos = 'repos' | 'tour' | 'serie-de-plus' | 'attente' | 'installation';
+
 /** Ce qu'annonce une préparation : toujours un travail, jamais le retour au calme. */
 export type SuivantTravail = Exclude<Suivant, { type: 'retourCalme' }>;
 
@@ -67,7 +75,17 @@ export type Etape =
       dureeSec: number;
       groupe?: number;
     }
-  | { type: 'repos'; exerciceId: string; dureeSec: number; suivant: Suivant; groupe?: number }
+  | {
+      type: 'repos';
+      exerciceId: string;
+      dureeSec: number;
+      suivant: Suivant;
+      groupe?: number;
+      /** Ce qui retient : le repos, la série de l'autre, l'installation. */
+      motif?: MotifRepos;
+      /** La séance attend « Go » au lieu de repartir seule. */
+      manuel?: boolean;
+    }
   | {
       type: 'station';
       exerciceId: string;
@@ -188,8 +206,183 @@ export function lirePhase(tempo: Tempo, premiere: SensTempo, dansRepSec: number)
 
 // ------------------------------------------------------------- Étapes
 
+/** Installation comptée à chaque nouvel exercice : changer les poids,
+ *  régler la machine. La séance attend « Go » pour repartir. */
+export const INSTALLATION_SEC = 30;
+/** Chacun son tour : le temps de céder la place. */
+export const CHANGEMENT_SEC = 15;
+
+/** Un morceau du temps d'une personne : une série à faire, ou une attente. */
+type Morceau =
+  | { genre: 'travail'; bloc: BlocSeries; serie: number; groupe: number }
+  | {
+      genre: 'attente';
+      dureeSec: number;
+      motif: MotifRepos;
+      exerciceId: string;
+      groupe: number;
+      manuel: boolean;
+    };
+
+type Attente = Extract<Morceau, { genre: 'attente' }>;
+
+/** Plus le motif est fort, plus il nomme la pause entière : quelques
+ *  secondes d'attente suivies du repos, c'est un repos. */
+const FORCE_MOTIF: Record<MotifRepos, number> = {
+  attente: 0,
+  repos: 1,
+  tour: 2,
+  'serie-de-plus': 3,
+  installation: 4,
+};
+
+/** Deux attentes qui se suivent ne font qu'une pause, nommée par la plus
+ *  forte. */
+function fusionner(avant: Attente, apres: Attente): Attente {
+  return {
+    ...avant,
+    dureeSec: avant.dureeSec + apres.dureeSec,
+    motif: FORCE_MOTIF[apres.motif] > FORCE_MOTIF[avant.motif] ? apres.motif : avant.motif,
+  };
+}
+
+/** Les étapes d'une séance du programme. Chaque nouvel exercice attend
+ *  « Go » ; dans un exercice ou un groupe lié, le chrono ne s'arrête pas.
+ *
+ *  À deux, les deux téléphones déroulent la même horloge : chaque tour
+ *  commence ensemble, et celui qui a fini avant attend l'autre (sa série est
+ *  plus longue, ou il en fait une de plus). Chacun son tour sur une machine,
+ *  celui qui commence d'abord, et la série de l'un est le repos de l'autre.
+ *  Sur un groupe lié qui compte une machine, on se croise : celui qui
+ *  commence prend le premier exercice, l'autre le suivant. Appuyer sur « Go »
+ *  ensemble remet les deux téléphones à la même seconde. */
+function construireEtapesHorloge(seance: Seance): Etape[] {
+  const { tempo } = seance.parametres;
+  const aDeux = seance.blocs.some((bloc) => bloc.autre !== undefined);
+  const jeCommence = seance.horloge?.jeCommence ?? true;
+  const seriesAutre = (bloc: BlocSeries) => (aDeux ? (bloc.autre?.series ?? 0) : 0);
+  const repsAutre = (bloc: BlocSeries) => bloc.autre?.reps ?? 0;
+  const blocs = seance.blocs.filter((bloc) => bloc.series > 0 || seriesAutre(bloc) > 0);
+  const groupes = groupesDeBlocs(blocs);
+  const duree = (bloc: BlocSeries, reps: number) =>
+    dureeSerieSec(exerciceDeSeance(bloc.exerciceId), reps, tempo);
+  const reposDuGroupe = (groupe: BlocSeries[]) => groupe[groupe.length - 1].reposSec;
+
+  const morceaux: Morceau[] = [];
+  const attendre = (dureeSec: number, motif: MotifRepos, exerciceId: string, groupe: number, manuel = false) => {
+    if (dureeSec > 0) morceaux.push({ genre: 'attente', dureeSec, motif, exerciceId, groupe, manuel });
+  };
+
+  groupes.forEach((groupe, g) => {
+    // Nouvel exercice : la pause de l'exercice d'avant, l'installation, puis
+    // « Go ».
+    const pause = g > 0 ? reposDuGroupe(groupes[g - 1]) : 0;
+    attendre(pause + INSTALLATION_SEC, 'installation', groupe[0].exerciceId, g, true);
+
+    const machine = groupe[0];
+    if (aDeux && groupe.length === 1 && machine.tour && machine.autre) {
+      const autre = machine.autre;
+      const ordre: ('moi' | 'autre')[] = jeCommence ? ['moi', 'autre'] : ['autre', 'moi'];
+      const passages: ('moi' | 'autre')[] = [];
+      for (let k = 1; k <= Math.max(machine.series, autre.series); k += 1) {
+        for (const qui of ordre) {
+          if (k <= (qui === 'moi' ? machine.series : autre.series)) passages.push(qui);
+        }
+      }
+      let serie = 0;
+      passages.forEach((qui, i) => {
+        if (qui === 'moi') {
+          serie += 1;
+          morceaux.push({ genre: 'travail', bloc: machine, serie, groupe: g });
+        } else {
+          attendre(DUREE_PRET_SEC + duree(machine, autre.reps), 'tour', machine.exerciceId, g);
+        }
+        if (i < passages.length - 1) attendre(CHANGEMENT_SEC, 'tour', machine.exerciceId, g);
+      });
+      return;
+    }
+
+    const croise = aDeux && groupe.length > 1 && groupe.some((bloc) => bloc.tour);
+    const decale = [...groupe.slice(1), groupe[0]];
+    const ordreMoi = croise && !jeCommence ? decale : groupe;
+    const ordreAutre = croise && jeCommence ? decale : groupe;
+    const tours = Math.max(...groupe.map((bloc) => Math.max(bloc.series, seriesAutre(bloc))));
+    /** Le travail d'une personne dans un tour, transitions comprises. */
+    const travailDuTour = (
+      ordre: BlocSeries[],
+      k: number,
+      series: (bloc: BlocSeries) => number,
+      reps: (bloc: BlocSeries) => number,
+    ) => {
+      const faits = ordre.filter((bloc) => k <= series(bloc));
+      return faits.reduce(
+        (total, bloc, i) =>
+          total + DUREE_PRET_SEC + duree(bloc, reps(bloc)) + (i < faits.length - 1 ? (bloc.transitionSec ?? 0) : 0),
+        0,
+      );
+    };
+    for (let k = 1; k <= tours; k += 1) {
+      const faits = ordreMoi.filter((bloc) => k <= bloc.series);
+      faits.forEach((bloc, i) => {
+        morceaux.push({ genre: 'travail', bloc, serie: k, groupe: g });
+        if (i < faits.length - 1) attendre(bloc.transitionSec ?? 0, 'repos', bloc.exerciceId, g);
+      });
+      const moi = travailDuTour(ordreMoi, k, (bloc) => bloc.series, (bloc) => bloc.reps);
+      const lui = aDeux ? travailDuTour(ordreAutre, k, seriesAutre, repsAutre) : 0;
+      if (lui > moi) attendre(lui - moi, moi === 0 ? 'serie-de-plus' : 'attente', groupe[0].exerciceId, g);
+      if (k < tours) attendre(reposDuGroupe(groupe), 'repos', groupe[groupe.length - 1].exerciceId, g);
+    }
+  });
+
+  const etapes: Etape[] = [];
+  if (seance.echauffementSec > 0) etapes.push({ type: 'echauffement', dureeSec: seance.echauffementSec });
+  // Les attentes qui se suivent ne font qu'une pause ; celle qui attend
+  // « Go » reste à part.
+  let attentes: Attente[] = [];
+  const poserAttentes = (suivant: Suivant) => {
+    for (const attente of attentes) {
+      etapes.push({
+        type: 'repos',
+        exerciceId: attente.exerciceId,
+        dureeSec: attente.dureeSec,
+        suivant,
+        groupe: attente.groupe,
+        motif: attente.motif,
+        ...(attente.manuel ? { manuel: true } : {}),
+      });
+    }
+    attentes = [];
+  };
+  for (const morceau of morceaux) {
+    if (morceau.genre === 'attente') {
+      const derniere = attentes[attentes.length - 1];
+      if (derniere && !derniere.manuel && !morceau.manuel) attentes[attentes.length - 1] = fusionner(derniere, morceau);
+      else attentes.push(morceau);
+      continue;
+    }
+    const { bloc, serie, groupe } = morceau;
+    const cible: SuivantTravail = { type: 'serie', exerciceId: bloc.exerciceId, serie, series: bloc.series, reps: bloc.reps };
+    poserAttentes(cible);
+    etapes.push({ type: 'pret', exerciceId: bloc.exerciceId, dureeSec: DUREE_PRET_SEC, suivant: cible, groupe });
+    etapes.push({
+      type: 'serie',
+      exerciceId: bloc.exerciceId,
+      serie,
+      series: bloc.series,
+      reps: bloc.reps,
+      dureeSec: duree(bloc, bloc.reps),
+      groupe,
+    });
+  }
+  poserAttentes({ type: 'retourCalme' });
+  if (seance.retourCalmeSec > 0) etapes.push({ type: 'retourCalme', dureeSec: seance.retourCalmeSec });
+  etapes.push({ type: 'fin', dureeSec: 0 });
+  return etapes;
+}
+
 /** Produit la liste plate des étapes de la séance, dans l'ordre. */
 export function construireEtapes(seance: Seance): Etape[] {
+  if (seance.horloge) return construireEtapesHorloge(seance);
   const { tempo } = seance.parametres;
   const etapes: Etape[] = [];
   const blocs = seance.blocs.filter((bloc) => bloc.series > 0);

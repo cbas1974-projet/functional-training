@@ -1,9 +1,10 @@
 // Programme du mois : l'application compose les séances elle-même, dans la
 // bibliothèque des posters, à partir d'objectifs musculaires — bas du dos,
-// épaules, extérieur et intérieur de cuisse par défaut. Une séance dure le
-// lundi, toujours la même ; des séances plus faciles le mardi et le jeudi, en
-// enchaîné, qui alternent d'une semaine à l'autre : mêmes muscles, autres
-// exercices. Chacun la suit sur son téléphone, avec ses séries et ses charges.
+// épaules, extérieur et intérieur de cuisse par défaut. Le jeudi, la séance de
+// référence, lourde, toujours la même ; le lundi le bas du corps et le mardi
+// le haut, en enchaîné, qui alternent d'une semaine à l'autre : mêmes muscles,
+// autres exercices. Chacun la suit sur son téléphone, avec ses répétitions et
+// ses charges ; à deux, les deux téléphones déroulent la même horloge.
 import type {
   BlocSeries,
   Exercice,
@@ -17,11 +18,11 @@ import type {
   Seance,
   SeanceDuMois,
   SeanceRealisee,
-  TypeSeanceMois,
   UnitePoids,
 } from '../types';
 import { EXERCICES, EXERCICES_PAR_ID } from '../data/exercices';
-import { cleMouvement, dureeSerieSec, estimerDureeSec, familleDe } from './generateurSeance';
+import { construireEtapes, dureeTotaleSec } from './etapesSeance';
+import { cleMouvement, familleDe } from './generateurSeance';
 import { exercicesPourMuscles, musclesDe } from './muscles';
 import { convertirPoids, uniteDeSeance } from './statistiques';
 
@@ -32,16 +33,62 @@ const estConnu = (id: unknown): id is string =>
 
 // ------------------------------------------------------------- Les personnes
 
-export const PERSONNES: { id: Personne; nom: string; seriesJourFacile: number }[] = [
-  // Le jiu-jitsu vient le soir des jours faciles : une série de moins.
-  { id: 'sebastien', nom: 'Sébastien', seriesJourFacile: 2 },
-  { id: 'max', nom: 'Max', seriesJourFacile: 3 },
+export interface ProfilPersonne {
+  id: Personne;
+  nom: string;
+  /** Une série de plus aux exercices de poussée — pectoraux, épaules,
+   *  triceps : le haut du corps est son point faible. */
+  seriePlusPoussee: boolean;
+  /** Le mardi, la dernière série à la moitié de la charge : le jiu-jitsu des
+   *  adultes vient le soir. */
+  derniereLegereMardi: boolean;
+  /** Étirements proposés pendant les longues pauses. */
+  etirementsPause: string[];
+}
+
+export const PERSONNES: ProfilPersonne[] = [
+  // Le dos à ménager : il s'étire pendant que Max fait sa série.
+  {
+    id: 'sebastien',
+    nom: 'Sébastien',
+    seriePlusPoussee: false,
+    derniereLegereMardi: true,
+    etirementsPause: ['etir-rachis-debout', 'etir-ischios-debout', 'etir-inclinaison-tronc'],
+  },
+  // Des jambes très fortes, le haut du corps moins ; les genoux demandent
+  // d'étirer les cuisses et les mollets.
+  {
+    id: 'max',
+    nom: 'Max',
+    seriePlusPoussee: true,
+    derniereLegereMardi: false,
+    etirementsPause: ['etir-quadriceps-debout', 'etir-mollet-mur', 'etir-fente-bras-leve'],
+  },
 ];
+
+const PROFILS = Object.fromEntries(PERSONNES.map((p) => [p.id, p])) as Record<Personne, ProfilPersonne>;
 
 export const NOM_PERSONNE: Record<Personne, string> = { sebastien: 'Sébastien', max: 'Max' };
 
 export const autrePersonne = (personne: Personne): Personne =>
   personne === 'sebastien' ? 'max' : 'sebastien';
+
+/** Les répétitions de chacun, une semaine normale : Sébastien deux de moins
+ *  que Max, ce qui lui laisse une quinzaine de secondes de repos en plus. */
+export const REPS_PAR_DEFAUT: Record<Personne, number> = { sebastien: 8, max: 10 };
+
+/** Les répétitions de chacun pour ce programme. */
+export const repsDuDuo = (programme: Pick<ProgrammeMois, 'duo'>): Record<Personne, number> => ({
+  ...REPS_PAR_DEFAUT,
+  ...programme.duo?.reps,
+});
+
+/** Chacun son tour sur une machine : Max commence. */
+const COMMENCE: Personne = 'max';
+
+/** Les étirements proposés pendant les longues pauses. */
+export const etirementsPauseDe = (personne: Personne): string[] =>
+  PROFILS[personne].etirementsPause.filter(estConnu);
 
 // ------------------------------------------------------------- Réglages
 
@@ -53,21 +100,32 @@ export const OBJECTIFS_PAR_DEFAUT = ['bas-du-dos', 'epaules', 'exterieur-cuisse'
 export const MATERIELS_PROGRAMME: Materiel[] = ['halteres', 'kettlebell', 'banc', 'tapis', 'salle'];
 
 /** Version de la composition. Un programme plus ancien est recomposé, avec
- *  la même graine : 2 = la trap bar en tête du lundi, les jambes pour finir,
- *  l'échauffement au tapis et les étirements du poster. */
-export const VERSION_PROGRAMME = 2;
-
-/** Chacun son tour : le temps de céder la place, en plus de la série de
- *  l'autre. */
-export const CHANGEMENT_SEC = 15;
+ *  la même graine : 3 = le bas du corps le lundi, le haut le mardi, la séance
+ *  de référence le jeudi. */
+export const VERSION_PROGRAMME = 3;
 
 /** Une séance vise l'heure, échauffement et étirements compris. */
 const DUREE_REFERENCE_MIN = 60;
-/** Au-delà, la séance dure perd ses derniers exercices. */
+/** Au-delà, une séance perd ses derniers exercices. */
 export const DUREE_MAXI_SEC = 65 * 60;
-/** Repos après une série, ou après un tour d'enchaîné : en salle, c'est le
- *  temps que l'autre fasse la sienne. */
+/** Trois séries par exercice ; Max en fait une de plus aux poussées. */
+export const SERIES_PROGRAMME = 3;
+/** La semaine dure, le jeudi une semaine sur deux : même poids, deux
+ *  répétitions de plus. */
+export const REPS_SEMAINE_DURE = 2;
+/** Après une semaine dure réussie, un cran de plus. */
+const CRAN: Record<UnitePoids, number> = { lb: 5, kg: 2.5 };
+/** Le mardi soir, le jiu-jitsu des adultes. */
+const JOUR_JIU_JITSU = 2;
+/** Repos après une série d'un gros exercice, et après un tour d'enchaîné. */
 export const REPOS_SEC = 90;
+/** Repos après une série d'un petit muscle : bras, épaules en isolation,
+ *  abdominaux, mollets, intérieur et extérieur de cuisse. */
+export const REPOS_PETITS_SEC = 60;
+/** La trap bar, le jeudi : la plus lourde, deux minutes. */
+export const REPOS_TRAP_BAR_SEC = 120;
+/** Deux exercices liés : le temps de passer de l'un à l'autre. */
+export const TRANSITION_LIEN_SEC = 15;
 /** Tenue des exercices au temps : planche, marche du fermier. */
 const TENUE_SEC = 30;
 /** Un enchaîné, c'est trois exercices à la suite, puis la pause. */
@@ -97,28 +155,37 @@ interface Emplacement {
   objectif?: boolean;
 }
 
-/** Lundi : tout le corps, lourd. Mardi : le bas. Jeudi : le haut. */
+/** Jeudi : tout le corps, lourd. Lundi : le bas. Mardi : le haut. */
 type Gabarit = 'dure' | 'bas' | 'haut';
 
-const gabaritDe = (seance: Pick<SeanceDuMois, 'type' | 'jour'>): Gabarit =>
-  seance.type === 'dure' ? 'dure' : seance.jour === 4 ? 'haut' : 'bas';
+type SeanceAGabarit = Pick<SeanceDuMois, 'type' | 'jour' | 'partie'>;
+
+const gabaritDe = (seance: SeanceAGabarit): Gabarit => {
+  if (seance.type === 'dure') return 'dure';
+  if (seance.partie === 'bas' || seance.partie === 'haut') return seance.partie;
+  // Programme d'avant la version 3 : le bas le mardi, le haut le jeudi.
+  return seance.jour === 4 ? 'haut' : 'bas';
+};
 
 const TRONC: PatternMoteur[] = ['anti-rotation', 'flexion-tronc', 'rotation', 'flexion-laterale'];
 
-/** Le lundi s'ouvre sur la trap bar, quand le dos est frais. */
+/** Le jeudi s'ouvre sur la trap bar, quand le dos est frais. */
 const CHARNIERE_TRAP_BAR: Emplacement = { cle: 'charniere', muscles: ['ischios', 'fessiers'], principal: ['ischios'], patterns: ['charniere'], salle: true, preferer: (e) => e.materiel === 'salle' };
 /** Sans les machines : un soulevé de terre roumain ou au kettlebell. Pas un
  *  pont fessier ; et le bas du dos a sa place à lui. */
 const CHARNIERE_LIBRE: Emplacement = { cle: 'charniere', muscles: ['ischios', 'fessiers'], principal: ['ischios'], patterns: ['charniere'], preferer: (e) => !(e.musclesPrincipaux ?? []).includes('lombaires') };
-/** Sans les machines, le lundi garde aussi un squat, à deux jambes : les
- *  fentes, qui tordent le genou, attendent les jours faciles. */
+/** Sans les machines, le jeudi garde aussi un squat, à deux jambes : les
+ *  fentes, qui tordent le genou, attendent le lundi. */
 const SQUAT_LOURD: Emplacement = { cle: 'jambes', muscles: ['quadriceps', 'fessiers'], principal: ['quadriceps', 'fessiers'], patterns: ['squat'], preferer: (e) => e.cotes === 'bilateral' };
 
 const BASE: Record<Gabarit, Emplacement[]> = {
   dure: [
-    // Le jour dur, on pousse une charge : un développé sur banc avant les pompes.
+    // On tire, sans charger le bas du dos — la trap bar l'a déjà fait : un
+    // rowing poitrine contre le banc plutôt que buste penché.
+    { cle: 'tirage', muscles: ['dorsaux', 'trapezes', 'biceps'], principal: ['dorsaux'], patterns: ['tirage-horizontal', 'tirage-vertical'], preferer: (e) => !chargeLeBasDuDos(e) },
+    // On pousse une charge : un développé sur banc avant les pompes. Dernière
+    // place de base, c'est elle qui part quand la séance déborde.
     { cle: 'poussee', muscles: ['pectoraux', 'triceps', 'epaules'], principal: ['pectoraux'], patterns: ['poussee-horizontale'], preferer: (e) => e.materiel === 'banc' },
-    { cle: 'tirage', muscles: ['dorsaux', 'trapezes', 'biceps'], principal: ['dorsaux'], patterns: ['tirage-horizontal', 'tirage-vertical'] },
   ],
   bas: [
     { cle: 'fente', muscles: ['quadriceps', 'fessiers'], principal: ['quadriceps', 'fessiers'], patterns: ['fente'] },
@@ -148,14 +215,14 @@ const PAR_OBJECTIF: Record<
   'bas-du-dos': {
     emplacement: { cle: 'bas-du-dos', muscles: ['lombaires', 'fessiers', 'ischios'], principal: ['lombaires'] },
     gabarits: ['dure', 'bas'],
-    // Le lundi, le soulevé de terre a déjà chargé l'arrière des cuisses : pour
+    // Le jeudi, le soulevé de terre a déjà chargé l'arrière des cuisses : pour
     // le bas du dos, un exercice qui ne soit pas une deuxième charnière lourde.
     surcharge: { dure: { preferer: (e) => !(e.musclesPrincipaux ?? []).includes('ischios') } },
   },
   epaules: {
     emplacement: { cle: 'epaules', muscles: ['epaules', 'coiffe-rotateurs'], principal: ['epaules'] },
     gabarits: ['dure', 'haut'],
-    // Le lundi, les épaules se travaillent lourd : un développé au-dessus de la tête.
+    // Le jeudi, les épaules se travaillent lourd : un développé au-dessus de la tête.
     surcharge: { dure: { muscles: ['epaules', 'triceps'], patterns: ['poussee-verticale'] } },
   },
   'exterieur-cuisse': {
@@ -252,6 +319,8 @@ interface Preferences {
   dejaPris: Set<string>;
   /** Exercices à repousser en fin de liste. */
   repousser?: (exercice: Exercice) => boolean;
+  /** Exercices à n'utiliser qu'à défaut de tout autre. */
+  eviter?: (exercice: Exercice) => boolean;
 }
 
 /** Remplit une place : les exercices qui la visent le mieux, puis un tirage
@@ -275,6 +344,7 @@ function choisir(
     const classes = exercicesPourMuscles(libres.filter(filtre), emplacement.muscles);
     if (classes.length === 0) continue;
     const rang = (e: Exercice) =>
+      (preferences.eviter?.(e) ? 8 : 0) +
       (preferences.dejaPris.has(cleMouvement(e)) ? 4 : 0) +
       (preferences.repousser?.(e) ? 2 : 0) +
       (emplacement.preferer && !emplacement.preferer(e) ? 1 : 0);
@@ -311,12 +381,14 @@ export function enEnchainements(exercices: Exercice[]): Exercice[] {
 
 // ------------------------------------------------------------- Pour finir : les jambes
 
-/** Le dernier exercice de chaque séance, pour les jambes. Le lundi, une
- *  machine lourde ; les autres jours, au choix. Jamais la trap bar, qui se
- *  fait fraîche, en début de séance. */
-const FINALES: Record<TypeSeanceMois, string[]> = {
+/** Le dernier exercice de chaque séance. Le jeudi, une machine lourde pour
+ *  les jambes ; le lundi, au choix ; le mardi, jour du haut du corps et du
+ *  jiu-jitsu le soir, la marche du fermier. Jamais la trap bar, qui se fait
+ *  fraîche, en début de séance. */
+const FINALES: Record<Gabarit, string[]> = {
   dure: ['leg-press', 'hack-squat'],
-  facile: ['traineau', 'farmers-walk', 'kb-farmers-walk', 'leg-press', 'hack-squat'],
+  bas: ['traineau', 'leg-press', 'hack-squat', 'farmers-walk', 'kb-farmers-walk'],
+  haut: ['farmers-walk', 'kb-farmers-walk'],
 };
 
 /** Un aller-retour de traîneau : pousser, puis tirer à reculons. */
@@ -325,9 +397,9 @@ const TRAINEAU_SEC = 30;
 const PORTAGE_SEC = 40;
 
 /** Séries et répétitions du dernier exercice. Le traîneau se compte en
- *  allers-retours, deux fois plus que de séries : une dizaine à deux. */
+ *  allers-retours, un de plus que de séries : quatre chacun. */
 function volumeFinale(exercice: Exercice, series: number, reps: number): { series: number; reps: number } {
-  if (exercice.id === 'traineau') return { series: series * 2, reps: TRAINEAU_SEC };
+  if (exercice.id === 'traineau') return { series: series + 1, reps: TRAINEAU_SEC };
   if (exercice.unite === 'secondes') return { series, reps: PORTAGE_SEC };
   return { series, reps };
 }
@@ -366,9 +438,9 @@ const MOUVEMENTS_LEGERS: Record<Gabarit, MouvementGuide[]> = {
 /** Cinq étirements du poster pour finir, une minute chacun — trente secondes
  *  de chaque côté quand ils se font d'un côté. Ils visent les muscles du jour
  *  et changent d'une semaine à l'autre, comme les exercices. */
-const ETIREMENTS_LUNDI = ['etir-ischios-allonge', 'etir-fessier-chiffre-4', 'etir-quadriceps-debout', 'etir-pectoral-montant', 'etir-dos-rond-quatre-pattes'];
+const ETIREMENTS_REFERENCE = ['etir-ischios-allonge', 'etir-fessier-chiffre-4', 'etir-quadriceps-debout', 'etir-pectoral-montant', 'etir-dos-rond-quatre-pattes'];
 const ETIREMENTS: Record<Gabarit, Record<'A' | 'B', string[]>> = {
-  dure: { A: ETIREMENTS_LUNDI, B: ETIREMENTS_LUNDI },
+  dure: { A: ETIREMENTS_REFERENCE, B: ETIREMENTS_REFERENCE },
   bas: {
     A: ['etir-fente-laterale', 'etir-fessier-chiffre-4', 'etir-quadriceps-debout', 'etir-ischios-allonge', 'etir-dos-rond-quatre-pattes'],
     B: ['etir-ecart-coudes-genoux', 'etir-genou-en-travers', 'etir-quadriceps-cote', 'etir-ischios-debout', 'etir-mollet-mur'],
@@ -382,13 +454,13 @@ const ETIREMENT_SEC = 60;
 
 /** L'échauffement d'une séance du programme : le cardio, puis les
  *  mouvements légers du jour. */
-export function echauffementDe(seance: Pick<SeanceDuMois, 'type' | 'jour'>): MouvementGuide[] {
+export function echauffementDe(seance: SeanceAGabarit): MouvementGuide[] {
   return [CARDIO, ...MOUVEMENTS_LEGERS[gabaritDe(seance)]];
 }
 
 /** Les étirements de fin d'une séance du programme, avec leur image. Un
  *  étirement d'un côté se fait en deux temps, droit puis gauche. */
-export function etirementsDe(seance: Pick<SeanceDuMois, 'type' | 'jour' | 'semaine'>): MouvementGuide[] {
+export function etirementsDe(seance: SeanceAGabarit & Pick<SeanceDuMois, 'semaine'>): MouvementGuide[] {
   return ETIREMENTS[gabaritDe(seance)][seance.semaine ?? 'A'].filter(estConnu).flatMap((id) => {
     const etirement = EXERCICES_PAR_ID[id];
     const consigne = etirement.pointsAttention[0] ?? '';
@@ -412,39 +484,32 @@ const dureeDes = (mouvements: MouvementGuide[]) =>
 export interface OptionsProgramme {
   objectifs?: string[];
   materiels?: Materiel[];
-  /** Mardi et jeudi changent d'une semaine à l'autre (cinq séances) ou non
+  /** Lundi et mardi changent d'une semaine à l'autre (cinq séances) ou non
    *  (trois séances). */
   alternance?: boolean;
   graine?: number;
   aujourdhui?: Date;
 }
 
-/** Paramètres de référence pour mesurer une séance : 3 séries de 8 au tempo
- *  3 s / 3 s + 2 s en bas. */
-const REFERENCE: Pick<ParametresSeance, 'seriesParExercice' | 'repsParSerie' | 'tempo'> = {
-  seriesParExercice: 3,
-  repsParSerie: 8,
-  tempo: { monteeSec: 3, descenteSec: 3, pauseSec: 2 },
-};
-
-/** Les jours faciles se mesurent avec trois tours : ceux de Max. */
-const REFERENCE_FACILE = { ...REFERENCE, seriesJourFacile: 3 };
-
-/** Réglages complets autour de la référence, pour construire une séance de
- *  mesure. */
-const parametresMinimaux: ParametresSeance = {
+/** Réglages complets pour mesurer une séance : le tempo lent, 3 s / 3 s et
+ *  2 s en bas. */
+const parametresMesure: ParametresSeance = {
   dureeMinutes: DUREE_REFERENCE_MIN,
   zones: ['bas', 'haut', 'dos', 'gainage', 'complet'],
   niveau: 'intermediaire',
   discipline: 'musculation',
   format: 'series',
-  tempo: REFERENCE.tempo,
+  tempo: { monteeSec: 3, descenteSec: 3, pauseSec: 2 },
   materiels: ['halteres'],
   explosifs: false,
   seriesParExercice: 3,
   repsParSerie: 8,
   guideVisuel: 'les-deux',
 };
+
+/** On mesure une séance à deux, aux répétitions d'usage : la semaine normale,
+ *  celle qu'on fait le plus souvent. */
+const MESURE: ContexteSeance = { personne: 'sebastien', aDeux: true };
 
 export function genererProgramme(options: OptionsProgramme = {}): ProgrammeMois {
   const objectifs = options.objectifs ?? OBJECTIFS_PAR_DEFAUT;
@@ -472,10 +537,13 @@ export function genererProgramme(options: OptionsProgramme = {}): ProgrammeMois 
         {
           exclus,
           dejaPris,
-          // Le lundi, les mouvements à deux mains d'abord : plus lourds, et une
-          // série unilatérale coûte deux fois le temps.
-          repousser: (e) =>
-            (tropDeDos && chargeLeBasDuDos(e)) || (gabarit === 'dure' && e.cotes === 'unilateral'),
+          // Les mouvements à deux mains ou en alternant d'abord : une série
+          // d'un seul côté coûte deux fois le temps — et le jeudi, à deux
+          // mains, on charge plus lourd.
+          repousser: (e) => (tropDeDos && chargeLeBasDuDos(e)) || e.cotes === 'unilateral',
+          // Le mardi, jiu-jitsu le soir : rien qui charge le bas du dos, même
+          // un exercice déjà fait le jeudi passe avant.
+          ...(gabarit === 'haut' ? { eviter: chargeLeBasDuDos } : {}),
         },
         alea,
       );
@@ -488,16 +556,16 @@ export function genererProgramme(options: OptionsProgramme = {}): ProgrammeMois 
     return pris;
   };
 
-  /** Le dernier exercice, pour les jambes : hors des mouvements de la
-   *  séance, et pas déjà le dernier d'une autre séance quand on a le choix. */
-  const finaleDe = (type: TypeSeanceMois, exercices: Exercice[]): Exercice | undefined => {
+  /** Le dernier exercice : hors des mouvements de la séance, et pas déjà le
+   *  dernier d'une autre séance quand on a le choix. */
+  const finaleDe = (gabarit: Gabarit, exercices: Exercice[]): Exercice | undefined => {
     const dansLaSeance = new Set(exercices.map(cleMouvement));
     const possibles = (ids: string[]) =>
       ids
         .filter(estConnu)
         .map((id) => EXERCICES_PAR_ID[id])
         .filter((e) => candidats.includes(e) && !dansLaSeance.has(cleMouvement(e)));
-    const pool = possibles(FINALES[type]).length > 0 ? possibles(FINALES[type]) : possibles(FINALES.facile);
+    const pool = possibles(FINALES[gabarit]).length > 0 ? possibles(FINALES[gabarit]) : possibles(FINALES.bas);
     if (pool.length === 0) return undefined;
     const nouvelles = pool.filter((e) => !dejaPris.has(cleMouvement(e)));
     const choix = nouvelles.length > 0 ? nouvelles : pool;
@@ -514,14 +582,17 @@ export function genererProgramme(options: OptionsProgramme = {}): ProgrammeMois 
     return { ...seance, ...(finale ? { finale: finale.id } : {}), ...(tour.length > 0 ? { tour } : {}) };
   };
 
-  const facile = (
+  /** Le lundi et le mardi : des enchaînements de trois, puis le dernier
+   *  exercice en séries. */
+  const enchainee = (
     id: string,
     nom: string,
     jour: number,
     semaine: 'A' | 'B' | undefined,
+    gabarit: 'bas' | 'haut',
     exercices: Exercice[],
   ): SeanceDuMois => {
-    const finale = finaleDe('facile', exercices);
+    const finale = finaleDe(gabarit, exercices);
     const seance = (liste: Exercice[]): SeanceDuMois =>
       complete(
         {
@@ -530,15 +601,17 @@ export function genererProgramme(options: OptionsProgramme = {}): ProgrammeMois 
           jour,
           ...(semaine ? { semaine } : {}),
           type: 'facile',
+          partie: gabarit,
           format: 'enchaine',
           exercices: enEnchainements(liste).map((e) => e.id),
         },
         finale,
       );
-    // Même avec trois tours — ceux de Max —, un jour facile tient dans
-    // l'heure : on retire les dernières places, les moins prioritaires.
+    // À deux, aux répétitions d'usage, la séance tient dans l'heure : on
+    // retire les dernières places, les moins prioritaires — jusqu'à un
+    // enchaînement de trois et une paire.
     let retenus = exercices;
-    while (retenus.length > 6 && dureeSec(seance(retenus), REFERENCE_FACILE) > DUREE_MAXI_SEC) {
+    while (retenus.length > 5 && dureeSec(seance(retenus)) > DUREE_MAXI_SEC) {
       retenus = retenus.slice(0, -1);
     }
     // Un exercice seul dans le dernier bloc n'est plus un enchaînement.
@@ -553,38 +626,53 @@ export function genererProgramme(options: OptionsProgramme = {}): ProgrammeMois 
     return seance(retenus);
   };
 
-  const principalLundi = composer('dure');
-  const finaleLundi = finaleDe('dure', principalLundi);
-  const lundiAvec = (liste: Exercice[]): SeanceDuMois =>
+  // Le jeudi d'abord : c'est la séance de référence, les autres l'entourent
+  // avec d'autres exercices.
+  const principalJeudi = composer('dure');
+  const finaleJeudi = finaleDe('dure', principalJeudi);
+  const jeudiAvec = (liste: Exercice[]): SeanceDuMois =>
     complete(
-      { id: 'lundi', nom: 'Lundi — séance dure', jour: 1, type: 'dure', format: 'series', exercices: liste.map((e) => e.id) },
-      finaleLundi,
+      {
+        id: 'jeudi',
+        nom: 'Jeudi — séance de référence',
+        jour: 4,
+        type: 'dure',
+        partie: 'complet',
+        format: 'series',
+        exercices: liste.map((e) => e.id),
+      },
+      finaleJeudi,
     );
-  // La séance dure tient dans l'heure : on retire d'abord les places de base
-  // (jamais la trap bar, en tête), les objectifs en dernier.
-  let retenusLundi = principalLundi;
-  while (retenusLundi.length > 4 && dureeSec(lundiAvec(retenusLundi), REFERENCE) > DUREE_MAXI_SEC) {
-    const retirables = retenusLundi.map((_, i) => i).filter((i) => i > 0);
-    const deBase = retirables.filter((i) => !surObjectif.has(retenusLundi[i].id));
+  // Elle tient dans l'heure : on retire d'abord les places de base (jamais la
+  // trap bar, en tête), les objectifs en dernier.
+  let retenusJeudi = principalJeudi;
+  while (retenusJeudi.length > 4 && dureeSec(jeudiAvec(retenusJeudi)) > DUREE_MAXI_SEC) {
+    const retirables = retenusJeudi.map((_, i) => i).filter((i) => i > 0);
+    const deBase = retirables.filter((i) => !surObjectif.has(retenusJeudi[i].id));
     const retrait = (deBase.length > 0 ? deBase : retirables).at(-1);
-    retenusLundi = retenusLundi.filter((_, i) => i !== retrait);
+    retenusJeudi = retenusJeudi.filter((_, i) => i !== retrait);
   }
-  const lundi = lundiAvec(retenusLundi);
+  const jeudi = jeudiAvec(retenusJeudi);
 
-  const mardiA = composer('bas');
-  const jeudiA = composer('haut');
-  const seances: SeanceDuMois[] = [lundi];
+  const lundiA = composer('bas');
+  const mardiA = composer('haut');
+  let seances: SeanceDuMois[];
   if (alternance) {
-    const mardiB = composer('bas', mardiA);
-    const jeudiB = composer('haut', jeudiA);
-    seances.push(
-      facile('mardi-a', 'Mardi A', 2, 'A', mardiA),
-      facile('jeudi-a', 'Jeudi A', 4, 'A', jeudiA),
-      facile('mardi-b', 'Mardi B', 2, 'B', mardiB),
-      facile('jeudi-b', 'Jeudi B', 4, 'B', jeudiB),
-    );
+    const lundiB = composer('bas', lundiA);
+    const mardiB = composer('haut', mardiA);
+    seances = [
+      enchainee('lundi-a', 'Lundi A — bas du corps', 1, 'A', 'bas', lundiA),
+      enchainee('mardi-a', 'Mardi A — haut du corps', 2, 'A', 'haut', mardiA),
+      jeudi,
+      enchainee('lundi-b', 'Lundi B — bas du corps', 1, 'B', 'bas', lundiB),
+      enchainee('mardi-b', 'Mardi B — haut du corps', 2, 'B', 'haut', mardiB),
+    ];
   } else {
-    seances.push(facile('mardi', 'Mardi', 2, undefined, mardiA), facile('jeudi', 'Jeudi', 4, undefined, jeudiA));
+    seances = [
+      enchainee('lundi', 'Lundi — bas du corps', 1, undefined, 'bas', lundiA),
+      enchainee('mardi', 'Mardi — haut du corps', 2, undefined, 'haut', mardiA),
+      jeudi,
+    ];
   }
 
   return {
@@ -599,64 +687,100 @@ export function genererProgramme(options: OptionsProgramme = {}): ProgrammeMois 
 
 // ------------------------------------------------------------- La séance de chacun
 
-/** Séries du jour : toutes le lundi ; les jours faciles, celles du réglage
- *  (une de moins que le lundi par défaut). */
-export function seriesDuJour(
-  seance: Pick<SeanceDuMois, 'type'>,
-  parametres: Pick<ParametresSeance, 'seriesParExercice' | 'seriesJourFacile'>,
-): number {
-  const dure = parametres.seriesParExercice ?? 3;
-  if (seance.type === 'dure') return dure;
-  return parametres.seriesJourFacile ?? Math.max(1, dure - 1);
+/** Ce qui fait la séance du jour, au-delà des réglages du téléphone. */
+export interface ContexteSeance {
+  /** Qui s'entraîne sur ce téléphone ; absent, les réglages du téléphone. */
+  personne?: Personne | null;
+  /** À deux : une horloge commune avec l'autre. */
+  aDeux?: boolean;
+  /** Le jeudi de la semaine dure : deux répétitions de plus, même poids. */
+  semaineDure?: boolean;
+  /** Les répétitions de chacun ; absentes, celles d'usage. */
+  reps?: Partial<Record<Personne, number>>;
+  /** Exercices dont la semaine dure a réussi : un cran de plus. */
+  augmenter?: string[];
+}
+
+const PATTERNS_POUSSEE: PatternMoteur[] = ['poussee-horizontale', 'poussee-verticale'];
+const GROUPES_POUSSEE: string[] = ['pectoraux', 'epaules', 'triceps'];
+
+/** Un exercice de poussée : développés, pompes, et l'isolation des
+ *  pectoraux, des épaules et des triceps. Un oiseau, qui tire, n'en est pas. */
+export function estPoussee(exercice: Exercice): boolean {
+  if (PATTERNS_POUSSEE.includes(exercice.pattern)) return true;
+  if (exercice.pattern === 'tirage-horizontal' || exercice.pattern === 'tirage-vertical') return false;
+  return GROUPES_POUSSEE.includes(exercice.groupe);
+}
+
+/** Petit muscle, petite pause : isolation, tronc, mollets. */
+const estPetitMuscle = (exercice: Exercice) =>
+  exercice.pattern === 'isolation' || TRONC.includes(exercice.pattern) || exercice.groupe === 'mollets';
+
+/** Le repos après une série : deux minutes à la trap bar le jeudi, une minute
+ *  trente aux gros exercices, une minute aux petits muscles. */
+export function reposDe(exercice: Exercice, seance: Pick<SeanceDuMois, 'type'>): number {
+  if (exercice.id === 'trap-bar-deadlift' && seance.type === 'dure') return REPOS_TRAP_BAR_SEC;
+  return estPetitMuscle(exercice) ? REPOS_PETITS_SEC : REPOS_SEC;
 }
 
 /** La séance du programme, mise aux réglages de la personne : c'est elle que
  *  déroule la séance guidée — tapis ou rameur, bille, répétitions comptées,
- *  charges notées, étirements. */
+ *  charges notées, étirements. À deux, chaque exercice porte aussi le volume
+ *  de l'autre : les deux téléphones en tirent la même horloge. */
 export function seancePourPersonne(
   seanceMois: SeanceDuMois,
   parametres: ParametresSeance,
+  contexte: ContexteSeance = {},
   maintenant: Date = new Date(),
 ): Seance {
-  const series = seriesDuJour(seanceMois, parametres);
-  const reps = parametres.repsParSerie ?? 8;
+  const moi = contexte.personne ?? null;
+  const partenaire = moi && contexte.aDeux ? autrePersonne(moi) : null;
   const enTour = new Set(seanceMois.tour ?? []);
   const enchaine = seanceMois.format === 'enchaine';
-  // Chacun son tour : on souffle le temps de la série de l'autre.
-  const serieDeLAutre = (exercice: Exercice, repsBloc: number) =>
-    dureeSerieSec(exercice, repsBloc, parametres.tempo) + CHANGEMENT_SEC;
+  const enPlus = contexte.semaineDure && seanceMois.type === 'dure' ? REPS_SEMAINE_DURE : 0;
+  const augmenter = new Set(contexte.augmenter ?? []);
+  const legere = moi !== null && PROFILS[moi].derniereLegereMardi && seanceMois.jour === JOUR_JIU_JITSU;
 
-  const blocs: BlocSeries[] = seanceMois.exercices.filter(estConnu).map((id, index) => {
-    const exercice = EXERCICES_PAR_ID[id];
-    const repsBloc = exercice.unite === 'secondes' ? TENUE_SEC : reps;
-    const tour = enTour.has(id);
+  /** Séries et répétitions d'une personne sur un exercice. */
+  const volumeDe = (qui: Personne | null, exercice: Exercice, finale: boolean) => {
+    const series = SERIES_PROGRAMME + (qui && PROFILS[qui].seriePlusPoussee && estPoussee(exercice) ? 1 : 0);
+    const habituelles = qui
+      ? (contexte.reps?.[qui] ?? REPS_PAR_DEFAUT[qui])
+      : (parametres.repsParSerie ?? REPS_PAR_DEFAUT.sebastien);
+    const reps = exercice.unite === 'secondes' ? TENUE_SEC : habituelles + enPlus;
+    return finale ? volumeFinale(exercice, series, reps) : { series, reps };
+  };
+
+  const blocDe = (exercice: Exercice, finale: boolean): BlocSeries => {
+    const mien = volumeDe(moi, exercice, finale);
+    const charge = exercice.unite === 'reps';
     return {
-      exerciceId: id,
-      series,
-      reps: repsBloc,
-      reposSec: tour && !enchaine ? serieDeLAutre(exercice, repsBloc) : REPOS_SEC,
-      ...(tour ? { tour: true } : {}),
-      ...(enchaine
-        ? {
-            superset: Math.floor(index / TAILLE_ENCHAINEMENT),
-            transitionSec: tour ? serieDeLAutre(exercice, repsBloc) : 0,
-          }
-        : {}),
-    };
-  });
-  // Les jambes pour finir, en séries, après les enchaînements.
-  if (estConnu(seanceMois.finale)) {
-    const exercice = EXERCICES_PAR_ID[seanceMois.finale];
-    const volume = volumeFinale(exercice, series, reps);
-    const tour = enTour.has(exercice.id);
-    blocs.push({
       exerciceId: exercice.id,
-      series: volume.series,
-      reps: volume.reps,
-      reposSec: tour ? serieDeLAutre(exercice, volume.reps) : REPOS_SEC,
-      ...(tour ? { tour: true } : {}),
-    });
-  }
+      series: mien.series,
+      reps: mien.reps,
+      reposSec: enchaine && !finale ? REPOS_SEC : reposDe(exercice, seanceMois),
+      ...(enTour.has(exercice.id) ? { tour: true } : {}),
+      ...(partenaire ? { autre: volumeDe(partenaire, exercice, finale) } : {}),
+      ...(legere && charge ? { derniereLegere: true } : {}),
+      ...(augmenter.has(exercice.id) && charge ? { ajoutCharge: CRAN[uniteDeSeance(parametres)] } : {}),
+    };
+  };
+
+  // Le jeudi, deux exercices liés s'enchaînent sans pause ; la pause vient
+  // après le groupe, la plus longue des siennes.
+  const liens = enchaine ? [] : (seanceMois.liens ?? []);
+  const blocs: BlocSeries[] = seanceMois.exercices.filter(estConnu).map((id, index) => {
+    const bloc = blocDe(EXERCICES_PAR_ID[id], false);
+    if (enchaine) return { ...bloc, superset: Math.floor(index / TAILLE_ENCHAINEMENT), transitionSec: 0 };
+    const lien = liens.findIndex((groupe) => groupe.includes(id));
+    if (lien < 0) return bloc;
+    const reposDuLien = Math.max(
+      ...liens[lien].filter(estConnu).map((membre) => reposDe(EXERCICES_PAR_ID[membre], seanceMois)),
+    );
+    return { ...bloc, superset: lien, transitionSec: TRANSITION_LIEN_SEC, reposSec: reposDuLien };
+  });
+  // Pour finir, en séries.
+  if (estConnu(seanceMois.finale)) blocs.push(blocDe(EXERCICES_PAR_ID[seanceMois.finale], true));
 
   const echauffement = echauffementDe(seanceMois);
   const retourCalme = etirementsDe(seanceMois);
@@ -670,7 +794,7 @@ export function seancePourPersonne(
       dureeMinutes: DUREE_REFERENCE_MIN,
       format: enchaine ? 'circuit' : 'series',
       styleCircuit: 'enchaine',
-      seriesParExercice: (parametres.seriesParExercice ?? 3) as ParametresSeance['seriesParExercice'],
+      seriesParExercice: SERIES_PROGRAMME,
       tempo: { ...parametres.tempo },
     },
     graine: 0,
@@ -678,23 +802,28 @@ export function seancePourPersonne(
     retourCalmeSec: dureeDes(retourCalme),
     echauffement,
     retourCalme,
+    // Chaque nouvel exercice attend « Go » ; à deux, l'horloge est commune.
+    horloge: {
+      ...(moi ? { personne: moi } : {}),
+      ...(partenaire ? { partenaire: NOM_PERSONNE[partenaire], jeCommence: moi === COMMENCE } : {}),
+    },
     blocs,
     circuit: null,
     dureeEstimeeSec: 0,
   };
-  seance.dureeEstimeeSec = estimerDureeSec(seance);
+  seance.dureeEstimeeSec = dureeTotaleSec(construireEtapes(seance));
   return seance;
 }
 
-/** Durée d'une séance du programme pour des réglages donnés. */
+/** Durée d'une séance du programme : à deux, aux répétitions d'usage, une
+ *  semaine normale, sauf contexte donné. */
 export function dureeSec(
   seanceMois: SeanceDuMois,
-  parametres: Pick<ParametresSeance, 'seriesParExercice' | 'seriesJourFacile' | 'repsParSerie' | 'tempo'>,
+  parametres: Partial<ParametresSeance> = {},
+  contexte: ContexteSeance = MESURE,
 ): number {
-  const complets = { ...parametresMinimaux, ...parametres } as ParametresSeance;
-  return seancePourPersonne(seanceMois, complets, new Date(0)).dureeEstimeeSec;
+  return seancePourPersonne(seanceMois, { ...parametresMesure, ...parametres }, contexte, new Date(0)).dureeEstimeeSec;
 }
-
 
 // ------------------------------------------------------------- Le calendrier
 
@@ -801,6 +930,48 @@ export function seanceAProposer(
   return suivante && { ...suivante, dansJours: suivante.dansJours + 1 };
 }
 
+/** Le prochain jour où revient cette séance, aujourd'hui compris. */
+export function prochaineDate(
+  programme: Pick<ProgrammeMois, 'debut'>,
+  seance: Pick<SeanceDuMois, 'jour' | 'semaine'>,
+  depuis: Date,
+): Date {
+  for (let i = 0; i < 14; i += 1) {
+    const jour = new Date(depuis.getFullYear(), depuis.getMonth(), depuis.getDate() + i);
+    const bonneSemaine = seance.semaine === undefined || semaineDe(programme, jour) === seance.semaine;
+    if (jour.getDay() === seance.jour && bonneSemaine) return jour;
+  }
+  return depuis;
+}
+
+/** La semaine dure : le jeudi d'une semaine B, même poids, deux répétitions
+ *  de plus. Une semaine sur deux, le temps que le corps encaisse. */
+export function estSemaineDure(
+  programme: Pick<ProgrammeMois, 'debut'>,
+  seance: Pick<SeanceDuMois, 'type'>,
+  date: Date,
+): boolean {
+  return seance.type === 'dure' && semaineDe(programme, date) === 'B';
+}
+
+/** Après une semaine dure réussie — toutes les séries faites —, le jeudi
+ *  normal qui suit propose un cran de plus : 5 lb, ou 2,5 kg. Les exercices
+ *  concernés, d'après le dernier jeudi fait avant cette semaine. */
+export function exercicesAAugmenter(
+  historique: SeanceRealisee[],
+  programme: Pick<ProgrammeMois, 'debut'>,
+  seance: Pick<SeanceDuMois, 'type' | 'nom'>,
+  date: Date,
+): string[] {
+  if (seance.type !== 'dure' || estSemaineDure(programme, seance, date)) return [];
+  const cetteSemaine = lundiDe(date).getTime();
+  const dernier = historique.find((h) => h.titre === seance.nom && new Date(h.date).getTime() < cetteSemaine);
+  if (!dernier || !estSemaineDure(programme, seance, new Date(dernier.date))) return [];
+  return dernier.exercices
+    .filter((e) => e.seriesPrevues > 0 && e.seriesFaites >= e.seriesPrevues && (e.poids ?? 0) > 0)
+    .map((e) => e.exerciceId);
+}
+
 // ------------------------------------------------------------- Changer un exercice
 
 /** Tous les exercices d'une séance, le dernier compris. */
@@ -828,7 +999,7 @@ export function alternatives(
     Number(ailleurs.has(cleMouvement(a))) - Number(ailleurs.has(cleMouvement(b)));
 
   if (exerciceId === seance.finale) {
-    const finales = new Set([...FINALES.dure, ...FINALES.facile]);
+    const finales = new Set(Object.values(FINALES).flat());
     return libres.filter((e) => finales.has(e.id)).sort(nouveautesDAbord).slice(0, maxi);
   }
   const muscles = (actuel.musclesPrincipaux ?? []).length > 0 ? actuel.musclesPrincipaux! : musclesDe(actuel);
@@ -851,10 +1022,12 @@ export function remplacerDansProgramme(
     ...programme,
     seances: programme.seances.map((s) => {
       if (s.id !== seanceId) return s;
+      const remplacer = (id: string) => (id === ancienId ? nouveauId : id);
       const remplacee: SeanceDuMois = {
         ...s,
-        exercices: s.exercices.map((id) => (id === ancienId ? nouveauId : id)),
+        exercices: s.exercices.map(remplacer),
         ...(s.finale === ancienId ? { finale: nouveauId } : {}),
+        ...(s.liens ? { liens: s.liens.map((groupe) => groupe.map(remplacer)) } : {}),
       };
       const tour = [...(s.tour ?? []).filter((id) => id !== ancienId), ...(surMachine ? [nouveauId] : [])];
       if (tour.length > 0) remplacee.tour = tour;
@@ -876,6 +1049,63 @@ export function basculerTour(programme: ProgrammeMois, seanceId: string, exercic
       const basculee: SeanceDuMois = { ...s, tour };
       if (tour.length === 0) delete basculee.tour;
       return basculee;
+    }),
+  };
+}
+
+// ------------------------------------------------------------- Lier deux exercices
+
+/** Deux exercices qu'on lie, le jeudi : bons partenaires quand ils ne
+ *  travaillent pas les mêmes muscles — pousser et tirer, le haut et le bas — et
+ *  ne chargent pas tous les deux le bas du dos. */
+export type AccordLien = 'bon' | 'memes-muscles' | 'bas-du-dos';
+
+export function accordLien(a: Exercice, b: Exercice): AccordLien {
+  if (chargeLeBasDuDos(a) && chargeLeBasDuDos(b)) return 'bas-du-dos';
+  const principaux = new Set(a.musclesPrincipaux ?? []);
+  const communs = a.groupe === b.groupe || (b.musclesPrincipaux ?? []).some((m) => principaux.has(m));
+  return communs ? 'memes-muscles' : 'bon';
+}
+
+/** Lie deux exercices d'une séance en séries : ils s'enchaînent sans pause,
+ *  la pause vient après la paire. Le second de la séance vient se placer
+ *  juste après le premier — la trap bar reste en tête. Un exercice déjà lié ne
+ *  se lie pas une seconde fois. */
+export function lierDansProgramme(
+  programme: ProgrammeMois,
+  seanceId: string,
+  unId: string,
+  autreId: string,
+): ProgrammeMois {
+  return {
+    ...programme,
+    seances: programme.seances.map((s) => {
+      if (s.id !== seanceId || s.format !== 'series' || unId === autreId) return s;
+      const liens = s.liens ?? [];
+      const libre = (id: string) => s.exercices.includes(id) && !liens.some((groupe) => groupe.includes(id));
+      if (!libre(unId) || !libre(autreId)) return s;
+      const [premier, second] =
+        s.exercices.indexOf(unId) < s.exercices.indexOf(autreId) ? [unId, autreId] : [autreId, unId];
+      const sans = s.exercices.filter((id) => id !== second);
+      const place = sans.indexOf(premier) + 1;
+      return {
+        ...s,
+        exercices: [...sans.slice(0, place), second, ...sans.slice(place)],
+        liens: [...liens, [premier, second]],
+      };
+    }),
+  };
+}
+
+/** Délie le groupe d'un exercice : chacun retrouve ses pauses. */
+export function delierDansProgramme(programme: ProgrammeMois, seanceId: string, exerciceId: string): ProgrammeMois {
+  return {
+    ...programme,
+    seances: programme.seances.map((s) => {
+      if (s.id !== seanceId || !s.liens) return s;
+      const deliee: SeanceDuMois = { ...s, liens: s.liens.filter((groupe) => !groupe.includes(exerciceId)) };
+      if (deliee.liens?.length === 0) delete deliee.liens;
+      return deliee;
     }),
   };
 }
@@ -909,6 +1139,34 @@ export function chargesPassees(
 const derniereNotee = (charges: number[]) =>
   charges.reduce((derniere, charge) => (charge > 0 ? charge : derniere), 0);
 
+/** La moitié d'une charge, arrondie vers le bas au cran des haltères : la
+ *  dernière série légère du mardi. */
+export function chargeLegere(charge: number, unite: UnitePoids): number {
+  if (charge <= 0) return 0;
+  const cran = CRAN[unite];
+  return Math.min(charge, Math.max(cran, Math.floor(charge / 2 / cran) * cran));
+}
+
+/** La charge proposée pour une série d'une séance du programme : celle de
+ *  `chargeProposee`, un cran de plus après une semaine dure réussie, et la
+ *  moitié pour la dernière série légère du mardi. */
+export function chargeDeSerie(
+  bloc: Pick<BlocSeries, 'series' | 'ajoutCharge' | 'derniereLegere'> | undefined,
+  saisies: number[],
+  passees: number[],
+  serie: number,
+  unite: UnitePoids,
+): number {
+  const deja = saisies[serie - 1] ?? 0;
+  if (deja > 0) return deja;
+  const ajout = bloc?.ajoutCharge ?? 0;
+  const reference = ajout > 0 ? passees.map((charge) => (charge > 0 ? charge + ajout : 0)) : passees;
+  if (bloc?.derniereLegere && serie > 1 && serie === bloc.series) {
+    return chargeLegere(chargeProposee(saisies, reference, serie - 1), unite);
+  }
+  return chargeProposee(saisies, reference, serie);
+}
+
 /** La charge proposée pour une série (numérotée à partir de 1) : celle déjà
  *  notée ; sinon celle de la série d'avant — au tempo lent, on la garde
  *  presque toujours ; sinon celle de la même série la dernière fois. */
@@ -937,6 +1195,32 @@ function depuisBase64Url(code: string): string {
   return new TextDecoder().decode(Uint8Array.from(binaire, (c) => c.charCodeAt(0)));
 }
 
+/** Les liens lisibles : deux ou trois exercices de la séance, côte à côte,
+ *  chacun dans un seul groupe. */
+function lireLiens(brut: unknown[], exercices: string[]): string[][] {
+  const pris = new Set<string>();
+  const liens: string[][] = [];
+  for (const groupe of brut) {
+    if (!Array.isArray(groupe) || groupe.length < 2 || groupe.length > 3) continue;
+    const ids = groupe.filter((id): id is string => estConnu(id) && exercices.includes(id) && !pris.has(id));
+    if (ids.length !== groupe.length || new Set(ids).size !== ids.length) continue;
+    const places = ids.map((id) => exercices.indexOf(id));
+    if (!places.every((place, i) => i === 0 || place === places[i - 1] + 1)) continue;
+    ids.forEach((id) => pris.add(id));
+    liens.push(ids);
+  }
+  return liens;
+}
+
+/** Les répétitions du duo, si les deux sont lisibles. */
+function lireDuo(brut: unknown): ProgrammeMois['duo'] {
+  const reps = (brut as { reps?: Partial<Record<Personne, unknown>> } | null | undefined)?.reps;
+  const lire = (n: unknown) => (typeof n === 'number' && Number.isInteger(n) && n >= 1 && n <= 30 ? n : null);
+  const sebastien = lire(reps?.sebastien);
+  const max = lire(reps?.max);
+  return sebastien !== null && max !== null ? { reps: { sebastien, max } } : undefined;
+}
+
 /** Relit un programme reçu ou sauvegardé ; null s'il est illisible. Les
  *  exercices inconnus de cette version de l'application sont écartés. */
 export function validerProgramme(brut: unknown): ProgrammeMois | null {
@@ -958,15 +1242,19 @@ export function validerProgramme(brut: unknown): ProgrammeMois | null {
       const tour = Array.isArray(s.tour)
         ? s.tour.filter((id) => estConnu(id) && (exercices.includes(id) || id === finale))
         : [];
+      const partie = s.partie === 'bas' || s.partie === 'haut' || s.partie === 'complet' ? s.partie : undefined;
+      const liens = Array.isArray(s.liens) ? lireLiens(s.liens, exercices) : [];
       return {
         id: s.id,
         nom: s.nom,
         jour: s.jour,
         ...(s.semaine === 'A' || s.semaine === 'B' ? { semaine: s.semaine } : {}),
         type: s.type === 'dure' ? 'dure' : 'facile',
+        ...(partie ? { partie } : {}),
         format: s.format === 'series' ? 'series' : 'enchaine',
         exercices,
         ...(finale ? { finale } : {}),
+        ...(liens.length > 0 ? { liens } : {}),
         ...(tour.length > 0 ? { tour } : {}),
       };
     });
@@ -980,21 +1268,24 @@ export function validerProgramme(brut: unknown): ProgrammeMois | null {
     graine: typeof p.graine === 'number' ? p.graine : 0,
     seances,
     ...(typeof p.version === 'number' ? { version: p.version } : {}),
+    ...(lireDuo(p.duo) ? { duo: lireDuo(p.duo) } : {}),
   });
 }
 
-/** Un programme d'une version précédente — sans trap bar ni jambes pour
- *  finir — est recomposé avec la même graine, les mêmes objectifs et le même
- *  premier lundi : les deux téléphones retombent sur le même programme. */
+/** Un programme d'une version précédente — l'ancienne semaine, la séance
+ *  dure le lundi — est recomposé avec la même graine, les mêmes objectifs et
+ *  le même premier lundi : les deux téléphones retombent sur le même
+ *  programme. */
 function mettreANiveau(programme: ProgrammeMois): ProgrammeMois {
   if ((programme.version ?? 1) >= VERSION_PROGRAMME) return programme;
-  return genererProgramme({
+  const recompose = genererProgramme({
     objectifs: programme.objectifs,
     materiels: [...new Set<Materiel>([...programme.materiels, ...MATERIELS_PROGRAMME])],
     graine: programme.graine,
     alternance: programme.seances.some((s) => s.semaine !== undefined),
     aujourdhui: depuisIso(programme.debut),
   });
+  return programme.duo ? { ...recompose, duo: programme.duo } : recompose;
 }
 
 export function encoderProgramme(programme: ProgrammeMois): string {

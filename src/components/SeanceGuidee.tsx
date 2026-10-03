@@ -9,6 +9,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ChangeEvent, CSSProperties, ReactNode } from 'react';
 import type {
+  BlocSeries,
   Exercice,
   GuideVisuel,
   MouvementGuide,
@@ -37,7 +38,7 @@ import {
 import type { Etape, EtatMaintien, EtatMetronome, PhaseTempo, Suivant } from '../utils/etapesSeance';
 import { estMobilite, secondesParRep } from '../utils/generateurSeance';
 import { libelleTempo } from '../utils/formatage';
-import { chargeProposee } from '../utils/programmeMois';
+import { chargeDeSerie, chargeLeBasDuDos, etirementsPauseDe } from '../utils/programmeMois';
 import { SUFFIXE_UNITE, libellePoidsParSerie, uniteDeSeance } from '../utils/statistiques';
 import { ajouterTemps, useMoteurEtapes } from '../hooks/useMoteurEtapes';
 import { useVerrouEcran } from '../hooks/useVerrouEcran';
@@ -63,9 +64,6 @@ export interface SeanceGuideeProps {
    *  programme montre déjà la séance, un second « Commencer » ferait double
    *  emploi. 'reprise' repart de la progression sauvegardée. */
   demarrage?: 'debut' | 'reprise';
-  /** Le partenaire : pendant le repos d'un exercice fait chacun son tour,
-   *  l'écran annonce « Au tour de Max ». */
-  partenaire?: string;
 }
 
 // ------------------------------------------------------------- Réglages
@@ -79,6 +77,10 @@ const PROLONGATION_REPOS_SEC = 15;
 const TOLERANCE_FIN_MS = 1000;
 /** Les dernières secondes d'un compte à rebours passent en rouge. */
 const SECONDES_ALERTE = 3;
+/** Une pause assez longue pour s'étirer : pendant la série de l'autre, ou
+ *  un grand repos. */
+const PAUSE_ETIREMENT_SEC = 45;
+const GRAND_REPOS_SEC = 90;
 /** Hauteur du rail de la bille. Mesurée pour que « Série terminée » reste
  *  au-dessus de la barre du bas sur un écran de 390 × 844 : la vignette, le
  *  compteur, les points d'attention et la saisie du poids passent avant. */
@@ -249,7 +251,7 @@ function libellePhase(etape: Etape, mobilite: boolean): string {
     case 'serie':
       return mobilite ? 'Position' : 'Série';
     case 'repos':
-      return mobilite ? 'Transition' : 'Repos';
+      return mobilite ? 'Transition' : etape.manuel ? 'Installation' : 'Repos';
     case 'station':
       return 'Circuit';
     case 'reposTour':
@@ -335,6 +337,14 @@ function couleurCompte(resteSec: number, normale: string): string {
   return resteSec <= SECONDES_ALERTE ? 'var(--alerte)' : normale;
 }
 
+/** Une pause où l'on peut s'étirer : pendant la série de l'autre — chacun son
+ *  tour, sa série de plus —, ou un grand repos. Jamais quand on installe. */
+function pauseAEtirement(etape: Etape): boolean {
+  if (etape.type !== 'repos' || etape.manuel) return false;
+  if (etape.motif === 'tour' || etape.motif === 'serie-de-plus') return etape.dureeSec >= PAUSE_ETIREMENT_SEC;
+  return etape.motif === 'repos' && etape.dureeSec >= GRAND_REPOS_SEC;
+}
+
 // ------------------------------------------------------------- Composant
 
 export default function SeanceGuidee({
@@ -345,7 +355,6 @@ export default function SeanceGuidee({
   onQuitter,
   chargesPassees = {},
   demarrage,
-  partenaire,
 }: SeanceGuideeProps) {
   // La progression proposée à la reprise est figée à l'ouverture : les
   // sauvegardes que nous envoyons ensuite reviennent dans cette même prop.
@@ -370,6 +379,12 @@ export default function SeanceGuidee({
   // Les séances enregistrées avant l'arrivée du réglage n'ont pas de guide.
   const guideVisuel: GuideVisuel = seanceActive.parametres.guideVisuel ?? 'les-deux';
   const unitePoids = uniteDeSeance(seanceActive.parametres);
+  // À deux : le prénom de l'autre, pour dire qui fait sa série.
+  const partenaire = seanceActive.horloge?.partenaire;
+  const personne = seanceActive.horloge?.personne;
+  const etirementsPause = useMemo(() => (personne ? etirementsPauseDe(personne) : []), [personne]);
+  const blocDe = (exerciceId: string): BlocSeries | undefined =>
+    seanceActive.blocs.find((bloc) => bloc.exerciceId === exerciceId);
 
   const moteur = useMoteurEtapes(etapes.length);
 
@@ -483,8 +498,10 @@ export default function SeanceGuidee({
       }
     }
 
-    // Fin de l'étape : passage automatique à la suivante.
-    if (ecoule >= dureeEff && ev.avance !== visite) {
+    // Fin de l'étape : passage automatique à la suivante — sauf quand la
+    // séance attend « Go ».
+    const attendGo = etape.type === 'repos' && etape.manuel === true;
+    if (ecoule >= dureeEff && ev.avance !== visite && !attendGo) {
       ev.avance = visite;
       if (etape.type === 'serie' || etape.type === 'station') bellSound.playBell('end');
       const finPrevueMs = etat.debutEtapeMs + dureeEff * 1000;
@@ -710,6 +727,7 @@ export default function SeanceGuidee({
           tempo={tempo}
           guideVisuel={guideVisuel}
           lireEcouleSec={lireEcouleSec}
+          bloc={blocDe(etape.exerciceId)}
           poidsSeries={poids[etape.exerciceId] ?? []}
           chargesPassees={chargesPassees[etape.exerciceId] ?? []}
           unitePoids={unitePoids}
@@ -720,21 +738,37 @@ export default function SeanceGuidee({
       );
       break;
     case 'repos':
-    case 'reposTour':
+    case 'reposTour': {
+      // La charge à installer pour la série qui vient.
+      const cible = etape.suivant;
+      const charge =
+        cible.type === 'serie'
+          ? chargeDeSerie(
+              blocDe(cible.exerciceId),
+              poids[cible.exerciceId] ?? [],
+              chargesPassees[cible.exerciceId] ?? [],
+              cible.serie,
+              unitePoids,
+            )
+          : 0;
+      // Un étirement par longue pause, à tour de rôle.
+      const etirement =
+        etirementsPause.length > 0 && pauseAEtirement(etape)
+          ? etirementsPause[etapes.slice(0, index).filter(pauseAEtirement).length % etirementsPause.length]
+          : undefined;
       corps = (
         <CorpsRepos
           etape={etape}
           resteSec={reste}
-          tourDe={
-            etape.type === 'repos' && seanceActive.blocs.some((b) => b.exerciceId === etape.exerciceId && b.tour)
-              ? (partenaire ?? 'l’autre')
-              : undefined
-          }
+          partenaire={partenaire}
+          charge={charge > 0 ? `${charge} ${SUFFIXE_UNITE[unitePoids]}` : undefined}
+          etirement={etirement}
           onProlonger={prolongerRepos}
           onPasser={suivant}
         />
       );
       break;
+    }
     case 'fin':
       corps = <CorpsFin realisee={realisation(true)} onEnregistrer={enregistrer} onAbandonner={abandonner} />;
       break;
@@ -1117,6 +1151,8 @@ interface CorpsTravailProps {
   guideVisuel: GuideVisuel;
   /** Horloge de l'étape, lue à chaque image par la bille. */
   lireEcouleSec: () => number;
+  /** Le bloc de la séance : cran de plus, dernière série légère. */
+  bloc?: BlocSeries;
   /** Charges déjà saisies pour cet exercice, index 0 = première série. */
   poidsSeries: number[];
   /** Charges de la dernière fois, série par série ; vide si aucune. */
@@ -1136,6 +1172,7 @@ function CorpsTravail({
   tempo,
   guideVisuel,
   lireEcouleSec,
+  bloc,
   poidsSeries,
   chargesPassees,
   unitePoids,
@@ -1147,8 +1184,13 @@ function CorpsTravail({
   const serieCourante = etape.type === 'serie' ? etape.serie : etape.tour;
   const dejaSaisi = poidsSeries[serieCourante - 1] ?? 0;
   // Sans saisie pour cette série, on propose la charge de la série d'avant,
-  // sinon celle de la dernière fois.
-  const valeurDepart = chargeProposee(poidsSeries, chargesPassees, serieCourante);
+  // sinon celle de la dernière fois — un cran de plus après une semaine dure
+  // réussie, la moitié pour la dernière série légère du mardi.
+  const valeurDepart = chargeDeSerie(bloc, poidsSeries, chargesPassees, serieCourante, unitePoids);
+  const serieLegere =
+    etape.type === 'serie' && bloc?.derniereLegere === true && etape.serie === etape.series && etape.series > 1;
+  // Une série longue qui charge le bas du dos : le rappel qui protège.
+  const dosAMenager = etape.type === 'serie' && etape.reps >= 10 && chargeLeBasDuDos(exercice);
 
   // Le texte saisi est gardé tel quel (« 12, » ne doit pas être réécrit en
   // « 12 » à chaque frappe) ; seule la valeur numérique remonte au parent.
@@ -1188,6 +1230,17 @@ function CorpsTravail({
           <p className="text-sm" style={{ color: 'var(--texte-discret)' }}>{sousTitre}</p>
         </div>
       </div>
+
+      {(serieLegere || dosAMenager) && (
+        <p
+          className="rounded-2xl px-4 py-2 text-sm font-semibold"
+          style={{ background: 'var(--surface)', color: serieLegere ? 'var(--accent)' : 'var(--alerte)' }}
+        >
+          {serieLegere
+            ? 'Série légère : la moitié de la charge. On garde du jus pour le jiu-jitsu.'
+            : 'Si le dos s’arrondit, on arrête la série.'}
+        </p>
+      )}
 
       {metro ? (
         <Metronome
@@ -1262,6 +1315,11 @@ function CorpsTravail({
           {chargesPassees.some((charge) => charge > 0) && (
             <span className="chiffres block text-xs" style={{ color: 'var(--texte-discret)' }}>
               Dernière fois : {chargesPassees.map((charge) => (charge > 0 ? charge : '—')).join(' · ')}
+            </span>
+          )}
+          {bloc?.ajoutCharge !== undefined && chargesPassees.some((charge) => charge > 0) && (
+            <span className="chiffres block text-xs font-semibold" style={{ color: 'var(--montee)' }}>
+              +{bloc.ajoutCharge} {SUFFIXE_UNITE[unitePoids]} : semaine dure réussie
             </span>
           )}
         </span>
@@ -1390,25 +1448,44 @@ function Metronome({ metro, exercice, tempo, guideVisuel, lireEcouleSec }: Metro
 interface CorpsReposProps {
   etape: Extract<Etape, { type: 'repos' | 'reposTour' }>;
   resteSec: number;
-  /** Chacun son tour : le nom de celui qui fait sa série pendant ce repos. */
-  tourDe?: string;
+  /** À deux : le prénom de l'autre. */
+  partenaire?: string;
+  /** La charge à installer pour la série qui vient : « 105 lb ». */
+  charge?: string;
+  /** Un étirement à faire pendant la pause. */
+  etirement?: string;
   onProlonger: () => void;
   onPasser: () => void;
 }
 
-function CorpsRepos({ etape, resteSec, tourDe, onProlonger, onPasser }: CorpsReposProps) {
+/** Ce qui retient pendant la pause, en tête de l'écran. */
+function titreRepos(etape: CorpsReposProps['etape'], partenaire: string | undefined, suivant: Exercice | null): string {
+  if (etape.type === 'reposTour') return `Fin du tour ${etape.tour} / ${etape.tours} · repos`;
+  const autre = partenaire ?? 'l’autre';
+  switch (etape.motif) {
+    case 'installation':
+      return 'Prochain exercice : on installe';
+    case 'tour':
+      return `Au tour de ${autre}`;
+    case 'serie-de-plus':
+      return `Repos prolongé — ${autre} fait sa série de plus`;
+    case 'attente':
+      return `${autre} finit sa série`;
+    default:
+      return suivant && estPosture(suivant) ? 'Changez de position' : 'Repos';
+  }
+}
+
+function CorpsRepos({ etape, resteSec, partenaire, charge, etirement, onProlonger, onPasser }: CorpsReposProps) {
   const { suivant } = etape;
   const exerciceSuivant = suivant.type === 'retourCalme' ? null : exerciceDeSeance(suivant.exerciceId);
+  // Nouvel exercice : on repart ensemble sur « Go », quand tout est prêt.
+  const attendGo = etape.type === 'repos' && etape.manuel === true;
+  const etire = etirement ? exerciceDeSeance(etirement) : null;
   return (
     <div className="space-y-4 text-center">
       <div className="text-xs font-bold uppercase tracking-[0.18em]" style={{ color: 'var(--descente)' }}>
-        {etape.type === 'reposTour'
-          ? `Fin du tour ${etape.tour} / ${etape.tours} · repos`
-          : tourDe
-            ? `Au tour de ${tourDe}`
-            : exerciceSuivant && estPosture(exerciceSuivant)
-              ? 'Changez de position'
-              : 'Repos'}
+        {titreRepos(etape, partenaire, exerciceSuivant)}
       </div>
       <div
         className="chiffres text-8xl font-bold leading-none"
@@ -1416,6 +1493,28 @@ function CorpsRepos({ etape, resteSec, tourDe, onProlonger, onPasser }: CorpsRep
       >
         {formaterMmSs(Math.ceil(resteSec))}
       </div>
+      {attendGo && resteSec <= 0 && (
+        <p className="text-lg font-bold" style={{ color: 'var(--montee)' }}>
+          Prêts ? On repart sur « Go ».
+        </p>
+      )}
+
+      {etire && (
+        <div className="flex items-center gap-3 rounded-2xl p-3 text-left" style={{ background: 'var(--surface)' }}>
+          <Vignette exerciceId={etire.id} alt={etire.nomFr} className="w-24 shrink-0 rounded-xl" />
+          <div className="min-w-0">
+            <div className="text-xs font-bold uppercase tracking-[0.14em]" style={{ color: 'var(--texte-discret)' }}>
+              Pendant ce temps, on s’étire
+            </div>
+            <div className="font-bold">{etire.nomFr}</div>
+            <div className="text-sm" style={{ color: 'var(--texte-discret)' }}>
+              {etire.cotes === 'unilateral' ? '20 s de chaque côté' : '20 à 30 s'}, en douceur, jamais jusqu’à la
+              douleur.
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="rounded-2xl p-4" style={{ background: 'var(--surface)' }}>
         <div className="mb-2 text-xs font-bold uppercase tracking-[0.18em]" style={{ color: 'var(--texte-discret)' }}>
           Prochain
@@ -1429,19 +1528,30 @@ function CorpsRepos({ etape, resteSec, tourDe, onProlonger, onPasser }: CorpsRep
             />
             <div className="mt-2 text-xl font-bold">{exerciceSuivant.nomFr}</div>
             <div style={{ color: 'var(--texte-discret)' }}>{libelleSuivant(suivant)}</div>
+            {charge && (
+              <div className="chiffres mt-1 text-lg font-bold" style={{ color: 'var(--texte)' }}>
+                Charge : {charge}
+              </div>
+            )}
           </>
         ) : (
           <div className="text-xl font-bold">Retour au calme</div>
         )}
       </div>
-      <div className="grid grid-cols-2 gap-3">
-        <Bouton variante="neutre" onClick={onProlonger}>
-          +{PROLONGATION_REPOS_SEC} s
+      {attendGo ? (
+        <Bouton variante="montee" taille="vedette" onClick={onPasser} className="w-full">
+          Go
         </Bouton>
-        <Bouton variante="accent" onClick={onPasser}>
-          Passer
-        </Bouton>
-      </div>
+      ) : (
+        <div className="grid grid-cols-2 gap-3">
+          <Bouton variante="neutre" onClick={onProlonger}>
+            +{PROLONGATION_REPOS_SEC} s
+          </Bouton>
+          <Bouton variante="accent" onClick={onPasser}>
+            Passer
+          </Bouton>
+        </div>
+      )}
     </div>
   );
 }

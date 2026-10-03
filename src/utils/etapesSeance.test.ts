@@ -2,9 +2,13 @@ import { describe, expect, it } from 'vitest';
 import type { Seance } from '../types';
 import { EXERCICES_PAR_ID } from '../data/exercices';
 import { DUREES_MINUTES, FORMATS, NIVEAUX, PARAMETRES_PAR_DEFAUT } from '../data/parametres';
-import { genererSeance } from './generateurSeance';
+import { dureeSerieSec, genererSeance } from './generateurSeance';
+import { estPoussee, genererProgramme, lierDansProgramme, seancePourPersonne } from './programmeMois';
+import type { ContexteSeance } from './programmeMois';
 import {
+  CHANGEMENT_SEC,
   DUREE_PRET_SEC,
+  INSTALLATION_SEC,
   agregerRealisation,
   construireEtapes,
   dureeRestanteSec,
@@ -589,5 +593,120 @@ describe('superset', () => {
     const premiereSerie = ETAPES_SUPERSET.findIndex((e) => e.type === 'serie');
     const apres = indexApresExercice(ETAPES_SUPERSET, premiereSerie);
     expect(ETAPES_SUPERSET[apres].exerciceId).toBe('russian-twist');
+  });
+});
+
+describe('l’horloge des séances du programme', () => {
+  const programme = genererProgramme({ graine: 3, aujourdhui: new Date(2026, 9, 5) });
+  const jeudiMois = programme.seances.find((s) => s.id === 'jeudi')!;
+  const tempo = { monteeSec: 3, descenteSec: 3, pauseSec: 2 };
+  const parametres = { ...PARAMETRES_PAR_DEFAUT, tempo };
+  const SEB: ContexteSeance = { personne: 'sebastien', aDeux: true };
+  const MAX: ContexteSeance = { personne: 'max', aDeux: true };
+  const etapesDe = (seanceMois = jeudiMois, contexte: ContexteSeance = SEB) =>
+    construireEtapes(seancePourPersonne(seanceMois, parametres, contexte));
+  const serieDe = (exerciceId: string, reps: number) => dureeSerieSec(EXERCICES_PAR_ID[exerciceId], reps, tempo);
+
+  /** L'instant où commence chaque étape, depuis le début de la séance. */
+  const debuts = (etapes: Etape[]) => {
+    let t = 0;
+    return etapes.map((etape) => {
+      const debut = t;
+      t += etape.dureeSec;
+      return debut;
+    });
+  };
+  /** Les instants où la séance attend « Go ». */
+  const instantsGo = (etapes: Etape[]) => {
+    const d = debuts(etapes);
+    return etapes.flatMap((e, i) => (e.type === 'repos' && e.manuel ? [d[i]] : []));
+  };
+  /** Les séries d'un téléphone, avec leur début et leur fin. */
+  const series = (etapes: Etape[]) => {
+    const d = debuts(etapes);
+    return etapes.flatMap((e, i) => (e.type === 'serie' ? [{ exerciceId: e.exerciceId, debut: d[i], fin: d[i] + e.dureeSec }] : []));
+  };
+
+  it('seul : chaque nouvel exercice attend « Go », après sa pause et l’installation', () => {
+    const seule = seancePourPersonne(jeudiMois, parametres, { personne: 'sebastien' });
+    const etapes = construireEtapes(seule);
+    const manuelles = etapes.filter((e) => e.type === 'repos' && e.manuel);
+    expect(manuelles).toHaveLength(seule.blocs.length);
+    expect(manuelles.map((e) => e.dureeSec)).toEqual(
+      seule.blocs.map((_, i) => (i === 0 ? 0 : seule.blocs[i - 1].reposSec) + INSTALLATION_SEC),
+    );
+    // Seul, personne à attendre.
+    expect(etapes.some((e) => e.type === 'repos' && e.motif !== 'repos' && e.motif !== 'installation')).toBe(false);
+  });
+
+  it('à deux, les « Go » tombent à la même seconde sur les deux téléphones', () => {
+    for (const s of programme.seances) {
+      const [seb, max] = [etapesDe(s, SEB), etapesDe(s, MAX)];
+      expect(instantsGo(seb)).toEqual(instantsGo(max));
+      expect(dureeTotaleSec(seb)).toBe(dureeTotaleSec(max));
+    }
+  });
+
+  it('à deux, les séries côte à côte commencent ensemble', () => {
+    const [seb, max] = [series(etapesDe()), series(etapesDe(jeudiMois, MAX))];
+    const machines = new Set(jeudiMois.tour);
+    for (const id of jeudiMois.exercices.filter((x) => !machines.has(x))) {
+      const debutsSeb = seb.filter((x) => x.exerciceId === id).map((x) => x.debut);
+      const debutsMax = max.filter((x) => x.exerciceId === id).map((x) => x.debut);
+      expect(debutsMax.slice(0, debutsSeb.length)).toEqual(debutsSeb);
+    }
+  });
+
+  it('chacun son tour sur la trap bar : Max commence, Sébastien attend sa série', () => {
+    const [seb, max] = [etapesDe(), etapesDe(jeudiMois, MAX)];
+    const goSeb = seb.findIndex((e) => e.type === 'repos' && e.manuel);
+    expect(seb[goSeb + 1]).toMatchObject({
+      type: 'repos',
+      motif: 'tour',
+      dureeSec: DUREE_PRET_SEC + serieDe('trap-bar-deadlift', 10) + CHANGEMENT_SEC,
+    });
+    const goMax = max.findIndex((e) => e.type === 'repos' && e.manuel);
+    expect(max[goMax + 1].type).toBe('pret');
+    expect(max[goMax + 2]).toMatchObject({ type: 'serie', exerciceId: 'trap-bar-deadlift', reps: 10 });
+    // Jamais les deux sur la machine en même temps.
+    const surBarre = (liste: ReturnType<typeof series>) => liste.filter((x) => x.exerciceId === 'trap-bar-deadlift');
+    for (const a of surBarre(series(seb))) {
+      for (const b of surBarre(series(max))) expect(a.fin <= b.debut || b.fin <= a.debut).toBe(true);
+    }
+  });
+
+  it('Max fait sa série de plus aux poussées : Sébastien a un repos prolongé', () => {
+    const seance = seancePourPersonne(jeudiMois, parametres, SEB);
+    const poussee = seance.blocs.find((b) => estPoussee(EXERCICES_PAR_ID[b.exerciceId]) && !b.tour)!;
+    expect(poussee.autre?.series).toBe(poussee.series + 1);
+    const prolonge = construireEtapes(seance).find(
+      (e) => e.type === 'repos' && e.motif === 'serie-de-plus' && e.exerciceId === poussee.exerciceId,
+    );
+    // Sa série plus longue au troisième tour, le repos, puis sa quatrième série.
+    const maSerie = DUREE_PRET_SEC + serieDe(poussee.exerciceId, 8);
+    const saSerie = DUREE_PRET_SEC + serieDe(poussee.exerciceId, 10);
+    expect(prolonge?.dureeSec).toBe(saSerie - maSerie + poussee.reposSec + saSerie);
+  });
+
+  it('dans un groupe lié avec une machine, on se croise : Max au premier exercice, Sébastien au second', () => {
+    const [barre, autre] = jeudiMois.exercices;
+    const lie = lierDansProgramme(programme, 'jeudi', barre, autre).seances.find((s) => s.id === 'jeudi')!;
+    const [seb, max] = [etapesDe(lie, SEB), etapesDe(lie, MAX)];
+    expect(seb.find((e) => e.type === 'serie')?.exerciceId).toBe(autre);
+    expect(max.find((e) => e.type === 'serie')?.exerciceId).toBe(barre);
+    expect(instantsGo(seb)).toEqual(instantsGo(max));
+    for (const a of series(seb).filter((x) => x.exerciceId === barre)) {
+      for (const b of series(max).filter((x) => x.exerciceId === barre)) {
+        expect(a.fin <= b.debut || b.fin <= a.debut).toBe(true);
+      }
+    }
+  });
+
+  it('« Passer l’exercice » mène à l’installation du suivant', () => {
+    const etapes = etapesDe();
+    const premiereSerie = etapes.findIndex((e) => e.type === 'serie');
+    const apres = etapes[indexApresExercice(etapes, premiereSerie)];
+    expect(apres).toMatchObject({ type: 'repos', manuel: true, motif: 'installation' });
+    expect(apres.exerciceId).toBe(jeudiMois.exercices[1]);
   });
 });

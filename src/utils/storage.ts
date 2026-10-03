@@ -36,6 +36,7 @@ export const ETAT_PAR_DEFAUT: EntrainementState = {
   programme: null,
   personne: null,
   programmeARenvoyer: false,
+  aDeux: true,
 };
 
 /** Complète des paramètres sauvegardés par une version antérieure. */
@@ -122,6 +123,8 @@ const migrer = (sauvegarde: Partial<EntrainementState>): EntrainementState => ({
   programme: sauvegarde.programme ? validerProgramme(sauvegarde.programme) : null,
   personne: sauvegarde.personne === 'sebastien' || sauvegarde.personne === 'max' ? sauvegarde.personne : null,
   programmeARenvoyer: sauvegarde.programmeARenvoyer === true,
+  // À deux par défaut : c'est l'habitude.
+  aDeux: sauvegarde.aDeux !== false,
 });
 
 /** Lit l'état sauvegardé ; reprend celui de l'ancienne application si besoin. */
