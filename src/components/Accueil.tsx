@@ -16,7 +16,7 @@ import type {
   SeanceDuMois,
   UnitePoids,
 } from '../types';
-import { EXERCICES_PAR_ID, NOM_MUSCLE } from '../data/exercices';
+import { EXERCICES_PAR_ID, NOM_MUSCLE, cheminImage } from '../data/exercices';
 import { GUIDES_VISUELS, REPS_PAR_SERIE, TEMPOS, UNITES_POIDS } from '../data/parametres';
 import { OBJECTIFS_MUSCULAIRES } from '../utils/muscles';
 import { formaterDuree } from '../utils/generateurSeance';
@@ -31,6 +31,7 @@ import {
   TAILLE_ENCHAINEMENT,
   alternatives,
   autrePersonne,
+  basculerTour,
   chargesPassees,
   depuisIso,
   faiteCetteSemaine,
@@ -46,6 +47,7 @@ import {
   seriesDuJour,
 } from '../utils/programmeMois';
 import FicheExercice from './FicheExercice';
+import ImageEnGrand from './ImageEnGrand';
 import SeanceGuidee from './SeanceGuidee';
 import { Bascule, CIBLE, Choix, Feuille, Groupe, Pastille } from './Feuille';
 
@@ -99,6 +101,9 @@ const SECONDAIRE = {
 const nomCourt = (seance: SeanceDuMois) =>
   `${JOURS_COURTS[seance.jour]}${seance.semaine ? ` ${seance.semaine}` : ''}`;
 
+const estUnExercice = (id: string | undefined): id is string =>
+  id !== undefined && Object.prototype.hasOwnProperty.call(EXERCICES_PAR_ID, id);
+
 /** « lundi 5 octobre ». */
 const dateLongue = (date: Date) =>
   date.toLocaleDateString('fr-CA', { weekday: 'long', day: 'numeric', month: 'long' });
@@ -148,16 +153,21 @@ function LigneExercice({
   passees,
   unite,
   onChanger,
+  onBasculerTour,
+  onImage,
 }: {
   bloc: BlocSeries;
   exercice: Exercice;
   passees: number[] | undefined;
   unite: UnitePoids;
   onChanger: () => void;
+  onBasculerTour: () => void;
+  onImage: () => void;
 }) {
+  const tour = bloc.tour === true;
   return (
     <li className="p-3" style={{ background: 'var(--surface-haute)', borderRadius: 14 }}>
-      <FicheExercice exercice={exercice} taille="petite">
+      <FicheExercice exercice={exercice} taille="petite" onImage={onImage}>
         <p className="text-xs" style={{ color: 'var(--texte-discret)' }}>
           {musclesCibles(exercice)}
         </p>
@@ -180,6 +190,21 @@ function LigneExercice({
             {SUFFIXE_UNITE[unite]}
           </p>
         )}
+        {/* À deux : côte à côte, ou chacun son tour sur la machine. */}
+        <button
+          type="button"
+          onClick={onBasculerTour}
+          aria-pressed={tour}
+          className="mt-1 rounded-full px-3 text-xs font-semibold"
+          style={{
+            minHeight: 34,
+            background: 'transparent',
+            border: `1px solid ${tour ? 'var(--pause)' : 'var(--bordure)'}`,
+            color: tour ? 'var(--pause)' : 'var(--texte-discret)',
+          }}
+        >
+          {tour ? 'Chacun son tour' : 'En même temps'}
+        </button>
       </FicheExercice>
     </li>
   );
@@ -482,6 +507,9 @@ export default function Accueil({
   const [messagePartage, setMessagePartage] = useState<string | null>(null);
   const [lienACopier, setLienACopier] = useState<string | null>(null);
   const fermerFeuille = useCallback(() => setFeuille(null), []);
+  /** L'exercice dont l'image est ouverte en grand. */
+  const [enGrand, setEnGrand] = useState<string | null>(null);
+  const fermerImage = useCallback(() => setEnGrand(null), []);
   /** L'autre téléphone n'a pas ce programme-ci : premier lancement, ou
    *  programme changé depuis le dernier envoi. Gardé dans la sauvegarde. */
   const aRenvoyer = etat.programmeARenvoyer === true;
@@ -525,12 +553,46 @@ export default function Accueil({
 
   const series = seance.blocs[0]?.series ?? 0;
   const enchaine = seanceMois.format === 'enchaine';
+  // Le dernier exercice, pour les jambes, se montre à part.
+  const dernier = seance.blocs[seance.blocs.length - 1];
+  const blocFinal = seanceMois.finale && dernier?.exerciceId === seanceMois.finale ? dernier : undefined;
+  const principaux = blocFinal ? seance.blocs.slice(0, -1) : seance.blocs;
   const groupes: BlocSeries[][] = enchaine
-    ? seance.blocs.reduce<BlocSeries[][]>((acc, bloc) => {
+    ? principaux.reduce<BlocSeries[][]>((acc, bloc) => {
         (acc[bloc.superset ?? 0] ??= []).push(bloc);
         return acc;
       }, [])
-    : [seance.blocs];
+    : [principaux];
+  const echauffement = seance.echauffement ?? [];
+  const etirements = [...new Set((seance.retourCalme ?? []).map((m) => m.exerciceId).filter(estUnExercice))];
+
+  /** Une ligne d'exercice de la séance affichée. */
+  const ligne = (bloc: BlocSeries) => {
+    const exercice = EXERCICES_PAR_ID[bloc.exerciceId];
+    if (!exercice) return null;
+    return (
+      <LigneExercice
+        key={bloc.exerciceId}
+        bloc={bloc}
+        exercice={exercice}
+        passees={passees[bloc.exerciceId]}
+        unite={unite}
+        onChanger={() => setFeuille({ type: 'changer', seanceId: seanceMois.id, exerciceId: bloc.exerciceId })}
+        onBasculerTour={() =>
+          onChange((prec) =>
+            prec.programme
+              ? {
+                  ...prec,
+                  programme: basculerTour(prec.programme, seanceMois.id, bloc.exerciceId),
+                  programmeARenvoyer: true,
+                }
+              : prec,
+          )
+        }
+        onImage={() => setEnGrand(bloc.exerciceId)}
+      />
+    );
+  };
 
   const semaineDuMois = semainesEcoulees(programme, maintenant);
   const objectifs =
@@ -775,8 +837,26 @@ export default function Accueil({
             <p className="mt-2 text-sm" style={{ color: 'var(--texte-discret)' }}>
               {enchaine
                 ? `${TAILLE_ENCHAINEMENT} exercices à la suite, puis ${REPOS_SEC} s de pause. ${series} tours.`
-                : `Chacun son tour : ${REPOS_SEC} s de repos entre deux séries.`}
+                : `${REPOS_SEC} s de repos entre deux séries ; chacun son tour, c'est la série de l'autre.`}
             </p>
+
+            {echauffement.length > 0 && (
+              <div className="mt-3 rounded-xl p-3" style={{ background: 'var(--surface-haute)' }}>
+                <p className="text-sm font-bold" style={{ color: 'var(--texte)' }}>
+                  Pour commencer ·{' '}
+                  <span className="chiffres">{Math.round(seance.echauffementSec / 60)} min</span>
+                </p>
+                <p className="text-sm" style={{ color: 'var(--texte-discret)' }}>
+                  {echauffement[0].nom}{' '}
+                  <span className="chiffres">{Math.round((echauffement[0].dureeSec ?? 0) / 60)} min</span>, puis{' '}
+                  {echauffement
+                    .slice(1)
+                    .map((m) => m.nom.toLowerCase())
+                    .join(', ')}
+                  .
+                </p>
+              </div>
+            )}
 
             {groupes.map((groupe, index) => (
               <div key={index} className="mt-3">
@@ -785,26 +865,46 @@ export default function Accueil({
                     Bloc {index + 1}
                   </p>
                 )}
-                <ul className="space-y-2">
-                  {groupe.map((bloc) => {
-                    const exercice = EXERCICES_PAR_ID[bloc.exerciceId];
-                    if (!exercice) return null;
-                    return (
-                      <LigneExercice
-                        key={bloc.exerciceId}
-                        bloc={bloc}
-                        exercice={exercice}
-                        passees={passees[bloc.exerciceId]}
-                        unite={unite}
-                        onChanger={() =>
-                          setFeuille({ type: 'changer', seanceId: seanceMois.id, exerciceId: bloc.exerciceId })
-                        }
-                      />
-                    );
-                  })}
-                </ul>
+                <ul className="space-y-2">{groupe.map(ligne)}</ul>
               </div>
             ))}
+
+            {blocFinal && (
+              <div className="mt-3">
+                <p className="mb-2 text-sm font-bold" style={{ color: 'var(--texte)' }}>
+                  Pour finir : les jambes
+                </p>
+                <ul className="space-y-2">{ligne(blocFinal)}</ul>
+              </div>
+            )}
+
+            {etirements.length > 0 && (
+              <div className="mt-3">
+                <p className="mb-2 text-sm font-bold" style={{ color: 'var(--texte)' }}>
+                  Étirements · <span className="chiffres">{Math.round(seance.retourCalmeSec / 60)} min</span>
+                </p>
+                <div className="grid grid-cols-5 gap-2">
+                  {etirements.map((id) => (
+                    <button
+                      key={id}
+                      type="button"
+                      onClick={() => setEnGrand(id)}
+                      aria-label={`Voir ${EXERCICES_PAR_ID[id].nomFr} en grand`}
+                      className="cursor-zoom-in overflow-hidden p-0.5"
+                      style={{ background: '#ffffff', border: '1px solid var(--bordure)', borderRadius: 10 }}
+                    >
+                      <img
+                        src={cheminImage(id)}
+                        alt={EXERCICES_PAR_ID[id].nomFr}
+                        loading="lazy"
+                        className="w-full"
+                        style={{ aspectRatio: '1 / 1', objectFit: 'contain' }}
+                      />
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
           </section>
 
           <div
@@ -944,11 +1044,16 @@ export default function Accueil({
         />
       )}
 
+      {enGrand && EXERCICES_PAR_ID[enGrand] && (
+        <ImageEnGrand exercice={EXERCICES_PAR_ID[enGrand]} onFermer={fermerImage} />
+      )}
+
       {active && (
         <SeanceGuidee
           seance={active.seance}
           progression={active.progression}
           demarrage={active.demarrage}
+          partenaire={autre ?? undefined}
           chargesPassees={chargesActives}
           onProgression={(progression) => onChange((prec) => ({ ...prec, enCours: progression }))}
           onTerminee={(realisee) => {

@@ -69,7 +69,10 @@ export type Materiel =
   | 'barre-fixe'
   | 'elastique'
   | 'swissball'
-  | 'tapis';
+  | 'tapis'
+  /** Les machines de la salle : trap bar, presse à cuisses, hack squat,
+   *  traîneau. Une pour deux : on s'y relaie. */
+  | 'salle';
 
 /** Schéma de mouvement. C'est la clé de l'équilibre d'une séance : on évite
  *  d'empiler deux exercices du même schéma, et un remplacement propose le
@@ -236,6 +239,19 @@ export interface BlocSeries {
   superset?: number;
   /** Repos court entre les deux exercices d'un superset, en secondes. */
   transitionSec?: number;
+  /** À deux, chacun son tour sur le même appareil : le repos de l'un est la
+   *  série de l'autre. Absent = en même temps, côte à côte. */
+  tour?: boolean;
+}
+
+/** Un temps de l'échauffement ou du retour au calme. */
+export interface MouvementGuide {
+  nom: string;
+  consigne: string;
+  /** Durée propre ; absente, la durée de l'étape se partage également. */
+  dureeSec?: number;
+  /** Exercice de la bibliothèque à montrer (un étirement du poster). */
+  exerciceId?: string;
 }
 
 export interface Circuit {
@@ -260,6 +276,11 @@ export interface Seance {
   graine: number;
   echauffementSec: number;
   retourCalmeSec: number;
+  /** Échauffement détaillé (tapis ou rameur, puis mouvements) ; absent,
+   *  l'échauffement articulaire habituel. Ses durées font `echauffementSec`. */
+  echauffement?: MouvementGuide[];
+  /** Étirements de fin, avec leur image ; absents, ceux d'usage. */
+  retourCalme?: MouvementGuide[];
   blocs: BlocSeries[];
   circuit: Circuit | null;
   dureeEstimeeSec: number;
@@ -351,6 +372,12 @@ export interface SeanceDuMois {
   format: 'series' | 'enchaine';
   /** Identifiants d'exercices de la bibliothèque, dans l'ordre de la séance. */
   exercices: string[];
+  /** Le dernier exercice, pour les jambes : presse, hack squat, traîneau ou
+   *  marche du fermier. En séries, après les enchaînements. */
+  finale?: string;
+  /** Exercices faits chacun son tour (une machine pour deux) ; les autres se
+   *  font en même temps. */
+  tour?: string[];
 }
 
 export interface ProgrammeMois {
@@ -363,4 +390,7 @@ export interface ProgrammeMois {
   /** Graine du tirage : deux programmes de même graine sont identiques. */
   graine: number;
   seances: SeanceDuMois[];
+  /** Version de la composition ; un programme plus ancien est recomposé
+   *  avec la même graine. */
+  version?: number;
 }

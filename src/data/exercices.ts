@@ -1,6 +1,7 @@
 import type { Exercice, Materiel, Muscle, Objectif, PatternMoteur, Zone } from '../types';
 import { EXERCICES_ETIREMENTS } from './etirements';
 import { EXERCICES_KETTLEBELL } from './kettlebell';
+import { EXERCICES_SALLE } from './salle';
 import { EXERCICES_YOGA } from './yoga';
 
 // Les 40 exercices du poster « Dumbbell Workouts », dans l'ordre de lecture.
@@ -1781,6 +1782,8 @@ export const EXERCICES: Exercice[] = [
   },
   // Les 68 exercices des deux posters « Kettlebell Workouts ».
   ...EXERCICES_KETTLEBELL,
+  // Les machines de la salle, dessinées : trap bar, presse, hack squat, traîneau.
+  ...EXERCICES_SALLE,
   // Les 57 postures du poster « Yoga Poses » et les 52 étirements du poster
   // « Stretching Exercises ». Famille « mobilité » : tenues au temps, sans
   // charge, et écartées des séances de musculation.
@@ -1851,6 +1854,7 @@ export const NOM_MATERIEL: Record<Materiel, string> = {
   elastique: 'Bande élastique',
   swissball: 'Swiss ball',
   tapis: 'Tapis',
+  salle: 'Machines de la salle',
 };
 
 export const NOM_ZONE: Record<Zone, string> = Object.fromEntries(

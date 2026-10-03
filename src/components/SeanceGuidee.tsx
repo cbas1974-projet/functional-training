@@ -11,6 +11,7 @@ import type { ChangeEvent, CSSProperties, ReactNode } from 'react';
 import type {
   Exercice,
   GuideVisuel,
+  MouvementGuide,
   ProgressionSeance,
   Seance,
   SeanceRealisee,
@@ -18,7 +19,6 @@ import type {
   UnitePoids,
 } from '../types';
 import { ECHAUFFEMENT, RETOUR_CALME, cheminImage } from '../data/exercices';
-import type { MouvementLibre } from '../data/exercices';
 import { bellSound } from '../utils/sounds';
 import {
   agregerRealisation,
@@ -63,6 +63,9 @@ export interface SeanceGuideeProps {
    *  programme montre déjà la séance, un second « Commencer » ferait double
    *  emploi. 'reprise' repart de la progression sauvegardée. */
   demarrage?: 'debut' | 'reprise';
+  /** Le partenaire : pendant le repos d'un exercice fait chacun son tour,
+   *  l'écran annonce « Au tour de Max ». */
+  partenaire?: string;
 }
 
 // ------------------------------------------------------------- Réglages
@@ -305,6 +308,29 @@ function decrireEtape(etape: Etape): string {
 }
 
 /** Les dernières secondes d'un décompte passent en rouge. */
+/** Le mouvement en cours d'un échauffement ou d'un retour au calme, et ce
+ *  qu'il lui reste. Chaque mouvement a sa durée (cinq minutes de tapis, trente
+ *  secondes d'étirement) ; sans durée, ils se partagent l'étape. */
+function lireMouvement(
+  mouvements: MouvementGuide[],
+  dureeEtapeSec: number,
+  ecouleSec: number,
+): { index: number; resteSec: number } {
+  if (mouvements.length === 0 || dureeEtapeSec <= 0) return { index: 0, resteSec: 0 };
+  const propres = mouvements.map((m) => m.dureeSec ?? 0);
+  const total = propres.reduce((somme, d) => somme + d, 0);
+  const durees =
+    total > 0 && propres.every((d) => d > 0)
+      ? propres.map((d) => (d * dureeEtapeSec) / total)
+      : mouvements.map(() => dureeEtapeSec / mouvements.length);
+  let fin = 0;
+  for (let i = 0; i < durees.length; i += 1) {
+    fin += durees[i];
+    if (ecouleSec < fin || i === durees.length - 1) return { index: i, resteSec: Math.max(0, fin - ecouleSec) };
+  }
+  return { index: durees.length - 1, resteSec: 0 };
+}
+
 function couleurCompte(resteSec: number, normale: string): string {
   return resteSec <= SECONDES_ALERTE ? 'var(--alerte)' : normale;
 }
@@ -319,6 +345,7 @@ export default function SeanceGuidee({
   onQuitter,
   chargesPassees = {},
   demarrage,
+  partenaire,
 }: SeanceGuideeProps) {
   // La progression proposée à la reprise est figée à l'ouverture : les
   // sauvegardes que nous envoyons ensuite reviennent dans cette même prop.
@@ -382,14 +409,15 @@ export default function SeanceGuidee({
 
   const metro = etatMetronome(etape, ecoule, tempo);
   const maintien = etatMaintien(etape, ecoule);
-  const mouvements: MouvementLibre[] | null =
-    etape.type === 'echauffement' ? ECHAUFFEMENT : etape.type === 'retourCalme' ? RETOUR_CALME : null;
-  const dureeMouvement = mouvements && dureeEff > 0 ? dureeEff / mouvements.length : 0;
-  const indexMouvement =
-    mouvements && dureeMouvement > 0
-      ? Math.min(mouvements.length - 1, Math.floor(ecoule / dureeMouvement))
-      : 0;
-  const resteMouvement = Math.max(0, (indexMouvement + 1) * dureeMouvement - ecoule);
+  // Échauffement et retour au calme : ceux de la séance (tapis ou rameur,
+  // étirements du poster), sinon ceux d'usage.
+  const mouvements: MouvementGuide[] | null =
+    etape.type === 'echauffement'
+      ? (seanceActive.echauffement ?? ECHAUFFEMENT)
+      : etape.type === 'retourCalme'
+        ? (seanceActive.retourCalme ?? RETOUR_CALME)
+        : null;
+  const { index: indexMouvement, resteSec: resteMouvement } = lireMouvement(mouvements ?? [], dureeEff, ecoule);
 
   const verrou = useVerrouEcran(enCours && !estFin);
 
@@ -644,7 +672,13 @@ export default function SeanceGuidee({
     case 'retourCalme':
       corps = (
         <CorpsMouvements
-          titre={etape.type === 'echauffement' ? 'Échauffement articulaire, sans charge' : 'Étirements doux, sans à-coups'}
+          titre={
+            etape.type === 'echauffement'
+              ? seanceActive.echauffement
+                ? 'Échauffement : on monte doucement en température'
+                : 'Échauffement articulaire, sans charge'
+              : 'Étirements doux, sans à-coups'
+          }
           mouvements={mouvements ?? []}
           indexMouvement={indexMouvement}
           resteMouvementSec={resteMouvement}
@@ -688,7 +722,17 @@ export default function SeanceGuidee({
     case 'repos':
     case 'reposTour':
       corps = (
-        <CorpsRepos etape={etape} resteSec={reste} onProlonger={prolongerRepos} onPasser={suivant} />
+        <CorpsRepos
+          etape={etape}
+          resteSec={reste}
+          tourDe={
+            etape.type === 'repos' && seanceActive.blocs.some((b) => b.exerciceId === etape.exerciceId && b.tour)
+              ? (partenaire ?? 'l’autre')
+              : undefined
+          }
+          onProlonger={prolongerRepos}
+          onPasser={suivant}
+        />
       );
       break;
     case 'fin':
@@ -953,7 +997,7 @@ function EnTete({
 
 interface CorpsMouvementsProps {
   titre: string;
-  mouvements: MouvementLibre[];
+  mouvements: MouvementGuide[];
   indexMouvement: number;
   resteMouvementSec: number;
   resteSec: number;
@@ -978,10 +1022,15 @@ function CorpsMouvements({ titre, mouvements, indexMouvement, resteMouvementSec,
             className="text-xs font-bold uppercase tracking-[0.18em]"
             style={{ color: 'var(--texte-discret)' }}
           >
-            Mouvement {indexMouvement + 1} / {mouvements.length} ·{' '}
-            <span className="chiffres">{Math.ceil(resteMouvementSec)} s</span>
+            {indexMouvement + 1} / {mouvements.length} ·{' '}
+            <span className="chiffres">
+              {resteMouvementSec >= 60 ? formaterMmSs(Math.ceil(resteMouvementSec)) : `${Math.ceil(resteMouvementSec)} s`}
+            </span>
           </div>
           <div className="mt-1 text-2xl font-bold">{courant.nom}</div>
+          {courant.exerciceId && (
+            <Vignette exerciceId={courant.exerciceId} alt={courant.nom} className="mt-3 w-full rounded-xl" />
+          )}
           <p className="mt-2" style={{ color: 'var(--texte-discret)' }}>{courant.consigne}</p>
         </div>
       )}
@@ -1341,11 +1390,13 @@ function Metronome({ metro, exercice, tempo, guideVisuel, lireEcouleSec }: Metro
 interface CorpsReposProps {
   etape: Extract<Etape, { type: 'repos' | 'reposTour' }>;
   resteSec: number;
+  /** Chacun son tour : le nom de celui qui fait sa série pendant ce repos. */
+  tourDe?: string;
   onProlonger: () => void;
   onPasser: () => void;
 }
 
-function CorpsRepos({ etape, resteSec, onProlonger, onPasser }: CorpsReposProps) {
+function CorpsRepos({ etape, resteSec, tourDe, onProlonger, onPasser }: CorpsReposProps) {
   const { suivant } = etape;
   const exerciceSuivant = suivant.type === 'retourCalme' ? null : exerciceDeSeance(suivant.exerciceId);
   return (
@@ -1353,9 +1404,11 @@ function CorpsRepos({ etape, resteSec, onProlonger, onPasser }: CorpsReposProps)
       <div className="text-xs font-bold uppercase tracking-[0.18em]" style={{ color: 'var(--descente)' }}>
         {etape.type === 'reposTour'
           ? `Fin du tour ${etape.tour} / ${etape.tours} · repos`
-          : exerciceSuivant && estPosture(exerciceSuivant)
-            ? 'Changez de position'
-            : 'Repos'}
+          : tourDe
+            ? `Au tour de ${tourDe}`
+            : exerciceSuivant && estPosture(exerciceSuivant)
+              ? 'Changez de position'
+              : 'Repos'}
       </div>
       <div
         className="chiffres text-8xl font-bold leading-none"

@@ -19,13 +19,19 @@ L'application compose les séances elle-même, avec les exercices des posters, �
 partir d'**objectifs musculaires** — par défaut les faiblesses déclarées : bas
 du dos, épaules, extérieur et intérieur de cuisse. Rien à taper.
 
-- **Lundi, la séance dure**, toujours la même, en séries droites : un squat à
-  deux jambes, une seule charnière lourde (soulevé de terre roumain ou au
-  kettlebell), un développé sur banc, un tirage, le bas du dos, les épaules
-  au-dessus de la tête, et le portage pour finir. Elle tient dans l'heure.
+- **Chaque séance** commence par **5 minutes de tapis ou de rameur** et
+  quatre mouvements légers choisis pour le jour, et finit par **5 minutes
+  d'étirements** du poster, avec leur image — trente secondes de chaque côté
+  quand l'étirement se fait d'un côté. Juste avant, **les jambes pour finir** :
+  presse à cuisses, hack squat, traîneau ou marche du fermier.
+- **Lundi, la séance dure**, toujours la même, en séries droites : le
+  **soulevé de terre à la trap bar en premier**, quand le dos est frais, un
+  développé sur banc, un tirage, le bas du dos, les épaules au-dessus de la
+  tête, puis la presse ou le hack squat. Elle tient dans l'heure.
 - **Mardi et jeudi, plus faciles**, en **enchaîné** : trois exercices à la
   suite, 90 s de pause, deux ou trois tours. Mardi le bas du corps (bas du
   dos, extérieur et intérieur de cuisse), jeudi le haut (épaules d'abord).
+  Les machines restent hors des enchaînements.
 - **Semaines A et B** : mardi et jeudi alternent d'une semaine à l'autre —
   mêmes muscles, autres exercices. Le programme dure quatre semaines, puis
   l'application propose d'en refaire un. Commencé un vendredi ou un week-end,
@@ -33,7 +39,16 @@ du dos, épaules, extérieur et intérieur de cuisse. Rien à taper.
 - **Jamais deux exercices qui chargent le bas du dos dans le même
   enchaînement**, aucun mouvement explosif, rien au-delà du niveau
   intermédiaire, et seulement le matériel de la salle : haltères, kettlebells,
-  banc, tapis.
+  banc, tapis, et quatre machines — trap bar, presse à cuisses, hack squat,
+  traîneau. Elles ne sont sur aucun poster : leur image est un dessin simple,
+  à remplacer par une photo du même nom dans `public/exercices/`.
+- **En même temps ou chacun son tour** : chaque exercice porte sa façon de se
+  faire à deux. Les poids libres, le kettlebell et les étirements se font
+  côte à côte ; les machines, une pour deux, chacun son tour — le repos devient
+  la série de l'autre, et pendant ce temps l'écran annonce « Au tour de Max ».
+  Un toucher change la façon de faire, et la durée de la séance suit.
+- **Toucher une image** l'ouvre en grand, avec les consignes : pour voir le
+  détail du mouvement avant de commencer.
 - **Changer** un exercice ouvre la liste des exercices des mêmes muscles, avec
   leur image : le même geste d'abord, et ce que le programme ne fait pas déjà
   avant ce qui revient un autre jour. Le changement vaut pour chaque séance de
@@ -223,13 +238,13 @@ chaque exercice les séries faites, le temps passé et la charge de chaque séri
 saisie : changer d'unité ne réécrit pas le passé, et les statistiques
 convertissent ce qu'il faut pour rester comparables.
 
-La bibliothèque présente les **254 exercices** classés par zone, avec les
+La bibliothèque présente les **258 exercices** classés par zone, avec les
 six posters d'origine consultables en entier. Un filtre sépare les trois
 familles :
 
 | Famille | Nombre | Comment ça se travaille |
 | --- | --- | --- |
-| Musculation | 145 | Répétitions au tempo, avec une charge — 77 aux haltères, 68 au kettlebell |
+| Musculation | 149 | Répétitions au tempo, avec une charge — 77 aux haltères, 68 au kettlebell, 4 machines de la salle |
 | Yoga | 57 | Postures tenues au temps, sans charge |
 | Étirements | 52 | Positions tenues au temps, sans charge |
 
@@ -392,11 +407,13 @@ src/
 │   ├── Entrainement.tsx          # Séance libre : réglages, plan, historique
 │   ├── SeanceGuidee.tsx          # Séance guidée plein écran et métronome
 │   ├── FicheExercice.tsx         # Vignette et nom d'un exercice
+│   ├── ImageEnGrand.tsx          # L'image d'un exercice en grand, avec ses consignes
 │   ├── PaceurTempo.tsx           # La bille qui monte et descend au tempo
 │   ├── HistoriqueEntrainement.tsx
 │   └── BibliothequeExercices.tsx
 ├── data/
 │   ├── exercices.ts              # Les 77 exercices et leurs points d'attention
+│   ├── salle.ts                  # Trap bar, presse, hack squat, traîneau
 │   └── parametres.ts             # Durées, tempos, niveaux, formats, zones
 ├── utils/
 │   ├── generateurSeance.ts       # Choix des exercices et calcul des volumes

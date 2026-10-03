@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import type { KeyboardEvent, ReactNode } from 'react';
+import type { CSSProperties, KeyboardEvent, ReactNode } from 'react';
 import type { Exercice } from '../types';
 import { cheminImage, NOM_ZONE } from '../data/exercices';
 
@@ -9,7 +9,46 @@ interface FicheExerciceProps {
   taille?: 'petite' | 'grande';
   afficherNomEn?: boolean;
   onClick?: () => void;
+  /** Toucher la vignette : la voir en grand. */
+  onImage?: () => void;
   children?: ReactNode;
+}
+
+/** La plaque blanche de la vignette : un bouton quand on peut l'agrandir. */
+function Plaque({
+  onImage,
+  nom,
+  className,
+  style,
+  children,
+}: {
+  onImage?: () => void;
+  nom: string;
+  className: string;
+  style: CSSProperties;
+  children: ReactNode;
+}) {
+  if (!onImage) {
+    return (
+      <div className={className} style={style}>
+        {children}
+      </div>
+    );
+  }
+  return (
+    <button
+      type="button"
+      onClick={(evenement) => {
+        evenement.stopPropagation();
+        onImage();
+      }}
+      aria-label={`Voir ${nom} en grand`}
+      className={`${className} cursor-zoom-in text-left`}
+      style={style}
+    >
+      {children}
+    </button>
+  );
 }
 
 export default function FicheExercice({
@@ -17,6 +56,7 @@ export default function FicheExercice({
   taille = 'petite',
   afficherNomEn = false,
   onClick,
+  onImage,
   children,
 }: FicheExerciceProps) {
   const [erreurImage, setErreurImage] = useState(false);
@@ -42,7 +82,9 @@ export default function FicheExercice({
     >
       {/* Les dessins sont noirs sur fond blanc : en mode sombre ils ne sont
           lisibles que posés sur une plaque blanche, jamais à même le fond. */}
-      <div
+      <Plaque
+        onImage={onImage}
+        nom={exercice.nomFr}
         className={`shrink-0 overflow-hidden p-1 ${taille === 'petite' ? 'w-24' : 'w-full'}`}
         style={{
           background: erreurImage ? 'var(--surface-haute)' : '#ffffff',
@@ -67,7 +109,7 @@ export default function FicheExercice({
             style={{ objectFit: 'contain', background: '#ffffff', borderRadius: 8 }}
           />
         )}
-      </div>
+      </Plaque>
 
       <div className="min-w-0 flex-1">
         <p className="font-bold leading-snug" style={{ color: 'var(--texte)' }}>

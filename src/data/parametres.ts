@@ -191,6 +191,7 @@ export const MATERIELS_DECLARABLES: { id: Materiel; nom: string; precision: stri
   { id: 'elastique', nom: 'Bande élastique', precision: 'À venir.' },
   { id: 'swissball', nom: 'Swiss ball', precision: 'À venir.' },
   { id: 'tapis', nom: 'Tapis', precision: 'Confort au sol pour le gainage et la mobilité.' },
+  { id: 'salle', nom: 'Machines de la salle', precision: 'Trap bar, presse à cuisses, hack squat, traîneau.' },
 ];
 
 export const UNITES_POIDS: { id: UnitePoids; nom: string; description: string }[] = [

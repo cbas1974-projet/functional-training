@@ -5,10 +5,12 @@ import { PARAMETRES_PAR_DEFAUT } from '../data/parametres';
 import { construireEtapes, dureeTotaleSec } from './etapesSeance';
 import { cleMouvement } from './generateurSeance';
 import {
+  CHANGEMENT_SEC,
   DUREE_MAXI_SEC,
   MATERIELS_PROGRAMME,
   TAILLE_ENCHAINEMENT,
   alternatives,
+  basculerTour,
   candidatsProgramme,
   chargeLeBasDuDos,
   chargeProposee,
@@ -113,17 +115,37 @@ describe('genererProgramme', () => {
     }
   });
 
-  it('le lundi pousse lourd : un squat, un développé sur banc, une seule charnière, le portage pour finir', () => {
+  it('le lundi s’ouvre sur la trap bar, pousse sur banc, et finit les jambes à la machine', () => {
     for (const p of programmes) {
-      const lundi = exercicesDe(seanceNommee(p, 'lundi'));
-      expect(lundi[0].pattern).toBe('squat');
-      expect(lundi[0].cotes).toBe('bilateral');
+      const seance = seanceNommee(p, 'lundi');
+      const lundi = exercicesDe(seance);
+      expect(lundi[0].id).toBe('trap-bar-deadlift');
       expect(lundi.some((e) => e.pattern === 'poussee-horizontale' && e.materiel === 'banc')).toBe(true);
       // Une seule charnière lourde : le bas du dos se travaille à part.
       const charnieres = lundi.filter((e) => e.pattern === 'charniere' && (e.musclesPrincipaux ?? []).includes('ischios'));
-      expect(charnieres).toHaveLength(1);
-      expect(charnieres[0].musclesPrincipaux).not.toContain('lombaires');
-      expect(lundi[lundi.length - 1].pattern).toBe('portage');
+      expect(charnieres.map((e) => e.id)).toEqual(['trap-bar-deadlift']);
+      expect(['leg-press', 'hack-squat']).toContain(seance.finale);
+      // Une machine pour deux : chacun son tour, d'office.
+      expect(seance.tour).toEqual(['trap-bar-deadlift', seance.finale]);
+    }
+  });
+
+  it('finit chaque séance par les jambes, jamais par la trap bar', () => {
+    const finales = ['leg-press', 'hack-squat', 'traineau', 'farmers-walk', 'kb-farmers-walk'];
+    for (const p of programmes) {
+      for (const s of p.seances) {
+        expect(finales).toContain(s.finale);
+        expect(s.exercices).not.toContain(s.finale);
+        expect(s.exercices.slice(1)).not.toContain('trap-bar-deadlift');
+        const surMachine = [...s.exercices, s.finale!].filter((id) => EXERCICES_PAR_ID[id].materiel === 'salle');
+        expect(s.tour ?? []).toEqual(surMachine);
+      }
+      // D'une séance à l'autre, la fin change.
+      expect(new Set(p.seances.map((s) => cleMouvement(EXERCICES_PAR_ID[s.finale!]))).size).toBeGreaterThanOrEqual(3);
+      // Les machines ne se glissent pas dans les enchaînements.
+      for (const s of p.seances.filter((x) => x.format === 'enchaine')) {
+        expect(exercicesDe(s).filter((e) => e.materiel === 'salle')).toEqual([]);
+      }
     }
   });
 
@@ -198,7 +220,7 @@ describe('genererProgramme', () => {
         expect(vise(seanceNommee(p, id), 'biceps') || vise(seanceNommee(p, id), 'triceps')).toBe(true);
       }
       const sansObjectif = genererProgramme({ graine, aujourdhui: LUNDI, objectifs: [] });
-      expect(sansObjectif.seances.every((s) => s.exercices.length >= 5)).toBe(true);
+      expect(sansObjectif.seances.every((s) => s.exercices.length >= 3 && s.finale !== undefined)).toBe(true);
     }
   });
 });
@@ -271,19 +293,64 @@ describe('la séance de chacun', () => {
     expect(seriesDuJour(mardi, { seriesParExercice: 2 })).toBe(1);
   });
 
-  it('déroule le lundi en séries, le mardi en enchaînements de trois', () => {
+  it('déroule le lundi en séries, le mardi en enchaînements de trois, les jambes à la fin', () => {
     const dure = seancePourPersonne(lundi, SEBASTIEN, LUNDI);
     expect(dure.titre).toBe(lundi.nom);
-    expect(dure.blocs.map((b) => b.exerciceId)).toEqual(lundi.exercices);
+    expect(dure.blocs.map((b) => b.exerciceId)).toEqual([...lundi.exercices, lundi.finale]);
     expect(dure.blocs.every((b) => b.series === 3 && b.superset === undefined)).toBe(true);
 
     const facile = seancePourPersonne(mardi, SEBASTIEN, LUNDI);
-    expect(facile.blocs.map((b) => b.superset)).toEqual(mardi.exercices.map((_, i) => Math.floor(i / 3)));
-    expect(facile.blocs.every((b) => b.series === 2 && b.transitionSec === 0)).toBe(true);
-    for (const bloc of facile.blocs) {
+    const enchaines = facile.blocs.slice(0, mardi.exercices.length);
+    expect(enchaines.map((b) => b.superset)).toEqual(mardi.exercices.map((_, i) => Math.floor(i / 3)));
+    expect(enchaines.every((b) => b.series === 2 && b.transitionSec === 0)).toBe(true);
+    for (const bloc of enchaines) {
       const exercice = EXERCICES_PAR_ID[bloc.exerciceId];
       expect(bloc.reps).toBe(exercice.unite === 'secondes' ? 30 : 8);
     }
+    // Le dernier, à part, après les enchaînements.
+    const fin = facile.blocs[facile.blocs.length - 1];
+    expect(fin.exerciceId).toBe(mardi.finale);
+    expect(fin.superset).toBeUndefined();
+  });
+
+  it('commence par cinq minutes de tapis ou de rameur et quatre mouvements légers', () => {
+    for (const s of programmes[0].seances) {
+      const seance = seancePourPersonne(s, SEBASTIEN, LUNDI);
+      expect(seance.echauffement?.[0]).toMatchObject({ nom: 'Tapis ou rameur', dureeSec: 300 });
+      expect(seance.echauffement).toHaveLength(5);
+      expect(seance.echauffementSec).toBe(300 + 4 * 45);
+    }
+  });
+
+  it('finit par cinq minutes d’étirements du poster, autres en semaine B', () => {
+    for (const s of programmes[0].seances) {
+      const seance = seancePourPersonne(s, SEBASTIEN, LUNDI);
+      expect(seance.retourCalmeSec).toBe(300);
+      for (const etirement of seance.retourCalme ?? []) {
+        expect(EXERCICES_PAR_ID[etirement.exerciceId!].famille).toBe('etirement');
+      }
+      expect(new Set(seance.retourCalme?.map((e) => e.exerciceId)).size).toBe(5);
+    }
+    const ids = (id: string) => new Set(seancePourPersonne(seanceNommee(p, id), SEBASTIEN, LUNDI).retourCalme?.map((e) => e.exerciceId));
+    const [a, b] = [ids('mardi-a'), ids('mardi-b')];
+    expect([...a].filter((id) => b.has(id))).toEqual([]);
+  });
+
+  it('chacun son tour : on souffle le temps de la série de l’autre', () => {
+    const dure = seancePourPersonne(lundi, SEBASTIEN, LUNDI);
+    const trapBar = dure.blocs[0];
+    expect(trapBar.tour).toBe(true);
+    // 8 répétitions à 3 s / 3 s + 2 s : 64 s, plus le temps de céder la place.
+    expect(trapBar.reposSec).toBe(64 + CHANGEMENT_SEC);
+    expect(dure.blocs[1].tour).toBeUndefined();
+    expect(dure.blocs[1].reposSec).toBe(90);
+
+    // Passer le développé en « chacun son tour » change la durée annoncée.
+    const bascule = basculerTour(p, 'lundi', lundi.exercices[1]);
+    expect(seanceNommee(bascule, 'lundi').tour).toContain(lundi.exercices[1]);
+    expect(dureeSec(seanceNommee(bascule, 'lundi'), SEBASTIEN)).not.toBe(dureeSec(lundi, SEBASTIEN));
+    const retour = basculerTour(bascule, 'lundi', lundi.exercices[1]);
+    expect(seanceNommee(retour, 'lundi')).toEqual(lundi);
   });
 
   it('annonce exactement la durée que la séance guidée chronométrera', () => {
@@ -320,6 +387,18 @@ describe('changer un exercice', () => {
     if (premierDejaFait >= 0) {
       expect(memeGeste.slice(premierDejaFait).every((e) => ailleurs.has(cleMouvement(e)))).toBe(true);
     }
+  });
+
+  it('remplace le dernier exercice par une autre fin pour les jambes', () => {
+    const fin = lundi.finale!;
+    const choix = alternatives(p, 'lundi', fin);
+    expect(choix.length).toBeGreaterThan(1);
+    expect(choix.every((e) => ['leg-press', 'hack-squat', 'traineau', 'farmers-walk', 'kb-farmers-walk'].includes(e.id))).toBe(true);
+    const marche = choix.find((e) => e.materiel !== 'salle')!;
+    const modifie = seanceNommee(remplacerDansProgramme(p, 'lundi', fin, marche.id), 'lundi');
+    expect(modifie.finale).toBe(marche.id);
+    // Une marche du fermier se fait côte à côte : plus « chacun son tour ».
+    expect(modifie.tour).toEqual(['trap-bar-deadlift']);
   });
 
   it('remplace l’exercice dans cette séance seulement', () => {
@@ -389,6 +468,27 @@ describe('le partage avec Max', () => {
 
   it('reste un lien qu’on peut envoyer par texto', () => {
     expect(lienDePartage(p, 'https://sgtraining.netlify.app/').length).toBeLessThan(2500);
+  });
+
+  it('recompose un programme d’avant les machines, pareil sur les deux téléphones', () => {
+    const ancien = {
+      debut: '2026-10-05',
+      objectifs: ['bas-du-dos', 'epaules'],
+      materiels: ['halteres', 'kettlebell', 'banc', 'tapis'],
+      graine: 42,
+      seances: [
+        { id: 'lundi', nom: 'Lundi — séance dure', jour: 1, type: 'dure', format: 'series', exercices: ['goblet-squat', 'romanian-deadlift', 'farmers-walk'] },
+        { id: 'mardi-a', nom: 'Mardi A', jour: 2, semaine: 'A', type: 'facile', format: 'enchaine', exercices: ['sumo-squat', 'fire-hydrant', 'side-lunge'] },
+      ],
+    };
+    const recompose = validerProgramme(ancien)!;
+    expect(recompose.version).toBe(2);
+    expect(recompose.debut).toBe('2026-10-05');
+    expect(recompose.graine).toBe(42);
+    expect(recompose.objectifs).toEqual(['bas-du-dos', 'epaules']);
+    expect(seanceNommee(recompose, 'lundi').exercices[0]).toBe('trap-bar-deadlift');
+    expect(recompose.seances).toHaveLength(5);
+    expect(validerProgramme(ancien)).toEqual(recompose);
   });
 
   it('refuse un lien abîmé et écarte les exercices inconnus', () => {
