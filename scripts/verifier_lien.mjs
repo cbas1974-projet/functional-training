@@ -1,6 +1,7 @@
 // Ouvre une ou plusieurs adresses de l'application dans un vrai navigateur et
-// vérifie que le programme s'affiche et que la séance libre fonctionne
-// (génération d'une séance, images chargées, aucune erreur JavaScript).
+// vérifie que le programme du mois s'affiche (la séance du jour ou la
+// prochaine) et que la séance libre fonctionne (génération d'une séance,
+// images chargées, aucune erreur JavaScript).
 // Rapporte tout ce qui aide à
 // diagnostiquer un échec : messages de console, requêtes bloquées, contenu
 // de la page et une capture d'écran encodée en base64.
@@ -51,13 +52,13 @@ for (const url of urls) {
       await page.waitForTimeout(3000);
       console.log('    avertissement githack franchi, url :', page.url());
     }
-    // Depuis le programme à deux, l'application s'ouvre sur « Programme » :
-    // on vérifie qu'il affiche la séance du jour, puis on passe en séance
-    // libre pour générer une séance. Les versions plus anciennes n'ont pas ce
-    // sélecteur de mode.
+    // L'application s'ouvre sur le programme du mois : on vérifie qu'il
+    // affiche la séance du jour (ou la prochaine), puis on passe en séance
+    // libre pour générer une séance. Les versions plus anciennes n'ont pas
+    // de bouton « Séance libre ».
     const libre = page.getByRole('button', { name: /^Séance libre$/ });
     const avecProgramme = (await libre.count()) > 0;
-    const programme = avecProgramme ? await page.getByText(/Aujourd’hui ·/).count() : 0;
+    const programme = avecProgramme ? await page.getByText(/Aujourd’hui ·|Prochaine séance ·/).count() : 0;
     if (avecProgramme) {
       console.log(`    programme ${programme ? 'affiché' : 'absent'}`);
       await libre.click({ timeout: 20000 });

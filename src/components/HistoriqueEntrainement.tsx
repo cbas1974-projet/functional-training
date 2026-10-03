@@ -104,8 +104,10 @@ export default function HistoriqueEntrainement({
                         >
                           {formaterDateFr(realisee.date)}
                         </p>
+                        {/* Une séance du programme porte son nom ; une séance
+                            libre, ses réglages. */}
                         <p className="text-sm" style={{ color: 'var(--texte-discret)' }}>
-                          {zones} · {format?.nom} · {niveau?.nom}
+                          {realisee.titre ?? `${zones} · ${format?.nom} · ${niveau?.nom}`}
                         </p>
                         <p className="text-sm" style={{ color: 'var(--texte-discret)' }}>
                           <span className="chiffres">{formaterDuree(realisee.dureeReelleSec)}</span>{' '}

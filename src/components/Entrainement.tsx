@@ -49,8 +49,10 @@ import {
 } from '../utils/formatage';
 import { frequencesParExercice, libelleFrequenceCourte, uniteDeSeance } from '../utils/statistiques';
 import type { FrequenceExercice } from '../utils/statistiques';
+import { chargesPassees } from '../utils/programmeMois';
 import SeanceGuidee from './SeanceGuidee';
 import FicheExercice from './FicheExercice';
+import { Bascule, CIBLE, Choix, Groupe, Pastille } from './Feuille';
 import HistoriqueEntrainement from './HistoriqueEntrainement';
 import BibliothequeExercices from './BibliothequeExercices';
 
@@ -70,148 +72,8 @@ interface SeanceActive {
  *  bibliothèque. Un seul à la fois : l'accueil ne doit pas être un rouleau. */
 type Vue = 'seance' | 'historique' | 'bibliotheque';
 
-/** Hauteur minimale d'une cible tactile, en pixels (doigt sur un téléphone). */
-const CIBLE = 44;
 /** Hauteur des deux actions principales : générer et lancer. */
 const ACTION = 60;
-
-/** Pastille de réglage : sélectionnée en accent, sinon en surface haute. */
-function Pastille({
-  selectionne,
-  onClick,
-  children,
-}: {
-  selectionne: boolean;
-  onClick: () => void;
-  children: ReactNode;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      aria-pressed={selectionne}
-      className="rounded-xl px-4 text-sm font-semibold"
-      style={{
-        minHeight: CIBLE,
-        background: selectionne ? 'var(--accent)' : 'var(--surface-haute)',
-        color: selectionne ? 'var(--accent-texte)' : 'var(--texte)',
-        border: `1px solid ${selectionne ? 'var(--accent)' : 'var(--bordure)'}`,
-      }}
-    >
-      {children}
-    </button>
-  );
-}
-
-/** Choix pleine largeur avec une explication : tempo, guide visuel. */
-function Choix({
-  selectionne,
-  onClick,
-  nom,
-  description,
-}: {
-  selectionne: boolean;
-  onClick: () => void;
-  nom: string;
-  description: string;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      aria-pressed={selectionne}
-      className="w-full rounded-xl px-4 py-2 text-left"
-      style={{
-        minHeight: CIBLE,
-        background: selectionne ? 'var(--accent)' : 'var(--surface-haute)',
-        color: selectionne ? 'var(--accent-texte)' : 'var(--texte)',
-        border: `1px solid ${selectionne ? 'var(--accent)' : 'var(--bordure)'}`,
-      }}
-    >
-      <span className="block text-sm font-semibold">{nom}</span>
-      <span
-        className="block text-xs"
-        style={selectionne ? { opacity: 0.85 } : { color: 'var(--texte-discret)' }}
-      >
-        {description}
-      </span>
-    </button>
-  );
-}
-
-/** Interrupteur pleine largeur : matériel possédé, mouvements explosifs. */
-function Bascule({
-  actif,
-  onClick,
-  nom,
-  precision,
-}: {
-  actif: boolean;
-  onClick: () => void;
-  nom: string;
-  precision?: string;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      aria-pressed={actif}
-      className="flex w-full items-center gap-3 rounded-xl px-3 py-2 text-left"
-      style={{
-        minHeight: CIBLE,
-        background: 'var(--surface-haute)',
-        color: 'var(--texte)',
-        border: `1px solid ${actif ? 'var(--accent)' : 'var(--bordure)'}`,
-      }}
-    >
-      <span
-        aria-hidden="true"
-        className="grid h-6 w-6 shrink-0 place-items-center text-xs font-bold"
-        style={{
-          borderRadius: 7,
-          background: actif ? 'var(--accent)' : 'transparent',
-          color: 'var(--accent-texte)',
-          border: `1px solid ${actif ? 'var(--accent)' : 'var(--bordure)'}`,
-        }}
-      >
-        {actif ? '✓' : ''}
-      </span>
-      <span className="min-w-0">
-        <span className="block text-sm font-semibold">{nom}</span>
-        {precision && (
-          <span className="block text-xs" style={{ color: 'var(--texte-discret)' }}>
-            {precision}
-          </span>
-        )}
-      </span>
-    </button>
-  );
-}
-
-/** Bloc de réglage de la feuille : un titre, des pastilles, une explication. */
-function Groupe({
-  titre,
-  aide,
-  children,
-}: {
-  titre: string;
-  aide?: string;
-  children: ReactNode;
-}) {
-  return (
-    <div>
-      <p className="mb-2 text-sm font-bold" style={{ color: 'var(--texte)' }}>
-        {titre}
-      </p>
-      {children}
-      {aide && (
-        <p className="mt-2 text-xs" style={{ color: 'var(--texte-discret)' }}>
-          {aide}
-        </p>
-      )}
-    </div>
-  );
-}
 
 /** Pastille de résumé (non cliquable) de la carte « Ma séance ». */
 function Resume({ children, accent = false }: { children: ReactNode; accent?: boolean }) {
@@ -454,6 +316,9 @@ export default function Entrainement({ etat, onChange }: EntrainementProps) {
 
   const lancerSeance = () => {
     if (!seanceCourante) return;
+    // La séance interrompue peut être celle du programme : la remplacer se
+    // demande.
+    if (enCours && !window.confirm('Une séance interrompue attend. L’abandonner et lancer celle-ci ?')) return;
     setSeanceActive({ seance: seanceCourante, progression: null });
   };
 
@@ -840,7 +705,7 @@ export default function Entrainement({ etat, onChange }: EntrainementProps) {
           }}
         >
           <p className="text-sm" style={{ color: 'var(--texte)' }}>
-            Séance interrompue le{' '}
+            {enCours.seance.titre ?? 'Séance'} interrompue le{' '}
             <span className="chiffres">
               {formaterDateFr(enCours.sauvegardeeLe ?? enCours.demarreeLe)}
             </span>
@@ -1213,6 +1078,14 @@ export default function Entrainement({ etat, onChange }: EntrainementProps) {
         <SeanceGuidee
           seance={seanceActive.seance}
           progression={seanceActive.progression}
+          chargesPassees={chargesPassees(
+            historique,
+            [
+              ...seanceActive.seance.blocs.map((bloc) => bloc.exerciceId),
+              ...(seanceActive.seance.circuit?.stations ?? []),
+            ],
+            uniteDeSeance(seanceActive.seance.parametres),
+          )}
           onProgression={(p) => onChange((prec) => ({ ...prec, enCours: p }))}
           onTerminee={(realisee) => {
             onChange((prec) => ({
@@ -1222,10 +1095,9 @@ export default function Entrainement({ etat, onChange }: EntrainementProps) {
             }));
             setSeanceActive(null);
           }}
-          onQuitter={() => {
-            onChange((prec) => ({ ...prec, enCours: null }));
-            setSeanceActive(null);
-          }}
+          // Abandonner efface déjà la progression ; quitter avant d'avoir
+          // commencé la garde, pour la reprendre plus tard.
+          onQuitter={() => setSeanceActive(null)}
         />
       )}
     </div>

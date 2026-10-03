@@ -11,6 +11,7 @@ import type {
 } from '../types';
 import { PARAMETRES_PAR_DEFAUT, TOUTES_LES_ZONES } from '../data/parametres';
 import { uniteDeSeance } from './statistiques';
+import { validerProgramme } from './programmeMois';
 
 const CLE_STOCKAGE = 'functional-training';
 
@@ -32,6 +33,9 @@ export const ETAT_PAR_DEFAUT: EntrainementState = {
   seanceCourante: null,
   enCours: null,
   historique: [],
+  programme: null,
+  personne: null,
+  programmeARenvoyer: false,
 };
 
 /** Complète des paramètres sauvegardés par une version antérieure. */
@@ -113,6 +117,11 @@ const migrer = (sauvegarde: Partial<EntrainementState>): EntrainementState => ({
   parametres: migrerParametres(sauvegarde.parametres ?? {}),
   enCours: migrerProgression(sauvegarde.enCours ?? null),
   historique: migrerHistorique(sauvegarde.historique ?? []),
+  // Un programme illisible (exercices disparus, sauvegarde abîmée) est
+  // écarté : l'application en compose un nouveau.
+  programme: sauvegarde.programme ? validerProgramme(sauvegarde.programme) : null,
+  personne: sauvegarde.personne === 'sebastien' || sauvegarde.personne === 'max' ? sauvegarde.personne : null,
+  programmeARenvoyer: sauvegarde.programmeARenvoyer === true,
 });
 
 /** Lit l'état sauvegardé ; reprend celui de l'ancienne application si besoin. */

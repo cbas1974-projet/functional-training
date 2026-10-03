@@ -37,6 +37,7 @@ import {
 import type { Etape, EtatMaintien, EtatMetronome, PhaseTempo, Suivant } from '../utils/etapesSeance';
 import { estMobilite, secondesParRep } from '../utils/generateurSeance';
 import { libelleTempo } from '../utils/formatage';
+import { chargeProposee } from '../utils/programmeMois';
 import { SUFFIXE_UNITE, libellePoidsParSerie, uniteDeSeance } from '../utils/statistiques';
 import { ajouterTemps, useMoteurEtapes } from '../hooks/useMoteurEtapes';
 import { useVerrouEcran } from '../hooks/useVerrouEcran';
@@ -55,6 +56,13 @@ export interface SeanceGuideeProps {
   onTerminee: (realisee: SeanceRealisee) => void;
   /** Appelé pour quitter sans enregistrer (ou après enregistrement). */
   onQuitter: () => void;
+  /** Charges de la dernière fois, par exercice puis par série : elles
+   *  pré-remplissent la saisie. */
+  chargesPassees?: Record<string, number[]>;
+  /** Démarre aussitôt, sans l'écran de présentation : l'accueil du
+   *  programme montre déjà la séance, un second « Commencer » ferait double
+   *  emploi. 'reprise' repart de la progression sauvegardée. */
+  demarrage?: 'debut' | 'reprise';
 }
 
 // ------------------------------------------------------------- Réglages
@@ -309,6 +317,8 @@ export default function SeanceGuidee({
   onProgression,
   onTerminee,
   onQuitter,
+  chargesPassees = {},
+  demarrage,
 }: SeanceGuideeProps) {
   // La progression proposée à la reprise est figée à l'ouverture : les
   // sauvegardes que nous envoyons ensuite reviennent dans cette même prop.
@@ -523,6 +533,18 @@ export default function SeanceGuidee({
     );
   };
 
+  // Démarrage direct : une seule fois, même quand le mode strict de React
+  // rejoue les effets au montage.
+  const demarrageFaitRef = useRef(false);
+  useEffect(() => {
+    if (!demarrage || demarrageFaitRef.current) return;
+    demarrageFaitRef.current = true;
+    if (demarrage === 'reprise' && progressionInitiale) reprendreSeance();
+    else commencer();
+    // Au montage uniquement.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const basculerPause = () => {
     bellSound.unlock();
     if (enPause) moteur.reprendre();
@@ -597,6 +619,10 @@ export default function SeanceGuidee({
   // ------------------------------------------------ Rendu
 
   if (!etat) {
+    // Démarrage direct : le fond de la séance, le temps d'un rendu.
+    if (demarrage) {
+      return <div className="fixed inset-0 z-50" style={{ background: 'var(--fond)' }} />;
+    }
     return (
       <EcranAccueil
         seance={seance}
@@ -651,6 +677,7 @@ export default function SeanceGuidee({
           guideVisuel={guideVisuel}
           lireEcouleSec={lireEcouleSec}
           poidsSeries={poids[etape.exerciceId] ?? []}
+          chargesPassees={chargesPassees[etape.exerciceId] ?? []}
           unitePoids={unitePoids}
           onPoids={(serie, charge) => changerPoids(etape.exerciceId, serie, charge)}
           onTerminee={suivant}
@@ -1043,6 +1070,8 @@ interface CorpsTravailProps {
   lireEcouleSec: () => number;
   /** Charges déjà saisies pour cet exercice, index 0 = première série. */
   poidsSeries: number[];
+  /** Charges de la dernière fois, série par série ; vide si aucune. */
+  chargesPassees: number[];
   unitePoids: UnitePoids;
   onPoids: (serie: number, charge: number | null) => void;
   onTerminee: () => void;
@@ -1059,6 +1088,7 @@ function CorpsTravail({
   guideVisuel,
   lireEcouleSec,
   poidsSeries,
+  chargesPassees,
   unitePoids,
   onPoids,
   onTerminee,
@@ -1067,12 +1097,9 @@ function CorpsTravail({
   // Numéro de la série en cours : le tour, pour une station de circuit.
   const serieCourante = etape.type === 'serie' ? etape.serie : etape.tour;
   const dejaSaisi = poidsSeries[serieCourante - 1] ?? 0;
-  // Sans saisie pour cette série, on reprend la dernière charge connue : au
-  // tempo lent on garde presque toujours la même d'une série à l'autre.
-  const derniereConnue = poidsSeries
-    .slice(0, serieCourante - 1)
-    .reduce((dernier, charge) => (charge > 0 ? charge : dernier), 0);
-  const valeurDepart = dejaSaisi > 0 ? dejaSaisi : derniereConnue;
+  // Sans saisie pour cette série, on propose la charge de la série d'avant,
+  // sinon celle de la dernière fois.
+  const valeurDepart = chargeProposee(poidsSeries, chargesPassees, serieCourante);
 
   // Le texte saisi est gardé tel quel (« 12, » ne doit pas être réécrit en
   // « 12 » à chaque frappe) ; seule la valeur numérique remonte au parent.
@@ -1084,9 +1111,9 @@ function CorpsTravail({
     onPoids(serieCourante, Number.isFinite(charge) ? charge : null);
   };
 
-  // La charge reprise de la série précédente est enregistrée d'office : sans
-  // cela, une série faite avec la même charge ressortirait vide du bilan.
-  const reprise = dejaSaisi === 0 && derniereConnue > 0 ? derniereConnue : 0;
+  // La charge proposée est enregistrée d'office : sans cela, une série faite
+  // avec la même charge ressortirait vide du bilan.
+  const reprise = dejaSaisi === 0 ? valeurDepart : 0;
   useEffect(() => {
     if (reprise > 0) onPoids(serieCourante, reprise);
     // Au montage uniquement : le composant est remonté à chaque étape.
@@ -1181,6 +1208,11 @@ function CorpsTravail({
               {poidsSeries
                 .map((charge, i) => `S${i + 1} ${charge > 0 ? charge : '—'}`)
                 .join(' · ')}
+            </span>
+          )}
+          {chargesPassees.some((charge) => charge > 0) && (
+            <span className="chiffres block text-xs" style={{ color: 'var(--texte-discret)' }}>
+              Dernière fois : {chargesPassees.map((charge) => (charge > 0 ? charge : '—')).join(' · ')}
             </span>
           )}
         </span>

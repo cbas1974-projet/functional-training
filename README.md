@@ -10,37 +10,55 @@ sur l'appareil.
 
 ## Fonctionnalités
 
-L'application a deux modes, en haut de l'écran : **Programme**, le vrai
-entraînement en salle à deux, et **Séance libre**, une séance tirée de la
-bibliothèque.
+L'application s'ouvre sur le **programme du mois** : la séance du jour, prête à
+commencer. La séance libre, l'historique et les exercices sont à un bouton.
 
-### Programme : l'entraînement à deux
+### Le programme du mois
 
-Un cycle de séances fixes (six par défaut, de A à F, sur deux semaines), fait
-à deux. L'application s'ouvre sur la séance du jour, la suivante du cycle.
+L'application compose les séances elle-même, avec les exercices des posters, à
+partir d'**objectifs musculaires** — par défaut les faiblesses déclarées : bas
+du dos, épaules, extérieur et intérieur de cuisse. Rien à taper.
 
-- **Chacun ses cibles** : sur le même exercice, chacun a ses séries et ses
-  répétitions (« Moi 3 × 8 · Mon ami 3 × 6 »).
-- **Deux façons de faire un exercice** : *chacun son tour* sur le même
-  appareil (bench press, leg press, trap bar, traîneau) — l'ami commence, puis
-  on alterne, et la série de l'un est le repos de l'autre — ou *en même temps*,
-  côte à côte aux poids libres ou sur deux machines opposées.
-- **La version du jour** : les soirs de jiu-jitsu (dimanche, mardi et jeudi par
-  défaut), la séance du matin perd une série pour « moi » ; l'ami garde la
-  sienne et fait sa dernière série seul. Un lien permet de faire quand même la
-  version complète.
-- **Les charges de chacun** : chaque série se valide d'un « Fait ». La charge
-  proposée est celle de la série précédente, sinon celle de la dernière fois —
-  retrouvée par le nom de l'exercice, dans n'importe quelle séance du cycle.
-- **Le tempo à la demande** : un bouton lance la bille (MONTE, DESCENDS,
-  TIENS) quand on est prêt sous la charge. L'endroit où commence la répétition
-  (en haut pour un bench press, en bas pour un trap bar) est deviné d'après le
-  nom et se corrige d'un toucher.
-- **Saisie rapide** : une liste se tape ou se dicte d'un coup, un exercice par
-  ligne ou séparés par des virgules — « trap bar trois fois huit, bench press
-  3x8, leg press ».
-- **Nos séances** : l'historique des séances faites, avec les charges de
-  chacun.
+- **Lundi, la séance dure**, toujours la même, en séries droites : un squat à
+  deux jambes, une seule charnière lourde (soulevé de terre roumain ou au
+  kettlebell), un développé sur banc, un tirage, le bas du dos, les épaules
+  au-dessus de la tête, et le portage pour finir. Elle tient dans l'heure.
+- **Mardi et jeudi, plus faciles**, en **enchaîné** : trois exercices à la
+  suite, 90 s de pause, deux ou trois tours. Mardi le bas du corps (bas du
+  dos, extérieur et intérieur de cuisse), jeudi le haut (épaules d'abord).
+- **Semaines A et B** : mardi et jeudi alternent d'une semaine à l'autre —
+  mêmes muscles, autres exercices. Le programme dure quatre semaines, puis
+  l'application propose d'en refaire un. Commencé un vendredi ou un week-end,
+  il part du lundi suivant.
+- **Jamais deux exercices qui chargent le bas du dos dans le même
+  enchaînement**, aucun mouvement explosif, rien au-delà du niveau
+  intermédiaire, et seulement le matériel de la salle : haltères, kettlebells,
+  banc, tapis.
+- **Changer** un exercice ouvre la liste des exercices des mêmes muscles, avec
+  leur image : le même geste d'abord, et ce que le programme ne fait pas déjà
+  avant ce qui revient un autre jour. Le changement vaut pour chaque séance de
+  ce nom.
+- **Objectifs** et **Refaire**, dans *Réglages* : choisir d'autres muscles,
+  ou tirer un autre programme. L'historique et les charges restent.
+
+### Sébastien et Max, chacun sur son téléphone
+
+Au premier lancement, l'application demande qui s'entraîne sur ce téléphone.
+Les jours faciles, Sébastien fait **une série de moins** que Max — le
+jiu-jitsu vient le soir. Tout se règle dans *Réglages* : séries du lundi,
+séries de mardi et jeudi, répétitions, tempo, unité.
+
+**Envoyer à Max** (ou à Sébastien) partage un lien qui contient tout le
+programme : Max l'ouvre et a les mêmes séances, les mêmes semaines A et B. S'il
+avait déjà un programme, l'application lui demande s'il prend celui-ci. Tant
+que l'autre téléphone n'a pas le programme — au premier jour, ou après un
+changement —, l'accueil le rappelle. Une application installée sur l'écran
+d'accueil d'un iPhone ne s'ouvre pas sur les liens des messages : on colle
+alors le lien dans *Réglages*.
+
+Chacun note ses charges sur son téléphone. La séance guidée **propose la
+charge de la dernière fois**, série par série, et l'affiche sous la saisie
+(« Dernière fois : 25 · 30 · 30 »).
 
 ### Séance libre
 - **Durée** : 5, 10, 15, 20, 30, 45 ou 60 minutes.
@@ -191,10 +209,12 @@ exercice par un autre de la même zone.
 - Repos chronométré avec aperçu de l'exercice suivant et bouton « +15 s ».
 - Pause, précédent, suivant, « Passer l'exercice ».
 - **Poids saisi série par série**, en livres : le champ est pré-rempli avec la
-  charge de la série précédente, il n'y a qu'à la corriger quand elle change.
+  charge de la série précédente, sinon celle de la dernière fois ; il n'y a
+  qu'à la corriger quand elle change.
 - Retour au calme guidé, puis écran de fin récapitulatif.
 - L'écran reste allumé pendant la séance, si le navigateur le permet.
-- La séance reprend où elle en était si la page est rechargée.
+- La séance reprend où elle en était si la page est rechargée : l'accueil
+  propose de la reprendre.
 
 ### Historique et bibliothèque
 Chaque séance enregistrée conserve la date, la durée réelle et prévue, et pour
@@ -367,9 +387,8 @@ aussi remplacer un fichier PNG par votre propre photo en gardant son nom.
 ```
 src/
 ├── components/
-│   ├── Programme.tsx             # Programme à deux : la séance du jour, l'historique
-│   ├── SeanceADeux.tsx           # Séance à deux, série par série, avec le tempo
-│   ├── EditeurProgramme.tsx      # Les séances du cycle, les prénoms, les soirs de jiu-jitsu
+│   ├── Accueil.tsx               # Programme du mois : la séance du jour, changer, partager
+│   ├── Feuille.tsx               # Feuille de réglages et ses boutons
 │   ├── Entrainement.tsx          # Séance libre : réglages, plan, historique
 │   ├── SeanceGuidee.tsx          # Séance guidée plein écran et métronome
 │   ├── FicheExercice.tsx         # Vignette et nom d'un exercice
@@ -382,7 +401,7 @@ src/
 ├── utils/
 │   ├── generateurSeance.ts       # Choix des exercices et calcul des volumes
 │   ├── etapesSeance.ts           # Machine à étapes de la séance guidée
-│   ├── programme.ts              # Ordre des séries à deux, cycle, charges, saisie rapide
+│   ├── programmeMois.ts          # Composition du programme, calendrier A/B, charges, lien
 │   ├── statistiques.ts           # Fréquence d'un exercice, charges par série
 │   ├── formatage.ts              # Dates, durées, libellés
 │   ├── sounds.ts                 # Cloche et bips (Web Audio)

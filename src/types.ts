@@ -197,6 +197,9 @@ export interface ParametresSeance {
   /** Nombre de séries souhaité par exercice ; null = automatique selon la
    *  durée. Si ce nombre ne tient pas dans la durée, l'automatique reprend. */
   seriesParExercice: 2 | 3 | 4 | null;
+  /** Séries par exercice les jours faciles du programme (mardi, jeudi).
+   *  Absent = une de moins que `seriesParExercice`. */
+  seriesJourFacile?: number;
   /** Répétitions souhaitées par série ; null = automatique selon le niveau.
    *  Si ce nombre ne tient pas dans la durée, l'automatique reprend. */
   repsParSerie: 6 | 8 | 9 | 10 | 12 | null;
@@ -250,6 +253,9 @@ export interface Circuit {
 export interface Seance {
   id: string;
   creeLe: string;
+  /** Nom de la séance du programme (« Mardi A ») ; absent pour une séance
+   *  libre. */
+  titre?: string;
   parametres: ParametresSeance;
   graine: number;
   echauffementSec: number;
@@ -279,6 +285,8 @@ export interface ExerciceRealise {
 export interface SeanceRealisee {
   id: string;
   date: string;
+  /** Nom de la séance du programme, s'il y en a un. */
+  titre?: string;
   parametres: ParametresSeance;
   dureePrevueSec: number;
   dureeReelleSec: number;
@@ -306,97 +314,53 @@ export interface EntrainementState {
   seanceCourante: Seance | null;
   enCours: ProgressionSeance | null;
   historique: SeanceRealisee[];
+  /** Le programme du mois ; null tant qu'il n'a pas été composé. */
+  programme?: ProgrammeMois | null;
+  /** Qui s'entraîne sur ce téléphone ; null tant qu'on ne l'a pas dit. */
+  personne?: Personne | null;
+  /** L'autre téléphone n'a pas ce programme-ci : il vient d'être composé, ou
+   *  il a changé depuis le dernier envoi. */
+  programmeARenvoyer?: boolean;
 }
 
-// ------------------------------------------------------------- Programme à deux
+// ------------------------------------------------------------- Programme du mois
 //
-// Le vrai entraînement en salle : un cycle de séances fixes (six, sur deux
-// semaines), fait à deux. Chacun a ses séries, ses répétitions et ses charges
-// sur les mêmes exercices.
+// Le vrai entraînement : l'application choisit les exercices dans la
+// bibliothèque des posters, à partir d'objectifs musculaires. Une séance dure
+// le lundi, toujours la même ; des séances plus faciles le mardi et le jeudi,
+// qui alternent d'une semaine à l'autre — mêmes muscles, autres exercices.
+// Chacun s'entraîne avec l'application sur son propre téléphone.
 
-/** Les deux personnes qui s'entraînent ensemble. */
-export type Personne = 'moi' | 'ami';
+/** Qui s'entraîne sur ce téléphone. */
+export type Personne = 'sebastien' | 'max';
 
-/** Comment un exercice se fait à deux.
- *  tour     : chacun son tour sur le même appareil (bench press, leg press,
- *             trap bar, traîneau) ; la série de l'un est le repos de l'autre.
- *  ensemble : en même temps, côte à côte aux poids libres ou sur deux machines
- *             opposées que l'on échange. */
-export type FaconADeux = 'tour' | 'ensemble';
+export type TypeSeanceMois = 'dure' | 'facile';
 
-/** Séries et répétitions visées par une personne pour un exercice. */
-export interface Cible {
-  series: number;
-  reps: number;
-}
-
-export interface ExerciceProgramme {
-  id: string;
-  /** Nom libre, tel qu'on le dit en salle : « Trap bar », « Leg press ». */
-  nom: string;
-  facon: FaconADeux;
-  cibles: Record<Personne, Cible>;
-  /** Où commence une répétition, pour le tempo : 'haut' (bench press, leg
-   *  press) ou 'bas' (trap bar, rowing). Absent = deviné d'après le nom. */
-  depart?: 'haut' | 'bas';
-}
-
-export interface SeanceProgramme {
+export interface SeanceDuMois {
+  /** 'lundi', 'mardi-a', 'jeudi-a', 'mardi-b', 'jeudi-b'. */
   id: string;
   nom: string;
-  exercices: ExerciceProgramme[];
+  /** Jour de la semaine : 1 = lundi, 2 = mardi, 4 = jeudi. */
+  jour: number;
+  /** Semaine A ou B ; absente, la séance revient toutes les semaines. */
+  semaine?: 'A' | 'B';
+  type: TypeSeanceMois;
+  /** 'series' : séries droites, repos entre chacune — chacun son tour sur
+   *  l'appareil. 'enchaine' : blocs de trois exercices à la suite, puis une
+   *  pause. */
+  format: 'series' | 'enchaine';
+  /** Identifiants d'exercices de la bibliothèque, dans l'ordre de la séance. */
+  exercices: string[];
 }
 
-export interface Programme {
-  noms: Record<Personne, string>;
-  seances: SeanceProgramme[];
-  /** Index de la prochaine séance du cycle. */
-  prochaine: number;
-  /** Jours où il y a du jiu-jitsu le soir (0 = dimanche … 6 = samedi). Ces
-   *  jours-là, la version de « moi » perd une série. */
-  joursJiuJitsu: number[];
-}
-
-/** Une série faite par une personne ; poids 0 = charge non saisie. */
-export interface SerieFaite {
-  personne: Personne;
-  serie: number;
-  poids: number;
-}
-
-export interface ExerciceFait {
-  exerciceId: string;
-  nom: string;
-  series: SerieFaite[];
-}
-
-export interface SeanceProgrammeFaite {
-  id: string;
-  /** Fin de la séance (ISO). */
-  date: string;
-  seanceId: string;
-  nomSeance: string;
-  allegee: boolean;
-  exercices: ExerciceFait[];
-}
-
-/** Séance à deux en cours, sauvegardée pour survivre à un rechargement. */
-export interface SeanceADeuxEnCours {
-  seanceId: string;
-  allegee: boolean;
-  /** Étape affichée, dans la liste plate des étapes de la séance. */
-  etape: number;
-  /** Charges saisies, par clé `exerciceId:personne:serie`. */
-  poids: Record<string, number>;
-  /** Clés des séries faites (même clé que `poids`). */
-  faites: string[];
-  demarreeLe: string;
-  /** Dernière série validée (ISO) : le repos se compte à partir d'elle. */
-  derniereSerieLe?: string;
-}
-
-export interface EtatProgramme {
-  programme: Programme;
-  historique: SeanceProgrammeFaite[];
-  enCours: SeanceADeuxEnCours | null;
+export interface ProgrammeMois {
+  /** Lundi de la semaine A (AAAA-MM-JJ) : l'alternance se compte depuis lui. */
+  debut: string;
+  /** Identifiants des objectifs musculaires retenus. */
+  objectifs: string[];
+  /** Matériel de la salle, avec lequel le programme a été composé. */
+  materiels: Materiel[];
+  /** Graine du tirage : deux programmes de même graine sont identiques. */
+  graine: number;
+  seances: SeanceDuMois[];
 }

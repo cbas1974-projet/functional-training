@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import type { EntrainementState } from '../types';
 import { PARAMETRES_PAR_DEFAUT } from '../data/parametres';
 import { chargerEtat, enregistrerEtat } from './storage';
+import { genererProgramme } from './programmeMois';
 
 const CLE = 'functional-training';
 
@@ -66,15 +67,28 @@ describe('chargerEtat', () => {
     expect(chargerEtat().enCours?.poids).toEqual({ 'goblet-squat': [16, 16, 18] });
   });
 
-  it('fait l’aller-retour sans rien perdre', () => {
+  it('fait l’aller-retour sans rien perdre, programme et personne compris', () => {
     const etat: EntrainementState = {
-      parametres: { ...PARAMETRES_PAR_DEFAUT, format: 'superset' },
+      parametres: { ...PARAMETRES_PAR_DEFAUT, format: 'superset', seriesJourFacile: 2 },
       seanceCourante: null,
       enCours: null,
       historique: [],
+      programme: genererProgramme({ graine: 4, aujourdhui: new Date(2026, 9, 5) }),
+      personne: 'sebastien',
+      programmeARenvoyer: true,
     };
     enregistrerEtat(etat);
     expect(chargerEtat()).toEqual(etat);
+  });
+
+  it('écarte un programme illisible et une personne inconnue', () => {
+    localStorage.setItem(
+      CLE,
+      JSON.stringify({ ...ANCIENNE_SAUVEGARDE, programme: { debut: 'hier' }, personne: 'quelqu’un' }),
+    );
+    const etat = chargerEtat();
+    expect(etat.programme).toBeNull();
+    expect(etat.personne).toBeNull();
   });
 
   it('fige en kilogrammes les séances enregistrées avant le réglage d’unité', () => {

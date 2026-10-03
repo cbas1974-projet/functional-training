@@ -567,6 +567,7 @@ export function agregerRealisation(
   return {
     id: nouvelIdentifiant(),
     date: new Date().toISOString(),
+    ...(seance.titre ? { titre: seance.titre } : {}),
     parametres: seance.parametres,
     dureePrevueSec: dureeTotaleSec(etapes),
     dureeReelleSec: Math.round(dureeReelleSec),

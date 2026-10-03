@@ -381,7 +381,7 @@ function limiter(valeur: number, mini: number, maxi: number): number {
 }
 
 /** Échauffement articulaire : 12 % de la séance, entre 1 et 5 min. */
-function echauffementSec(dureeMinutes: number): number {
+export function echauffementSec(dureeMinutes: number): number {
   return limiter(arrondiDemiMinute(dureeMinutes * 0.12), 1, 5) * 60;
 }
 
@@ -393,7 +393,7 @@ function echauffementMobiliteSec(dureeMinutes: number): number {
 }
 
 /** Retour au calme : 8 % de la séance, entre 30 s et 4 min. */
-function retourCalmeSec(dureeMinutes: number): number {
+export function retourCalmeSec(dureeMinutes: number): number {
   return limiter(arrondiDemiMinute(dureeMinutes * 0.08), 0.5, 4) * 60;
 }
 
@@ -582,13 +582,14 @@ function premierNonVide<T>(...listes: T[][]): T[] {
 
 /** Le mouvement d'un exercice, indépendamment du matériel : le squat gobelet
  *  aux haltères et au kettlebell portent le même nom anglais sur leurs posters.
- *  Une séance ne doit pas les tirer tous les deux. */
+ *  Une séance ne doit pas les tirer tous les deux. Espaces et traits d'union
+ *  ne comptent pas : « Woodchop » et « Wood Chop » sont le même bûcheron. */
 export function cleMouvement(exercice: Exercice): string {
   return exercice.nomEn
     .toLowerCase()
     .replace(/[’']/g, '')
     .replace(/^(dumbbell|weighted)\s+/, '')
-    .trim();
+    .replace(/[\s-]+/g, '');
 }
 
 /** Parcourt le cycle de zones et retient au plus `maximum` exercices, en
