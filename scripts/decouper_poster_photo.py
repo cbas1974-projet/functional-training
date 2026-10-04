@@ -285,6 +285,9 @@ COUPES_LIBELLE: dict[str, float] = {
     "kb-superman": 0.83,
     "kb-side-leg-raise": 0.80,
     "kb-single-leg-calf-raise": 0.775,
+    # Grande photo du volume 1 : libellés trop près du dessin.
+    "tricep-extension": 0.77,
+    "wrist-curl": 0.78,
 }
 
 #: Posters dont les cases ne portent aucun libellé imprimé : rien à retirer
@@ -296,8 +299,10 @@ SANS_LIBELLE = {"stretching"}
 #: plutôt que des traits gris qui n'existent pas.
 SANS_GRILLE = {"stretching"}
 
-#: Largeur des vignettes produites. Les 40 premières font 199 px ; on monte à
-#: 320 px, ce que la photo permet sans interpoler.
+#: Largeur des vignettes produites. Les 40 premières, tirées d'une petite
+#: image, faisaient 199 px ; on monte à 320 px, ce que les photos des autres
+#: posters permettent sans interpoler. La grande photo du volume 1 (585 px par
+#: case) se découpe en 480 px (`--largeur 480`).
 LARGEUR_VIGNETTE = 320
 
 
@@ -490,6 +495,20 @@ def decouper(debut: int, fin: int, rangee: Rangee, detectes: list[int]) -> list[
     return [(bornes[i], bornes[i + 1]) for i in range(len(bornes) - 1)]
 
 
+def bas_local_du_bandeau(rvb: np.ndarray, x0: int, x1: int, y_haut: int, y_bas: int) -> int | None:
+    """Dernière ligne du bandeau au-dessus d'une case, reconnu à sa couleur —
+    un bleu marine, là où les dessins sont noirs ou gris. Un poster plastifié
+    gondole : sur une photo, le bandeau peut remonter de cinquante pixels d'un
+    bout à l'autre, et pencher au-dessus d'une même case ; on prend sa ligne
+    la plus basse."""
+    if y_bas <= y_haut:
+        return None
+    bloc = rvb[y_haut:y_bas, x0:x1].astype(int)
+    marine = (bloc[..., 2] - bloc[..., 0] > 25) & (bloc.sum(axis=-1) < 420)
+    lignes = np.nonzero(marine.mean(axis=1) > 0.02)[0]
+    return y_haut + int(lignes.max()) if len(lignes) else None
+
+
 def nb_cellules(rangee: Rangee) -> int:
     return len(rangee) + 1 if isinstance(rangee, list) else rangee
 
@@ -554,6 +573,8 @@ def main() -> None:
     p.add_argument("disposition", choices=sorted(set(DISPOSITIONS) | set(PANNEAUX)))
     p.add_argument("--sortie", type=Path, default=Path("public/exercices"))
     p.add_argument("--planche", type=Path, help="planche de contrôle")
+    p.add_argument("--largeur", type=int, default=LARGEUR_VIGNETTE,
+                   help=f"largeur des vignettes en pixels (défaut : {LARGEUR_VIGNETTE})")
     p.add_argument("--garder-libelle", action="store_true",
                    help="conserve le libellé imprimé : sert à vérifier les identifiants")
     p.add_argument("--debug", action="store_true")
@@ -564,6 +585,7 @@ def main() -> None:
         brute = redresser(brute, *REDRESSEMENTS[args.disposition])
     img = aplanir(brute)
     gris = np.asarray(img.convert("L"), dtype=float)
+    rvb = np.asarray(img)
 
     identifiants = IDENTIFIANTS[args.disposition]
     en_panneaux = args.disposition in PANNEAUX
@@ -576,8 +598,10 @@ def main() -> None:
     if len(identifiants) != attendu:
         sys.exit(f"{len(identifiants)} identifiants pour {attendu} cellules annoncées.")
 
-    # Boîte de chaque section : (nom, rangées, x_gauche, x_droite, haut, bas).
+    # Boîte de chaque section : (nom, rangées, x_gauche, x_droite, haut, bas),
+    # et le haut du bandeau de la section quand il y en a un.
     boites: list[tuple[str, list[Rangee], int, int, int, int]] = []
+    hauts_bandeaux: list[int | None] = []
     if en_panneaux:
         largeur, hauteur = img.size
         for nom, (fx0, fx1, fy0, fy1), rangees in PANNEAUX[args.disposition]:
@@ -587,6 +611,7 @@ def main() -> None:
                 round(fy0 * hauteur), round(fy1 * hauteur),
             )
             boites.append((nom, rangees, x0, x1, y0, y1))
+            hauts_bandeaux.append(None)
     else:
         tous = bandeaux(img)
         barres = bandeaux_de_section(tous, len(sections), img.size[0])
@@ -603,31 +628,61 @@ def main() -> None:
             bas = (barres[i + 1][0] - 10) if i + 1 < len(barres) else bas_dernier
             # Bord du poster interpolé : le bandeau de la section, et le suivant.
             sx0, sx1 = (barres[i + 1][2], barres[i + 1][3]) if i + 1 < len(barres) else (gx0, gx1)
+            # Un bandeau rogné par un reflet ne doit pas rétrécir la section :
+            # quand un de ses bords s'écarte de plus de 3 % de celui du
+            # bandeau suivant, on garde celui du suivant.
+            ecart_permis = 0.03 * img.size[0]
+            if abs(gx0 - sx0) > ecart_permis:
+                gx0 = sx0
+            if abs(gx1 - sx1) > ecart_permis:
+                gx1 = sx1
             boites.append((nom, rangees, max(gx0, sx0) + 8, min(gx1, sx1) - 8, y1 + 10, bas))
+            hauts_bandeaux.append(y0)
 
     args.sortie.mkdir(parents=True, exist_ok=True)
     vignettes: list[tuple[str, Image.Image]] = []
     index = 0
 
-    for nom_section, rangees, x_gauche, x_droite, haut, bas in boites:
+    for (nom_section, rangees, x_gauche, x_droite, haut, bas), haut_bandeau in zip(boites, hauts_bandeaux):
         lignes = [haut + t for t in traits(gris[haut:bas, x_gauche:x_droite], 1)]
         bornes_y = decouper(haut, bas, len(rangees), lignes)
 
-        for (ra, rb), rangee in zip(bornes_y, rangees):
-            ra, rb = ra + 6, rb - 6
-            bloc = gris[ra:rb, x_gauche:x_droite]
-            cols = [
+        rangees_bornees = [((ra + 6, rb - 6), rangee) for (ra, rb), rangee in zip(bornes_y, rangees)]
+        colonnes = [
+            [
                 x_gauche + t
                 for t in (
-                    gouttieres(bloc, nb_cellules(rangee))
+                    gouttieres(gris[ra:rb, x_gauche:x_droite], nb_cellules(rangee))
                     if args.disposition in SANS_GRILLE
-                    else traits(bloc, 0)
+                    else traits(gris[ra:rb, x_gauche:x_droite], 0)
                 )
             ]
+            for (ra, rb), rangee in rangees_bornees
+        ]
+        for k, ((ra, rb), rangee) in enumerate(rangees_bornees):
+            cols = colonnes[k]
+            # Des traits trop pâles pour ressortir : la rangée reprend ceux de
+            # la rangée la plus proche de la même section, quand celle-ci a
+            # autant de cases et tous ses traits — les colonnes d'une section
+            # sont alignées.
+            if not isinstance(rangee, list) and len(cols) != rangee - 1:
+                completes = [
+                    j for j, (_, autre) in enumerate(rangees_bornees)
+                    if autre == rangee and len(colonnes[j]) == rangee - 1
+                ]
+                if completes:
+                    cols = colonnes[min(completes, key=lambda j: abs(j - k))]
             for (ca, cb) in decouper(x_gauche, x_droite, rangee, cols):
                 if cb - ca < 40 or rb - ra < 40:
                     sys.exit(f"Cellule dégénérée en {nom_section} : x={ca}..{cb}, y={ra}..{rb}")
-                cellule = img.crop((ca + 6, ra + 4, cb - 6, rb - 2))
+                # Première rangée : la case commence sous le bandeau, à l'endroit
+                # où il s'arrête au-dessus d'elle.
+                haut_case = ra + 4
+                if k == 0 and haut_bandeau is not None:
+                    fin_bandeau = bas_local_du_bandeau(rvb, ca + 6, cb - 6, haut_bandeau, ra + 4)
+                    if fin_bandeau is not None:
+                        haut_case = min(haut_case, fin_bandeau + 8)
+                cellule = img.crop((ca + 6, haut_case, cb - 6, rb - 2))
                 nom = identifiants[index]
                 if args.garder_libelle or args.disposition in SANS_LIBELLE:
                     cellule = rogner_blanc(cellule)
@@ -637,9 +692,9 @@ def main() -> None:
                     cellule = rogner_blanc(cellule.crop((0, 0, cellule.width, coupe)))
                 else:
                     cellule = rogner_blanc(retirer_libelle(cellule))
-                echelle = LARGEUR_VIGNETTE / cellule.width
+                echelle = args.largeur / cellule.width
                 cellule = cellule.resize(
-                    (LARGEUR_VIGNETTE, max(1, int(round(cellule.height * echelle)))), Image.LANCZOS
+                    (args.largeur, max(1, int(round(cellule.height * echelle)))), Image.LANCZOS
                 )
                 cellule = cellule.filter(ImageFilter.UnsharpMask(radius=1.6, percent=90, threshold=3))
                 cellule.save(args.sortie / f"{nom}.png")
@@ -652,7 +707,7 @@ def main() -> None:
 
     if args.planche:
         colonnes = 5
-        larg = LARGEUR_VIGNETTE + 10
+        larg = args.largeur + 10
         haut_case = max(v.height for _, v in vignettes) + 34
         rangs = (len(vignettes) + colonnes - 1) // colonnes
         planche = Image.new("RGB", (colonnes * larg, rangs * haut_case), "white")
