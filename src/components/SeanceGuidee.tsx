@@ -39,9 +39,15 @@ import {
 import type { Etape, EtatMaintien, EtatMetronome, PhaseTempo, Suivant } from '../utils/etapesSeance';
 import { estMobilite, secondesParRep } from '../utils/generateurSeance';
 import { libelleTempo } from '../utils/formatage';
-import { chargeDeSerie, chargeLeBasDuDos, etirementsPauseDe } from '../utils/programmeMois';
-import { SUFFIXE_UNITE, libellePoidsParSerie, uniteDeSeance } from '../utils/statistiques';
+import { autrePersonne, chargeDeSerie, chargeLeBasDuDos, etirementsPauseDe } from '../utils/programmeMois';
+import { decisionPasserExercice, decisionProlonger, decisionSuivant, perspectiveAutre } from '../utils/horlogeCommune';
+import { tempsActifMs } from '../utils/etatCommun';
+import type { Contexte, Decision } from '../utils/horlogeCommune';
+import { SUFFIXE_UNITE, chargeTotale, libellePoidsParSerie, uniteDeSeance } from '../utils/statistiques';
 import { ajouterTemps, useMoteurEtapes } from '../hooks/useMoteurEtapes';
+import { useMoteurCommun } from '../hooks/useMoteurCommun';
+import { useSeanceCommune } from '../hooks/useSeanceCommune';
+import type { ConfigSynchro } from '../hooks/useSeanceCommune';
 import { useVerrouEcran } from '../hooks/useVerrouEcran';
 import PaceurTempo from './PaceurTempo';
 import type { LectureTempo } from './PaceurTempo';
@@ -65,6 +71,11 @@ export interface SeanceGuideeProps {
    *  programme montre déjà la séance, un second « Commencer » ferait double
    *  emploi. 'reprise' repart de la progression sauvegardée. */
   demarrage?: 'debut' | 'reprise';
+  /** À deux, avec le serveur : l'horloge commune, en direct. */
+  synchro?: ConfigSynchro;
+  /** La charge totale soulevée la dernière fois, dans l'unité de la séance :
+   *  le chiffre à battre. */
+  chargeDerniereFois?: number;
 }
 
 // ------------------------------------------------------------- Réglages
@@ -345,6 +356,8 @@ export default function SeanceGuidee({
   onQuitter,
   chargesPassees = {},
   demarrage,
+  synchro,
+  chargeDerniereFois,
 }: SeanceGuideeProps) {
   // La progression proposée à la reprise est figée à l'ouverture : les
   // sauvegardes que nous envoyons ensuite reviennent dans cette même prop.
@@ -376,7 +389,25 @@ export default function SeanceGuidee({
   const blocDe = (exerciceId: string): BlocSeries | undefined =>
     seanceActive.blocs.find((bloc) => bloc.exerciceId === exerciceId);
 
-  const moteur = useMoteurEtapes(etapes.length);
+  // À deux, avec le serveur : l'horloge commune mène la séance, la même sur
+  // les deux téléphones. Sans réseau, elle tourne ici et rattrape le serveur
+  // quand il revient.
+  const enCommun = synchro !== undefined && partenaire !== undefined && seanceActive.blocs.some((b) => b.autre);
+  const commune = useSeanceCommune(enCommun ? synchro : null);
+  const etapesAutre = useMemo(() => {
+    const autre = perspectiveAutre(seanceActive);
+    return autre ? construireEtapes(autre) : [];
+  }, [seanceActive]);
+  const moteurLocal = useMoteurEtapes(etapes.length);
+  const moteurCommun = useMoteurCommun(etapes, commune.etat, commune.heure, enCommun);
+  const moteur = enCommun ? moteurCommun : moteurLocal;
+  /** Un mot quand un bouton ne peut rien : « Max finit sa série. » */
+  const [message, setMessage] = useState<string | null>(null);
+  useEffect(() => {
+    if (!message) return;
+    const delai = window.setTimeout(() => setMessage(null), 3500);
+    return () => window.clearTimeout(delai);
+  }, [message]);
 
   // À chaque changement d'étape, on remonte en haut. C'est le conteneur plein
   // écran qui défile, pas la fenêtre (le défilement du corps est bloqué) :
@@ -408,8 +439,21 @@ export default function SeanceGuidee({
   const reste = Math.max(0, dureeEff - ecoule);
 
   // Temps réel : étapes quittées + étape courante (rien sur l'étape finale).
-  const tempsAvecCourante = ajouterTemps(etat?.tempsParEtapeSec ?? [], index, estFin ? 0 : ecoule);
-  const tempsTotalEcoule = tempsAvecCourante.reduce((total, t) => total + t, 0);
+  // Une attente où l'on arrive en avance (à deux) commence « avant zéro » :
+  // pas de temps négatif au compteur.
+  const tempsAvecCourante = ajouterTemps(etat?.tempsParEtapeSec ?? [], index, estFin ? 0 : Math.max(0, ecoule));
+  // À deux, le temps écoulé est celui de la séance commune, pauses ôtées : les
+  // attentes écourtées n'y comptent pas pour leur durée prévue. Il s'arrête à
+  // l'écran de fin : le temps passé à le regarder ne compte pas.
+  const [finAtteinteA, setFinAtteinteA] = useState<number | null>(null);
+  const heureCommune = commune.heure;
+  useEffect(() => {
+    if (enCommun && estFin && finAtteinteA === null) setFinAtteinteA(heureCommune());
+  }, [enCommun, estFin, finAtteinteA, heureCommune]);
+  const tempsTotalEcoule =
+    enCommun && commune.etat
+      ? tempsActifMs(commune.etat, commune.etat.debut, finAtteinteA ?? commune.heure(), false) / 1000
+      : tempsAvecCourante.reduce((total, t) => total + t, 0);
   const tempsRestant = dureeRestanteSec(etapes, index, ecoule, prolongation);
 
   const metro = etatMetronome(etape, ecoule, tempo);
@@ -491,14 +535,27 @@ export default function SeanceGuidee({
     // Fin de l'étape : passage automatique à la suivante — sauf quand la
     // séance attend « Go ».
     const attendGo = etape.type === 'repos' && etape.manuel === true;
-    if (ecoule >= dureeEff && ev.avance !== visite && !attendGo) {
+    // À deux, l'étape suit l'horloge commune d'elle-même.
+    if (!enCommun && ecoule >= dureeEff && ev.avance !== visite && !attendGo) {
       ev.avance = visite;
       if (etape.type === 'serie' || etape.type === 'station') bellSound.playBell('end');
       const finPrevueMs = etat.debutEtapeMs + dureeEff * 1000;
       const depart = maintenant - finPrevueMs <= TOLERANCE_FIN_MS ? finPrevueMs : maintenant;
       naviguer(index + 1, depart);
     }
-  }, [etat, estFin, etape, reste, prolongation, metro, mouvements, indexMouvement, ecoule, dureeEff, maintenant, index, naviguer]);
+  }, [etat, estFin, etape, reste, prolongation, metro, mouvements, indexMouvement, ecoule, dureeEff, maintenant, index, naviguer, enCommun]);
+
+  // À deux, la cloche sonne quand l'horloge commune entre dans une série, et
+  // quand elle en sort.
+  const etapeSonnee = useRef<Etape | null>(null);
+  useEffect(() => {
+    if (!enCommun || !etat) return;
+    const avant = etapeSonnee.current;
+    etapeSonnee.current = etape;
+    if (!avant || avant === etape) return;
+    if (etape.type === 'serie' || etape.type === 'station') bellSound.playBell('start');
+    else if (avant.type === 'serie' || avant.type === 'station') bellSound.playBell('end');
+  }, [enCommun, etat, etape]);
 
   // ------------------------------------------------ Sauvegarde
 
@@ -549,6 +606,8 @@ export default function SeanceGuidee({
     setSeanceActive(source);
     setPoids(poidsInitial);
     setDemarreeLe(debut);
+    // À deux : on commence la séance commune, ou on la rejoint.
+    if (enCommun) commune.envoyer({ type: 'commencer' });
     moteur.demarrer(indexDepart, temps);
     bellSound.playBell('start');
   };
@@ -580,15 +639,53 @@ export default function SeanceGuidee({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  /** À deux : ce que voit ce téléphone, et l'autre, sur l'horloge commune. */
+  const contexteCommun = (): Contexte | null =>
+    commune.etat && moteurCommun.position
+      ? {
+          etapes,
+          etapesAutre,
+          etat: commune.etat,
+          t: commune.heure(),
+          position: moteurCommun.position,
+          partenaire: partenaire ?? 'l’autre',
+        }
+      : null;
+  /** Un appui, à deux : pour les deux, pour moi seul, ou rien — avec un mot. */
+  const decider = (choisir: (contexte: Contexte) => Decision) => {
+    bellSound.unlock();
+    const contexte = contexteCommun();
+    if (!contexte) return;
+    const decision = choisir(contexte);
+    if (decision.genre === 'refus') {
+      if (decision.raison) setMessage(decision.raison);
+      return;
+    }
+    if (decision.genre === 'locale') {
+      moteurCommun.setEcart(decision.ecart);
+      return;
+    }
+    if (decision.confirmer && !window.confirm(decision.confirmer)) return;
+    commune.envoyer(decision.action);
+  };
+
   const basculerPause = () => {
     bellSound.unlock();
-    if (enPause) moteur.reprendre();
+    if (enCommun) commune.envoyer({ type: enPause ? 'reprendre' : 'pause' });
+    else if (enPause) moteur.reprendre();
     else moteur.pause();
   };
-  const precedent = () => naviguer(indexEtapePrecedente(etapes, index));
-  const suivant = () => naviguer(index + 1);
-  const passerExercice = () => naviguer(indexApresExercice(etapes, index));
-  const prolongerRepos = () => moteur.prolonger(PROLONGATION_REPOS_SEC);
+  const precedent = () => {
+    // À deux, on ne revient pas en arrière : l'horloge est commune.
+    if (!enCommun) naviguer(indexEtapePrecedente(etapes, index));
+  };
+  const suivant = () => (enCommun ? decider(decisionSuivant) : naviguer(index + 1));
+  const passerExercice = () =>
+    enCommun ? decider(decisionPasserExercice) : naviguer(indexApresExercice(etapes, index));
+  const prolongerRepos = () =>
+    enCommun
+      ? decider((contexte) => decisionProlonger(contexte, PROLONGATION_REPOS_SEC))
+      : moteur.prolonger(PROLONGATION_REPOS_SEC);
 
   /** Enregistre la charge d'une série précise (numérotée à partir de 1). */
   const changerPoids = (exerciceId: string, serie: number, charge: number | null) =>
@@ -629,7 +726,8 @@ export default function SeanceGuidee({
     }
     // Le dialogue bloque le rendu, pas l'horloge : on met en pause le temps
     // de la question, puis on reprend si l'utilisateur renonce à quitter.
-    const etaitEnPause = enPause;
+    // À deux, la pause arrêterait aussi l'autre : l'horloge continue.
+    const etaitEnPause = enPause || enCommun;
     if (!etaitEnPause) moteur.pause();
     if (!window.confirm('Quitter la séance en cours ?')) {
       if (!etaitEnPause) moteur.reprendre();
@@ -760,7 +858,14 @@ export default function SeanceGuidee({
       break;
     }
     case 'fin':
-      corps = <CorpsFin realisee={realisation(true)} onEnregistrer={enregistrer} onAbandonner={abandonner} />;
+      corps = (
+        <CorpsFin
+          realisee={realisation(true)}
+          chargeDerniereFois={chargeDerniereFois}
+          onEnregistrer={enregistrer}
+          onAbandonner={abandonner}
+        />
+      );
       break;
   }
 
@@ -775,17 +880,40 @@ export default function SeanceGuidee({
         position={libellePosition(etapes, index, ordreExercices)}
         exercice={etape.exerciceId ? exerciceDeSeance(etape.exerciceId).nomFr : undefined}
         couleur={ambiance.couleur}
-        avancement={dureeTotale > 0 ? tempsTotalEcoule / dureeTotale : 0}
+        avancement={
+          dureeTotale <= 0 ? 0 : enCommun ? 1 - tempsRestant / dureeTotale : tempsTotalEcoule / dureeTotale
+        }
         ecouleSec={tempsTotalEcoule}
         resteSec={tempsRestant}
         onQuitter={quitter}
       />
+      {enCommun && (
+        <div
+          className="py-1.5 text-center text-sm font-semibold"
+          style={{ background: 'var(--surface-haute)', color: commune.enLigne ? 'var(--montee)' : 'var(--pause)' }}
+        >
+          {!commune.enLigne
+            ? 'Hors ligne · appuyez sur « Go » ensemble'
+            : personne && commune.presents.includes(autrePersonne(personne))
+              ? `En direct avec ${partenaire}`
+              : `En direct · ${partenaire} n’a pas encore rejoint`}
+        </div>
+      )}
       {enPause && (
         <div
           className="py-2 text-center font-semibold"
           style={{ background: 'var(--pause)', color: 'var(--accent-texte)' }}
         >
-          En pause · le chrono est arrêté
+          En pause · le chrono est arrêté{enCommun ? ' pour les deux' : ''}
+        </div>
+      )}
+      {message && (
+        <div
+          role="status"
+          className="py-2 text-center font-semibold"
+          style={{ background: 'var(--accent)', color: 'var(--accent-texte)' }}
+        >
+          {message}
         </div>
       )}
       <main className="mx-auto w-full max-w-md flex-1 px-4 py-4">{corps}</main>
@@ -798,7 +926,7 @@ export default function SeanceGuidee({
         }}
       >
         <div className="mx-auto flex max-w-md gap-2">
-          <Bouton variante="neutre" taille="etroit" onClick={precedent} disabled={index === 0} className="flex-1">
+          <Bouton variante="neutre" taille="etroit" onClick={precedent} disabled={index === 0 || enCommun} className="flex-1">
             Précédent
           </Bouton>
           {!estFin && (
@@ -1566,13 +1694,41 @@ function CorpsRepos({ etape, resteSec, partenaire, charge, etirement, onProlonge
 
 interface CorpsFinProps {
   realisee: SeanceRealisee;
+  chargeDerniereFois?: number;
   onEnregistrer: () => void;
   onAbandonner: () => void;
 }
 
-function CorpsFin({ realisee, onEnregistrer, onAbandonner }: CorpsFinProps) {
+/** La charge soulevée, et l'écart avec la dernière fois. */
+function ChargeSoulevee({ total, derniere, unite }: { total: number; derniere?: number; unite: UnitePoids }) {
+  const suffixe = SUFFIXE_UNITE[unite];
+  const ecart = derniere !== undefined && derniere > 0 ? total - derniere : null;
+  const pourcent = ecart !== null && derniere ? Math.round((ecart / derniere) * 100) : 0;
+  return (
+    <div className="rounded-2xl p-4 text-center" style={{ background: 'var(--surface)' }}>
+      <div className="text-xs font-bold uppercase tracking-[0.18em]" style={{ color: 'var(--texte-discret)' }}>
+        Charge totale soulevée
+      </div>
+      <div className="chiffres text-5xl font-bold leading-tight" style={{ ...ARCHIVO, color: 'var(--montee)' }}>
+        {total.toLocaleString('fr-CA')} {suffixe}
+      </div>
+      <p className="chiffres mt-1 text-sm" style={{ color: 'var(--texte-discret)' }}>
+        {ecart === null
+          ? 'La première : c’est le chiffre à battre la prochaine fois.'
+          : ecart === 0
+            ? 'Pile comme la dernière fois.'
+            : `${ecart > 0 ? '+' : '−'}${Math.abs(ecart).toLocaleString('fr-CA')} ${suffixe} par rapport à la dernière fois${
+                pourcent !== 0 ? ` (${ecart > 0 ? '+' : '−'}${Math.abs(pourcent)} %)` : ''
+              }`}
+      </p>
+    </div>
+  );
+}
+
+function CorpsFin({ realisee, chargeDerniereFois, onEnregistrer, onAbandonner }: CorpsFinProps) {
   const seriesFaites = realisee.exercices.reduce((total, e) => total + e.seriesFaites, 0);
   const seriesPrevues = realisee.exercices.reduce((total, e) => total + e.seriesPrevues, 0);
+  const total = chargeTotale(realisee);
   const cellule = 'px-2 py-2 text-center chiffres';
   return (
     <div className="space-y-4">
@@ -1586,6 +1742,10 @@ function CorpsFin({ realisee, onEnregistrer, onAbandonner }: CorpsFinProps) {
           {seriesFaites} / {seriesPrevues} séries faites
         </p>
       </div>
+
+      {total > 0 && (
+        <ChargeSoulevee total={total} derniere={chargeDerniereFois} unite={uniteDeSeance(realisee.parametres)} />
+      )}
 
       <div className="overflow-hidden rounded-2xl" style={{ background: 'var(--surface)' }}>
         <table className="w-full text-sm" style={{ borderCollapse: 'separate', borderSpacing: 0 }}>

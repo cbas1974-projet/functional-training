@@ -50,6 +50,7 @@ import {
 import { frequencesParExercice, libelleFrequenceCourte, uniteDeSeance } from '../utils/statistiques';
 import type { FrequenceExercice } from '../utils/statistiques';
 import { chargesPassees } from '../utils/programmeMois';
+import { avecSeanceFaite, sansSeance } from '../utils/enLigne';
 import SeanceGuidee from './SeanceGuidee';
 import FicheExercice from './FicheExercice';
 import { Bascule, CIBLE, Choix, Groupe, Pastille } from './Feuille';
@@ -332,7 +333,7 @@ export default function Entrainement({ etat, onChange }: EntrainementProps) {
   };
 
   const supprimerDeLHistorique = (id: string) => {
-    onChange((prec) => ({ ...prec, historique: prec.historique.filter((s) => s.id !== id) }));
+    onChange((prec) => sansSeance(prec, id));
   };
 
   const nbExercicesSeance = seanceCourante
@@ -1088,11 +1089,7 @@ export default function Entrainement({ etat, onChange }: EntrainementProps) {
           )}
           onProgression={(p) => onChange((prec) => ({ ...prec, enCours: p }))}
           onTerminee={(realisee) => {
-            onChange((prec) => ({
-              ...prec,
-              enCours: null,
-              historique: [realisee, ...prec.historique].slice(0, 200),
-            }));
+            onChange((prec) => avecSeanceFaite(prec, realisee));
             setSeanceActive(null);
           }}
           // Abandonner efface déjà la progression ; quitter avant d'avoir

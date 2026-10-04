@@ -1,0 +1,9 @@
+# Caddy obtient et renouvelle seul le certificat HTTPS du domaine : les
+# téléphones, sur une page en https, ne parlent qu'à un serveur en https.
+{$DOMAINE} {
+	encode gzip
+	reverse_proxy api:8080 {
+		# Le direct (Server-Sent Events) passe sans attendre.
+		flush_interval -1
+	}
+}

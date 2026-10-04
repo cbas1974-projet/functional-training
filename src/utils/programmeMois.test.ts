@@ -10,6 +10,7 @@ import {
   TAILLE_ENCHAINEMENT,
   TRANSITION_LIEN_SEC,
   accordLien,
+  adresseServeurValide,
   alternatives,
   basculerTour,
   candidatsProgramme,
@@ -22,6 +23,7 @@ import {
   delierDansProgramme,
   dureeSec,
   enEnchainements,
+  equipeDe,
   estPoussee,
   estSemaineDure,
   etirementsPauseDe,
@@ -33,6 +35,7 @@ import {
   prochaineDate,
   prochaineSeance,
   programmeDansLien,
+  refaireProgramme,
   remplacerDansProgramme,
   repsDuDuo,
   seanceAProposer,
@@ -714,6 +717,35 @@ describe('le partage avec Max', () => {
     for (const duo of [{ reps: { sebastien: 0, max: 10 } }, { reps: { sebastien: 8 } }, { reps: 'beaucoup' }, 12]) {
       expect(validerProgramme({ ...p, duo })).toEqual(p);
     }
+  });
+
+  it('regroupe les deux téléphones sous le même code d’équipe, et transmet l’adresse du serveur', () => {
+    expect(equipeDe(p)).toMatch(/^[A-Za-z0-9_-]{10,40}$/);
+    expect(equipeDe(p)).toBe(equipeDe(JSON.parse(JSON.stringify(p))));
+    expect(equipeDe({ ...p, graine: p.graine + 1 })).not.toBe(equipeDe(p));
+    const enLigne = { ...p, serveur: 'https://srv123.hstgr.cloud' };
+    expect(programmeDansLien(new URL(lienDePartage(enLigne, 'https://sgtraining.netlify.app/')).hash)).toEqual(enLigne);
+    expect(adresseServeurValide('https://srv123.hstgr.cloud/api/')).toBe('https://srv123.hstgr.cloud');
+    expect(adresseServeurValide('http://srv123.hstgr.cloud')).toBeNull();
+    expect(adresseServeurValide('http://localhost:8080')).toBe('http://localhost:8080');
+    expect(adresseServeurValide('pas une adresse')).toBeNull();
+    expect(validerProgramme({ ...p, serveur: 'javascript:alert(1)', equipe: 'x' })).toEqual(p);
+  });
+
+  it('refaire le programme garde les répétitions, le serveur et le code d’équipe', () => {
+    const ancien: ProgrammeMois = {
+      ...p,
+      duo: { reps: { sebastien: 8, max: 12 } },
+      serveur: 'https://srv123.hstgr.cloud',
+    };
+    const nouveau = refaireProgramme(ancien, { graine: ancien.graine + 1 });
+    expect(nouveau.graine).toBe(ancien.graine + 1);
+    expect(nouveau.duo).toEqual(ancien.duo);
+    expect(nouveau.serveur).toBe(ancien.serveur);
+    // L'historique des deux reste sous le même code, même refait deux fois.
+    expect(equipeDe(nouveau)).toBe(equipeDe(ancien));
+    expect(equipeDe(refaireProgramme(nouveau, { graine: 3 }))).toBe(equipeDe(ancien));
+    expect(validerProgramme(JSON.parse(JSON.stringify(nouveau)))?.equipe).toBe(equipeDe(ancien));
   });
 
   it('recompose un programme d’avant les machines, pareil sur les deux téléphones', () => {

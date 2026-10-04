@@ -1221,6 +1221,40 @@ function lireDuo(brut: unknown): ProgrammeMois['duo'] {
   return sebastien !== null && max !== null ? { reps: { sebastien, max } } : undefined;
 }
 
+const CODE_EQUIPE = /^[A-Za-z0-9_-]{10,40}$/;
+
+/** Le code d'équipe du programme : celui qu'il porte, sinon tiré de sa graine
+ *  et de son premier lundi — les deux téléphones le calculent pareil. */
+export const equipeDe = (programme: Pick<ProgrammeMois, 'equipe' | 'graine' | 'debut'>): string =>
+  programme.equipe ?? `p${(programme.graine >>> 0).toString(36)}${programme.debut.replace(/-/g, '')}`;
+
+/** Un nouveau programme à la place de l'ancien : d'autres exercices, mais les
+ *  réglages du duo restent — les répétitions de chacun, le serveur et le code
+ *  d'équipe : l'historique commun continue d'un programme à l'autre. */
+export function refaireProgramme(ancien: ProgrammeMois, options: OptionsProgramme): ProgrammeMois {
+  return {
+    ...genererProgramme(options),
+    ...(ancien.duo ? { duo: ancien.duo } : {}),
+    ...(ancien.serveur ? { serveur: ancien.serveur } : {}),
+    equipe: equipeDe(ancien),
+  };
+}
+
+/** Une adresse de serveur utilisable depuis la page : en https, ou sur ce
+ *  poste pour essayer. Sans le chemin ni la barre finale. */
+export function adresseServeurValide(brute: unknown): string | null {
+  if (typeof brute !== 'string' || brute.length > 200) return null;
+  let url: URL;
+  try {
+    url = new URL(brute.trim());
+  } catch {
+    return null;
+  }
+  const local = url.hostname === 'localhost' || url.hostname === '127.0.0.1';
+  if (url.protocol !== 'https:' && !(local && url.protocol === 'http:')) return null;
+  return `${url.protocol}//${url.host}`;
+}
+
 /** Relit un programme reçu ou sauvegardé ; null s'il est illisible. Les
  *  exercices inconnus de cette version de l'application sont écartés. */
 export function validerProgramme(brut: unknown): ProgrammeMois | null {
@@ -1269,6 +1303,8 @@ export function validerProgramme(brut: unknown): ProgrammeMois | null {
     seances,
     ...(typeof p.version === 'number' ? { version: p.version } : {}),
     ...(lireDuo(p.duo) ? { duo: lireDuo(p.duo) } : {}),
+    ...(typeof p.equipe === 'string' && CODE_EQUIPE.test(p.equipe) ? { equipe: p.equipe } : {}),
+    ...(adresseServeurValide(p.serveur) ? { serveur: adresseServeurValide(p.serveur)! } : {}),
   });
 }
 
@@ -1285,7 +1321,12 @@ function mettreANiveau(programme: ProgrammeMois): ProgrammeMois {
     alternance: programme.seances.some((s) => s.semaine !== undefined),
     aujourdhui: depuisIso(programme.debut),
   });
-  return programme.duo ? { ...recompose, duo: programme.duo } : recompose;
+  return {
+    ...recompose,
+    ...(programme.duo ? { duo: programme.duo } : {}),
+    ...(programme.equipe ? { equipe: programme.equipe } : {}),
+    ...(programme.serveur ? { serveur: programme.serveur } : {}),
+  };
 }
 
 export function encoderProgramme(programme: ProgrammeMois): string {

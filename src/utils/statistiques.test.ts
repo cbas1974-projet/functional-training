@@ -3,6 +3,7 @@ import type { ExerciceRealise, SeanceRealisee } from '../types';
 import { PARAMETRES_PAR_DEFAUT } from '../data/parametres';
 import {
   arrondirPoids,
+  chargeTotale,
   convertirPoids,
   frequenceExercice,
   frequencesParExercice,
@@ -163,5 +164,36 @@ describe('unités', () => {
     const enKilos = frequenceExercice([ancienne, recente], 'goblet-squat', 'kg', MAINTENANT);
     expect(enKilos.poidsMax).toBe(16);
     expect(enKilos.dernierPoids).toBe(13.5);
+  });
+});
+
+describe('chargeTotale', () => {
+  it('additionne poids × répétitions des séries faites, des deux côtés pour un exercice d’un seul côté', () => {
+    const faite = seance(ilYA(0), [
+      // 100 + 100 + 100, huit fois : 2 400.
+      { exerciceId: 'bench-press', poidsParSerie: [100, 100, 100] },
+      // Deux séries faites sur trois notées, à droite puis à gauche : 40 × 8 × 2 × 2.
+      { exerciceId: 'single-arm-row', poidsParSerie: [40, 40, 40], seriesFaites: 2 },
+      // Au temps : n'entre pas dans le total.
+      { exerciceId: 'farmers-walk', poidsParSerie: [50, 50], reps: 40 },
+      // Sans charge notée : rien.
+      { exerciceId: 'goblet-squat' },
+      // Ancienne séance : un seul poids, pour chaque série faite.
+      { exerciceId: 'shoulder-press', poids: 20, seriesFaites: 2 },
+    ]);
+    faite.parametres = { ...PARAMETRES_PAR_DEFAUT, unitePoids: 'lb' };
+    expect(chargeTotale(faite)).toBe(2400 + 1280 + 320);
+  });
+
+  it('se convertit dans l’unité du moment', () => {
+    const enKilos = seance(ilYA(0), [{ exerciceId: 'bench-press', poidsParSerie: [50] , seriesFaites: 1 }]);
+    enKilos.parametres = { ...PARAMETRES_PAR_DEFAUT, unitePoids: 'kg' };
+    expect(chargeTotale(enKilos)).toBe(400);
+    expect(chargeTotale(enKilos, 'lb')).toBe(882);
+  });
+
+  it('ignore un exercice inconnu, même au nom piégé', () => {
+    const piege = seance(ilYA(0), [{ exerciceId: 'constructor', poidsParSerie: [100] }]);
+    expect(chargeTotale(piege)).toBe(0);
   });
 });

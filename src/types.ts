@@ -361,6 +361,14 @@ export interface EntrainementState {
   programmeARenvoyer?: boolean;
   /** On s'entraîne à deux (horloge commune) ou seul (son propre temps). */
   aDeux?: boolean;
+  /** Séances faites pas encore reçues par le serveur (leurs identifiants) :
+   *  elles repartent quand le réseau revient. */
+  aEnvoyer?: string[];
+  /** Séances supprimées ici, à effacer aussi du serveur. */
+  aEffacer?: string[];
+  /** Le serveur et l'équipe (« adresse|code ») qui ont déjà reçu les séances
+   *  faites avant d'être branchés : on ne les renvoie pas à chaque fois. */
+  historiqueEnvoyeA?: string;
 }
 
 // ------------------------------------------------------------- Programme du mois
@@ -422,4 +430,10 @@ export interface ProgrammeMois {
   /** À deux : les répétitions de chacun. Le lien les transporte, pour que
    *  les deux téléphones calculent la même horloge. */
   duo?: { reps: Record<Personne, number> };
+  /** Le code d'équipe qui regroupe les deux téléphones sur le serveur ;
+   *  absent, il se tire de la graine et du premier lundi. */
+  equipe?: string;
+  /** L'adresse du serveur, quand elle a été réglée sur un téléphone : le
+   *  lien la transmet à l'autre. */
+  serveur?: string;
 }

@@ -1,7 +1,14 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { EntrainementState, ProgrammeMois } from './types';
 import { chargerEtat, enregistrerEtat } from './utils/storage';
-import { genererProgramme, programmeDansLien } from './utils/programmeMois';
+import {
+  IDENTIFIANT_PARTAGEABLE,
+  effacerRealisation,
+  envoyerRealisation,
+  partageDe,
+  sansSeance,
+} from './utils/enLigne';
+import { NOM_PERSONNE, autrePersonne, genererProgramme, programmeDansLien } from './utils/programmeMois';
 import { graineAleatoire } from './utils/formatage';
 import { uniteDeSeance } from './utils/statistiques';
 import Accueil from './components/Accueil';
@@ -16,6 +23,19 @@ const CLE_LIEN = 'programme=';
 const memesSeances = (a: ProgrammeMois, b: ProgrammeMois | null | undefined) =>
   JSON.stringify(a.seances) === JSON.stringify(b?.seances);
 
+/** Les réglages d'un programme reçu aux mêmes séances — répétitions de
+ *  chacun, serveur, équipe : on les prend sans rien demander. */
+const avecReglagesDe = (programme: ProgrammeMois, recu: ProgrammeMois): ProgrammeMois => ({
+  ...programme,
+  ...(recu.duo ? { duo: recu.duo } : {}),
+  ...(recu.serveur ? { serveur: recu.serveur } : {}),
+  ...(recu.equipe ? { equipe: recu.equipe } : {}),
+});
+
+/** Une séance faite (ou supprimée) repart vers le serveur toutes les trente
+ *  secondes tant qu'il ne l'a pas. */
+const RELANCE_ENVOI_MS = 30_000;
+
 /** L'état au lancement. Le premier jour, l'application compose le programme
  *  elle-même ; un programme reçu par lien est pris d'office s'il n'y en avait
  *  pas encore, sinon il attend une réponse. */
@@ -24,7 +44,10 @@ function demarrer(): { etat: EntrainementState; recu: ProgrammeMois | null } {
   const recu = programmeDansLien(window.location.hash);
   if (recu && !etat.programme) return { etat: { ...etat, programme: recu, programmeARenvoyer: false }, recu: null };
   if (etat.programme) {
-    return { etat, recu: recu && !memesSeances(recu, etat.programme) ? recu : null };
+    if (recu && memesSeances(recu, etat.programme)) {
+      return { etat: { ...etat, programme: avecReglagesDe(etat.programme, recu) }, recu: null };
+    }
+    return { etat, recu };
   }
   // Un programme tout neuf : l'autre téléphone ne l'a pas encore.
   const programme = genererProgramme({ graine: graineAleatoire() });
@@ -66,8 +89,10 @@ export default function App() {
     const surAncre = () => {
       const recu = programmeDansLien(window.location.hash);
       if (!recu) return;
-      if (memesSeances(recu, programmeActuel.current)) effacerLien();
-      else setProgrammeRecu(recu);
+      if (memesSeances(recu, programmeActuel.current)) {
+        setEtat((prec) => (prec.programme ? { ...prec, programme: avecReglagesDe(prec.programme, recu) } : prec));
+        effacerLien();
+      } else setProgrammeRecu(recu);
     };
     window.addEventListener('hashchange', surAncre);
     return () => window.removeEventListener('hashchange', surAncre);
@@ -77,6 +102,67 @@ export default function App() {
   useEffect(() => {
     window.scrollTo({ top: 0 });
   }, [vue]);
+
+  // Les séances faites partent vers le serveur, et repartent tant qu'il ne
+  // les a pas.
+  const partage = partageDe(etat.programme ?? null, etat.personne ?? null);
+  const aEnvoyer = etat.aEnvoyer ?? [];
+  const historiqueRef = useRef(etat.historique);
+  useEffect(() => {
+    historiqueRef.current = etat.historique;
+  }, [etat.historique]);
+  const cleEnvoi = partage ? `${partage.serveur}|${partage.equipe}|${partage.personne}` : '';
+  const listeEnvoi = aEnvoyer.join(',');
+  const listeEffacer = (etat.aEffacer ?? []).join(',');
+  useEffect(() => {
+    if (!partage || (listeEnvoi === '' && listeEffacer === '')) return;
+    let fini = false;
+    // Une à la fois, les suppressions d'abord : la file raccourcie relance
+    // la suivante.
+    const traiter = async () => {
+      const aRetirer = listeEffacer.split(',')[0];
+      if (aRetirer) {
+        const regle = await effacerRealisation(partage, aRetirer);
+        if (fini || !regle) return;
+        setEtat((prec) => ({ ...prec, aEffacer: (prec.aEffacer ?? []).filter((x) => x !== aRetirer) }));
+        return;
+      }
+      const id = listeEnvoi.split(',')[0];
+      const realisation = historiqueRef.current.find((h) => h.id === id);
+      const regle = realisation ? await envoyerRealisation(partage, realisation) : true;
+      if (fini || !regle) return;
+      setEtat((prec) => ({ ...prec, aEnvoyer: (prec.aEnvoyer ?? []).filter((x) => x !== id) }));
+    };
+    void traiter();
+    const relance = window.setInterval(() => void traiter(), RELANCE_ENVOI_MS);
+    return () => {
+      fini = true;
+      window.clearInterval(relance);
+    };
+    // La clé et les listes résument le partage et les files.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cleEnvoi, listeEnvoi, listeEffacer]);
+
+  // Au premier branchement sur un serveur, les séances faites avant partent
+  // aussi : l'historique du serveur est complet dès le départ.
+  const cleHistorique = partage ? `${partage.serveur}|${partage.equipe}` : '';
+  useEffect(() => {
+    if (!cleHistorique) return;
+    setEtat((prec) =>
+      prec.historiqueEnvoyeA === cleHistorique
+        ? prec
+        : {
+            ...prec,
+            historiqueEnvoyeA: cleHistorique,
+            aEnvoyer: [
+              ...new Set([
+                ...(prec.aEnvoyer ?? []),
+                ...prec.historique.map((h) => h.id).filter((id) => IDENTIFIANT_PARTAGEABLE.test(id)),
+              ]),
+            ],
+          },
+    );
+  }, [cleHistorique]);
 
   const onChange = useCallback(
     (miseAJour: (prec: EntrainementState) => EntrainementState) => setEtat((prec) => miseAJour(prec)),
@@ -130,9 +216,9 @@ export default function App() {
             {vue === 'historique' && (
               <HistoriqueEntrainement
                 historique={etat.historique}
-                onSupprimer={(id) =>
-                  setEtat((prec) => ({ ...prec, historique: prec.historique.filter((s) => s.id !== id) }))
-                }
+                partage={partage}
+                nomPartenaire={etat.personne ? NOM_PERSONNE[autrePersonne(etat.personne)] : null}
+                onSupprimer={(id) => setEtat((prec) => sansSeance(prec, id))}
               />
             )}
             {vue === 'exercices' && (

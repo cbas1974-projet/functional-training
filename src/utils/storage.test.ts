@@ -80,6 +80,9 @@ describe('chargerEtat', () => {
       personne: 'sebastien',
       programmeARenvoyer: true,
       aDeux: false,
+      aEnvoyer: ['seance-1'],
+      aEffacer: ['seance-0'],
+      historiqueEnvoyeA: 'https://srv123.hstgr.cloud|p1a2b3c20261005',
     };
     enregistrerEtat(etat);
     expect(chargerEtat()).toEqual(etat);

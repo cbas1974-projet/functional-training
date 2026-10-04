@@ -22,7 +22,7 @@ import { GUIDES_VISUELS, TEMPOS, UNITES_POIDS } from '../data/parametres';
 import { OBJECTIFS_MUSCULAIRES } from '../utils/muscles';
 import { formaterDuree, groupesDeBlocs } from '../utils/generateurSeance';
 import { formaterDateFr, graineAleatoire, memeTempo } from '../utils/formatage';
-import { SUFFIXE_UNITE, uniteDeSeance } from '../utils/statistiques';
+import { SUFFIXE_UNITE, chargeTotale, uniteDeSeance } from '../utils/statistiques';
 import { bellSound } from '../utils/sounds';
 import {
   JOURS,
@@ -32,22 +32,24 @@ import {
   SERIES_PROGRAMME,
   TAILLE_ENCHAINEMENT,
   accordLien,
+  adresseServeurValide,
   alternatives,
   autrePersonne,
   basculerTour,
   chargesPassees,
   delierDansProgramme,
   depuisIso,
+  equipeDe,
   estSemaineDure,
   exercicesAAugmenter,
   faiteCetteSemaine,
   faiteLe,
-  genererProgramme,
   isoDate,
   lienDePartage,
   lierDansProgramme,
   prochaineDate,
   programmeDansLien,
+  refaireProgramme,
   remplacerDansProgramme,
   repsDuDuo,
   seanceAProposer,
@@ -56,6 +58,8 @@ import {
   semainesEcoulees,
 } from '../utils/programmeMois';
 import type { AccordLien, ContexteSeance } from '../utils/programmeMois';
+import type { ConfigSynchro } from '../hooks/useSeanceCommune';
+import { avecSeanceFaite, serveurDe } from '../utils/enLigne';
 import FicheExercice from './FicheExercice';
 import ImageEnGrand from './ImageEnGrand';
 import SeanceGuidee from './SeanceGuidee';
@@ -80,6 +84,8 @@ interface SeanceActive {
   seance: Seance;
   progression: ProgressionSeance | null;
   demarrage: 'debut' | 'reprise';
+  /** À deux, avec le serveur : la séance commune à rejoindre. */
+  synchro?: ConfigSynchro;
 }
 
 type FeuilleOuverte =
@@ -323,11 +329,15 @@ function FeuilleReglages({
   onObjectifs,
   onRefaire,
   onRecevoir,
+  serveur,
+  onServeur,
   onFermer,
 }: {
   personne: Personne | null;
   parametres: ParametresSeance;
   reps: Record<Personne, number>;
+  serveur: string | null;
+  onServeur: (adresse: string | null) => void;
   onPersonne: (personne: Personne) => void;
   onReps: (personne: Personne, reps: number) => void;
   onParametres: (partiel: Partial<ParametresSeance>) => void;
@@ -391,6 +401,8 @@ function FeuilleReglages({
 
       <RecevoirParLien onRecevoir={onRecevoir} />
 
+      <ReglageServeur actuelle={serveur} onChoisir={onServeur} />
+
       <details>
         <summary
           className="flex cursor-pointer select-none items-center text-sm font-bold"
@@ -432,6 +444,90 @@ function FeuilleReglages({
         Réglages, programme et historique restent sur ce téléphone.
       </p>
     </Feuille>
+  );
+}
+
+/** L'adresse du serveur du direct à deux : celle du VPS. Elle part avec le
+ *  lien du programme, l'autre téléphone la reçoit. */
+function ReglageServeur({
+  actuelle,
+  onChoisir,
+}: {
+  actuelle: string | null;
+  onChoisir: (adresse: string | null) => void;
+}) {
+  const [texte, setTexte] = useState(actuelle ?? '');
+  const [etat, setEtat] = useState<'' | 'essai' | 'ok' | 'muet' | 'invalide'>('');
+  const essayer = async () => {
+    const adresse = adresseServeurValide(texte);
+    if (!adresse) {
+      setEtat('invalide');
+      return;
+    }
+    setEtat('essai');
+    try {
+      const reponse = await fetch(`${adresse}/api/heure`, { cache: 'no-store' });
+      if (!reponse.ok) throw new Error();
+      setEtat('ok');
+      setTexte(adresse);
+      onChoisir(adresse);
+    } catch {
+      setEtat('muet');
+    }
+  };
+  return (
+    <Groupe titre="Serveur, pour le direct à deux" aide="L’adresse de ton VPS. Elle part avec le lien du programme.">
+      <div className="flex gap-2">
+        <input
+          value={texte}
+          onChange={(evenement) => {
+            setTexte(evenement.target.value);
+            setEtat('');
+          }}
+          placeholder="https://srv….hstgr.cloud"
+          aria-label="Adresse du serveur"
+          inputMode="url"
+          className="min-w-0 flex-1 rounded-xl px-3 text-sm"
+          style={{ ...SECONDAIRE, background: 'var(--surface-haute)' }}
+        />
+        <button
+          type="button"
+          disabled={texte.trim() === '' || etat === 'essai'}
+          onClick={() => void essayer()}
+          className="shrink-0 rounded-xl px-4 text-sm font-bold disabled:opacity-40"
+          style={{ minHeight: CIBLE, background: 'var(--accent)', color: 'var(--accent-texte)' }}
+        >
+          Essayer
+        </button>
+      </div>
+      {etat !== '' && etat !== 'essai' && (
+        <p
+          role={etat === 'ok' ? 'status' : 'alert'}
+          className="mt-2 text-xs font-semibold"
+          style={{ color: etat === 'ok' ? 'var(--montee)' : 'var(--alerte)' }}
+        >
+          {etat === 'ok'
+            ? 'Le serveur répond : le direct à deux est prêt. Renvoie le programme à l’autre.'
+            : etat === 'muet'
+              ? 'Pas de réponse à cette adresse.'
+              : 'L’adresse doit commencer par https://'}
+        </p>
+      )}
+      {actuelle && (
+        <button
+          type="button"
+          onClick={() => {
+            onChoisir(null);
+            setTexte('');
+            setEtat('');
+          }}
+          className="mt-1 text-xs font-semibold"
+          style={{ minHeight: 32, color: 'var(--texte-discret)', background: 'transparent' }}
+        >
+          Oublier ce serveur
+        </button>
+      )}
+    </Groupe>
   );
 }
 
@@ -630,6 +726,13 @@ export default function Accueil({
     () => chargesPassees(historique, seance.blocs.map((bloc) => bloc.exerciceId), unite),
     [historique, seance, unite],
   );
+  // La charge soulevée la dernière fois qu'on a fait cette séance : le chiffre
+  // à battre, affiché à la fin.
+  const chargeDerniereFois = useMemo(() => {
+    if (!active?.seance.titre) return undefined;
+    const precedente = historique.find((h) => h.titre === active.seance.titre);
+    return precedente ? chargeTotale(precedente, uniteDeSeance(active.seance.parametres)) : undefined;
+  }, [active, historique]);
   const chargesActives = useMemo(
     () =>
       active
@@ -759,7 +862,11 @@ export default function Accueil({
 
   const refaire = (objectifsChoisis: string[]) => {
     changerProgramme(
-      genererProgramme({ objectifs: objectifsChoisis, materiels: programme.materiels, graine: graineAleatoire() }),
+      refaireProgramme(programme, {
+        objectifs: objectifsChoisis,
+        materiels: programme.materiels,
+        graine: graineAleatoire(),
+      }),
     );
     setFeuille(null);
     window.scrollTo({ top: 0 });
@@ -771,19 +878,38 @@ export default function Accueil({
     }
   };
 
+  /** La séance commune du jour, si l'on s'entraîne à deux et que le serveur
+   *  est réglé. */
+  const serveur = serveurDe(programme);
+  const configSynchro = (seanceId: string, aDeuxIci: boolean): ConfigSynchro | undefined =>
+    aDeuxIci && personne && serveur
+      ? { serveur, equipe: equipeDe(programme), cle: `${isoDate(new Date())}_${seanceId}`, personne }
+      : undefined;
+
   const commencer = () => {
     if (seance.blocs.length === 0) return;
     if (enCours && !window.confirm('Une séance interrompue attend. L’abandonner et commencer celle-ci ?')) return;
     // Geste de l'utilisateur : c'est maintenant qu'on réveille le son.
     bellSound.unlock();
     setALier(null);
-    setActive({ seance: seancePourPersonne(seanceMois, parametres, contexte), progression: null, demarrage: 'debut' });
+    setActive({
+      seance: seancePourPersonne(seanceMois, parametres, contexte),
+      progression: null,
+      demarrage: 'debut',
+      synchro: configSynchro(seanceMois.id, aDeux),
+    });
   };
 
   const reprendre = () => {
     if (!enCours) return;
     bellSound.unlock();
-    setActive({ seance: enCours.seance, progression: enCours, demarrage: 'reprise' });
+    const duMois = programme.seances.find((s) => s.nom === enCours.seance.titre);
+    setActive({
+      seance: enCours.seance,
+      progression: enCours,
+      demarrage: 'reprise',
+      synchro: duMois ? configSynchro(duMois.id, enCours.seance.horloge?.partenaire !== undefined) : undefined,
+    });
   };
 
   const partager = async () => {
@@ -1208,6 +1334,15 @@ export default function Accueil({
           personne={personne}
           parametres={parametres}
           reps={reps}
+          serveur={programme.serveur ?? null}
+          onServeur={(adresse) =>
+            modifierProgramme((prec) => {
+              const suivant = { ...prec };
+              if (adresse) suivant.serveur = adresse;
+              else delete suivant.serveur;
+              return suivant;
+            })
+          }
           onPersonne={choisirPersonne}
           onReps={changerReps}
           onParametres={mettreAJourParametres}
@@ -1242,14 +1377,12 @@ export default function Accueil({
           seance={active.seance}
           progression={active.progression}
           demarrage={active.demarrage}
+          synchro={active.synchro}
+          chargeDerniereFois={chargeDerniereFois}
           chargesPassees={chargesActives}
           onProgression={(progression) => onChange((prec) => ({ ...prec, enCours: progression }))}
           onTerminee={(realisee) => {
-            onChange((prec) => ({
-              ...prec,
-              enCours: null,
-              historique: [realisee, ...prec.historique].slice(0, 200),
-            }));
+            onChange((prec) => avecSeanceFaite(prec, realisee));
             setActive(null);
             setChoisie(null);
             // Retour en haut : la séance faite, et la suivante.

@@ -98,6 +98,30 @@ En haut de l'accueil, **Seul** ou **Avec Max** :
   mollets pour Max, comme le physio le lui a demandé. 20 s de chaque côté, en
   douceur, jamais jusqu'à la douleur.
 
+**En direct, avec le serveur.** Quand le serveur est branché (voir
+[Le serveur](#le-serveur-vps)), l'horloge commune passe par lui. Max ouvre
+l'application le même jour, sur la même séance, en mode « Avec
+Sébastien » : les deux téléphones affichent la même étape à la même seconde.
+Les téléphones ne se parlent pas entre eux, chacun parle au serveur. Un
+bandeau dit où on en est : « En direct avec Max », « Max n'a pas encore
+rejoint » ou « Hors ligne ». Si le réseau coupe, l'application continue
+seule ; un appui fait hors ligne part dès que le réseau revient, même si la
+page s'est rechargée entre-temps.
+
+La règle des boutons, à deux : **l'horloge commune ne coupe jamais la série
+de quelqu'un, elle ne raccourcit que les attentes.**
+
+| Bouton | À deux |
+| --- | --- |
+| Commencer | Ouvre la séance commune du jour, ou la rejoint là où elle en est |
+| Go | Lance le nouvel exercice pour les deux (demande confirmation si l'autre n'a pas fini le précédent) |
+| Pause / Reprendre | Arrête et relance le chrono des deux |
+| Suivant, pendant une attente | Écourte le repos, l'échauffement ou l'attente pour les deux, au plus jusqu'à la prochaine série de l'un ou de l'autre — refusé pendant la série de l'autre : « Max finit sa série. » Si les deux appuient en même temps, ça ne compte qu'une fois |
+| Suivant, pendant sa série | Si l'autre attend, il commence plus tôt ; sinon on finit plus tôt et on l'attend |
+| +15 s | Arrête le chrono des deux quinze secondes : le repos s'allonge, rien ne recule. Refusé si l'autre est en pleine série |
+| Passer l'exercice | Pour soi seul (un genou qui fait mal) : l'autre continue, on se retrouve au prochain « Go » |
+| Précédent | Désactivé : l'horloge est commune |
+
 **Envoyer à Max** (ou à Sébastien) partage un lien qui contient tout le
 programme, liens et répétitions de chacun compris : Max l'ouvre et a les
 mêmes séances, les mêmes semaines A et B, la même horloge. S'il
@@ -262,7 +286,11 @@ exercice par un autre de la même zone.
 - **Poids saisi série par série**, en livres : le champ est pré-rempli avec la
   charge de la série précédente, sinon celle de la dernière fois ; il n'y a
   qu'à la corriger quand elle change.
-- Retour au calme guidé, puis écran de fin récapitulatif.
+- Retour au calme guidé, puis écran de fin récapitulatif, avec la **charge
+  totale soulevée** : poids × répétitions de chaque série faite, les deux
+  côtés pour un exercice unilatéral. À côté, l'écart avec la dernière fois
+  qu'on a fait cette séance (« +600 lb par rapport à la dernière fois
+  (+10 %) »).
 - L'écran reste allumé pendant la séance, si le navigateur le permet.
 - La séance reprend où elle en était si la page est rechargée : l'accueil
   propose de la reprendre.
@@ -272,7 +300,14 @@ Chaque séance enregistrée conserve la date, la durée réelle et prévue, et p
 chaque exercice les séries faites, le temps passé et la charge de chaque série
 (« 30 · 30 · 35 lb »). Chaque séance garde l'unité dans laquelle elle a été
 saisie : changer d'unité ne réécrit pas le passé, et les statistiques
-convertissent ce qu'il faut pour rester comparables.
+convertissent ce qu'il faut pour rester comparables. Chaque séance affiche
+sa charge soulevée.
+
+Avec le serveur, chaque séance enregistrée part aussi dans **l'historique
+des deux**, et celles faites avant de brancher le serveur partent une fois.
+En haut de l'historique, **Moi** ou **Avec Max** : ses séances seules, ou
+celles des deux, chacune avec son nom. Une séance supprimée sur son
+téléphone disparaît aussi de l'historique des deux.
 
 La bibliothèque présente les **258 exercices** classés par zone, avec les
 six posters d'origine consultables en entier. Un filtre sépare les trois
@@ -389,7 +424,8 @@ Deux choses méritent d'être connues :
 
 ## Installation et lancement
 
-Node.js 20 ou plus récent est nécessaire.
+Node.js 22 ou plus récent est nécessaire (le serveur et ses tests utilisent
+`node:sqlite`).
 
 ```bash
 npm install     # une seule fois
@@ -417,6 +453,53 @@ un téléphone, sans serveur ni connexion.
 `netlify.toml` contient déjà la commande de build et le dossier publié. Dans
 Netlify : « Add new site », « Import an existing project », choisir ce dépôt.
 Chaque push redéploie le site.
+
+## Le serveur (VPS)
+
+Le site reste sur Netlify. Le serveur, installé sur le VPS, garde deux
+choses : **la séance commune du jour** (l'horloge des deux téléphones) et
+**l'historique des deux**, avec les charges. Rien de confidentiel : pas de
+compte, pas de mot de passe. Un code d'équipe, tiré du programme et
+transmis avec le lien « Envoyer à Max », regroupe les deux téléphones. Il
+reste le même quand on refait le programme.
+
+Sans serveur, ou sans réseau, l'application fonctionne comme avant : tout
+reste sur le téléphone.
+
+**Installer.** Dans le terminal du VPS (chez Hostinger : hPanel → VPS →
+Terminal), en root :
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/cbas1974-projet/functional-training/main/serveur/installer.sh | sh -s -- srvXXXXXX.hstgr.cloud
+```
+
+Remplacer `srvXXXXXX.hstgr.cloud` par le nom du VPS (ou un sous-domaine qui
+pointe vers lui). Le script installe Docker s'il manque, télécharge le code
+dans `/opt/entrainement`, démarre le serveur et son certificat HTTPS (Caddy),
+puis vérifie que `https://srvXXXXXX.hstgr.cloud/api/heure` répond. Les ports
+80 et 443 doivent être libres et ouverts dans le pare-feu du VPS. Relancer
+la même commande met le serveur à jour.
+
+**Brancher l'application.** Dans *Réglages → Serveur, pour le direct à deux*, coller l'adresse
+`https://srvXXXXXX.hstgr.cloud`, puis « Essayer ». L'adresse voyage avec le
+lien « Envoyer à Max ». On peut aussi la fixer pour tout le site, au moment
+de publier : `VITE_SERVEUR = "https://srvXXXXXX.hstgr.cloud"` dans la
+section `[build.environment]` de `netlify.toml`.
+
+**Les données** sont dans `/opt/entrainement/serveur/donnees/` : un seul
+fichier SQLite à copier pour une sauvegarde. Les séances communes de plus
+d'un mois sont effacées ; l'historique reste.
+
+**Essayer sur son poste** : `node serveur/serveur.ts` (port 8080, données
+dans `./donnees`), puis `VITE_SERVEUR=http://127.0.0.1:8080 npm run dev`.
+
+| Route | Rôle |
+| --- | --- |
+| `GET /api/heure` | L'heure du serveur, pour caler les téléphones |
+| `GET`, `POST /api/equipes/:equipe/seances/:jour_seance` | La séance commune ; un appui (Commencer, Go, Pause…) |
+| `GET /api/equipes/:equipe/seances/:jour_seance/flux` | La séance commune en direct (Server-Sent Events) |
+| `PUT`, `DELETE /api/equipes/:equipe/historique/:id` | Une séance faite ; une séance supprimée |
+| `GET /api/equipes/:equipe/historique` | Les séances des deux |
 
 ## Images des exercices
 
@@ -455,15 +538,25 @@ src/
 │   ├── generateurSeance.ts       # Choix des exercices et calcul des volumes
 │   ├── etapesSeance.ts           # Machine à étapes de la séance guidée
 │   ├── programmeMois.ts          # Composition du programme, calendrier A/B, charges, lien
-│   ├── statistiques.ts           # Fréquence d'un exercice, charges par série
+│   ├── statistiques.ts           # Fréquence d'un exercice, charges par série, charge totale
+│   ├── etatCommun.ts             # La séance commune : ses appuis, partagés avec le serveur
+│   ├── horlogeCommune.ts         # Où en est chacun sur l'horloge commune, et la règle des boutons
+│   ├── enLigne.ts                # Le serveur hors séance : envoi des séances, historique des deux
 │   ├── formatage.ts              # Dates, durées, libellés
 │   ├── sounds.ts                 # Cloche et bips (Web Audio)
 │   └── storage.ts                # Sauvegarde locale
 ├── hooks/
 │   ├── useMoteurEtapes.ts        # Moteur de temps (horloge, pause, reprise)
+│   ├── useSeanceCommune.ts       # La séance commune en direct, et les appuis à envoyer
+│   ├── useMoteurCommun.ts        # Le moteur de temps quand l'horloge est commune
 │   └── useVerrouEcran.ts         # Garde l'écran allumé
 ├── types.ts
 └── App.tsx
+serveur/
+├── serveur.ts                    # Le serveur : séance commune, historique, SQLite
+├── installer.sh                  # Installation sur le VPS en une commande
+├── Dockerfile, docker-compose.yml
+└── Caddyfile                     # HTTPS automatique
 ```
 
 ## La bibliothèque d'exercices

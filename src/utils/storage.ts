@@ -37,6 +37,8 @@ export const ETAT_PAR_DEFAUT: EntrainementState = {
   personne: null,
   programmeARenvoyer: false,
   aDeux: true,
+  aEnvoyer: [],
+  aEffacer: [],
 };
 
 /** Complète des paramètres sauvegardés par une version antérieure. */
@@ -112,6 +114,10 @@ const migrerHistorique = (historique: SeanceRealisee[]): SeanceRealisee[] =>
     exercices: realisee.exercices.map(migrerExercice),
   }));
 
+/** Une file d'identifiants relue : que des textes, deux cents au plus. */
+const identifiants = (brut: unknown): string[] =>
+  Array.isArray(brut) ? brut.filter((id): id is string => typeof id === 'string').slice(-200) : [];
+
 const migrer = (sauvegarde: Partial<EntrainementState>): EntrainementState => ({
   ...ETAT_PAR_DEFAUT,
   ...sauvegarde,
@@ -125,6 +131,9 @@ const migrer = (sauvegarde: Partial<EntrainementState>): EntrainementState => ({
   programmeARenvoyer: sauvegarde.programmeARenvoyer === true,
   // À deux par défaut : c'est l'habitude.
   aDeux: sauvegarde.aDeux !== false,
+  aEnvoyer: identifiants(sauvegarde.aEnvoyer),
+  aEffacer: identifiants(sauvegarde.aEffacer),
+  historiqueEnvoyeA: typeof sauvegarde.historiqueEnvoyeA === 'string' ? sauvegarde.historiqueEnvoyeA : undefined,
 });
 
 /** Lit l'état sauvegardé ; reprend celui de l'ancienne application si besoin. */

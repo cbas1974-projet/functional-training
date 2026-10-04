@@ -2,6 +2,7 @@
 // travaillé, et avec quelle charge. Rien n'est stocké ici : tout se recalcule
 // à partir des séances enregistrées.
 import type { ExerciceRealise, ParametresSeance, SeanceRealisee, UnitePoids } from '../types';
+import { EXERCICES_PAR_ID } from '../data/exercices';
 
 /** Fenêtres glissantes proposées à l'écran, en jours. */
 export const FENETRES_JOURS = [30, 90, 180] as const;
@@ -146,4 +147,33 @@ export function libellePoidsParSerie(exo: ExerciceRealise, unite: UnitePoids): s
   const distinctes = new Set(parSerie.filter((poids) => poids > 0));
   if (distinctes.size === 1 && !parSerie.includes(0)) return `${[...distinctes][0]} ${suffixe}`;
   return `${parSerie.map((poids) => (poids > 0 ? String(poids) : '—')).join(' · ')} ${suffixe}`;
+}
+
+// ------------------------------------------------------------- Charge totale
+
+/** La charge totale soulevée dans une séance : le poids noté × les
+ *  répétitions, série par série — des deux côtés pour un exercice d'un seul
+ *  côté. Seules les séries faites comptent ; les exercices au temps n'y
+ *  entrent pas. Dans l'unité demandée, celle de la séance par défaut. */
+export function chargeTotale(realisee: SeanceRealisee, vers: UnitePoids = uniteDeSeance(realisee.parametres)): number {
+  const de = uniteDeSeance(realisee.parametres);
+  let total = 0;
+  for (const exo of realisee.exercices) {
+    const exercice = Object.prototype.hasOwnProperty.call(EXERCICES_PAR_ID, exo.exerciceId)
+      ? EXERCICES_PAR_ID[exo.exerciceId]
+      : undefined;
+    if (!exercice || exercice.unite !== 'reps' || !(exo.reps > 0)) continue;
+    const reference = poidsDe(exo);
+    const charges =
+      exo.poidsParSerie && exo.poidsParSerie.length > 0
+        ? exo.poidsParSerie
+        : reference
+          ? Array.from({ length: exo.seriesFaites }, () => reference)
+          : [];
+    const cotes = exercice.cotes === 'unilateral' ? 2 : 1;
+    for (const charge of charges.slice(0, exo.seriesFaites)) {
+      if (charge > 0) total += charge * exo.reps * cotes;
+    }
+  }
+  return Math.round(de === vers ? total : convertirPoids(total, de, vers));
 }

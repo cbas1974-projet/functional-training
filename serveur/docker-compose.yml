@@ -1,0 +1,27 @@
+# Le serveur d'entraînement et son HTTPS. Le domaine vient du fichier .env
+# écrit par installer.sh (DOMAINE=...).
+services:
+  api:
+    build:
+      context: ..
+      dockerfile: serveur/Dockerfile
+    restart: unless-stopped
+    volumes:
+      - ./donnees:/donnees
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      - DOMAINE=${DOMAINE}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_donnees:/data
+      - caddy_config:/config
+    depends_on:
+      - api
+volumes:
+  caddy_donnees:
+  caddy_config:
