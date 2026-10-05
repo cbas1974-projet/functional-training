@@ -475,10 +475,19 @@ curl -fsSL https://raw.githubusercontent.com/cbas1974-projet/functional-training
 
 Remplacer `srvXXXXXX.hstgr.cloud` par le nom du VPS (ou un sous-domaine qui
 pointe vers lui). Le script installe Docker s'il manque, télécharge le code
-dans `/opt/entrainement`, démarre le serveur et son certificat HTTPS (Caddy),
-puis vérifie que `https://srvXXXXXX.hstgr.cloud/api/heure` répond. Les ports
-80 et 443 doivent être libres et ouverts dans le pare-feu du VPS. Relancer
-la même commande met le serveur à jour.
+dans `/opt/entrainement`, démarre le serveur, puis vérifie que
+`https://srvXXXXXX.hstgr.cloud/api/heure` répond. Relancer la même commande
+met le serveur à jour ; les données restent.
+
+- **Le VPS fait déjà tourner n8n** (le modèle Hostinger, avec Traefik) : le
+  serveur se range derrière ce Traefik, sur le même domaine, aux seules
+  adresses `/api/heure` et `/api/equipes/…`. Il reprend le certificat et le
+  réseau de n8n, sans toucher à n8n ni à la configuration de Traefik. Pour
+  le retirer : `docker rm -f entrainement-api`.
+- **Le VPS est libre** (ports 80 et 443 inutilisés) : le serveur arrive avec
+  son propre Caddy, qui s'occupe du certificat HTTPS.
+- **Autre chose occupe les ports 80 et 443** : le script s'arrête sans rien
+  changer et affiche ce qui les occupe.
 
 **Brancher l'application.** Dans *Réglages → Serveur, pour le direct à deux*, coller l'adresse
 `https://srvXXXXXX.hstgr.cloud`, puis « Essayer ». L'adresse voyage avec le
