@@ -4,6 +4,21 @@ Le carnet de bord entre deux conversations avec Claude : où on en est, ce
 qui attend, ce qui a été décidé. Le fonctionnement de l'application est
 décrit dans le [README](README.md).
 
+## Pour reprendre
+
+Sébastien écrit simplement :
+
+> Lis SUIVI.md du projet functional-training et dis-moi par quoi on commence.
+
+Claude, de son côté :
+1. Se place dans le dépôt `cbas1974-projet/functional-training` (le cloner
+   s'il n'est pas là, puis `npm install`).
+2. Lit ce fichier en entier, puis le README.
+3. Vérifie que tout passe : `npx vitest run`, `npx tsc -b --noEmit`,
+   `npx eslint .`.
+4. Résume en quelques lignes simples ce qui attend, propose par quoi
+   commencer, et attend le feu vert de Sébastien avant les gros changements.
+
 ## Fermeture du 6 octobre 2026
 
 ### Où on en est
@@ -55,7 +70,10 @@ décrit dans le [README](README.md).
 3. **La liste des étirements du physio de Max**, pour remplacer les
    étirements génériques.
 
-### Travaux demandés pour la nuit du 6 octobre
+### Prochains travaux, pas encore commencés
+
+Demandés le 6 octobre. Finalement, rien n'a été fait cette nuit-là : on
+s'est arrêté à cette fermeture.
 
 1. **Le tempo à deux, en deux façons à tester.** Un choix dans Réglages,
    « Tempo à deux » :
