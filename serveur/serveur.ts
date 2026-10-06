@@ -9,8 +9,13 @@
 //
 //   node serveur/serveur.ts            (PORT=8080 et DONNEES=./donnees par défaut)
 //
+// Copies de sécurité, dans DONNEES/copies : une chaque nuit, les 30 dernières
+// gardées (jours/), et la première de chaque mois, gardée pour toujours
+// (mois/). Chacune est la base entière, tout l'historique depuis le premier
+// jour.
+//
 // Routes :
-//   GET  /api/heure                                 l'heure du serveur
+//   GET  /api/heure                                 l'heure du serveur, et celle de sa dernière copie
 //   GET  /api/equipes/:equipe/seances/:cle          l'état de la séance commune
 //   POST /api/equipes/:equipe/seances/:cle          un appui : Commencer, Go, Pause…
 //   GET  /api/equipes/:equipe/seances/:cle/flux     l'état en direct (Server-Sent Events)
@@ -19,10 +24,11 @@
 //   GET    /api/equipes/:equipe/historique          les séances des deux
 import { createServer } from 'node:http';
 import type { IncomingMessage, Server, ServerResponse } from 'node:http';
-import { mkdirSync } from 'node:fs';
+import { copyFileSync, existsSync, mkdirSync, readdirSync, renameSync, rmSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { DatabaseSync } from 'node:sqlite';
+import { gzipSync } from 'node:zlib';
 import { EXPIRATION_MS, appliquer, lireEnvoi, lireEtat } from '../src/utils/etatCommun.ts';
 import type { EtatCommun } from '../src/utils/etatCommun.ts';
 
@@ -41,6 +47,67 @@ const CONSERVATION_SEANCES_MS = 31 * 24 * 60 * 60 * 1000;
  *  téléphone était hors ligne — compte à son arrivée, à quelques secondes
  *  près : l'autre téléphone, lui, a continué. */
 const RETARD_TOLERE_MS = 10_000;
+/** Les copies de chaque nuit : on garde les trente dernières. */
+const COPIES_GARDEES = 30;
+/** Toutes les heures, on regarde si la copie du jour est faite : elle part
+ *  donc peu après minuit, ou dès le démarrage s'il en manque une. */
+const VERIFICATION_COPIES_MS = 60 * 60 * 1000;
+/** Le jour des copies change à minuit, heure du Québec. */
+const FUSEAU = 'America/Toronto';
+/** Au-delà, une réponse (tout l'historique) voyage compressée. */
+const COMPRESSION_DES = 8 * 1024;
+
+/** La date (AAAA-MM-JJ) d'un instant dans un fuseau ; en temps universel si
+ *  le fuseau est inconnu. */
+export function jourDans(fuseau: string, instant: number): string {
+  try {
+    const parties = Object.fromEntries(
+      new Intl.DateTimeFormat('en-CA', { timeZone: fuseau, year: 'numeric', month: '2-digit', day: '2-digit' })
+        .formatToParts(instant)
+        .map((partie) => [partie.type, partie.value]),
+    );
+    return `${parties.year}-${parties.month}-${parties.day}`;
+  } catch {
+    return new Date(instant).toISOString().slice(0, 10);
+  }
+}
+
+/** Fait la copie du jour si elle manque, garde la première de chaque mois
+ *  pour toujours, et efface les copies de chaque nuit au-delà des trente
+ *  dernières. Rend l'instant de la copie du jour. */
+export function faireLesCopies(base: DatabaseSync, dossier: string, jour: string, instant: number): number {
+  const jours = join(dossier, 'copies', 'jours');
+  const mois = join(dossier, 'copies', 'mois');
+  for (const ici of [jours, mois]) {
+    mkdirSync(ici, { recursive: true });
+    // Le reste d'une copie interrompue (panne, disque plein) ne sert à rien.
+    for (const nom of readdirSync(ici)) if (nom.endsWith('.tmp')) rmSync(join(ici, nom), { force: true });
+  }
+  const duJour = join(jours, `${jour}.sqlite`);
+  let faiteA = instant;
+  if (existsSync(duJour)) {
+    faiteA = Math.round(statSync(duJour).mtimeMs);
+  } else {
+    // Écrite à côté puis renommée : une copie est entière, ou elle n'est pas.
+    // VACUUM INTO lit la base d'un seul coup, même pendant qu'on s'en sert.
+    const enCours = `${duJour}.tmp`;
+    base.prepare('VACUUM INTO ?').run(enCours);
+    renameSync(enCours, duJour);
+  }
+  const dejaCeMois = readdirSync(mois).some((nom) => nom.startsWith(jour.slice(0, 8)) && nom.endsWith('.sqlite'));
+  if (!dejaCeMois) {
+    const enCours = join(mois, `${jour}.sqlite.tmp`);
+    copyFileSync(duJour, enCours);
+    renameSync(enCours, join(mois, `${jour}.sqlite`));
+  }
+  const anciennes = readdirSync(jours)
+    .filter((nom) => /^\d{4}-\d{2}-\d{2}\.sqlite$/.test(nom))
+    .sort()
+    .reverse()
+    .slice(COPIES_GARDEES);
+  for (const nom of anciennes) rmSync(join(jours, nom), { force: true });
+  return faiteA;
+}
 
 export interface OptionsServeur {
   port?: number;
@@ -83,9 +150,24 @@ export function demarrer(options: OptionsServeur = {}): Promise<Server> {
       'realisation = excluded.realisation, recu = excluded.recu',
   );
   const effacerRealisation = base.prepare('DELETE FROM historique WHERE equipe = ? AND id = ?');
-  const lireHistorique = base.prepare(
-    'SELECT personne, realisation FROM historique WHERE equipe = ? ORDER BY date DESC LIMIT 500',
-  );
+  // Tout l'historique, depuis le premier jour.
+  const lireHistorique = base.prepare('SELECT personne, realisation FROM historique WHERE equipe = ? ORDER BY date DESC');
+
+  // ------------------------------------------------ Les copies de sécurité
+  let derniereCopie: number | null = null;
+  const copier = () => {
+    try {
+      const instant = maintenant();
+      derniereCopie = faireLesCopies(base, dossier, jourDans(FUSEAU, instant), instant);
+    } catch (erreur) {
+      // Disque plein, droits… : on réessaie dans une heure, et /api/heure
+      // le laisse voir, la vérification automatique aussi.
+      console.error('Copie de sécurité impossible :', erreur);
+    }
+  };
+  copier();
+  const minuterieCopies = setInterval(copier, VERIFICATION_COPIES_MS);
+  minuterieCopies.unref();
 
   const etatDe = (equipe: string, cle: string): EtatCommun | null => {
     try {
@@ -111,9 +193,17 @@ export function demarrer(options: OptionsServeur = {}): Promise<Server> {
     'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
     'Access-Control-Allow-Headers': 'content-type',
   };
-  const json = (reponse: ServerResponse, statut: number, corps: unknown) => {
-    reponse.writeHead(statut, { ...entetes, 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' });
-    reponse.end(JSON.stringify(corps));
+  /** Une réponse en JSON ; longue, et si le téléphone le comprend, compressée. */
+  const json = (reponse: ServerResponse, statut: number, corps: unknown, requete?: IncomingMessage) => {
+    const texte = JSON.stringify(corps);
+    const enTetes = { ...entetes, 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' };
+    if (requete && texte.length > COMPRESSION_DES && /\bgzip\b/.test(String(requete.headers['accept-encoding'] ?? ''))) {
+      reponse.writeHead(statut, { ...enTetes, 'Content-Encoding': 'gzip', Vary: 'Accept-Encoding' });
+      reponse.end(gzipSync(texte));
+      return;
+    }
+    reponse.writeHead(statut, enTetes);
+    reponse.end(texte);
   };
   const lireCorps = (requete: IncomingMessage): Promise<unknown> =>
     new Promise((resoudre, rejeter) => {
@@ -148,7 +238,7 @@ export function demarrer(options: OptionsServeur = {}): Promise<Server> {
         return;
       }
       if (url.pathname === '/api/heure') {
-        json(reponse, 200, { heure: maintenant() });
+        json(reponse, 200, { heure: maintenant(), copie: derniereCopie });
         return;
       }
       // /api/equipes/:equipe/...
@@ -221,9 +311,12 @@ export function demarrer(options: OptionsServeur = {}): Promise<Server> {
       if (rubrique === 'historique') {
         if (cle === undefined && requete.method === 'GET') {
           const lignes = lireHistorique.all(equipe) as { personne: string; realisation: string }[];
-          json(reponse, 200, {
-            seances: lignes.map((ligne) => ({ personne: ligne.personne, realisation: JSON.parse(ligne.realisation) })),
-          });
+          json(
+            reponse,
+            200,
+            { seances: lignes.map((ligne) => ({ personne: ligne.personne, realisation: JSON.parse(ligne.realisation) })) },
+            requete,
+          );
           return;
         }
         if (cle && IDENTIFIANT.test(cle) && requete.method === 'PUT') {
@@ -251,6 +344,7 @@ export function demarrer(options: OptionsServeur = {}): Promise<Server> {
   });
 
   serveur.on('close', () => {
+    clearInterval(minuterieCopies);
     for (const ensemble of abonnes.values()) for (const abonne of ensemble) abonne.reponse.end();
     base.close();
   });

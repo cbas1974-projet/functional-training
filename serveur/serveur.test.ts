@@ -1,10 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { mkdtempSync, rmSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { AddressInfo } from 'node:net';
 import type { Server } from 'node:http';
-import { demarrer } from './serveur.ts';
+import { DatabaseSync } from 'node:sqlite';
+import { demarrer, faireLesCopies, jourDans } from './serveur.ts';
 
 const EQUIPE = 'equipe-essai-1234';
 const CLE = '2026-10-08_jeudi';
@@ -59,10 +60,13 @@ async function lireFlux(reponse: Response, jusqua: (donnees: { etat: unknown; pr
 }
 
 describe('le serveur', () => {
-  it('donne son heure, pour caler les téléphones', async () => {
+  it('donne son heure, pour caler les téléphones, et celle de sa dernière copie de sécurité', async () => {
     const reponse = await fetch(`${adresse}/api/heure`);
-    expect(await reponse.json()).toEqual({ heure: 1_000_000 });
+    // La copie se fait dès le démarrage : le 31 décembre 1969 au soir, au
+    // Québec, pour cette horloge d'essai.
+    expect(await reponse.json()).toEqual({ heure: 1_000_000, copie: 1_000_000 });
     expect(reponse.headers.get('access-control-allow-origin')).toBe('*');
+    expect(existsSync(join(dossier, 'copies', 'jours', '1969-12-31.sqlite'))).toBe(true);
   });
 
   it('garde la séance commune : on la commence, on la rejoint, « Go » vaut pour les deux', async () => {
@@ -152,6 +156,29 @@ describe('le serveur', () => {
     expect(reste.seances.map((s: { realisation: { id: string } }) => s.realisation.id)).toEqual(['seance-2']);
   });
 
+  it('renvoie tout l’historique depuis le premier jour, compressé en route', async () => {
+    const debut = Date.UTC(2026, 9, 1);
+    for (let lot = 0; lot < 12; lot += 1) {
+      await Promise.all(
+        Array.from({ length: 50 }, (_, i) => {
+          const n = lot * 50 + i;
+          const id = `seance-${String(n).padStart(4, '0')}`;
+          const realisation = { id, date: new Date(debut + n * 86_400_000).toISOString(), exercices: [], terminee: true };
+          return fetch(`${adresse}/api/equipes/${EQUIPE}/historique/${id}`, {
+            method: 'PUT',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify({ personne: n % 2 ? 'max' : 'sebastien', realisation }),
+          });
+        }),
+      );
+    }
+    const reponse = await fetch(`${adresse}/api/equipes/${EQUIPE}/historique`);
+    expect(reponse.headers.get('content-encoding')).toBe('gzip');
+    const { seances } = await reponse.json();
+    expect(seances).toHaveLength(600);
+    expect(seances.at(-1).realisation.id).toBe('seance-0000');
+  });
+
   it('retrouve tout après un redémarrage', async () => {
     await appui({ type: 'commencer' });
     serveur.closeAllConnections();
@@ -160,5 +187,64 @@ describe('le serveur', () => {
     adresse = `http://127.0.0.1:${(serveur.address() as AddressInfo).port}`;
     const relue = await (await fetch(`${adresse}/api/equipes/${EQUIPE}/seances/${CLE}`)).json();
     expect(relue.etat.debut).toBe(1_000_000);
+  });
+});
+
+describe('les copies de sécurité', () => {
+  // À l'écart des copies du serveur démarré pour chaque essai.
+  let ici: string;
+  beforeEach(() => {
+    ici = join(dossier, 'essai');
+    mkdirSync(ici);
+  });
+  const lire = (fichier: string) => {
+    const copie = new DatabaseSync(fichier, { readOnly: true });
+    const lignes = copie.prepare('SELECT x FROM t').all().map((ligne) => ligne.x);
+    copie.close();
+    return lignes;
+  };
+  const jour = (i: number) => new Date(Date.UTC(2026, 8, 1 + i)).toISOString().slice(0, 10);
+
+  it('une chaque nuit, les trente dernières, et la première de chaque mois pour toujours', () => {
+    const base = new DatabaseSync(join(ici, 'essai.sqlite'));
+    base.exec("CREATE TABLE t (x TEXT); INSERT INTO t VALUES ('jour 1');");
+    // Du 1er septembre au 9 novembre 2026 : soixante-dix nuits.
+    for (let i = 0; i < 70; i += 1) {
+      faireLesCopies(base, ici, jour(i), i);
+      if (i === 0) base.exec("INSERT INTO t VALUES ('jour 2');");
+    }
+    base.close();
+    const jours = readdirSync(join(ici, 'copies', 'jours')).sort();
+    expect(jours).toHaveLength(30);
+    expect([jours[0], jours.at(-1)]).toEqual(['2026-10-11.sqlite', '2026-11-09.sqlite']);
+    const mois = readdirSync(join(ici, 'copies', 'mois')).sort();
+    expect(mois).toEqual(['2026-09-01.sqlite', '2026-10-01.sqlite', '2026-11-01.sqlite']);
+    // Chaque copie est la base entière : tout depuis le premier jour.
+    expect(lire(join(ici, 'copies', 'mois', '2026-09-01.sqlite'))).toEqual(['jour 1']);
+    expect(lire(join(ici, 'copies', 'jours', '2026-11-09.sqlite'))).toEqual(['jour 1', 'jour 2']);
+  });
+
+  it('une seule par jour, même si le serveur redémarre, et une copie ratée ne laisse rien de bancal', () => {
+    const base = new DatabaseSync(join(ici, 'essai.sqlite'));
+    base.exec("CREATE TABLE t (x TEXT); INSERT INTO t VALUES ('matin');");
+    expect(faireLesCopies(base, ici, '2026-10-06', 5)).toBe(5);
+    base.exec("INSERT INTO t VALUES ('soir');");
+    // Le même jour : rien ne change, la copie reste celle de la nuit.
+    faireLesCopies(base, ici, '2026-10-06', 6);
+    expect(lire(join(ici, 'copies', 'jours', '2026-10-06.sqlite'))).toEqual(['matin']);
+    // Un reste de copie interrompue (panne de courant) ne gêne pas la suivante.
+    writeFileSync(join(ici, 'copies', 'jours', '2026-10-07.sqlite.tmp'), 'à moitié');
+    writeFileSync(join(ici, 'copies', 'mois', '2026-09-01.sqlite.tmp'), 'à moitié');
+    faireLesCopies(base, ici, '2026-10-07', 7);
+    base.close();
+    expect(readdirSync(join(ici, 'copies', 'jours')).sort()).toEqual(['2026-10-06.sqlite', '2026-10-07.sqlite']);
+    expect(readdirSync(join(ici, 'copies', 'mois'))).toEqual(['2026-10-06.sqlite']);
+    expect(lire(join(ici, 'copies', 'jours', '2026-10-07.sqlite'))).toEqual(['matin', 'soir']);
+  });
+
+  it('change de jour à minuit, heure du Québec', () => {
+    // 3 h 30 du matin à Londres, 23 h 30 la veille à Montréal.
+    expect(jourDans('America/Toronto', Date.UTC(2026, 9, 7, 3, 30))).toBe('2026-10-06');
+    expect(jourDans('Fuseau/Inconnu', Date.UTC(2026, 9, 7, 3, 30))).toBe('2026-10-07');
   });
 });

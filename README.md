@@ -309,6 +309,12 @@ En haut de l'historique, **Moi** ou **Avec Max** : ses séances seules, ou
 celles des deux, chacune avec son nom. Une séance supprimée sur son
 téléphone disparaît aussi de l'historique des deux.
 
+Le serveur garde **tout l'historique, depuis le premier jour**, et « Avec
+Max » le montre en entier. Le téléphone en garde des années : l'historique
+y prend au plus 1,5 million de caractères (plus de 700 séances), bien en
+dessous des 5 Mo qu'un navigateur donne à un site. Au-delà, les plus
+vieilles séances ne restent que sur le serveur.
+
 La bibliothèque présente les **258 exercices** classés par zone, avec les
 six posters d'origine consultables en entier. Un filtre sépare les trois
 familles :
@@ -495,20 +501,54 @@ lien « Envoyer à Max ». On peut aussi la fixer pour tout le site, au moment
 de publier : `VITE_SERVEUR = "https://srvXXXXXX.hstgr.cloud"` dans la
 section `[build.environment]` de `netlify.toml`.
 
-**Les données** sont dans `/opt/entrainement/serveur/donnees/` : un seul
-fichier SQLite à copier pour une sauvegarde. Les séances communes de plus
-d'un mois sont effacées ; l'historique reste.
+**Les données** sont dans `/opt/entrainement/serveur/donnees/`, dans un seul
+fichier SQLite. Les séances communes de plus d'un mois sont effacées ;
+l'historique reste, pour toujours.
+
+**Les copies de sécurité** se font toutes seules, par le serveur lui-même,
+dans `donnees/copies/` :
+
+- `jours/` : une copie chaque nuit, peu après minuit (heure du Québec), et
+  dès que le serveur démarre s'il manque celle du jour. Les 30 dernières
+  sont gardées.
+- `mois/` : la première copie de chaque mois, gardée pour toujours.
+
+Chaque copie est la base entière : tout l'historique depuis le premier
+jour, avec les charges. Une copie se lit comme la base elle-même. Pour
+revenir à l'une d'elles (ici celle du 5 octobre) :
+
+```bash
+docker stop entrainement-api
+cd /opt/entrainement/serveur/donnees
+mkdir -p avant && mv entrainement.sqlite* avant/
+cp copies/jours/2026-10-05.sqlite entrainement.sqlite && chown 1000:1000 entrainement.sqlite
+docker start entrainement-api
+```
+
+Avec Caddy, `docker compose stop api` et `docker compose start api`, depuis
+`/opt/entrainement/serveur`, remplacent `docker stop` et `docker start`.
+Les copies restent sur le VPS : chaque téléphone garde aussi ses propres
+séances.
+
+**La vérification automatique.** Le contrôle GitHub « Vérifier le site »
+vérifie aussi le serveur, à chaque push et chaque matin vers 7 h : il doit
+répondre, avec l'en-tête qui laisse le site lui parler, et sa dernière copie
+de sécurité doit dater de moins de 30 heures. Sinon, GitHub envoie un
+courriel. L'adresse vérifiée est celle de `VITE_SERVEUR` dans
+`netlify.toml` ; sans adresse, l'étape ne fait rien. GitHub suspend les
+vérifications du matin d'un dépôt public resté 60 jours sans commit : on
+les relance dans l'onglet *Actions*.
 
 **Essayer sur son poste** : `node serveur/serveur.ts` (port 8080, données
 dans `./donnees`), puis `VITE_SERVEUR=http://127.0.0.1:8080 npm run dev`.
 
 | Route | Rôle |
 | --- | --- |
-| `GET /api/heure` | L'heure du serveur, pour caler les téléphones |
+| `GET /api/heure` | L'heure du serveur, pour caler les téléphones, et celle de sa dernière copie de sécurité |
 | `GET`, `POST /api/equipes/:equipe/seances/:jour_seance` | La séance commune ; un appui (Commencer, Go, Pause…) |
 | `GET /api/equipes/:equipe/seances/:jour_seance/flux` | La séance commune en direct (Server-Sent Events) |
 | `PUT`, `DELETE /api/equipes/:equipe/historique/:id` | Une séance faite ; une séance supprimée |
-| `GET /api/equipes/:equipe/historique` | Les séances des deux |
+| `GET /api/equipes/:equipe/historique` | Les séances des deux, toutes (compressées en route) |
 
 ## Images des exercices
 
@@ -562,7 +602,7 @@ src/
 ├── types.ts
 └── App.tsx
 serveur/
-├── serveur.ts                    # Le serveur : séance commune, historique, SQLite
+├── serveur.ts                    # Le serveur : séance commune, historique, copies de sécurité, SQLite
 ├── installer.sh                  # Installation sur le VPS en une commande
 ├── Dockerfile, docker-compose.yml
 └── Caddyfile                     # HTTPS automatique

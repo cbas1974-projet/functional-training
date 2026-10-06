@@ -33,13 +33,19 @@ Claude, de son côté :
   - l'historique de chacun ;
   - « Refaire le programme » garde les répétitions, le serveur et le code
     d'équipe.
-- **Prêt, mais pas encore branché** : le direct à deux (une horloge commune
-  pour les deux téléphones) et l'historique commun « Avec Max ». Il manque
-  l'installation du serveur sur le VPS.
+- **Prêt, mais pas encore branché** : il manque l'installation du serveur
+  sur le VPS pour :
+  - le direct à deux (une horloge commune pour les deux téléphones) ;
+  - l'historique commun « Avec Max », tout depuis le premier jour ;
+  - les copies de sécurité : une chaque nuit (les 30 dernières gardées) et
+    la première de chaque mois (gardée pour toujours) ;
+  - la vérification automatique du serveur, chaque matin et à chaque push.
 - **Derniers commits** :
   - `8587e3e` : direct à deux, charge soulevée, historique des deux ;
   - `a1d077f` : l'installateur se range derrière le Traefik déjà présent sur
-    le VPS.
+    le VPS ;
+  - « Copies de sécurité, tout l'historique, vérification du serveur »
+    (6 octobre, après la fermeture).
 
 ### En attente de Sébastien
 
@@ -53,9 +59,13 @@ Claude, de son côté :
    - La ligne a été testée sur une copie de la configuration du VPS : Traefik
      y sert déjà d'autres services, et le serveur se range derrière lui sans
      y toucher.
+   - La fin doit aussi afficher « ✓ Copies de sécurité » : le serveur fait
+     sa première copie dès qu'il démarre.
    - Ensuite, côté Claude : mettre `VITE_SERVEUR = "https://srv1302277.hstgr.cloud"`
      dans `[build.environment]` de `netlify.toml`, pousser, puis vérifier que
-     le site parle bien au serveur.
+     le site parle bien au serveur. Ce même push allume la vérification
+     automatique du serveur (le job « serveur » du contrôle « Vérifier le
+     site ») : elle doit passer au vert.
 2. **Nouvelles photos d'exercices**, que Sébastien va ajouter. À remplacer en
    priorité :
    - les 4 dessins faits par Claude, jugés laids : `trap-bar-deadlift`,
@@ -75,6 +85,9 @@ Claude, de son côté :
 Demandés le 6 octobre. Finalement, rien n'a été fait cette nuit-là : on
 s'est arrêté à cette fermeture.
 
+Les copies de sécurité et la vérification automatique du serveur, demandées
+le même jour, sont faites (voir « Où on en est »). Reste :
+
 1. **Le tempo à deux, en deux façons à tester.** Un choix dans Réglages,
    « Tempo à deux » :
    - **Chacun le sien** : chacun garde son tempo, et les deux tempos voyagent
@@ -92,18 +105,9 @@ s'est arrêté à cette fermeture.
    - il faut le ranger dans `programme.duo`, et le passer à
      `validerProgramme` et au lien de partage ;
    - ajouter des tests.
-2. **Les copies de sécurité sur le VPS.**
-   - Une copie de `serveur/donnees/entrainement.sqlite` chaque nuit, gardée
-     30 jours, et une copie par mois, gardée pour toujours. Chaque copie
-     contient tout l'historique depuis le premier jour.
-   - Posées par l'installateur (cron) : elles s'activent la prochaine fois
-     que la ligne est collée.
-   - Lever aussi la limite de 500 séances de la liste « Avec Max »
-     (`LIMIT 500` dans `serveur.ts`) : Sébastien veut tout l'historique
-     depuis le jour 1.
-3. **La vérification automatique du serveur** dans le workflow « Vérifier le
-   site » : `https://<serveur>/api/heure` doit répondre. L'adresse se lit dans
-   `VITE_SERVEUR` de `netlify.toml` ; sans adresse, l'étape ne fait rien.
+2. **Plus tard, si Sébastien le veut** : exporter l'historique dans un
+   fichier, pour en garder une copie hors du VPS (sur son PC ou son
+   Google Drive). Pas demandé.
 
 ### Décisions prises
 
@@ -113,6 +117,12 @@ s'est arrêté à cette fermeture.
 - **À deux, les boutons suivent une règle** : l'horloge commune ne coupe
   jamais la série de quelqu'un, elle ne raccourcit que les attentes. Le
   détail, bouton par bouton, est dans le README.
+- **Tout l'historique, depuis le jour 1** : le serveur garde tout, sans
+  limite. Le téléphone en garde des années (au plus 1,5 million de
+  caractères, plus de 700 séances) ; avant, il n'en gardait que 200.
+- **Les copies de sécurité sont faites par le serveur lui-même**, et non par
+  une tâche (cron) posée sur le VPS comme prévu d'abord : rien d'autre à
+  installer, et une nuit manquée (VPS éteint) se rattrape au démarrage.
 - **Les repos** : 1 min 30 et 1 min. À la trap bar, 2 minutes de repos, avec
   des étirements. Le physio de Max lui a prescrit des étirements.
 
@@ -134,8 +144,16 @@ s'est arrêté à cette fermeture.
 - **Docker** marche dans le bac à sable : lancer `dockerd` en arrière-plan.
   Un faux VPS (Traefik, plus `traefik/whoami` à la place du service déjà
   en place) a servi à tester l'installateur.
+- **Les copies de sécurité** : `faireLesCopies` dans `serveur.ts`, au
+  démarrage puis toutes les heures. `VACUUM INTO` dans un `.tmp`, renommé
+  ensuite. Le jour change à minuit, heure de `America/Toronto`. L'instant
+  de la dernière copie est dans la réponse de `/api/heure` (champ `copie`).
+- **La vérification du matin** (`schedule` du workflow, 11 h 17 UTC) : les
+  courriels d'échec vont au compte qui a poussé la ligne `cron`
+  (`cbas1974-projet`). GitHub la suspend après 60 jours sans commit sur un
+  dépôt public ; on la relance dans l'onglet *Actions*.
 - **Vérifications** :
-  - `npx vitest run` (482 tests) ;
+  - `npx vitest run` (487 tests) ;
   - `npx tsc -b --noEmit` ;
   - `npx eslint .` ;
   - `npm run build`.

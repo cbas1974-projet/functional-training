@@ -149,6 +149,14 @@ while [ "$i" -lt "$ESSAIS" ]; do
     echo ""
     echo "✓ Serveur prêt : https://$DOMAINE"
     echo "  Donne cette adresse à Claude, ou mets-la dans l'appli : Réglages → Serveur."
+    # Le serveur fait sa première copie de sécurité dès qu'il démarre.
+    if ls "$DOSSIER/serveur/donnees/copies/jours/"*.sqlite >/dev/null 2>&1; then
+      echo "✓ Copies de sécurité : une chaque nuit (les 30 dernières) et une par mois (pour toujours),"
+      echo "  dans $DOSSIER/serveur/donnees/copies"
+    else
+      echo "⚠ Le serveur n'a pas pu faire sa première copie de sécurité. Envoie à Claude une capture de ce qui suit :"
+      docker logs "$CONTENEUR" --tail 15 2>&1 || (cd "$DOSSIER/serveur" && docker compose logs --tail 15 api) || true
+    fi
     exit 0
   fi
   i=$((i + 1))

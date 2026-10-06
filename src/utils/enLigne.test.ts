@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { EntrainementState, SeanceRealisee } from '../types';
 import { PARAMETRES_PAR_DEFAUT } from '../data/parametres';
-import { avecSeanceFaite, sansSeance } from './enLigne';
+import { avecSeanceFaite, historiqueQuiTient, sansSeance } from './enLigne';
 import { genererProgramme } from './programmeMois';
 import { ETAT_PAR_DEFAUT } from './storage';
 
@@ -39,5 +39,32 @@ describe('les séances et le serveur', () => {
       expect(apres.aEnvoyer).toEqual([]);
       expect(sansSeance(apres, seance.id).aEffacer).toEqual([]);
     }
+  });
+
+  it('le téléphone garde des années de séances, et n’oublie les plus vieilles qu’une fois sa place pleine', () => {
+    // Une séance ordinaire : sept exercices notés série par série.
+    const notee = (n: number): SeanceRealisee => ({
+      ...seance,
+      id: `seance-${n}`,
+      exercices: Array.from({ length: 7 }, (_, i) => ({
+        exerciceId: `exercice-${i}`,
+        seriesPrevues: 3,
+        seriesFaites: 3,
+        reps: 8,
+        dureeSec: 412,
+        poids: 135,
+        poidsParSerie: [135, 135, 135],
+      })),
+    });
+    // Du plus récent au plus ancien, comme l'historique.
+    const historique = Array.from({ length: 699 }, (_, n) => notee(n + 1));
+    const apres = avecSeanceFaite({ ...etat, historique }, notee(0));
+    expect(apres.historique).toHaveLength(700);
+    expect(apres.historique.at(-1)?.id).toBe('seance-699');
+    // Place pour dix séances : les dix plus récentes restent.
+    const dix = historiqueQuiTient(apres.historique, 10 * JSON.stringify(notee(0)).length);
+    expect(dix.map((s) => s.id)).toEqual(apres.historique.slice(0, 10).map((s) => s.id));
+    // Une séance trop grosse pour la place reste quand même : on ne perd pas la dernière.
+    expect(historiqueQuiTient([notee(0)], 10)).toHaveLength(1);
   });
 });

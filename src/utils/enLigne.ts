@@ -33,12 +33,30 @@ export const IDENTIFIANT_PARTAGEABLE = /^[A-Za-z0-9_-]{4,64}$/;
 /** Avec un serveur, et un identifiant qu'il accepte : la séance part. */
 const partira = (etat: EntrainementState, id: string) => partageDeLEtat(etat) !== null && IDENTIFIANT_PARTAGEABLE.test(id);
 
+/** La place de l'historique sur le téléphone, en caractères. Le navigateur
+ *  donne environ 5 Mo à un site ; l'historique en prend au plus 1,5 million
+ *  de caractères, soit plus de 700 séances : des années. Au-delà, les plus
+ *  vieilles ne restent que sur le serveur, qui garde tout. */
+const HISTORIQUE_MAXI_CARACTERES = 1_500_000;
+
+/** Les séances les plus récentes qui tiennent dans la place de l'historique. */
+export function historiqueQuiTient(historique: SeanceRealisee[], maxi = HISTORIQUE_MAXI_CARACTERES): SeanceRealisee[] {
+  let place = maxi;
+  const gardees: SeanceRealisee[] = [];
+  for (const seance of historique) {
+    place -= JSON.stringify(seance).length;
+    if (place < 0 && gardees.length > 0) break;
+    gardees.push(seance);
+  }
+  return gardees;
+}
+
 /** Une séance faite entre dans l'historique ; avec un serveur, elle part
  *  aussi dans l'historique des deux. */
 export const avecSeanceFaite = (etat: EntrainementState, realisee: SeanceRealisee): EntrainementState => ({
   ...etat,
   enCours: null,
-  historique: [realisee, ...etat.historique].slice(0, 200),
+  historique: historiqueQuiTient([realisee, ...etat.historique]),
   ...(partira(etat, realisee.id) ? { aEnvoyer: [...(etat.aEnvoyer ?? []), realisee.id] } : {}),
 });
 

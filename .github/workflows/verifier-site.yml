@@ -4,11 +4,18 @@
 # Netlify met une à deux minutes à publier : on attend d'abord que l'adresse
 # serve bien le commit qu'on vient de pousser, sinon le contrôle validerait
 # le build précédent.
+#
+# Vérifie aussi le serveur du VPS, à chaque push et chaque matin : il répond,
+# et sa copie de sécurité de la nuit est faite. En cas d'échec, GitHub envoie
+# un courriel.
 name: Vérifier le site
 
 on:
   push:
     branches: [main]
+  schedule:
+    # Chaque matin, vers 7 h au Québec : le serveur seulement.
+    - cron: '17 11 * * *'
   workflow_dispatch:
 
 permissions:
@@ -19,6 +26,7 @@ env:
 
 jobs:
   verifier:
+    if: github.event_name != 'schedule'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -57,3 +65,49 @@ jobs:
 
       - name: Navigateur
         run: node scripts/verifier_lien.mjs $URLS
+
+  serveur:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # L'adresse est celle de VITE_SERVEUR dans netlify.toml ; sans adresse,
+      # il n'y a rien à vérifier.
+      - name: Le serveur répond, et sa copie de la nuit est faite
+        run: |
+          serveur=$(sed -n 's/^[[:space:]]*VITE_SERVEUR[[:space:]]*=[[:space:]]*"\([^"]*\)".*/\1/p' netlify.toml | head -n 1)
+          if [ -z "$serveur" ]; then
+            echo "Pas encore de serveur dans netlify.toml (VITE_SERVEUR) : rien à vérifier."
+            exit 0
+          fi
+          echo "=== $serveur"
+          entetes="$RUNNER_TEMP/entetes"
+          if ! reponse=$(curl -fsS --max-time 20 --retry 3 --retry-delay 20 --retry-all-errors -D "$entetes" "$serveur/api/heure"); then
+            echo "::error::Le serveur $serveur ne répond pas"
+            exit 1
+          fi
+          echo "$reponse"
+          # Sans cet en-tête, le site ne peut pas parler au serveur.
+          if ! grep -qi '^access-control-allow-origin: \*' "$entetes"; then
+            echo "::error::Le serveur répond sans l'en-tête Access-Control-Allow-Origin"
+            exit 1
+          fi
+          node -e '
+            const { heure, copie } = JSON.parse(process.argv[1]);
+            if (!Number.isFinite(heure)) {
+              console.log("::error::Réponse inattendue du serveur");
+              process.exit(1);
+            }
+            const ecart = Math.round((heure - Date.now()) / 1000);
+            console.log(`horloge du serveur : ${ecart >= 0 ? "+" : ""}${ecart} s`);
+            if (!Number.isFinite(copie)) {
+              console.log("::error::Le serveur n’a fait aucune copie de sécurité depuis son démarrage");
+              process.exit(1);
+            }
+            const heures = (heure - copie) / 3_600_000;
+            console.log(`dernière copie de sécurité : il y a ${heures.toFixed(1)} h`);
+            if (heures > 30) {
+              console.log(`::error::La dernière copie de sécurité date de ${Math.round(heures)} h`);
+              process.exit(1);
+            }
+          ' "$reponse"
