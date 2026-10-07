@@ -110,8 +110,9 @@ export const MATERIELS_PROGRAMME: Materiel[] = ['halteres', 'kettlebell', 'banc'
 export const NOMBRES_EXERCICES = [4, 6, 8, 10];
 /** Six exercices, trois paires, et le dernier pour les jambes. */
 export const EXERCICES_PAR_DEFAUT = 6;
-/** Le tempo des séances du programme : 4 s / 4 s, et 2 s en bas. */
-export const TEMPO_PROGRAMME: Tempo = { monteeSec: 4, descenteSec: 4, pauseSec: 2 };
+/** Le tempo des séances du programme : 3 s / 3 s, et 1 s en bas, qui casse
+ *  le rebond sans obliger à trop alléger. */
+export const TEMPO_PROGRAMME: Tempo = { monteeSec: 3, descenteSec: 3, pauseSec: 1 };
 
 /** Le nombre d'exercices des séances de ce programme. */
 export const nombreExercicesDe = (programme: Pick<ProgrammeMois, 'duo'>): number =>

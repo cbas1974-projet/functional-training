@@ -21,10 +21,16 @@ export const DUREES_MINUTES = [5, 10, 15, 20, 30, 45, 60] as const;
  *  en bas quand il y en a un. */
 export const TEMPOS: { tempo: Tempo; nom: string; description: string }[] = [
   {
+    tempo: { monteeSec: 3, descenteSec: 3, pauseSec: 1 },
+    nom: '3 s / 3 s + 1 s en bas',
+    description:
+      'Recommandé : lent et sans rebond. La seconde en bas casse l’élan, et la charge reste assez lourde pour faire travailler le tendon. Une série de 8 dure 56 s.',
+  },
+  {
     tempo: { monteeSec: 3, descenteSec: 3, pauseSec: 2 },
     nom: '3 s / 3 s + 2 s en bas',
     description:
-      'Recommandé : le tempo des protocoles cliniques pour le tendon, plus un arrêt en position étirée. On repart sans élan : plus dur, donc un peu plus léger. Une série de 8 dure 64 s.',
+      'Le tempo des protocoles cliniques pour le tendon, plus un arrêt de 2 s en position étirée. On repart sans élan : plus dur, donc un peu plus léger. Une série de 8 dure 64 s.',
   },
   {
     tempo: { monteeSec: 4, descenteSec: 4 },
@@ -217,7 +223,7 @@ export const PARAMETRES_PAR_DEFAUT: ParametresSeance = {
   format: 'series',
   tenueSec: 30,
   styleCircuit: 'enchaine',
-  tempo: { monteeSec: 3, descenteSec: 3, pauseSec: 2 },
+  tempo: { monteeSec: 3, descenteSec: 3, pauseSec: 1 },
   materiels: ['halteres'],
   explosifs: false,
   seriesParExercice: 3,

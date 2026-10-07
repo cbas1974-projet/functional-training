@@ -692,7 +692,7 @@ describe('durée d’une série', () => {
   it('compte le tempo, double l’unilatéral et respecte les exercices au temps', () => {
     const tempo = { monteeSec: 5, descenteSec: 5 };
     expect(secondesParRep(tempo)).toBe(10);
-    expect(secondesParRep(PARAMETRES_PAR_DEFAUT.tempo)).toBe(8);
+    expect(secondesParRep(PARAMETRES_PAR_DEFAUT.tempo)).toBe(7);
     expect(dureeSerieSec(EXERCICES_PAR_ID['squat'], 8, tempo)).toBe(80);
     expect(dureeSerieSec(EXERCICES_PAR_ID['single-arm-row'], 8, tempo)).toBe(160);
     expect(dureeSerieSec(EXERCICES_PAR_ID['farmers-walk'], 40, tempo)).toBe(40);
@@ -710,7 +710,7 @@ describe('durée d’une série', () => {
 
   it('recommande 8 répétitions au tempo lent avec pause', () => {
     expect(PARAMETRES_PAR_DEFAUT.repsParSerie).toBe(8);
-    expect(PARAMETRES_PAR_DEFAUT.tempo).toEqual({ monteeSec: 3, descenteSec: 3, pauseSec: 2 });
+    expect(PARAMETRES_PAR_DEFAUT.tempo).toEqual({ monteeSec: 3, descenteSec: 3, pauseSec: 1 });
     // Le premier tempo et la première série proposés sont les recommandés.
     expect(TEMPOS[0].tempo).toEqual(PARAMETRES_PAR_DEFAUT.tempo);
     expect(TEMPOS[0].description.startsWith('Recommandé')).toBe(true);

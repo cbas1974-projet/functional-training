@@ -272,9 +272,9 @@ describe('genererProgramme', () => {
     }
   });
 
-  it('par défaut, six exercices — trois paires — et la finale, au tempo 4 s / 4 s + 2 s en bas : un peu plus d’une heure à deux', () => {
+  it('par défaut, six exercices — trois paires — et la finale, au tempo 3 s / 3 s + 1 s en bas : à peu près une heure à deux', () => {
     expect(EXERCICES_PAR_DEFAUT).toBe(6);
-    expect(TEMPO_PROGRAMME).toEqual({ monteeSec: 4, descenteSec: 4, pauseSec: 2 });
+    expect(TEMPO_PROGRAMME).toEqual({ monteeSec: 3, descenteSec: 3, pauseSec: 1 });
     const durees: number[] = [];
     for (const p of programmes) {
       expect(nombreExercicesDe(p)).toBe(6);
@@ -288,13 +288,13 @@ describe('genererProgramme', () => {
         durees.push(seance.dureeEstimeeSec / 60);
       }
     }
-    // Échauffement, trois paires, la finale et les étirements : autour de
-    // 72 minutes à deux.
-    expect(Math.min(...durees)).toBeGreaterThan(55);
-    expect(Math.max(...durees)).toBeLessThan(90);
+    // Échauffement, trois paires, la finale et les étirements : autour d'une
+    // heure à deux.
+    expect(Math.min(...durees)).toBeGreaterThan(50);
+    expect(Math.max(...durees)).toBeLessThan(75);
     const moyenne = durees.reduce((somme, d) => somme + d, 0) / durees.length;
-    expect(moyenne).toBeGreaterThan(65);
-    expect(moyenne).toBeLessThan(80);
+    expect(moyenne).toBeGreaterThan(57);
+    expect(moyenne).toBeLessThan(66);
   });
 
   it('seul, la séance dure à peine plus qu’à deux : sans l’autre, la machine laisse une vraie pause', () => {

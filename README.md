@@ -31,7 +31,7 @@ du dos, épaules, extérieur et intérieur de cuisse. Rien à taper.
   minute, 2 minutes quand la paire compte la trap bar**. Trois tours. La
   façon dont les paires sont formées est expliquée plus bas.
 - **Six exercices par séance — trois paires — et le dernier pour les
-  jambes**, au **tempo 4 s / 4 s + 2 s en bas**. Dans *Réglages*, on choisit
+  jambes**, au **tempo 3 s / 3 s + 1 s en bas**. Dans *Réglages*, on choisit
   4, 6, 8 ou 10 exercices, et le tempo parmi ceux de la liste ; la durée
   affichée suit. Ces deux réglages appartiennent au programme : les deux
   téléphones doivent avoir les mêmes pour que l'horloge commune soit juste.
@@ -246,9 +246,10 @@ enregistré » — reste affiché du début à la fin.
   temps selon le niveau) ou tabata (20 s de travail, 10 s de repos). Les
   exercices sont appariés par opposition : c'est ce qui rend un bloc sans repos
   tenable.
-- **Tempo** : 3 s / 3 s **+ 2 s en bas** recommandé — la pause se tient en
-  position étirée, et l'on repart sans élan. 4 s / 4 s, 4 s / 4 s + 2 s en bas,
-  3 s / 3 s, 5 s / 5 s et 2 s / 4 s restent disponibles.
+- **Tempo** : 3 s / 3 s **+ 1 s en bas** recommandé — la seconde en bas casse
+  le rebond, et l'on repart sans élan. 3 s / 3 s + 2 s en bas, 4 s / 4 s,
+  4 s / 4 s + 2 s en bas, 3 s / 3 s, 5 s / 5 s et 2 s / 4 s restent
+  disponibles.
 - **Séries par exercice** (3 par défaut) et **répétitions par série**
   (8 par défaut). L'application ajuste le nombre d'exercices pour tenir dans
   la durée demandée, et revient au calcul automatique si le réglage ne tient
@@ -334,7 +335,7 @@ En tabata, le travail est trop court pour un tempo lent — vingt secondes à
 et c'est le souffle qui mène. C'est l'opposé exact du tempo lent, à réserver aux
 jours où c'est le cardio que tu travailles — et pas le tendon.
 
-### Pourquoi 8 répétitions à 3 s / 3 s + 2 s en bas par défaut
+### Pourquoi 8 répétitions à 3 s / 3 s + 1 s en bas par défaut
 
 Ce qui fait progresser un tendon, c'est une **contrainte élevée tenue quelques
 secondes** : il faut les deux, la charge et la durée. Une charge trop légère ne
@@ -343,11 +344,17 @@ tendinopathie (*heavy slow resistance*) travaillent à 3 s de montée / 3 s de
 descente, de 15 à 6 répétitions maximales, trois fois par semaine.
 
 **La pause en bas** ajoute deux choses. Elle supprime le rebond : on repart d'un
-arrêt complet, la remontée est plus dure, donc la charge un peu plus légère pour
-le même effort. Et elle charge la position étirée : la musculation en amplitude
-complète améliore l'amplitude autant que les étirements. Elle se tient muscles
-engagés ; si le dos s'arrondit en bas (soulevé de terre), on la supprime pour
-cet exercice.
+arrêt complet, sans l'élan qui ferait encaisser le genou ou le dos. Et elle
+charge la position étirée : la musculation en amplitude complète améliore
+l'amplitude autant que les étirements. Elle se tient muscles engagés ; si le dos
+s'arrondit en bas (soulevé de terre), on la supprime pour cet exercice.
+
+**Une seconde suffit.** Plus lent n'est pas mieux pour le tendon : à 4 s / 4 s
++ 2 s, il faut nettement alléger pour finir la série, et c'est la charge, plus
+que la lenteur, qui le fait progresser. Les études sur la durée des répétitions
+ne trouvent pas plus de muscle au-delà de quelques secondes, et l'ACSM (2026)
+juge le tempo secondaire devant la charge, le volume et l'amplitude. Le
+3 s / 3 s + 1 s reste lent et sans rebond, avec une charge qui compte.
 
 **Huit répétitions** tombent dans la fourchette des lignes directrices pour les
 adultes vieillissants (8 à 12 répétitions, 60 à 80 % du maximum, vitesse lente à
@@ -362,9 +369,8 @@ décline le plus tôt avec l'âge. Le 2 s / 4 s, avec une montée décidée, et 
 mouvements explosifs du kettlebell sont là pour ça. Les autres tempos et
 nombres de répétitions restent disponibles.
 
-C'est le réglage de la séance libre. Le programme du mois, lui, part de
-**4 s / 4 s + 2 s en bas** : son tempo se règle à part, dans *Réglages*, et
-vaut pour les deux téléphones.
+C'est aussi le tempo du programme du mois. Celui-ci se règle à part, dans
+*Réglages*, et vaut pour les deux téléphones.
 
 ### Séance proposée
 Chaque exercice est présenté avec sa vignette, les séries et répétitions, les
