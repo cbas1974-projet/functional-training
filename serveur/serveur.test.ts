@@ -490,3 +490,222 @@ describe('les copies de sécurité', () => {
     expect(jourDans('Fuseau/Inconnu', Date.UTC(2026, 9, 7, 3, 30))).toBe('2026-10-07');
   });
 });
+
+// ------------------------------------------------------------- Les mensurations
+
+/** Une mesure du corps ; `surcharge` la déforme à volonté. */
+const mesure = (id: string, surcharge: Record<string, unknown> = {}) => ({
+  id,
+  date: '2026-09-05',
+  poids: 182.4,
+  unitePoids: 'lb',
+  tailleCm: 178,
+  age: 42,
+  ...surcharge,
+});
+const corpsDeMesure = (id: string, surcharge: Record<string, unknown> = {}, personne = 'sebastien') =>
+  JSON.stringify({ personne, mesure: mesure(id, surcharge) });
+const noterMesure = (id: string, corps = corpsDeMesure(id), equipe = EQUIPE) =>
+  fetch(`${adresse}/api/equipes/${equipe}/mesures/${id}`, {
+    method: 'PUT',
+    headers: { 'content-type': 'application/json' },
+    body: corps,
+  });
+const retirerMesure = (id: string, equipe = EQUIPE) =>
+  fetch(`${adresse}/api/equipes/${equipe}/mesures/${id}`, { method: 'DELETE' });
+const lireLesMesures = async (equipe = EQUIPE): Promise<{ personne: string; mesure: Record<string, unknown> }[]> =>
+  (await (await fetch(`${adresse}/api/equipes/${equipe}/mesures`)).json()).mesures;
+const idsDeMesures = async (equipe = EQUIPE) => (await lireLesMesures(equipe)).map((m) => m.mesure.id).sort();
+
+describe('les mensurations', () => {
+  it('garde les mesures des deux, de la plus récente à la plus ancienne', async () => {
+    expect((await noterMesure('mesure-1', corpsDeMesure('mesure-1', { date: '2026-08-05' }))).status).toBe(200);
+    expect((await noterMesure('mesure-2', corpsDeMesure('mesure-2', { poids: 81.9, unitePoids: 'kg' }, 'max'))).status).toBe(200);
+    expect((await noterMesure('mesure-3', corpsDeMesure('mesure-3', { date: '2026-10-05' }))).status).toBe(200);
+    const liste = await lireLesMesures();
+    expect(liste.map((m) => [m.personne, m.mesure.id])).toEqual([
+      ['sebastien', 'mesure-3'],
+      ['max', 'mesure-2'],
+      ['sebastien', 'mesure-1'],
+    ]);
+    expect(liste[1].mesure).toEqual(mesure('mesure-2', { poids: 81.9, unitePoids: 'kg' }));
+    // Une autre équipe ne voit rien.
+    expect(await lireLesMesures('autre-equipe-5678')).toEqual([]);
+  });
+
+  it('une mesure corrigée remplace l’ancienne : elle ne compte qu’une fois', async () => {
+    await noterMesure('mesure-1');
+    expect((await noterMesure('mesure-1', corpsDeMesure('mesure-1', { poids: 181.2 }))).status).toBe(200);
+    const liste = await lireLesMesures();
+    expect(liste).toHaveLength(1);
+    expect(liste[0].mesure.poids).toBe(181.2);
+  });
+
+  it('une mesure supprimée sur le téléphone s’efface du serveur, même deux fois', async () => {
+    await noterMesure('mesure-1');
+    await noterMesure('mesure-2', corpsDeMesure('mesure-2', { date: '2026-10-05' }));
+    expect((await retirerMesure('mesure-1')).status).toBe(200);
+    expect((await retirerMesure('mesure-1')).status).toBe(200);
+    expect((await retirerMesure('mesure-inconnue')).status).toBe(200);
+    expect(await idsDeMesures()).toEqual(['mesure-2']);
+    // Chaque équipe garde les siennes.
+    await noterMesure('mesure-1', corpsDeMesure('mesure-1'), 'autre-equipe-5678');
+    expect((await retirerMesure('mesure-1')).status).toBe(200);
+    expect(await idsDeMesures('autre-equipe-5678')).toEqual(['mesure-1']);
+  });
+
+  it('ne garde que ce qu’une mesure contient, arrondi au dixième : le reste du corps est jeté', async () => {
+    const corps = JSON.stringify({
+      personne: 'max',
+      mesure: { ...mesure('mesure-1', { poids: 182.4000001 }), note: 'un champ de trop', autre: { x: 1 } },
+      reste: 'et encore',
+    });
+    expect((await noterMesure('mesure-1', corps)).status).toBe(200);
+    expect((await lireLesMesures())[0]).toEqual({ personne: 'max', mesure: mesure('mesure-1') });
+  });
+
+  it('refuse ce qui n’est pas une mesure, et n’en garde rien', async () => {
+    const refusees: [string, string][] = [
+      ['une personne inconnue', corpsDeMesure('mesure-1', {}, 'quelqu’un')],
+      ['sans personne', JSON.stringify({ mesure: mesure('mesure-1') })],
+      ['sans mesure', JSON.stringify({ personne: 'max' })],
+      ['rien du tout', 'null'],
+      ['un autre identifiant que celui de l’adresse', corpsDeMesure('mesure-9')],
+      ['sans unité', JSON.stringify({ personne: 'max', mesure: { ...mesure('mesure-1'), unitePoids: undefined } })],
+      ['une unité inconnue', corpsDeMesure('mesure-1', { unitePoids: 'stone' })],
+      ['un poids absurde', corpsDeMesure('mesure-1', { poids: 5 })],
+      ['un poids en texte', corpsDeMesure('mesure-1', { poids: '182' })],
+      ['une taille absurde', corpsDeMesure('mesure-1', { tailleCm: 1780 })],
+      ['un âge à virgule', corpsDeMesure('mesure-1', { age: 42.5 })],
+      ['un jour qui n’existe pas', corpsDeMesure('mesure-1', { date: '2026-02-31' })],
+      ['une date d’heure précise', corpsDeMesure('mesure-1', { date: '2026-09-05T10:00:00Z' })],
+      ['du JSON qui ne se lit pas', '{pas du json'],
+    ];
+    for (const [quoi, corps] of refusees) {
+      const reponse = await noterMesure('mesure-1', corps);
+      expect(reponse.status, quoi).toBe(400);
+    }
+    expect(await idsDeMesures()).toEqual([]);
+  });
+
+  it('une adresse qui n’a pas la forme d’un identifiant n’est pas une route', async () => {
+    expect((await noterMesure('mes')).status).toBe(404);
+    expect((await retirerMesure('mes')).status).toBe(404);
+    expect((await noterMesure('a'.repeat(65))).status).toBe(404);
+    expect((await fetch(`${adresse}/api/equipes/court/mesures`)).status).toBe(404);
+    // Ni une autre méthode.
+    expect((await fetch(`${adresse}/api/equipes/${EQUIPE}/mesures/mesure-1`, { method: 'POST', body: '{}' })).status).toBe(404);
+    expect((await fetch(`${adresse}/api/equipes/${EQUIPE}/mesures`, { method: 'PUT', body: '{}' })).status).toBe(404);
+  });
+
+  it('répond à la pré-vérification du navigateur : PUT et DELETE sont permis depuis le site', async () => {
+    const reponse = await fetch(`${adresse}/api/equipes/${EQUIPE}/mesures/mesure-1`, { method: 'OPTIONS' });
+    expect(reponse.status).toBe(204);
+    expect(reponse.headers.get('access-control-allow-methods')).toMatch(/PUT.*DELETE/);
+    expect(reponse.headers.get('access-control-allow-origin')).toBe('*');
+  });
+
+  it('retrouve tout après un redémarrage', async () => {
+    await noterMesure('mesure-1');
+    serveur.closeAllConnections();
+    await new Promise((resoudre) => serveur.close(resoudre));
+    serveur = await demarrer({ donnees: dossier, maintenant: () => horloge });
+    adresse = `http://127.0.0.1:${(serveur.address() as AddressInfo).port}`;
+    expect(await idsDeMesures()).toEqual(['mesure-1']);
+  });
+
+  it('les copies de sécurité les contiennent : c’est la même base', async () => {
+    await noterMesure('mesure-1');
+    await noterMesure('mesure-2', corpsDeMesure('mesure-2', {}, 'max'));
+    // Une nuit plus tard, le serveur redémarre : il fait la copie du jour.
+    horloge += 2 * 24 * 60 * 60 * 1000;
+    await redemarrer({});
+    const copies = readdirSync(join(dossier, 'copies', 'jours')).sort();
+    expect(copies).toHaveLength(2);
+    const copie = new DatabaseSync(join(dossier, 'copies', 'jours', copies.at(-1)!), { readOnly: true });
+    const lignes = copie.prepare('SELECT id, personne FROM mesures ORDER BY id').all();
+    copie.close();
+    expect(lignes.map((l) => ({ ...l }))).toEqual([
+      { id: 'mesure-1', personne: 'sebastien' },
+      { id: 'mesure-2', personne: 'max' },
+    ]);
+  });
+
+  describe('les protections, les mêmes que pour l’historique', () => {
+    afterEach(() => {
+      vi.restoreAllMocks();
+    });
+
+    it('une mesure pèse au plus 4 Ko : la plus grosse qui tient passe, la suivante est refusée', async () => {
+      const octets = (reste: string) => Buffer.byteLength(JSON.stringify({ personne: 'sebastien', mesure: { ...mesure('mesure-1'), reste } }));
+      const pile = 'x'.repeat(4 * 1024 - octets(''));
+      expect(octets(pile)).toBe(4 * 1024);
+      const corps = (reste: string) => JSON.stringify({ personne: 'sebastien', mesure: { ...mesure('mesure-1'), reste } });
+      expect((await noterMesure('mesure-1', corps(pile))).status).toBe(200);
+      const trop = await noterMesure('mesure-2', corps(`${pile}x`).replace('mesure-1', 'mesure-2'));
+      expect(trop.status).toBe(400);
+      expect(await trop.json()).toEqual({ erreur: 'trop gros' });
+      // Bien plus gros : refusé de même, sans qu'on le lise.
+      expect((await noterMesure('mesure-3', corps('x'.repeat(200_000)).replace('mesure-1', 'mesure-3'))).status).toBe(400);
+      expect(await idsDeMesures()).toEqual(['mesure-1']);
+    });
+
+    it('les écritures puisent au même seau : une mesure de trop, c’est 429 avec Retry-After, puis ça repasse', async () => {
+      await redemarrer({ ecrituresParMinute: 3 }); // trois en réserve, puis un toutes les 20 s
+      expect((await noterMesure('mesure-1')).status).toBe(200);
+      expect((await enregistrer('seance-1')).status).toBe(200);
+      expect((await retirerMesure('mesure-1')).status).toBe(200);
+      const refus = await noterMesure('mesure-2');
+      expect(refus.status).toBe(429);
+      expect(refus.headers.get('retry-after')).toBe('20');
+      expect(refus.headers.get('access-control-allow-origin')).toBe('*');
+      expect(await refus.json()).toEqual({ erreur: 'trop de requêtes' });
+      // Un refus n'écrit rien, et la lecture a son propre seau.
+      expect(await idsDeMesures()).toEqual([]);
+      horloge += 20_000;
+      expect((await noterMesure('mesure-2')).status).toBe(200);
+      expect(await idsDeMesures()).toEqual(['mesure-2']);
+    });
+
+    it('les lectures aussi sont comptées, à part', async () => {
+      await redemarrer({ lecturesParMinute: 2 });
+      expect((await fetch(`${adresse}/api/equipes/${EQUIPE}/mesures`)).status).toBe(200);
+      expect((await fetch(`${adresse}/api/equipes/${EQUIPE}/mesures`)).status).toBe(200);
+      const refus = await fetch(`${adresse}/api/equipes/${EQUIPE}/mesures`);
+      expect(refus.status).toBe(429);
+      expect(refus.headers.get('retry-after')).toBe('30');
+      // Les écritures, elles, passent.
+      expect((await noterMesure('mesure-1')).status).toBe(200);
+    });
+
+    it('une équipe garde au plus un certain nombre de mesures : une nouvelle est refusée (507), une correction passe', async () => {
+      await redemarrer({ mesuresParEquipe: 2 });
+      for (const id of ['mesure-1', 'mesure-2']) expect((await noterMesure(id)).status).toBe(200);
+      const refus = await noterMesure('mesure-3');
+      expect(refus.status).toBe(507);
+      expect(await refus.json()).toEqual({ erreur: 'équipe pleine' });
+      expect((await noterMesure('mesure-2', corpsDeMesure('mesure-2', { poids: 180 }))).status).toBe(200);
+      expect((await lireLesMesures()).find((m) => m.mesure.id === 'mesure-2')?.mesure.poids).toBe(180);
+      // Les autres équipes ne sont pas gênées ; effacer rend sa place.
+      expect((await noterMesure('mesure-3', corpsDeMesure('mesure-3'), 'autre-equipe-5678')).status).toBe(200);
+      expect((await retirerMesure('mesure-1')).status).toBe(200);
+      expect((await noterMesure('mesure-3')).status).toBe(200);
+      expect(await idsDeMesures()).toEqual(['mesure-2', 'mesure-3']);
+    });
+
+    it('une base trop grosse refuse d’écrire une mesure (507), mais on peut lire et effacer', async () => {
+      vi.spyOn(console, 'error').mockImplementation(() => {});
+      await redemarrer({ baseMaxiOctets: 100 * 1024 });
+      expect((await noterMesure('mesure-1')).status).toBe(200);
+      // Les séances remplissent la base ; la mesure en prend la mesure une minute plus tard.
+      for (const id of ['seance-1', 'seance-2', 'seance-3']) expect((await enregistrer(id, 'x'.repeat(50_000))).status).toBe(200);
+      horloge += 60_000;
+      const refus = await noterMesure('mesure-2');
+      expect(refus.status).toBe(507);
+      expect(await refus.json()).toEqual({ erreur: 'plus de place' });
+      expect(await idsDeMesures()).toEqual(['mesure-1']);
+      expect((await retirerMesure('mesure-1')).status).toBe(200);
+      expect(await idsDeMesures()).toEqual([]);
+    });
+  });
+});

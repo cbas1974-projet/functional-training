@@ -83,9 +83,77 @@ describe('chargerEtat', () => {
       aEnvoyer: ['seance-1'],
       aEffacer: ['seance-0'],
       historiqueEnvoyeA: 'https://srv123.hstgr.cloud|p1a2b3c20261005',
+      mesures: [
+        { id: 'mesure-1', date: '2026-08-05', poids: 185.2, unitePoids: 'lb', tailleCm: 178, age: 42 },
+        { id: 'mesure-2', date: '2026-09-05', poids: 82.4, unitePoids: 'kg', tailleCm: 177.5, age: 42 },
+      ],
+      mesuresAEnvoyer: ['mesure-2'],
+      mesuresAEffacer: ['mesure-0'],
+      mesuresEnvoyeesA: 'https://srv123.hstgr.cloud|p1a2b3c20261005',
     };
     enregistrerEtat(etat);
     expect(chargerEtat()).toEqual(etat);
+  });
+
+  it('une sauvegarde d’avant les mensurations n’en a pas : des listes vides, rien d’autre ne change', () => {
+    localStorage.setItem(CLE, JSON.stringify(ANCIENNE_SAUVEGARDE));
+    const etat = chargerEtat();
+    expect(etat.mesures).toEqual([]);
+    expect(etat.mesuresAEnvoyer).toEqual([]);
+    expect(etat.mesuresAEffacer).toEqual([]);
+    expect(etat.mesuresEnvoyeesA).toBeUndefined();
+    expect(etat.enCours?.indexEtape).toBe(3);
+    // Sans aucune sauvegarde non plus.
+    localStorage.clear();
+    expect(chargerEtat().mesures).toEqual([]);
+  });
+
+  it('relit les mesures avec prudence : les illisibles et les doublons sont écartés, le reste est remis dans l’ordre', () => {
+    const mesure = { id: 'mesure-1', date: '2026-09-05', poids: 182.4, unitePoids: 'lb', tailleCm: 178, age: 42 };
+    localStorage.setItem(
+      CLE,
+      JSON.stringify({
+        ...ANCIENNE_SAUVEGARDE,
+        mesures: [
+          mesure,
+          { ...mesure, id: 'mesure-0', date: '2026-07-05' },
+          { ...mesure, poids: 999 },
+          { ...mesure, id: 'mesure-2', date: '2026-02-30' },
+          { ...mesure, id: 'mesure-3', unitePoids: 'stone' },
+          { id: 'mesure-4' },
+          { ...mesure, poids: 100 },
+          'n’importe quoi',
+          null,
+        ],
+      }),
+    );
+    expect(chargerEtat().mesures?.map((m) => m.id)).toEqual(['mesure-0', 'mesure-1']);
+    // La première version d'un doublon l'emporte.
+    expect(chargerEtat().mesures?.[1].poids).toBe(182.4);
+  });
+
+  it('une sauvegarde qui n’a pas la forme d’une liste de mesures ne casse rien', () => {
+    for (const mesures of ['beaucoup', 12, { 0: {} }, null]) {
+      localStorage.setItem(CLE, JSON.stringify({ ...ANCIENNE_SAUVEGARDE, mesures }));
+      expect(chargerEtat().mesures).toEqual([]);
+    }
+  });
+
+  it('les files d’envoi des mesures ne gardent que des identifiants que le serveur accepte', () => {
+    localStorage.setItem(
+      CLE,
+      JSON.stringify({
+        ...ANCIENNE_SAUVEGARDE,
+        mesuresAEnvoyer: ['mesure-1', 42, null, 'a b c d', 'abc', 'mesure-2'],
+        mesuresAEffacer: 'mesure-1',
+        mesuresEnvoyeesA: 12,
+      }),
+    );
+    const etat = chargerEtat();
+    // Un identifiant que le serveur refuserait (404) bloquerait la file pour toujours.
+    expect(etat.mesuresAEnvoyer).toEqual(['mesure-1', 'mesure-2']);
+    expect(etat.mesuresAEffacer).toEqual([]);
+    expect(etat.mesuresEnvoyeesA).toBeUndefined();
   });
 
   it('s’entraîne à deux par défaut', () => {

@@ -372,6 +372,35 @@ export interface EntrainementState {
   /** Le serveur et l'équipe (« adresse|code ») qui ont déjà reçu les séances
    *  faites avant d'être branchés : on ne les renvoie pas à chaque fois. */
   historiqueEnvoyeA?: string;
+  /** Les mesures du corps de ce téléphone : poids, taille, âge, à une date. */
+  mesures?: Mesure[];
+  /** Mesures notées ou corrigées ici pas encore reçues par le serveur (leurs
+   *  identifiants) : elles repartent quand le réseau revient. */
+  mesuresAEnvoyer?: string[];
+  /** Mesures supprimées ici, à effacer aussi du serveur. */
+  mesuresAEffacer?: string[];
+  /** Le serveur et l'équipe (« adresse|code ») qui ont déjà reçu les mesures
+   *  notées avant d'être branchés. */
+  mesuresEnvoyeesA?: string;
+}
+
+// ------------------------------------------------------------- Mensurations
+
+/** Une mesure du corps, notée à une date : le poids, la taille, l'âge. La plus
+ *  ancienne est le point de départ, le « jour 1 ». */
+export interface Mesure {
+  id: string;
+  /** Le jour de la mesure (AAAA-MM-JJ), à l'heure du téléphone. */
+  date: string;
+  /** Le poids de corps, dans l'unité `unitePoids`. */
+  poids: number;
+  /** L'unité du poids au moment de la mesure : changer d'unité ensuite ne
+   *  réécrit pas le passé, les courbes convertissent ce qu'il faut. */
+  unitePoids: UnitePoids;
+  /** La taille, en centimètres. */
+  tailleCm: number;
+  /** L'âge, en années. */
+  age: number;
 }
 
 // ------------------------------------------------------------- Programme du mois

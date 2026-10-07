@@ -11,6 +11,7 @@ import type {
 } from '../types';
 import { PARAMETRES_PAR_DEFAUT, TOUTES_LES_ZONES } from '../data/parametres';
 import { uniteDeSeance } from './statistiques';
+import { IDENTIFIANT_MESURE, lireMesures } from './mesures';
 import { validerProgramme } from './programmeMois';
 
 const CLE_STOCKAGE = 'functional-training';
@@ -39,6 +40,9 @@ export const ETAT_PAR_DEFAUT: EntrainementState = {
   aDeux: true,
   aEnvoyer: [],
   aEffacer: [],
+  mesures: [],
+  mesuresAEnvoyer: [],
+  mesuresAEffacer: [],
 };
 
 /** Complète des paramètres sauvegardés par une version antérieure. */
@@ -118,6 +122,11 @@ const migrerHistorique = (historique: SeanceRealisee[]): SeanceRealisee[] =>
 const identifiants = (brut: unknown): string[] =>
   Array.isArray(brut) ? brut.filter((id): id is string => typeof id === 'string').slice(-200) : [];
 
+/** Une file de mesures relue : seuls les identifiants que le serveur accepte —
+ *  un autre ne passerait jamais, et bloquerait la file. */
+const identifiantsDeMesures = (brut: unknown): string[] =>
+  identifiants(brut).filter((id) => IDENTIFIANT_MESURE.test(id));
+
 const migrer = (sauvegarde: Partial<EntrainementState>): EntrainementState => ({
   ...ETAT_PAR_DEFAUT,
   ...sauvegarde,
@@ -134,6 +143,12 @@ const migrer = (sauvegarde: Partial<EntrainementState>): EntrainementState => ({
   aEnvoyer: identifiants(sauvegarde.aEnvoyer),
   aEffacer: identifiants(sauvegarde.aEffacer),
   historiqueEnvoyeA: typeof sauvegarde.historiqueEnvoyeA === 'string' ? sauvegarde.historiqueEnvoyeA : undefined,
+  // Les mensurations : une sauvegarde d'avant n'en a pas, une abîmée perd
+  // seulement les mesures qui ne se lisent plus.
+  mesures: lireMesures(sauvegarde.mesures),
+  mesuresAEnvoyer: identifiantsDeMesures(sauvegarde.mesuresAEnvoyer),
+  mesuresAEffacer: identifiantsDeMesures(sauvegarde.mesuresAEffacer),
+  mesuresEnvoyeesA: typeof sauvegarde.mesuresEnvoyeesA === 'string' ? sauvegarde.mesuresEnvoyeesA : undefined,
 });
 
 /** Lit l'état sauvegardé ; reprend celui de l'ancienne application si besoin. */

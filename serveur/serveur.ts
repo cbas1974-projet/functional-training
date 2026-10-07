@@ -1,8 +1,8 @@
 // Le serveur de l'application d'entraînement, à installer sur le VPS : il
 // garde la séance commune du jour — une seule horloge pour les deux
-// téléphones — et l'historique de chacun, avec les charges. Rien de
-// confidentiel : pas de compte ; un code d'équipe, transmis avec le lien du
-// programme, regroupe les deux téléphones.
+// téléphones —, l'historique de chacun, avec les charges, et leurs mensurations
+// (poids, taille, âge). Rien de confidentiel : pas de compte ; un code
+// d'équipe, transmis avec le lien du programme, regroupe les deux téléphones.
 //
 // Node lit le TypeScript tel quel ; aucune dépendance : node:http pour
 // répondre, node:sqlite pour garder.
@@ -11,8 +11,8 @@
 //
 // Copies de sécurité, dans DONNEES/copies : une chaque nuit, les 30 dernières
 // gardées (jours/), et la première de chaque mois, gardée pour toujours
-// (mois/). Chacune est la base entière, tout l'historique depuis le premier
-// jour.
+// (mois/). Chacune est la base entière, tout l'historique et toutes les
+// mesures depuis le premier jour.
 //
 // Protections, puisque le serveur est public : un débit par adresse (la
 // dernière de X-Forwarded-For, que pose le proxy), les directs comptés, et des
@@ -28,6 +28,9 @@
 //   PUT    /api/equipes/:equipe/historique/:id      une séance faite
 //   DELETE /api/equipes/:equipe/historique/:id      une séance supprimée sur le téléphone
 //   GET    /api/equipes/:equipe/historique          les séances des deux
+//   PUT    /api/equipes/:equipe/mesures/:id         une mesure du corps (poids, taille, âge)
+//   DELETE /api/equipes/:equipe/mesures/:id         une mesure supprimée sur le téléphone
+//   GET    /api/equipes/:equipe/mesures             les mesures des deux
 import { createServer } from 'node:http';
 import type { IncomingHttpHeaders, IncomingMessage, Server, ServerResponse } from 'node:http';
 import { copyFileSync, existsSync, mkdirSync, readdirSync, renameSync, rmSync, statSync } from 'node:fs';
@@ -37,6 +40,7 @@ import { DatabaseSync } from 'node:sqlite';
 import { gzipSync } from 'node:zlib';
 import { EXPIRATION_MS, appliquer, lireEnvoi, lireEtat } from '../src/utils/etatCommun.ts';
 import type { EtatCommun } from '../src/utils/etatCommun.ts';
+import { lireMesure } from '../src/utils/mesures.ts';
 
 const PERSONNES = new Set(['sebastien', 'max']);
 const EQUIPE = /^[A-Za-z0-9_-]{10,40}$/;
@@ -133,7 +137,7 @@ export interface LimitesServeur {
    *  d'une minute entière : un téléphone qui envoie tout son historique, une
    *  séance à la fois, passe — au rythme de la limite une fois la réserve vide —
    *  même s'il ne réessaie que toutes les trente secondes (`RELANCE_ENVOI_MS`,
-   *  dans App.tsx). */
+   *  dans enLigne.ts). */
   ecrituresParMinute: number;
   /** Lectures (GET…) par minute et par adresse. */
   lecturesParMinute: number;
@@ -143,6 +147,10 @@ export interface LimitesServeur {
   seanceMaxiOctets: number;
   /** Séances par équipe : une nouvelle au-delà est refusée, une mise à jour non. */
   seancesParEquipe: number;
+  /** Une mesure du corps, en octets de JSON : une vraie en fait moins de 200. */
+  mesureMaxiOctets: number;
+  /** Mesures par équipe : une nouvelle au-delà est refusée, une mise à jour non. */
+  mesuresParEquipe: number;
   /** La base, en octets : au-delà, plus d'écriture, sauf pour effacer. */
   baseMaxiOctets: number;
 }
@@ -153,6 +161,9 @@ export const LIMITES_PAR_DEFAUT: LimitesServeur = {
   fluxParAdresse: 10,
   seanceMaxiOctets: 64 * 1024,
   seancesParEquipe: 10_000,
+  // Une par mois et par personne : deux mille, c'est plus de quatre-vingts ans.
+  mesureMaxiOctets: 4 * 1024,
+  mesuresParEquipe: 2_000,
   // Avec les copies de chaque nuit (trente) et de chaque mois, la place prise
   // sur le disque du VPS reste de quelques gigaoctets au pire.
   baseMaxiOctets: 100 * 1024 * 1024,
@@ -235,6 +246,12 @@ export function demarrer(options: OptionsServeur = {}): Promise<Server> {
       PRIMARY KEY (equipe, id)
     );
     CREATE INDEX IF NOT EXISTS historique_date ON historique (equipe, date DESC);
+    CREATE TABLE IF NOT EXISTS mesures (
+      equipe TEXT NOT NULL, id TEXT NOT NULL, personne TEXT NOT NULL, date TEXT NOT NULL,
+      mesure TEXT NOT NULL, recu INTEGER NOT NULL,
+      PRIMARY KEY (equipe, id)
+    );
+    CREATE INDEX IF NOT EXISTS mesures_date ON mesures (equipe, date DESC);
   `);
   base.prepare('DELETE FROM seances WHERE maj < ?').run(maintenant() - CONSERVATION_SEANCES_MS);
 
@@ -253,6 +270,15 @@ export function demarrer(options: OptionsServeur = {}): Promise<Server> {
   const effacerRealisation = base.prepare('DELETE FROM historique WHERE equipe = ? AND id = ?');
   // Tout l'historique, depuis le premier jour.
   const lireHistorique = base.prepare('SELECT personne, realisation FROM historique WHERE equipe = ? ORDER BY date DESC');
+  const ecrireMesure = base.prepare(
+    'INSERT INTO mesures (equipe, id, personne, date, mesure, recu) VALUES (?, ?, ?, ?, ?, ?) ' +
+      'ON CONFLICT (equipe, id) DO UPDATE SET personne = excluded.personne, date = excluded.date, ' +
+      'mesure = excluded.mesure, recu = excluded.recu',
+  );
+  const lireUneMesure = base.prepare('SELECT 1 FROM mesures WHERE equipe = ? AND id = ?');
+  const compterMesures = base.prepare('SELECT COUNT(*) AS n FROM mesures WHERE equipe = ?');
+  const effacerUneMesure = base.prepare('DELETE FROM mesures WHERE equipe = ? AND id = ?');
+  const lireToutesLesMesures = base.prepare('SELECT personne, mesure FROM mesures WHERE equipe = ? ORDER BY date DESC, id DESC');
 
   // ------------------------------------------------ Les copies de sécurité
   let derniereCopie: number | null = null;
@@ -504,6 +530,43 @@ export function demarrer(options: OptionsServeur = {}): Promise<Server> {
         }
         if (cle && IDENTIFIANT.test(cle) && requete.method === 'DELETE') {
           effacerRealisation.run(equipe, cle);
+          json(reponse, 200, { ok: true });
+          return;
+        }
+      }
+      if (rubrique === 'mesures') {
+        if (cle === undefined && requete.method === 'GET') {
+          const lignes = lireToutesLesMesures.all(equipe) as { personne: string; mesure: string }[];
+          json(
+            reponse,
+            200,
+            { mesures: lignes.map((ligne) => ({ personne: ligne.personne, mesure: JSON.parse(ligne.mesure) })) },
+            requete,
+          );
+          return;
+        }
+        if (cle && IDENTIFIANT.test(cle) && requete.method === 'PUT') {
+          if (refuserSiPleine(reponse)) return;
+          const corps = (await lireCorps(requete, limites.mesureMaxiOctets)) as { personne?: unknown; mesure?: unknown } | null;
+          // Relue comme le téléphone la relit : une mesure qui ne se lit pas n'entre pas.
+          const mesure = lireMesure(corps?.mesure);
+          if (!corps || !PERSONNES.has(String(corps.personne)) || !mesure || mesure.id !== cle) {
+            json(reponse, 400, { erreur: 'mesure illisible' });
+            return;
+          }
+          // Une équipe pleine n'accepte plus de nouvelle mesure, mais garde à
+          // jour celles qu'elle a. « Pas maintenant » : le téléphone la renverra.
+          const nouvelle = lireUneMesure.get(equipe, cle) === undefined;
+          if (nouvelle && (compterMesures.get(equipe) as { n: number }).n >= limites.mesuresParEquipe) {
+            json(reponse, 507, { erreur: 'équipe pleine' });
+            return;
+          }
+          ecrireMesure.run(equipe, cle, String(corps.personne), mesure.date, JSON.stringify(mesure), maintenant());
+          json(reponse, 200, { ok: true });
+          return;
+        }
+        if (cle && IDENTIFIANT.test(cle) && requete.method === 'DELETE') {
+          effacerUneMesure.run(equipe, cle);
           json(reponse, 200, { ok: true });
           return;
         }

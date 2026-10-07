@@ -35,6 +35,14 @@ export function convertirPoids(valeur: number, de: UnitePoids, vers: UnitePoids)
   return arrondirPoids(converti, vers);
 }
 
+/** Convertit un poids de corps d'une unité vers l'autre, au dixième près : un
+ *  corps ne se pèse pas au demi-kilo des haltères. 182 lb font 82,6 kg. */
+export function convertirPoidsCorps(valeur: number, de: UnitePoids, vers: UnitePoids): number {
+  if (de === vers) return valeur;
+  const converti = vers === 'lb' ? valeur * LIVRES_PAR_KG : valeur / LIVRES_PAR_KG;
+  return Math.round(converti * 10) / 10;
+}
+
 /** Charge de référence d'un exercice réalisé, quel que soit le nom du champ :
  *  `poidsKg` est l'ancien, conservé pour les séances déjà enregistrées. */
 export function poidsDe(exo: ExerciceRealise): number | undefined {

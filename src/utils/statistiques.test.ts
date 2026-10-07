@@ -5,6 +5,7 @@ import {
   arrondirPoids,
   chargeTotale,
   convertirPoids,
+  convertirPoidsCorps,
   frequenceExercice,
   frequencesParExercice,
   libelleFrequenceCourte,
@@ -138,6 +139,22 @@ describe('unités', () => {
     expect(arrondirPoids(15.88, 'kg')).toBe(16);
     expect(arrondirPoids(15.6, 'kg')).toBe(15.5);
     expect(arrondirPoids(35.27, 'lb')).toBe(35);
+  });
+
+  it('convertit un poids de corps au dixième près, pas au demi-kilo des haltères', () => {
+    expect(convertirPoidsCorps(182, 'lb', 'kg')).toBe(82.6);
+    expect(convertirPoidsCorps(82.4, 'kg', 'lb')).toBe(181.7);
+    expect(convertirPoidsCorps(182.4, 'lb', 'lb')).toBe(182.4);
+    expect(convertirPoidsCorps(82.4, 'kg', 'kg')).toBe(82.4);
+    // Pour une charge, 182 lb s'arrondit au demi-kilo : 82,5 kg.
+    expect(convertirPoids(182, 'lb', 'kg')).toBe(82.5);
+  });
+
+  it('un poids de corps qui fait l’aller-retour entre les deux unités ne dérive pas d’un dixième', () => {
+    for (let livres = 80; livres <= 400; livres += 0.7) {
+      const retour = convertirPoidsCorps(convertirPoidsCorps(livres, 'lb', 'kg'), 'kg', 'lb');
+      expect(Math.abs(retour - livres)).toBeLessThanOrEqual(0.2);
+    }
   });
 
   it('traite une séance sans unité comme des kilogrammes', () => {

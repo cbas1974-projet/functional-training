@@ -5,8 +5,8 @@ un pratiquant de jiu-jitsu : **tempo lent, sans rebond**, pour solliciter les
 tendons et les ligaments sans charge excessive.
 
 L'application fonctionne entièrement dans le navigateur. Aucun compte, aucun
-serveur : les réglages, la séance en cours et l'historique sont enregistrés
-sur l'appareil.
+serveur : les réglages, la séance en cours, l'historique et les mensurations
+sont enregistrés sur l'appareil.
 
 ## Fonctionnalités
 
@@ -430,6 +430,30 @@ fiche indique **combien de fois l'exercice a été fait sur
 charge utilisée et le record, ramenés à l'unité courante. Les exercices travaillés dans le mois portent
 une pastille sur leur vignette : ce qui n'en a pas est ce qu'on néglige.
 
+### Progression et mensurations
+
+Dans l'historique, l'onglet **Progression** réunit les mensurations et trois
+graphiques.
+
+- **Mensurations.** Chacun note, à une date, son **poids** (dans l'unité des
+  charges, livres ou kilos), sa **taille** en centimètres — avec l'équivalent
+  en pieds et pouces — et son **âge**. La première mesure est le **jour 1**, le
+  point de départ ; on en ajoute une quand on veut, une fois par mois suffit, et
+  un rappel discret apparaît quand la dernière date de plus de 30 jours. Une
+  mesure se corrige ou se supprime. Chaque mesure garde son unité : changer
+  d'unité ne réécrit pas le passé.
+- **Trois graphiques** en SVG, chacun une ligne avec des points : la **charge
+  d'un exercice** (la plus lourde des séries de chaque séance, à choisir parmi
+  les exercices déjà faits), la **charge totale soulevée** à chaque séance et le
+  **poids de corps** au fil des mois. Trois à cinq lignes de repère aux valeurs
+  rondes, avec leur unité ; les dates sous la courbe ; toucher un point en donne
+  la valeur.
+- **Avec le serveur**, les mesures partent aussi, par une file d'envoi qui ne
+  perd rien : réseau coupé, 429 (trop de requêtes) ou 507 (plus de place), la
+  mesure reste dans la file et repart plus tard ; seul un 400 la retire.
+  L'onglet montre alors aussi l'autre (« Moi » le retire) : sa courbe s'ajoute,
+  en bleu, avec une légende, et ses mesures se lisent sous les vôtres.
+
 ## Chercher par muscle
 
 Chaque case des posters porte une **planche anatomique** : une silhouette de
@@ -560,9 +584,10 @@ Chaque push redéploie le site.
 
 ## Le serveur (VPS)
 
-Le site reste sur Netlify. Le serveur, installé sur le VPS, garde deux
-choses : **la séance commune du jour** (l'horloge des deux téléphones) et
-**l'historique des deux**, avec les charges. Rien de confidentiel : pas de
+Le site reste sur Netlify. Le serveur, installé sur le VPS, garde trois
+choses : **la séance commune du jour** (l'horloge des deux téléphones),
+**l'historique des deux**, avec les charges, et leurs **mensurations**. Rien de
+confidentiel : pas de
 compte, pas de mot de passe. Un code d'équipe, tiré du programme et
 transmis avec le lien « Envoyer à Max », regroupe les deux téléphones. Il
 reste le même quand on refait le programme.
@@ -612,7 +637,8 @@ dans `donnees/copies/` :
 - `mois/` : la première copie de chaque mois, gardée pour toujours.
 
 Chaque copie est la base entière : tout l'historique depuis le premier
-jour, avec les charges. Une copie se lit comme la base elle-même. Pour
+jour, avec les charges, et toutes les mesures. Une copie se lit comme la base
+elle-même. Pour
 revenir à l'une d'elles (ici celle du 5 octobre) :
 
 ```bash
@@ -633,11 +659,12 @@ séances.
 minute, et garder 10 directs ouverts. C'est large : un téléphone qui envoie
 tout son historique d'un coup passe, un peu plus lentement. Une séance
 enregistrée pèse au plus 64 Ko (une vraie, 2 ou 3 Ko), une équipe garde au plus
-10 000 séances, et si la base dépasse 100 Mo (des dizaines d'années de
-séances), le serveur refuse d'écrire
+10 000 séances, une mesure pèse au plus 4 Ko (une vraie, moins de 200 octets)
+et une équipe en garde au plus 2 000, et si la base dépasse 100 Mo (des
+dizaines d'années de séances), le serveur refuse d'écrire
 (effacer reste permis). Quand il répond « pas maintenant » (429 : trop de
-requêtes ; 507 : plus de place), le téléphone garde sa séance et la renvoie
-plus tard : rien ne se perd. Pour que cela marche, le serveur ne doit être
+requêtes ; 507 : plus de place), le téléphone garde sa séance, ou sa mesure, et
+la renvoie plus tard : rien ne se perd. Pour que cela marche, le serveur ne doit être
 joignable que par Traefik ou Caddy, qui lui donnent l'adresse de chacun (c'est
 le cas avec l'installateur). Les valeurs se règlent dans `serveur/serveur.ts`
 (`LIMITES_PAR_DEFAUT`).
@@ -661,6 +688,8 @@ dans `./donnees`), puis `VITE_SERVEUR=http://127.0.0.1:8080 npm run dev`.
 | `GET /api/equipes/:equipe/seances/:jour_seance/flux` | La séance commune en direct (Server-Sent Events) |
 | `PUT`, `DELETE /api/equipes/:equipe/historique/:id` | Une séance faite ; une séance supprimée |
 | `GET /api/equipes/:equipe/historique` | Les séances des deux, toutes (compressées en route) |
+| `PUT`, `DELETE /api/equipes/:equipe/mesures/:id` | Une mesure du corps (poids, taille, âge) ; une mesure supprimée |
+| `GET /api/equipes/:equipe/mesures` | Les mesures des deux, toutes |
 
 ## Images des exercices
 
@@ -690,6 +719,9 @@ src/
 │   ├── ImageEnGrand.tsx          # L'image d'un exercice en grand, avec ses consignes
 │   ├── PaceurTempo.tsx           # La bille qui monte et descend au tempo
 │   ├── HistoriqueEntrainement.tsx
+│   ├── Progression.tsx           # L'onglet Progression : mensurations et trois graphiques
+│   ├── Mesures.tsx               # Formulaire et listes des mesures (poids, taille, âge)
+│   ├── Graphique.tsx             # Graphique en courbes dessiné à la main (SVG)
 │   └── BibliothequeExercices.tsx
 ├── data/
 │   ├── exercices.ts              # Les 77 exercices et leurs points d'attention
@@ -703,7 +735,9 @@ src/
 │   ├── statistiques.ts           # Fréquence d'un exercice, charges par série, charge totale
 │   ├── etatCommun.ts             # La séance commune : ses appuis, partagés avec le serveur
 │   ├── horlogeCommune.ts         # Où en est chacun sur l'horloge commune, et la règle des boutons
-│   ├── enLigne.ts                # Le serveur hors séance : envoi des séances, historique des deux
+│   ├── enLigne.ts                # Le serveur hors séance : envoi des séances et des mesures, historique des deux
+│   ├── mesures.ts                # Une mesure du corps : relecture, jour 1, rappel, pieds et pouces (partagé avec le serveur)
+│   ├── progression.ts            # Séries de points des graphiques, lignes de repère, dates de l'axe
 │   ├── formatage.ts              # Dates, durées, libellés
 │   ├── sounds.ts                 # Cloche et bips (Web Audio)
 │   └── storage.ts                # Sauvegarde locale
@@ -711,11 +745,12 @@ src/
 │   ├── useMoteurEtapes.ts        # Moteur de temps (horloge, pause, reprise)
 │   ├── useSeanceCommune.ts       # La séance commune en direct, et les appuis à envoyer
 │   ├── useMoteurCommun.ts        # Le moteur de temps quand l'horloge est commune
+│   ├── useEnvoiMesures.ts        # La file d'envoi des mesures vers le serveur
 │   └── useVerrouEcran.ts         # Garde l'écran allumé
 ├── types.ts
 └── App.tsx
 serveur/
-├── serveur.ts                    # Le serveur : séance commune, historique, copies de sécurité, protections, SQLite
+├── serveur.ts                    # Le serveur : séance commune, historique, mensurations, copies de sécurité, protections, SQLite
 ├── installer.sh                  # Installation sur le VPS en une commande
 ├── Dockerfile, docker-compose.yml
 └── Caddyfile                     # HTTPS automatique

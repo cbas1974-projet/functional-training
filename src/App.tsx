@@ -3,11 +3,15 @@ import type { EntrainementState, ProgrammeMois } from './types';
 import { chargerEtat, enregistrerEtat } from './utils/storage';
 import {
   IDENTIFIANT_PARTAGEABLE,
+  RELANCE_ENVOI_MS,
+  avecMesure,
   effacerRealisation,
   envoyerRealisation,
   partageDe,
+  sansMesure,
   sansSeance,
 } from './utils/enLigne';
+import { useEnvoiMesures } from './hooks/useEnvoiMesures';
 import { NOM_PERSONNE, autrePersonne, genererProgramme, programmeDansLien } from './utils/programmeMois';
 import { graineAleatoire } from './utils/formatage';
 import { uniteDeSeance } from './utils/statistiques';
@@ -31,10 +35,6 @@ const avecReglagesDe = (programme: ProgrammeMois, recu: ProgrammeMois): Programm
   ...(recu.serveur ? { serveur: recu.serveur } : {}),
   ...(recu.equipe ? { equipe: recu.equipe } : {}),
 });
-
-/** Une séance faite (ou supprimée) repart vers le serveur toutes les trente
- *  secondes tant qu'il ne l'a pas. */
-const RELANCE_ENVOI_MS = 30_000;
 
 /** L'état au lancement. Le premier jour, l'application compose le programme
  *  elle-même ; un programme reçu par lien est pris d'office s'il n'y en avait
@@ -164,6 +164,9 @@ export default function App() {
     );
   }, [cleHistorique]);
 
+  // Les mesures du corps partent aussi, par leur propre file.
+  useEnvoiMesures(etat, setEtat);
+
   const onChange = useCallback(
     (miseAJour: (prec: EntrainementState) => EntrainementState) => setEtat((prec) => miseAJour(prec)),
     [],
@@ -219,6 +222,11 @@ export default function App() {
                 partage={partage}
                 nomPartenaire={etat.personne ? NOM_PERSONNE[autrePersonne(etat.personne)] : null}
                 onSupprimer={(id) => setEtat((prec) => sansSeance(prec, id))}
+                personne={etat.personne ?? null}
+                mesures={etat.mesures ?? []}
+                unitePoids={uniteDeSeance(etat.parametres)}
+                onMesure={(mesure) => setEtat((prec) => avecMesure(prec, mesure))}
+                onSupprimerMesure={(id) => setEtat((prec) => sansMesure(prec, id))}
               />
             )}
             {vue === 'exercices' && (
