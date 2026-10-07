@@ -237,9 +237,12 @@ describe('les boutons, à deux', () => {
     });
   });
 
-  // À la trap bar, chacun son tour : Max finit sa série 1 à 85 s ; Sébastien
-  // l'attend jusqu'à 100 s (le changement de machine), puis fait la sienne.
-  const tAttenteMax = 1_000_000 + 88_000;
+  // À la trap bar, chacun son tour : Max finit sa série 1 (10 répétitions de 6 s,
+  // sans arrêt en bas, après 5 s de préparation : 65 s) ; Sébastien l'attend
+  // jusqu'à 80 s (le changement de machine), puis fait la sienne. On se place
+  // trois secondes après la série de Max : il attend, et Sébastien aussi.
+  const attenteMax = etapesMax.findIndex((e) => e.type === 'repos' && e.motif === 'tour');
+  const tAttenteMax = debutEtape(etapesMax, installation(etapesMax, 0) + 1, attenteMax, 1_000_000) + 3_000;
 
   it('« Suivant » pendant une attente ne saute jamais la série de l’autre', () => {
     const ctx = contexte(etapesMax, etapesSeb, etat, tAttenteMax, 'Speedy');
@@ -301,10 +304,13 @@ describe('le temps passé sur les étapes', () => {
   const serie1 = installation(etapesMax, 0) + 2;
 
   it('écran éteint, les étapes franchies comptent ; un exercice passé, non', () => {
-    // Max : sa série 1 à 5 s, puis l'écran s'éteint trois minutes.
+    // Max : sa série 1 à 5 s, puis l'écran s'éteint trois minutes. La série de
+    // la trap bar dure 60 s (10 répétitions sans arrêt en bas), l'attente de
+    // Sébastien — changement de machine compris — 83 s, la préparation 5 s.
+    expect(etapesMax[serie1].dureeSec).toBe(60);
     expect(tempsDesEtapesQuittees(etapesMax, { index: serie1, ecouleSec: 5 }, { index: serie1 + 3, ecouleSec: 1 }, 180)).toEqual([
-      [serie1, 80],
-      [serie1 + 1, 99],
+      [serie1, 60],
+      [serie1 + 1, 83],
       [serie1 + 2, 5],
     ]);
     // « Passer l'exercice » en pleine série : les séries suivantes ne comptent pas.

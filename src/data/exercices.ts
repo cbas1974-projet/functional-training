@@ -340,6 +340,7 @@ export const EXERCICES: Exercice[] = [
     niveauMin: 1,
     cotes: 'bilateral',
     unite: 'reps',
+    sansPauseEnBas: true,
     position: 'Debout, buste penché',
     pointsAttention: [
       'Buste penché dos plat, genoux légèrement fléchis.',
@@ -571,6 +572,7 @@ export const EXERCICES: Exercice[] = [
     niveauMin: 2,
     cotes: 'alterne',
     unite: 'reps',
+    sansPauseEnBas: true,
     position: 'Debout, buste penché',
     pointsAttention: [
       'Buste penché dos plat, genoux fléchis, regard au sol devant soi.',
@@ -596,6 +598,8 @@ export const EXERCICES: Exercice[] = [
     cotes: 'bilateral',
     unite: 'reps',
     premierePhase: 'descend',
+    sansPauseEnBas: true,
+    genouAMenager: true,
     position: 'Debout',
     pointsAttention: [
       'Pieds largeur d’épaules, genoux dans l’axe des pieds.',
@@ -620,12 +624,14 @@ export const EXERCICES: Exercice[] = [
     cotes: 'bilateral',
     unite: 'reps',
     premierePhase: 'descend',
+    sansPauseEnBas: true,
+    genouAMenager: true,
     position: 'Debout',
     pointsAttention: [
       'Haltère tenu à la verticale contre la poitrine, coudes vers le bas.',
       'En bas, les coudes passent à l’intérieur des genoux.',
       'Buste droit, talons au sol pendant toute la descente.',
-      'Marquer un temps en bas, sans rebond.',
+      'Remonter en poussant sur les talons, sans rebond.',
     ],
   },
   {
@@ -643,6 +649,8 @@ export const EXERCICES: Exercice[] = [
     cotes: 'bilateral',
     unite: 'reps',
     premierePhase: 'descend',
+    sansPauseEnBas: true,
+    genouAMenager: true,
     position: 'Debout, pieds écartés',
     pointsAttention: [
       'Pieds larges, pointes tournées vers l’extérieur.',
@@ -691,6 +699,7 @@ export const EXERCICES: Exercice[] = [
     cotes: 'bilateral',
     unite: 'reps',
     premierePhase: 'descend',
+    sansPauseEnBas: true,
     position: 'Debout',
     pointsAttention: [
       'Dos plat du début à la fin, omoplates serrées.',
@@ -738,6 +747,8 @@ export const EXERCICES: Exercice[] = [
     cotes: 'alterne',
     unite: 'reps',
     premierePhase: 'descend',
+    sansPauseEnBas: true,
+    genouAMenager: true,
     position: 'Debout',
     pointsAttention: [
       'Grand pas en arrière, buste droit.',
@@ -761,6 +772,8 @@ export const EXERCICES: Exercice[] = [
     cotes: 'alterne',
     unite: 'reps',
     premierePhase: 'descend',
+    sansPauseEnBas: true,
+    genouAMenager: true,
     position: 'Debout',
     pointsAttention: [
       'Grand pas sur le côté, jambe opposée tendue et pied à plat.',
@@ -784,6 +797,8 @@ export const EXERCICES: Exercice[] = [
     niveauMin: 2,
     cotes: 'alterne',
     unite: 'reps',
+    sansPauseEnBas: true,
+    genouAMenager: true,
     position: 'Debout devant une marche ou un banc',
     pointsAttention: [
       'Pied entier posé sur la marche, support parfaitement stable.',
@@ -900,6 +915,8 @@ export const EXERCICES: Exercice[] = [
     cotes: 'bilateral',
     unite: 'reps',
     premierePhase: 'descend',
+    sansPauseEnBas: true,
+    genouAMenager: true,
     position: 'Debout',
     pointsAttention: [
       'Haltères aux épaules, coudes vers l’avant.',
@@ -1359,6 +1376,7 @@ export const EXERCICES: Exercice[] = [
     niveauMin: 2,
     cotes: 'bilateral',
     unite: 'reps',
+    sansPauseEnBas: true,
     position: 'Debout, buste penché à 45 degrés',
     pointsAttention: [
       'Dos plat, regard vers le sol un mètre devant : jamais de dos rond.',
@@ -1497,6 +1515,8 @@ export const EXERCICES: Exercice[] = [
     cotes: 'unilateral',
     unite: 'reps',
     premierePhase: 'descend',
+    sansPauseEnBas: true,
+    genouAMenager: true,
     position: 'Debout sur une marche',
     pointsAttention: [
       'La marche allonge la descente : le genou arrière passe sous le niveau du pied avant.',
@@ -1520,6 +1540,8 @@ export const EXERCICES: Exercice[] = [
     cotes: 'alterne',
     unite: 'reps',
     premierePhase: 'descend',
+    sansPauseEnBas: true,
+    genouAMenager: true,
     position: 'Debout',
     pointsAttention: [
       'La jambe arrière croise derrière l’autre, en diagonale.',
@@ -1868,6 +1890,24 @@ export const OBJECTIFS: { id: Objectif; nom: string; description: string }[] = [
   { id: 'gainage', nom: 'Gainage', description: 'Abdominaux, obliques et exercices de corps entier.' },
   { id: 'dos', nom: 'Dos', description: 'Tirages et haut du dos, avec un peu de gainage et de jambes.' },
 ];
+
+/** La consigne des exercices marqués `sansPauseEnBas`. */
+export const CONSIGNE_SANS_PAUSE = 'Sans arrêt en bas : on descend contrôlé, on remonte sans rebond';
+/** Celle des exercices marqués `genouAMenager`, en plus de la précédente. */
+export const CONSIGNE_GENOU = 'On descend seulement jusqu’où le genou ne fait pas mal';
+
+/** Les consignes d'un exercice, telles qu'on les affiche partout (séance
+ *  guidée, image en grand, bibliothèque, séance libre) : celles de précaution
+ *  d'abord — pas d'arrêt en bas, le genou —, puis ses points d'attention. */
+export function consignesDe(
+  exercice: Pick<Exercice, 'pointsAttention' | 'sansPauseEnBas' | 'genouAMenager'>,
+): string[] {
+  return [
+    ...(exercice.sansPauseEnBas ? [CONSIGNE_SANS_PAUSE] : []),
+    ...(exercice.genouAMenager ? [CONSIGNE_GENOU] : []),
+    ...exercice.pointsAttention,
+  ];
+}
 
 /** Images intégrées directement dans la page (version « fichier unique »
  *  produite par scripts/construire_fichier_unique.mjs) : identifiant → data URI.

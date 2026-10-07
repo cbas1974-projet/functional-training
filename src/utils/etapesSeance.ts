@@ -16,6 +16,7 @@ import {
   dureeSerieSec,
   groupesDeBlocs,
   secondesParRep,
+  tempoPourExercice,
 } from './generateurSeance';
 
 // La durée de la préparation appartient au modèle de coût du générateur ;
@@ -676,7 +677,11 @@ export function etatMetronome(etape: Etape, ecouleSec: number, tempo: Tempo): Et
   const exercice = exerciceDeSeance(etape.exerciceId);
   if (exercice.unite === 'secondes') return null;
 
-  const parRep = secondesParRep(tempo);
+  // Un exercice sans arrêt en bas compte une répétition plus courte : c'est le
+  // même tempo que celui des durées (`dureeSerieSec`), pour que la bille, les
+  // bips et la durée de l'étape ne se contredisent jamais.
+  const tempoExercice = tempoPourExercice(exercice, tempo);
+  const parRep = secondesParRep(tempoExercice);
   if (parRep <= 0) return null;
   const cyclesTotaux =
     etape.type === 'serie'
@@ -687,7 +692,7 @@ export function etatMetronome(etape: Etape, ecouleSec: number, tempo: Tempo): Et
   const ecoule = Math.max(0, ecouleSec);
   const cycle = Math.floor(ecoule / parRep);
   const dansCycle = ecoule - cycle * parRep;
-  const lecture = lirePhase(tempo, premierePhase(exercice), dansCycle);
+  const lecture = lirePhase(tempoExercice, premierePhase(exercice), dansCycle);
   const phase = lecture.phase;
   const resteDansPhaseSec = lecture.dureePhaseSec - lecture.ecouleDansPhaseSec;
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { EXERCICES, EXERCICES_PAR_ID, POSTERS } from './exercices';
+import { CONSIGNE_GENOU, CONSIGNE_SANS_PAUSE, EXERCICES, EXERCICES_PAR_ID, POSTERS, consignesDe } from './exercices';
 import { EXERCICES_ETIREMENTS } from './etirements';
 import { EXERCICES_KETTLEBELL } from './kettlebell';
 import { EXERCICES_YOGA } from './yoga';
@@ -44,6 +44,59 @@ describe('bibliothèque d’exercices', () => {
   it('renseigne au moins deux points d’attention par exercice', () => {
     const pauvres = EXERCICES.filter((e) => e.pointsAttention.length < 2).map((e) => e.id);
     expect(pauvres).toEqual([]);
+  });
+});
+
+/** Le texte de tous les composants : pour vérifier qu'aucun n'affiche les points
+ *  d'attention sans passer par `consignesDe`. */
+const COMPOSANTS = import.meta.glob('../components/*.tsx', { query: '?raw', import: 'default', eager: true }) as Record<
+  string,
+  string
+>;
+
+describe('consignes de précaution', () => {
+  it('dit « sans arrêt en bas » aux exercices du dos et des genoux, et en plus « jusqu’où le genou ne fait pas mal » à ceux des genoux', () => {
+    expect(CONSIGNE_SANS_PAUSE).toBe('Sans arrêt en bas : on descend contrôlé, on remonte sans rebond');
+    expect(CONSIGNE_GENOU).toBe('On descend seulement jusqu’où le genou ne fait pas mal');
+
+    // Le dos : une seule consigne de plus, avant les points d'attention.
+    const souleve = EXERCICES_PAR_ID['romanian-deadlift'];
+    expect(souleve.genouAMenager).toBeUndefined();
+    expect(consignesDe(souleve)).toEqual([CONSIGNE_SANS_PAUSE, ...souleve.pointsAttention]);
+    // Les genoux : les deux.
+    for (const id of ['squat', 'leg-press', 'kb-lunge-press', 'step-up']) {
+      const exercice = EXERCICES_PAR_ID[id];
+      expect(consignesDe(exercice), id).toEqual([CONSIGNE_SANS_PAUSE, CONSIGNE_GENOU, ...exercice.pointsAttention]);
+    }
+    // Les autres : leurs points d'attention, rien de plus.
+    const curl = EXERCICES_PAR_ID['hammer-curl'];
+    expect(consignesDe(curl)).toEqual(curl.pointsAttention);
+    expect(consignesDe({ pointsAttention: [] })).toEqual([]);
+  });
+
+  it('ne contredit aucun exercice sans arrêt en bas : aucun ne demande de marquer un temps en bas', () => {
+    for (const exercice of EXERCICES.filter((e) => e.sansPauseEnBas)) {
+      const phrases = consignesDe(exercice).filter((p) => /marquer un temps|temps d.arrêt en bas|tenir en bas/i.test(p));
+      expect(phrases, exercice.id).toEqual([]);
+    }
+  });
+
+  it('ne marque le genou que sur des exercices sans arrêt en bas', () => {
+    expect(EXERCICES.filter((e) => e.genouAMenager && !e.sansPauseEnBas).map((e) => e.id)).toEqual([]);
+  });
+
+  it('s’affiche partout où les consignes s’affichent : aucun écran ne lit les points d’attention sans elle', () => {
+    expect(Object.keys(COMPOSANTS).length).toBeGreaterThan(5);
+    const sansLaFonction = Object.entries(COMPOSANTS)
+      .filter(([, texte]) => texte.includes('.pointsAttention'))
+      .map(([chemin]) => chemin);
+    expect(sansLaFonction).toEqual([]);
+    // Les cinq écrans qui montrent les consignes d'un exercice.
+    for (const nom of ['SeanceGuidee', 'ImageEnGrand', 'BibliothequeExercices', 'Entrainement']) {
+      const texte = COMPOSANTS[`../components/${nom}.tsx`];
+      expect(texte, nom).toContain('consignesDe(');
+    }
+    expect(COMPOSANTS['../components/SeanceGuidee.tsx'].match(/consignesDe\(/g)).toHaveLength(2);
   });
 });
 

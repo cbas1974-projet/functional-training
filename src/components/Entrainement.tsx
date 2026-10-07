@@ -25,7 +25,7 @@ import {
   TOUTES_LES_ZONES,
   UNITES_POIDS,
 } from '../data/parametres';
-import { EXERCICES_PAR_ID, NOM_PATTERN, NOM_ZONE, ZONES } from '../data/exercices';
+import { EXERCICES_PAR_ID, NOM_PATTERN, NOM_ZONE, ZONES, consignesDe } from '../data/exercices';
 import {
   analyserSeance,
   disciplineDe,
@@ -36,6 +36,7 @@ import {
   genererSeance,
   libelleBloc,
   remplacerExercice,
+  tempoPourExercice,
   tenueDe,
 } from '../utils/generateurSeance';
 import type { AnalyseSeance } from '../utils/generateurSeance';
@@ -365,7 +366,8 @@ export default function Entrainement({ etat, onChange }: EntrainementProps) {
     const exercice = EXERCICES_PAR_ID[bloc.exerciceId];
     const duree = formaterDuree(dureeSerieDuBloc(bloc, tempo));
     const cotes = exercice.cotes === 'unilateral' ? ', droite puis gauche' : '';
-    return `Une série de ${bloc.reps} répétitions à ${libelleTempo(tempo)}${cotes} dure ${duree}.`;
+    // Sans arrêt en bas pour certains exercices : le tempo annoncé est le leur.
+    return `Une série de ${bloc.reps} répétitions à ${libelleTempo(tempoPourExercice(exercice, tempo))}${cotes} dure ${duree}.`;
   }, [seanceCourante]);
 
   /** Combien de fois chaque exercice a déjà été fait, par fenêtre glissante.
@@ -540,7 +542,10 @@ export default function Entrainement({ etat, onChange }: EntrainementProps) {
 
           {!mobilite && (
             <>
-              <Groupe titre="Tempo">
+              <Groupe
+                titre="Tempo"
+                aide="Les exercices qui fatiguent le dos ou le genou se font toujours sans arrêt en bas, quel que soit le tempo."
+              >
                 <div className="space-y-2">
                   {TEMPOS.map((t) => (
                     <Choix
@@ -961,7 +966,7 @@ export default function Entrainement({ etat, onChange }: EntrainementProps) {
                         className="ml-4 list-disc space-y-0.5 pb-1 text-sm"
                         style={{ color: 'var(--texte-discret)' }}
                       >
-                        {exercice.pointsAttention.map((point, index) => (
+                        {consignesDe(exercice).map((point, index) => (
                           <li key={index}>{point}</li>
                         ))}
                         {exercice.interetJjb && (

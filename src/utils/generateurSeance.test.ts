@@ -30,6 +30,7 @@ import {
   remplacerExercice,
   sontOpposes,
   secondesParRep,
+  tempoPourExercice,
 } from './generateurSeance';
 
 /** Graine fixe : les tests doivent être reproductibles. */
@@ -702,10 +703,55 @@ describe('durée d’une série', () => {
   it('compte la pause en bas dans chaque répétition', () => {
     const avecPause = { monteeSec: 3, descenteSec: 3, pauseSec: 2 };
     expect(secondesParRep(avecPause)).toBe(8);
-    expect(dureeSerieSec(EXERCICES_PAR_ID['squat'], 8, avecPause)).toBe(64);
+    expect(dureeSerieSec(EXERCICES_PAR_ID['bench-press'], 8, avecPause)).toBe(64);
     // Unilatéral : la pause se tient de chaque côté.
     expect(dureeSerieSec(EXERCICES_PAR_ID['single-arm-row'], 8, avecPause)).toBe(128);
     expect(secondesParRep({ monteeSec: 4, descenteSec: 4, pauseSec: 2 })).toBe(10);
+  });
+
+  it('ne compte aucune pause en bas aux exercices du dos et des genoux : l’arrêt vaut 0', () => {
+    const avecPause = { monteeSec: 3, descenteSec: 3, pauseSec: 2 };
+    // Le squat, le soulevé de terre, la presse : 6 s par répétition, pas 8.
+    for (const id of ['squat', 'kb-deadlift', 'leg-press', 'trap-bar-deadlift']) {
+      const exercice = EXERCICES_PAR_ID[id];
+      expect(exercice.sansPauseEnBas, id).toBe(true);
+      expect(secondesParRep(avecPause, exercice), id).toBe(6);
+      expect(dureeSerieSec(exercice, 8, avecPause), id).toBe(48);
+    }
+    // Unilatéral : pas de pause de chaque côté.
+    expect(dureeSerieSec(EXERCICES_PAR_ID['elevated-reverse-lunge'], 8, avecPause)).toBe(96);
+    expect(dureeSerieSec(EXERCICES_PAR_ID['kb-lawn-mower'], 6, avecPause)).toBe(72);
+    // Au tempo de la séance libre aussi, et sans pause dans le tempo, rien ne change.
+    expect(dureeSerieSec(EXERCICES_PAR_ID['squat'], 8, PARAMETRES_PAR_DEFAUT.tempo)).toBe(48);
+    expect(dureeSerieSec(EXERCICES_PAR_ID['squat'], 8, { monteeSec: 3, descenteSec: 3 })).toBe(48);
+    // Les autres gardent leur pause ; les exercices au temps ne comptent pas de répétitions.
+    expect(dureeSerieSec(EXERCICES_PAR_ID['hammer-curl'], 8, avecPause)).toBe(64);
+    expect(dureeSerieSec(EXERCICES_PAR_ID['farmers-walk'], 40, avecPause)).toBe(40);
+    // Le tempo d'un exercice : celui de la séance, sans la pause quand il n'en a pas.
+    expect(tempoPourExercice(EXERCICES_PAR_ID['squat'], avecPause)).toEqual({ monteeSec: 3, descenteSec: 3, pauseSec: 0 });
+    expect(tempoPourExercice(EXERCICES_PAR_ID['hammer-curl'], avecPause)).toBe(avecPause);
+  });
+
+  it('annonce, dans la séance libre, la durée d’une série sans arrêt en bas', () => {
+    // Un bloc de squats, un bloc de curls : la durée de la séance les compte chacun à leur tempo.
+    const seance: Seance = {
+      id: 'essai',
+      creeLe: '2026-01-01T10:00:00.000Z',
+      parametres: avec({ tempo: { monteeSec: 3, descenteSec: 3, pauseSec: 2 } }),
+      graine: 1,
+      echauffementSec: 0,
+      retourCalmeSec: 0,
+      blocs: [
+        { exerciceId: 'squat', series: 2, reps: 8, reposSec: 60 },
+        { exerciceId: 'hammer-curl', series: 2, reps: 8, reposSec: 60 },
+      ],
+      circuit: null,
+      dureeEstimeeSec: 0,
+    };
+    const analyse = analyserSeance(seance);
+    // 2 × 48 s au squat, 2 × 64 s au curl ; 4 préparations de 5 s ; 3 repos de 60 s.
+    expect(analyse.travailSec).toBe(2 * 48 + 2 * 64);
+    expect(estimerDureeSec(seance)).toBe(2 * 48 + 2 * 64 + 4 * 5 + 3 * 60);
   });
 
   it('recommande 8 répétitions au tempo lent avec pause', () => {

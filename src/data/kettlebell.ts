@@ -350,6 +350,7 @@ export const EXERCICES_KETTLEBELL: Exercice[] = [
     niveauMin: 2,
     cotes: 'bilateral',
     unite: 'reps',
+    sansPauseEnBas: true,
     position: 'Debout, buste penché à 45°, un kettlebell dans chaque main',
     pointsAttention: [
       'Dos plat, hanches en arrière : les lombaires tiennent, elles ne bougent pas.',
@@ -437,6 +438,8 @@ export const EXERCICES_KETTLEBELL: Exercice[] = [
     cotes: 'bilateral',
     unite: 'reps',
     premierePhase: 'descend',
+    sansPauseEnBas: true,
+    genouAMenager: true,
     position: 'Debout, kettlebell tenu par les cornes contre la poitrine',
     pointsAttention: [
       'La charge devant redresse le buste : c’est le squat le plus doux pour le dos.',
@@ -458,6 +461,7 @@ export const EXERCICES_KETTLEBELL: Exercice[] = [
     niveauMin: 1,
     cotes: 'bilateral',
     unite: 'reps',
+    sansPauseEnBas: true,
     position: 'Debout, kettlebell au sol entre les pieds',
     pointsAttention: [
       'Hanches en arrière d’abord, genoux ensuite : c’est une charnière, pas un squat.',
@@ -480,6 +484,7 @@ export const EXERCICES_KETTLEBELL: Exercice[] = [
     niveauMin: 2,
     cotes: 'unilateral',
     unite: 'reps',
+    sansPauseEnBas: true,
     position: 'Debout sur une jambe, kettlebell dans la main opposée',
     pointsAttention: [
       'Hanches parallèles au sol : la hanche de la jambe levée ne s’ouvre pas.',
@@ -502,6 +507,8 @@ export const EXERCICES_KETTLEBELL: Exercice[] = [
     cotes: 'alterne',
     unite: 'reps',
     premierePhase: 'descend',
+    sansPauseEnBas: true,
+    genouAMenager: true,
     position: 'Debout, kettlebell en rack sur une épaule',
     pointsAttention: [
       'Grand pas, genou arrière qui frôle le sol.',
@@ -523,6 +530,8 @@ export const EXERCICES_KETTLEBELL: Exercice[] = [
     cotes: 'alterne',
     unite: 'reps',
     premierePhase: 'descend',
+    sansPauseEnBas: true,
+    genouAMenager: true,
     position: 'Debout, kettlebell contre la poitrine',
     pointsAttention: [
       'Pas de côté, hanches en arrière, jambe opposée tendue.',
@@ -611,6 +620,8 @@ export const EXERCICES_KETTLEBELL: Exercice[] = [
     cotes: 'unilateral',
     unite: 'reps',
     premierePhase: 'descend',
+    sansPauseEnBas: true,
+    genouAMenager: true,
     position: 'Debout, kettlebell en rack',
     pointsAttention: [
       'Squat complet, puis la poussée des jambes lance le développé.',
@@ -672,6 +683,8 @@ export const EXERCICES_KETTLEBELL: Exercice[] = [
     cotes: 'alterne',
     unite: 'reps',
     premierePhase: 'descend',
+    sansPauseEnBas: true,
+    genouAMenager: true,
     position: 'Debout, kettlebell en rack',
     pointsAttention: [
       'Descendre en fente, développer en bas, revenir debout.',
@@ -1111,6 +1124,7 @@ export const EXERCICES_KETTLEBELL: Exercice[] = [
     niveauMin: 2,
     cotes: 'unilateral',
     unite: 'reps',
+    sansPauseEnBas: true,
     position: 'En fente, main libre sur une marche, kettlebell au sol',
     pointsAttention: [
       'Tirer comme pour démarrer une tondeuse, coude vers le plafond.',
@@ -1131,6 +1145,7 @@ export const EXERCICES_KETTLEBELL: Exercice[] = [
     niveauMin: 1,
     cotes: 'bilateral',
     unite: 'reps',
+    sansPauseEnBas: true,
     position: 'Debout, buste penché, kettlebells sous les épaules',
     pointsAttention: [
       'Bras légèrement fléchis, ouvrir jusqu’à l’horizontale.',
@@ -1177,6 +1192,7 @@ export const EXERCICES_KETTLEBELL: Exercice[] = [
     niveauMin: 2,
     cotes: 'bilateral',
     unite: 'reps',
+    sansPauseEnBas: true,
     position: 'Debout, kettlebell tenu contre la poitrine ou derrière la nuque',
     pointsAttention: [
       'Charnière de hanche, dos plat du début à la fin.',
@@ -1306,6 +1322,8 @@ export const EXERCICES_KETTLEBELL: Exercice[] = [
     cotes: 'alterne',
     unite: 'reps',
     premierePhase: 'descend',
+    sansPauseEnBas: true,
+    genouAMenager: true,
     position: 'Debout, kettlebell à deux mains',
     pointsAttention: [
       'Fente latérale en tournant le buste vers le pied avant.',
@@ -1370,6 +1388,8 @@ export const EXERCICES_KETTLEBELL: Exercice[] = [
     niveauMin: 2,
     cotes: 'bilateral',
     unite: 'reps',
+    sansPauseEnBas: true,
+    genouAMenager: true,
     position: 'Dos au mur, cuisses à l’horizontale, kettlebells aux épaules',
     pointsAttention: [
       'La chaise se tient pendant que les bras développent.',

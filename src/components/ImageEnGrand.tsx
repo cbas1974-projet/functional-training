@@ -4,7 +4,7 @@
 import { useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import type { Exercice } from '../types';
-import { NOM_MUSCLE, cheminImage } from '../data/exercices';
+import { NOM_MUSCLE, cheminImage, consignesDe } from '../data/exercices';
 
 interface ImageEnGrandProps {
   exercice: Exercice;
@@ -61,7 +61,7 @@ export default function ImageEnGrand({ exercice, onFermer }: ImageEnGrandProps) 
             {exercice.position}
           </p>
           <ul className="mt-2 list-disc space-y-1 pl-5 text-sm" style={{ color: 'var(--texte)' }}>
-            {exercice.pointsAttention.map((point) => (
+            {consignesDe(exercice).map((point) => (
               <li key={point}>{point}</li>
             ))}
           </ul>

@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import type { ReactNode } from 'react';
 import type { Exercice, Famille, SeanceRealisee, UnitePoids } from '../types';
-import { EXERCICES, NOM_MATERIEL, NOM_MUSCLE, NOM_PATTERN, POSTERS, ZONES } from '../data/exercices';
+import { EXERCICES, NOM_MATERIEL, NOM_MUSCLE, NOM_PATTERN, POSTERS, ZONES, consignesDe } from '../data/exercices';
 import { OBJECTIFS_MUSCULAIRES, exercicesPourMuscles, sollicitation } from '../utils/muscles';
 import { formaterDateFr, libelleNiveauMin } from '../utils/formatage';
 import { SUFFIXE_UNITE, frequencesParExercice } from '../utils/statistiques';
@@ -160,7 +160,7 @@ function DetailExercice({
           className="ml-4 mt-1 list-disc space-y-0.5 text-sm"
           style={{ color: 'var(--texte-discret)' }}
         >
-          {exercice.pointsAttention.map((point, index) => (
+          {consignesDe(exercice).map((point, index) => (
             <li key={index}>{point}</li>
           ))}
         </ul>

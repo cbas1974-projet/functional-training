@@ -154,6 +154,17 @@ export interface Exercice {
   /** Mouvement balistique (saut, swing) : incompatible avec le tempo lent,
    *  exclu tant que l'option « explosifs » n'est pas activée. */
   explosif?: boolean;
+  /** Pas d'arrêt en bas, quel que soit le tempo : on descend contrôlé et on
+   *  remonte sans rebond. Pour les exercices où la position basse tenue
+   *  fatigue le bas du dos ou le genou (soulevés de terre, rowings penchés,
+   *  squats, fentes…). La durée d'une répétition, la bille, le métronome et la
+   *  durée annoncée de la séance en tiennent compte : voir
+   *  `tempoPourExercice`. */
+  sansPauseEnBas?: boolean;
+  /** Plie le genou sous charge (squats, fentes, presse…) : on ne descend que
+   *  jusqu'où le genou ne fait pas mal. Ajoute une consigne aux points
+   *  d'attention (`consignesDe`). */
+  genouAMenager?: boolean;
   position: string;
   /** Phase par laquelle commence chaque répétition : 'descend' pour les
    *  mouvements qui partent de la position haute (squat, fente, développé

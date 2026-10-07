@@ -31,7 +31,6 @@ import {
   NOM_PERSONNE,
   NOM_ROLE,
   PERSONNES,
-  REPOS_PAIRE_SEC,
   REPS_SEMAINE_DURE,
   SERIES_PROGRAMME,
   TEMPO_PROGRAMME,
@@ -474,7 +473,7 @@ function FeuilleReglages({
 
       <Groupe
         titre="Tempo des séances"
-        aide="Le nombre d’exercices et le tempo sont les mêmes sur les deux téléphones : ils partent avec le programme. La séance libre garde son tempo à elle."
+        aide="Le nombre d’exercices et le tempo sont les mêmes sur les deux téléphones : ils partent avec le programme. La séance libre garde son tempo à elle. Les exercices qui fatiguent le dos ou le genou se font toujours sans arrêt en bas."
       >
         <div className="space-y-2">
           {TEMPOS.map((t) => (
@@ -1253,7 +1252,7 @@ export default function Accueil({
             </p>
             <p className="mt-2 text-sm" style={{ color: 'var(--texte-discret)' }}>
               {avecPaires
-                ? `Par paires : les deux exercices à la suite, puis ${dureeCourte(REPOS_PAIRE_SEC)} de pause${avecTrapBar ? ', 2 min avec la trap bar' : ''}. À chaque nouvelle paire, on installe, puis on repart sur « Go ».`
+                ? `Par paires : les deux exercices à la suite, puis la pause de la paire : 1 min aux petits muscles, 1 min 30 avec un gros exercice${avecTrapBar ? ', 2 min avec la trap bar' : ''}. À chaque nouvelle paire, on installe, puis on repart sur « Go ».`
                 : `Pauses : ${avecTrapBar ? '2 min à la trap bar, ' : ''}1 min 30 aux gros exercices, 1 min aux petits. À chaque nouvel exercice, on installe, puis on repart sur « Go ».`}
             </p>
 
@@ -1327,6 +1326,10 @@ export default function Accueil({
                             {croisee ? ' · à deux, on se croise' : ''}
                           </p>
                         )}
+                        {/* La pause de la paire : la plus longue des pauses de ses deux exercices. */}
+                        <p className="chiffres text-xs" style={{ color: 'var(--texte-discret)' }}>
+                          Pause après la paire : {dureeCourte(groupe[0].reposSec)}
+                        </p>
                       </div>
                       <button
                         type="button"

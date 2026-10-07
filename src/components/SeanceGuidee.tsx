@@ -19,7 +19,7 @@ import type {
   Tempo,
   UnitePoids,
 } from '../types';
-import { ECHAUFFEMENT, RETOUR_CALME, cheminImage } from '../data/exercices';
+import { ECHAUFFEMENT, RETOUR_CALME, cheminImage, consignesDe } from '../data/exercices';
 import { bellSound } from '../utils/sounds';
 import {
   agregerRealisation,
@@ -37,7 +37,7 @@ import {
   premierePhase,
 } from '../utils/etapesSeance';
 import type { Etape, EtatMaintien, EtatMetronome, PhaseTempo, Suivant } from '../utils/etapesSeance';
-import { estMobilite, secondesParRep } from '../utils/generateurSeance';
+import { estMobilite, secondesParRep, tempoPourExercice } from '../utils/generateurSeance';
 import { libelleTempo } from '../utils/formatage';
 import type { Essai } from '../utils/essai';
 import { autrePersonne, chargeDeSerie, chargeLeBasDuDos, etirementsPauseDe } from '../utils/programmeMois';
@@ -1055,7 +1055,7 @@ function EcranAccueil({
           La bonne charge : les deux dernières répétitions sont dures, la forme reste intacte, et il
           vous en resterait deux. Jamais jusqu’à l’échec.
           {tempo.pauseSec
-            ? ' Pendant la pause en bas, les muscles restent engagés ; si le dos s’arrondit, pas de pause sur cet exercice.'
+            ? ' Pendant la pause en bas, les muscles restent engagés. Les exercices qui fatiguent le dos ou le genou se font sans arrêt en bas.'
             : ''}
         </p>
 
@@ -1269,7 +1269,7 @@ function CorpsPret({ etape, exercice, resteSec, onDemarrer, onPasser }: CorpsPre
         </div>
       </div>
       <ul className="list-disc space-y-1 pl-5" style={{ color: 'var(--texte-discret)' }}>
-        {exercice.pointsAttention.map((point) => (
+        {consignesDe(exercice).map((point) => (
           <li key={point}>{point}</li>
         ))}
       </ul>
@@ -1430,7 +1430,7 @@ function CorpsTravail({
       <details className="rounded-2xl px-4" style={{ background: 'var(--surface)' }}>
         <summary className="cursor-pointer py-3 font-medium">Points d’attention</summary>
         <ul className="list-disc space-y-1 pb-3 pl-5" style={{ color: 'var(--texte-discret)' }}>
-          {exercice.pointsAttention.map((point) => (
+          {consignesDe(exercice).map((point) => (
             <li key={point}>{point}</li>
           ))}
         </ul>
@@ -1521,12 +1521,15 @@ function Metronome({ metro, exercice, tempo, guideVisuel, lireEcouleSec }: Metro
   const { mot, couleur } = MOT_DE_PHASE[metro.phase];
   const avecBille = guideVisuel !== 'chiffre';
 
+  // Sans arrêt en bas pour certains exercices : la bille ne s'arrête pas au pied
+  // du rail, et la répétition est plus courte — comme dans la durée annoncée.
+  const tempoExercice = tempoPourExercice(exercice, tempo);
   // Les valeurs dont dépend le placement de la bille, réduites à des nombres :
   // `lire` garde ainsi la même identité d'un rendu à l'autre et la boucle
   // d'animation du paceur n'est pas relancée cinq fois par seconde.
-  const { monteeSec, descenteSec } = tempo;
-  const pauseSec = tempo.pauseSec ?? 0;
-  const parRep = secondesParRep(tempo);
+  const { monteeSec, descenteSec } = tempoExercice;
+  const pauseSec = tempoExercice.pauseSec ?? 0;
+  const parRep = secondesParRep(tempoExercice);
   const premiere = premierePhase(exercice);
 
   /** Position de la bille à l'instant présent. Le calcul est exactement celui
@@ -1582,7 +1585,7 @@ function Metronome({ metro, exercice, tempo, guideVisuel, lireEcouleSec }: Metro
         </div>
       )}
       <div className="chiffres mt-3 text-sm" style={{ color: 'var(--texte-discret)' }}>
-        Tempo {libelleTempo(tempo)} · sans rebond
+        Tempo {libelleTempo(tempoExercice)} · sans rebond
       </div>
     </div>
   );

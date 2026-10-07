@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { Seance } from '../types';
 import { EXERCICES_PAR_ID } from '../data/exercices';
 import { DUREES_MINUTES, FORMATS, NIVEAUX, PARAMETRES_PAR_DEFAUT } from '../data/parametres';
-import { dureeSerieSec, genererSeance, groupesDeBlocs } from './generateurSeance';
+import { dureeSerieSec, estimerDureeSec, genererSeance, groupesDeBlocs, secondesParRep } from './generateurSeance';
 import { basculerTour, delierDansProgramme, estPoussee, genererProgramme, seancePourPersonne } from './programmeMois';
 import type { ContexteSeance } from './programmeMois';
 import {
@@ -130,6 +130,30 @@ describe('construireEtapes', () => {
     expect(etape(I.reposTour).dureeSec).toBe(60);
     expect(etape(I.retourCalme).dureeSec).toBe(90);
     expect(dureeTotaleSec(ETAPES)).toBe(1240);
+  });
+
+  it('compte une répétition plus courte aux exercices sans arrêt en bas', () => {
+    const avecPause = { monteeSec: 3, descenteSec: 3, pauseSec: 2 };
+    const seance: Seance = {
+      ...SEANCE,
+      parametres: { ...SEANCE.parametres, tempo: avecPause },
+      circuit: null,
+      blocs: [
+        { exerciceId: 'goblet-squat', series: 1, reps: 8, reposSec: 60 },
+        { exerciceId: 'hammer-curl', series: 1, reps: 8, reposSec: 60 },
+        { exerciceId: 'elevated-reverse-lunge', series: 1, reps: 6, reposSec: 60 },
+        { exerciceId: 'single-arm-row', series: 1, reps: 6, reposSec: 60 },
+      ],
+    };
+    const durees = construireEtapes(seance)
+      .filter((e) => e.type === 'serie')
+      .map((e) => [e.exerciceId, e.dureeSec]);
+    expect(durees).toEqual([
+      ['goblet-squat', 8 * 6],
+      ['hammer-curl', 8 * 8],
+      ['elevated-reverse-lunge', 6 * 6 * 2],
+      ['single-arm-row', 6 * 8 * 2],
+    ]);
   });
 
   it('numérote séries, tours et stations et attribue les exercices', () => {
@@ -277,12 +301,13 @@ describe('etatMetronome', () => {
 
   it('tient la pause en bas, juste après la descente', () => {
     const tempo = { monteeSec: 3, descenteSec: 3, pauseSec: 2 };
-    // Squat : on descend, on tient en bas, on remonte sans élan.
-    const squat: Etape = { type: 'serie', exerciceId: 'goblet-squat', serie: 1, series: 1, reps: 8, dureeSec: 64 };
-    expect(etatMetronome(squat, 1, tempo)).toMatchObject({ rep: 1, phase: 'descend', resteDansPhaseSec: 2 });
-    expect(etatMetronome(squat, 3.5, tempo)).toMatchObject({ rep: 1, phase: 'pause', resteDansPhaseSec: 1.5 });
-    expect(etatMetronome(squat, 6, tempo)).toMatchObject({ rep: 1, phase: 'monte', resteDansPhaseSec: 2 });
-    expect(etatMetronome(squat, 8, tempo)).toMatchObject({ rep: 2, phase: 'descend', resteDansPhaseSec: 3, cycle: 1 });
+    // Développé couché : on descend, on tient en bas, on remonte sans élan.
+    const developpe: Etape = { type: 'serie', exerciceId: 'bench-press', serie: 1, series: 1, reps: 8, dureeSec: 64 };
+    expect(premierePhase(EXERCICES_PAR_ID['bench-press'])).toBe('descend');
+    expect(etatMetronome(developpe, 1, tempo)).toMatchObject({ rep: 1, phase: 'descend', resteDansPhaseSec: 2 });
+    expect(etatMetronome(developpe, 3.5, tempo)).toMatchObject({ rep: 1, phase: 'pause', resteDansPhaseSec: 1.5 });
+    expect(etatMetronome(developpe, 6, tempo)).toMatchObject({ rep: 1, phase: 'monte', resteDansPhaseSec: 2 });
+    expect(etatMetronome(developpe, 8, tempo)).toMatchObject({ rep: 2, phase: 'descend', resteDansPhaseSec: 3, cycle: 1 });
 
     // Curl : on monte, on redescend, puis on tient bras tendus avant la suivante.
     const curl: Etape = { type: 'serie', exerciceId: 'hammer-curl', serie: 1, series: 1, reps: 8, dureeSec: 64 };
@@ -290,6 +315,37 @@ describe('etatMetronome', () => {
     expect(etatMetronome(curl, 4, tempo)).toMatchObject({ rep: 1, phase: 'descend', resteDansPhaseSec: 2 });
     expect(etatMetronome(curl, 7, tempo)).toMatchObject({ rep: 1, phase: 'pause', resteDansPhaseSec: 1 });
     expect(etatMetronome(curl, 63.5, tempo)).toMatchObject({ rep: 8, phase: 'pause', resteDansPhaseSec: 0.5 });
+  });
+
+  it('ne tient aucune pause en bas pour un exercice qui n’en a pas : la répétition est plus courte', () => {
+    const tempo = { monteeSec: 3, descenteSec: 3, pauseSec: 2 };
+    // Squat gobelet : on descend, on remonte aussitôt — 6 s par répétition, pas 8.
+    const squat: Etape = { type: 'serie', exerciceId: 'goblet-squat', serie: 1, series: 1, reps: 8, dureeSec: 48 };
+    expect(EXERCICES_PAR_ID['goblet-squat'].sansPauseEnBas).toBe(true);
+    expect(etatMetronome(squat, 1, tempo)).toMatchObject({ rep: 1, phase: 'descend', resteDansPhaseSec: 2 });
+    expect(etatMetronome(squat, 3.5, tempo)).toMatchObject({ rep: 1, phase: 'monte', resteDansPhaseSec: 2.5 });
+    expect(etatMetronome(squat, 6, tempo)).toMatchObject({ rep: 2, phase: 'descend', resteDansPhaseSec: 3, cycle: 1 });
+    expect(etatMetronome(squat, 47.9, tempo)).toMatchObject({ rep: 8, phase: 'monte' });
+    // Soulevé de terre : on monte, on redescend, et on repart sans tenir en bas.
+    const souleve: Etape = { type: 'serie', exerciceId: 'kb-deadlift', serie: 1, series: 1, reps: 8, dureeSec: 48 };
+    expect(etatMetronome(souleve, 1, tempo)).toMatchObject({ rep: 1, phase: 'monte' });
+    expect(etatMetronome(souleve, 5.9, tempo)).toMatchObject({ rep: 1, phase: 'descend' });
+    expect(etatMetronome(souleve, 6, tempo)).toMatchObject({ rep: 2, phase: 'monte', cycle: 1 });
+    // Sur un exercice unilatéral, la pause manque des deux côtés.
+    const fente: Etape = { type: 'serie', exerciceId: 'elevated-reverse-lunge', serie: 1, series: 1, reps: 4, dureeSec: 48 };
+    expect(etatMetronome(fente, 23.9, tempo)).toMatchObject({ rep: 4, totalReps: 4, cote: 'droit' });
+    expect(etatMetronome(fente, 24, tempo)).toMatchObject({ rep: 1, totalReps: 4, cote: 'gauche' });
+    // Le métronome, la bille et les bips lisent le même tempo que la durée.
+    for (const id of ['goblet-squat', 'kb-deadlift', 'elevated-reverse-lunge', 'hammer-curl']) {
+      const exercice = EXERCICES_PAR_ID[id];
+      const parRep = secondesParRep(tempo, exercice);
+      expect(parRep, id).toBe(exercice.sansPauseEnBas ? 6 : 8);
+      expect(dureeSerieSec(exercice, 4, tempo), id).toBe(4 * parRep * (exercice.cotes === 'unilateral' ? 2 : 1));
+      for (let t = 0; t < parRep; t += 0.5) {
+        const etape: Etape = { type: 'serie', exerciceId: id, serie: 1, series: 1, reps: 4, dureeSec: dureeSerieSec(exercice, 4, tempo) };
+        expect(etatMetronome(etape, t, tempo)?.phase === 'pause', `${id} · ${t} s`).toBe(!exercice.sansPauseEnBas && t >= 6);
+      }
+    }
   });
 
   it('découpe une répétition en phases, sans phase vide', () => {
@@ -533,6 +589,50 @@ describe('accord entre la durée estimée et les étapes', () => {
       expect(bilaterale.dureeSec).toBe(30);
       expect(etatMaintien(bilaterale, 5)).toBeNull();
     }
+  });
+
+  it('la séance guidée dure exactement ce que le générateur annonce, même avec des exercices sans arrêt en bas', () => {
+    const tempos = [{ monteeSec: 3, descenteSec: 3, pauseSec: 1 }, { monteeSec: 4, descenteSec: 4, pauseSec: 2 }, { monteeSec: 3, descenteSec: 3 }];
+    // Des séries et des supersets qui comptent des exercices du dos et des genoux.
+    for (const tempo of tempos) {
+      for (const format of ['series', 'superset'] as const) {
+        const seance: Seance = {
+          ...SEANCE,
+          parametres: { ...SEANCE.parametres, format, tempo },
+          circuit: null,
+          blocs: [
+            { exerciceId: 'goblet-squat', series: 3, reps: 8, reposSec: 60, ...(format === 'superset' ? { superset: 0, transitionSec: 20 } : {}) },
+            { exerciceId: 'hammer-curl', series: 3, reps: 8, reposSec: 60, ...(format === 'superset' ? { superset: 0, transitionSec: 20 } : {}) },
+            { exerciceId: 'kb-deadlift', series: 3, reps: 10, reposSec: 90 },
+            { exerciceId: 'elevated-reverse-lunge', series: 2, reps: 6, reposSec: 60 },
+          ],
+        };
+        expect(dureeTotaleSec(construireEtapes(seance))).toBe(estimerDureeSec(seance));
+      }
+    }
+    // Et des séances libres tirées au hasard, kettlebell et jambes compris.
+    let sansPause = 0;
+    for (const format of FORMATS) {
+      for (const dureeMinutes of [20, 45, 60] as const) {
+        for (const graine of [1, 2, 3, 4, 5, 6]) {
+          const seance = genererSeance(
+            {
+              ...PARAMETRES_PAR_DEFAUT,
+              dureeMinutes,
+              format: format.id,
+              zones: ['bas', 'dos'],
+              materiels: ['halteres', 'kettlebell', 'banc', 'step'],
+              tempo: { monteeSec: 3, descenteSec: 3, pauseSec: 1 },
+            },
+            graine,
+          );
+          sansPause += seance.blocs.filter((b) => EXERCICES_PAR_ID[b.exerciceId].sansPauseEnBas).length;
+          expect(dureeTotaleSec(construireEtapes(seance))).toBe(seance.dureeEstimeeSec);
+        }
+      }
+    }
+    // Le test ne prouve rien s'il ne tombe jamais sur un exercice sans arrêt en bas.
+    expect(sansPause).toBeGreaterThan(10);
   });
 
   it('la séance guidée dure exactement ce que le générateur annonce', () => {

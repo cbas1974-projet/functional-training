@@ -22,16 +22,21 @@ partir d'**objectifs musculaires** — par défaut les faiblesses déclarées : 
 du dos, épaules, extérieur et intérieur de cuisse. Rien à taper.
 
 - **Chaque séance** commence par **5 minutes de tapis ou de rameur** et
-  quatre mouvements légers choisis pour le jour, et finit par **5 minutes
-  d'étirements** du poster, avec leur image — trente secondes de chaque côté
-  quand l'étirement se fait d'un côté. Juste avant, **les jambes pour finir** :
-  presse à cuisses, hack squat, traîneau ou marche du fermier, seul, en
-  séries.
+  quatre mouvements légers choisis pour le jour (le lundi, le pont fessier
+  plutôt que des fentes), et finit par **5 minutes d'étirements** du poster,
+  avec leur image — **les mêmes à chaque séance et pour les deux, et toujours
+  ceux des jambes** : le mollet contre le mur, l'avant de la cuisse sur le
+  côté, l'arrière de la cuisse et le fessier sur le dos, puis une torsion
+  allongée. Trente secondes de chaque côté. Juste avant, **les jambes pour
+  finir** : presse à cuisses, hack squat, traîneau ou marche du fermier, seul,
+  en séries.
 - **Par paires, tous les jours** : les exercices vont deux par deux, deux
   exercices qui s'opposent. On fait les deux à la suite — 15 secondes pour
-  passer de l'un à l'autre —, puis **une seule pause après la paire : 1
-  minute, 2 minutes quand la paire compte la trap bar**. Trois tours. La
-  façon dont les paires sont formées est expliquée plus bas.
+  passer de l'un à l'autre —, puis **une seule pause après la paire : la plus
+  longue des pauses de ses deux exercices** — **1 minute** si la paire ne
+  compte que des petits muscles, **1 minute 30** si elle compte un gros
+  exercice, **2 minutes** avec la trap bar. Trois tours. La façon dont les
+  paires sont formées est expliquée plus bas.
 - **Six exercices par séance — trois paires — et le dernier pour les
   jambes**, au **tempo 3 s / 3 s + 1 s en bas**. Dans *Réglages*, on choisit
   4, 6, 8 ou 10 exercices, et le tempo parmi ceux de la liste ; la durée
@@ -41,9 +46,12 @@ du dos, épaules, extérieur et intérieur de cuisse. Rien à taper.
   téléphone n'a pas encore le programme. La séance libre garde son propre
   tempo.
 - **Combien de temps** : à deux, une séance de six exercices dure environ
-  **1 h 15** (entre 1 h et 1 h 20 selon les exercices : Big Max fait une série de
-  plus aux poussées, et chaque paire s'installe avant « Go »). Quatre
-  exercices, environ 55 minutes ; huit, 1 h 30 ; dix, près de 1 h 50.
+  **1 h 05** (entre 1 h et 1 h 15 selon les exercices : Big Max fait une série
+  de plus aux poussées, les pauses de paire vont de 1 minute à 2 minutes, et
+  chaque paire s'installe avant « Go »). Quatre exercices, environ 50 minutes ;
+  huit, 1 h 20 ; dix, 1 h 35 et jusqu'à 1 h 45. Les exercices du dos et des
+  genoux, sans arrêt en bas, comptent une répétition plus courte (une seconde
+  de moins au tempo par défaut).
   L'application ne retire plus d'exercice pour tenir dans l'heure : elle prend
   le nombre choisi, les objectifs d'abord. Seul garde-fou : une séance qui
   passerait deux heures et demie perdrait ses dernières paires.
@@ -59,18 +67,59 @@ du dos, épaules, extérieur et intérieur de cuisse. Rien à taper.
   soir : rien qui charge le bas du dos, et la marche du fermier pour finir.
   Le lundi et le mardi, les machines attendent la fin de la séance.
 - **Semaines A et B** : lundi et mardi alternent d'une semaine à l'autre —
-  mêmes muscles, autres exercices. Le programme dure quatre semaines, puis
-  l'application propose d'en refaire un. Commencé un vendredi ou un week-end,
-  il part du lundi suivant.
+  mêmes muscles, autres exercices. Le lundi fait exception pour le bas du dos
+  et les cuisses : il ne reste qu'un exercice direct pour le bas du dos (le
+  Superman au kettlebell), deux pour l'intérieur de cuisse (le squat sumo, la
+  fente latérale tournée avec développé) et deux pour l'extérieur (la bouche
+  d'incendie, l'élévation latérale de jambe). La semaine B les reprend plutôt
+  que de laisser l'objectif sans exercice direct. Le programme dure quatre
+  semaines, puis l'application propose d'en refaire un. Commencé un vendredi ou
+  un week-end, il part du lundi suivant.
 - **La semaine dure**, le jeudi une semaine sur deux (semaine B) : **même
   poids, deux répétitions de plus** — Big Max 12, Speedy 10. Si le dos
   s'arrondit, on arrête la série. Quand toutes les séries sont faites, le
   jeudi suivant propose **un cran de plus** : 5 lb (2,5 kg).
-- **Les pauses** : 1 min après une paire, 2 min quand elle compte la trap
-  bar. Un exercice fait seul garde les siennes : 2 min à la trap bar, 1 min 30
-  aux gros exercices, 1 min aux petits muscles. Dans une paire, le chrono ne
-  s'arrête pas. À chaque nouvelle paire, l'écran montre la suivante et **la
-  charge à installer**, et la séance repart seulement sur **« Go »**.
+- **Les pauses** : après une paire, la plus longue des pauses de ses deux
+  exercices — 1 min si ce sont deux petits muscles (bras, épaules en isolation,
+  ventre, mollets, intérieur et extérieur de cuisse), 1 min 30 avec un gros
+  exercice, 2 min avec la trap bar. Un exercice fait seul garde les siennes :
+  2 min à la trap bar, 1 min 30 aux gros exercices, 1 min aux petits muscles.
+  Dans une paire, le chrono ne s'arrête pas. L'accueil écrit sous chaque paire
+  la pause qui la suit. À chaque nouvelle paire, l'écran montre la suivante et
+  **la charge à installer**, et la séance repart seulement sur **« Go »**.
+- **Sans arrêt en bas** pour les exercices où la position basse fatigue le dos
+  ou le genou. Pour le dos : les soulevés de terre (trap bar, roumain,
+  kettlebell, sur une jambe), le good morning, les rowings buste penché, les
+  oiseaux et la tondeuse. Pour les genoux : les squats (haltères, gobelet,
+  sumo, kettlebell), la chaise au mur, les thrusters, la presse à cuisses et le
+  hack squat, les fentes et la montée sur marche. Quel que soit le tempo, ces
+  exercices se font en descendant contrôlé et en remontant sans rebond :
+  l'arrêt en bas vaut 0 seconde, pour les deux. La répétition est plus courte,
+  la bille ne se pose pas au pied du rail, et la durée annoncée en tient
+  compte. Chacun porte une consigne : « Sans arrêt en bas : on descend
+  contrôlé, on remonte sans rebond » et, pour les genoux, « On descend
+  seulement jusqu'où le genou ne fait pas mal ». Elles s'affichent avec les
+  autres consignes de l'exercice, dans la séance guidée, l'image en grand, la
+  bibliothèque et la séance libre. La liste est dans les données des exercices
+  (`sansPauseEnBas`, `genouAMenager`).
+- **Mis de côté, pour les deux**, tant que la jambe de Speedy n'a pas été
+  examinée par un professionnel : elle lui donne parfois l'impression de
+  « lâcher », ses bandelettes ilio-tibiales sont fragiles et son bas du dos
+  fatigue vite ; Big Max, lui, a mal aux genoux. Ils font les mêmes exercices
+  ensemble, donc la règle est la même pour les deux. Sont écartés les **fentes
+  et les exercices sur une jambe** (fentes, montée sur marche, soulevé de terre
+  sur une jambe, pas chassé avec rowing, esquive latérale, tour du monde au
+  kettlebell), le **good morning** et les **rowings buste penché sans appui**.
+  On garde les rowings avec appui : poitrine contre le banc, ou une main et un
+  genou sur le banc. Ces exercices restent dans la bibliothèque et dans la
+  séance libre ; le programme ne les compose plus et « Changer » ne les
+  propose plus. La place « fente » du lundi se remplit avec un exercice à deux
+  jambes : un squat gobelet, le pont fessier ou le pont grenouille (la presse
+  et le hack squat, des machines, restent pour la fin de la séance). Pour les
+  remettre plus tard, il suffit de retirer leur nom de la liste
+  `EXERCICES_MIS_DE_COTE` (`src/utils/programmeMois.ts`, où le commentaire dit
+  aussi comment rendre ses fentes à la place du lundi), puis de refaire le
+  programme.
 - **Les paires se voient** sur l'accueil : « Paire 1 », ses deux exercices
   côte à côte, et ce qui les unit (« pousser ↔ tirer », « haut ↔ bas »,
   « quadriceps ↔ ischios »…). Chaque exercice porte une petite étiquette :
@@ -101,8 +150,8 @@ du dos, épaules, extérieur et intérieur de cuisse. Rien à taper.
   détail du mouvement avant de commencer.
 - **Changer** un exercice ouvre la liste des exercices des mêmes muscles, avec
   leur image : le même geste d'abord, et ce que le programme ne fait pas déjà
-  avant ce qui revient un autre jour. Le changement vaut pour chaque séance de
-  ce nom.
+  avant ce qui revient un autre jour. Les exercices mis de côté n'y sont jamais
+  proposés. Le changement vaut pour chaque séance de ce nom.
 - **Objectifs** et **Refaire**, dans *Réglages* : choisir d'autres muscles,
   ou tirer un autre programme. L'historique, les charges, le nombre
   d'exercices et le tempo restent.
@@ -130,9 +179,12 @@ exercice n'entre que s'il a un partenaire possible. Puis elle forme les
 paires — le plus de paires possible, des muscles opposés plutôt que le haut
 avec le bas — sans tenir compte de l'ordre : « Refaire les paires » retombe
 toujours sur les mêmes. Les objectifs viennent en tête de séance, et le jeudi
-la trap bar reste la première. À dix exercices, il arrive que la semaine B
-reprenne un exercice de la semaine A : les exercices du bas du corps qui
-s'opposent viennent à manquer.
+la trap bar reste la première. L'intérieur et l'extérieur de cuisse, deux
+objectifs, vont toujours ensemble quand ils le peuvent. Depuis que les fentes
+sont mises de côté, les exercices du bas du corps qui s'opposent sont rares :
+le lundi de la semaine B reprend le Superman au kettlebell, un exercice de plus
+à huit exercices, deux de plus à dix (le plus souvent le squat sumo et la
+flexion de jambe). Le mardi ne reprend rien, et le jeudi n'a pas de semaine B.
 
 ### Speedy et Big Max, chacun sur son téléphone
 
@@ -154,9 +206,11 @@ En haut de l'accueil, **Seul** ou **Avec Big Max** :
   ensemble à chaque nouvel exercice les remet à la même seconde.
 - **Pendant la série de l'autre et les grosses pauses** — les deux minutes de
   la trap bar, et celle qui suit sa dernière série —, l'écran propose un
-  étirement, avec son image : le dos pour Speedy, les cuisses et les
-  mollets pour Big Max, comme le physio le lui a demandé. 20 s de chaque côté, en
-  douceur, jamais jusqu'à la douleur.
+  étirement, avec son image : le dos et les mollets pour Speedy — jamais de
+  flexion avant debout, qui fatigue son bas du dos —, les cuisses, les mollets et
+  l'arrière des cuisses pour Big Max, comme le physio le lui a demandé — jamais
+  de fente, dure pour le genou. 20 s de chaque côté, en douceur, jamais
+  jusqu'à la douleur.
 
 **En direct, avec le serveur.** Quand le serveur est branché (voir
 [Le serveur](#le-serveur-vps)), l'horloge commune passe par lui. Big Max ouvre
@@ -249,7 +303,8 @@ enregistré » — reste affiché du début à la fin.
   exercices sont appariés par opposition : c'est ce qui rend un bloc sans repos
   tenable.
 - **Tempo** : 3 s / 3 s **+ 1 s en bas** recommandé — la seconde en bas casse
-  le rebond, et l'on repart sans élan. 3 s / 3 s + 2 s en bas, 4 s / 4 s,
+  le rebond, et l'on repart sans élan (sauf aux exercices du dos et des genoux,
+  qui n'ont jamais d'arrêt en bas). 3 s / 3 s + 2 s en bas, 4 s / 4 s,
   4 s / 4 s + 2 s en bas, 3 s / 3 s, 5 s / 5 s et 2 s / 4 s restent
   disponibles.
 - **Séries par exercice** (3 par défaut) et **répétitions par série**
@@ -348,8 +403,10 @@ descente, de 15 à 6 répétitions maximales, trois fois par semaine.
 **La pause en bas** ajoute deux choses. Elle supprime le rebond : on repart d'un
 arrêt complet, sans l'élan qui ferait encaisser le genou ou le dos. Et elle
 charge la position étirée : la musculation en amplitude complète améliore
-l'amplitude autant que les étirements. Elle se tient muscles engagés ; si le dos
-s'arrondit en bas (soulevé de terre), on la supprime pour cet exercice.
+l'amplitude autant que les étirements. Elle se tient muscles engagés. Là où la
+position basse fatigue le dos ou le genou — soulevés de terre, rowings
+penchés, squats, fentes —, on la supprime d'office : ces exercices se font
+sans arrêt en bas.
 
 **Une seconde suffit.** Plus lent n'est pas mieux pour le tendon : à 4 s / 4 s
 + 2 s, il faut nettement alléger pour finir la série, et c'est la charge, plus
@@ -384,8 +441,9 @@ exercice par un autre de la même zone.
   « Préparez-vous ».
 - **Métronome de tempo** : affichage MONTE / DESCENDS / TIENS avec les
   secondes, et comptage automatique des répétitions. Pendant la pause en bas,
-  la bille s'arrête au pied du rail. Les exercices unilatéraux annoncent le
-  côté droit puis le côté gauche.
+  la bille s'arrête au pied du rail — sauf aux exercices sans arrêt en bas, où
+  elle repart aussitôt. Les exercices unilatéraux annoncent le côté droit puis
+  le côté gauche.
 - Bips de montée, de descente et de pause, cloche de fin de série.
 - Repos chronométré avec aperçu de l'exercice suivant et bouton « +15 s ».
 - Pause, précédent, suivant, « Passer l'exercice ».
@@ -491,7 +549,9 @@ noircit les érecteurs du rachis — pas même celles de la **Superman** et du
 travail. Lus à pleine résolution, ils montrent les fessiers et les ischios en
 noir, le bas du dos en gris clair. C'est une convention de l'illustrateur, pas
 de la biomécanique : ces deux fiches sont corrigées, et c'est ce qui les met en
-tête de l'objectif « bas du dos ».
+tête de l'objectif « bas du dos ». Le Good Morning reste dans la bibliothèque,
+mais le programme du mois ne le compose plus : le Superman est le seul exercice
+direct pour le bas du dos qui lui reste.
 
 Deuxième limite : la planche ne sépare pas le moyen fessier du grand fessier —
 la fesse est une seule zone. Or c'est le moyen fessier, avec le tenseur du
@@ -795,6 +855,11 @@ coupes en dur dans la disposition.
 la durée annoncée sur la séance proposée est **exactement** la somme des
 étapes que déroulera la séance guidée, à la seconde près. Un test le vérifie
 pour toutes les durées, tous les formats et tous les niveaux.
+
+Une répétition compte la montée, la descente et l'arrêt en bas, sauf pour les
+exercices sans arrêt en bas, dont l'arrêt vaut 0 : le générateur, les étapes de
+la séance guidée, le métronome et la bille lisent tous le même tempo
+(`tempoPourExercice`), si bien que la durée annoncée reste celle de la séance.
 
 Le générateur respecte d'abord le nombre de séries demandé, puis les
 répétitions demandées. Il ne descend les répétitions que dans un cas : quand
