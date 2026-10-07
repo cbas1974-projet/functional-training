@@ -1,7 +1,7 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { EntrainementState, SeanceRealisee } from '../types';
 import { PARAMETRES_PAR_DEFAUT } from '../data/parametres';
-import { avecSeanceFaite, historiqueQuiTient, sansSeance } from './enLigne';
+import { avecSeanceFaite, effacerRealisation, envoyerRealisation, historiqueQuiTient, sansSeance } from './enLigne';
 import { genererProgramme } from './programmeMois';
 import { ETAT_PAR_DEFAUT } from './storage';
 
@@ -66,5 +66,42 @@ describe('les séances et le serveur', () => {
     expect(dix.map((s) => s.id)).toEqual(apres.historique.slice(0, 10).map((s) => s.id));
     // Une séance trop grosse pour la place reste quand même : on ne perd pas la dernière.
     expect(historiqueQuiTient([notee(0)], 10)).toHaveLength(1);
+  });
+});
+
+describe('quand le serveur refuse', () => {
+  const partage = { serveur: 'https://srv123.hstgr.cloud', equipe: 'equipe-essai-1234', personne: 'sebastien' } as const;
+  /** Un serveur qui répond toujours ce statut ; `null`, un réseau qui ne passe pas. */
+  const serveurRepond = (statut: number | null) =>
+    vi.stubGlobal('fetch', () =>
+      statut === null ? Promise.reject(new TypeError('Failed to fetch')) : Promise.resolve(new Response('{}', { status: statut })),
+    );
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('une séance reçue, ou refusée pour de bon, est réglée : inutile de la renvoyer', async () => {
+    for (const statut of [200, 400]) {
+      serveurRepond(statut);
+      expect(await envoyerRealisation(partage, seance)).toBe(true);
+    }
+  });
+
+  it('« pas maintenant » (429 trop de requêtes, 507 plus de place) ou une panne : la séance reste à envoyer', async () => {
+    for (const statut of [429, 507, 500, 503, null]) {
+      serveurRepond(statut);
+      expect(await envoyerRealisation(partage, seance)).toBe(false);
+    }
+  });
+
+  it('de même pour une suppression : « pas maintenant » la laisse à effacer', async () => {
+    for (const statut of [200, 400, 404]) {
+      serveurRepond(statut);
+      expect(await effacerRealisation(partage, seance.id)).toBe(true);
+    }
+    for (const statut of [429, 507, 500, 503, null]) {
+      serveurRepond(statut);
+      expect(await effacerRealisation(partage, seance.id)).toBe(false);
+    }
   });
 });

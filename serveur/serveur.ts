@@ -14,6 +14,12 @@
 // (mois/). Chacune est la base entière, tout l'historique depuis le premier
 // jour.
 //
+// Protections, puisque le serveur est public : un débit par adresse (la
+// dernière de X-Forwarded-For, que pose le proxy), les directs comptés, et des
+// tailles bornées — une séance, une équipe, la base. Un refus « pas
+// maintenant » (429, 507) laisse le téléphone réessayer plus tard : voir
+// LIMITES_PAR_DEFAUT.
+//
 // Routes :
 //   GET  /api/heure                                 l'heure du serveur, et celle de sa dernière copie
 //   GET  /api/equipes/:equipe/seances/:cle          l'état de la séance commune
@@ -23,7 +29,7 @@
 //   DELETE /api/equipes/:equipe/historique/:id      une séance supprimée sur le téléphone
 //   GET    /api/equipes/:equipe/historique          les séances des deux
 import { createServer } from 'node:http';
-import type { IncomingMessage, Server, ServerResponse } from 'node:http';
+import type { IncomingHttpHeaders, IncomingMessage, Server, ServerResponse } from 'node:http';
 import { copyFileSync, existsSync, mkdirSync, readdirSync, renameSync, rmSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
@@ -56,6 +62,16 @@ const VERIFICATION_COPIES_MS = 60 * 60 * 1000;
 const FUSEAU = 'America/Toronto';
 /** Au-delà, une réponse (tout l'historique) voyage compressée. */
 const COMPRESSION_DES = 8 * 1024;
+/** Les méthodes qui écrivent ; les autres sont des lectures. */
+const METHODES_ECRITURE = new Set(['POST', 'PUT', 'DELETE']);
+const MINUTE_MS = 60_000;
+/** Toutes les minutes, les seaux pleins sont oubliés : celui d'une adresse
+ *  qu'on n'a pas vue depuis une minute est plein, comme celui d'une inconnue. */
+const OUBLI_DES_ADRESSES_MS = MINUTE_MS;
+/** Un direct refusé, faute de place, peut réessayer dans une demi-minute. */
+const ATTENTE_FLUX_MS = 30_000;
+/** La taille de la base se mesure au plus une fois par minute. */
+const MESURE_BASE_MS = MINUTE_MS;
 
 /** La date (AAAA-MM-JJ) d'un instant dans un fuseau ; en temps universel si
  *  le fuseau est inconnu. */
@@ -109,18 +125,101 @@ export function faireLesCopies(base: DatabaseSync, dossier: string, jour: string
   return faiteA;
 }
 
+/** Les limites contre les abus : larges pour un usage normal — deux amis, qui
+ *  peuvent partager la même adresse —, étroites pour un abus. Chacune se règle
+ *  dans `OptionsServeur.limites`, pour les essais. */
+export interface LimitesServeur {
+  /** Écritures (POST, PUT, DELETE) par minute et par adresse. La réserve est
+   *  d'une minute entière : un téléphone qui envoie tout son historique, une
+   *  séance à la fois, passe — au rythme de la limite une fois la réserve vide —
+   *  même s'il ne réessaie que toutes les trente secondes (`RELANCE_ENVOI_MS`,
+   *  dans App.tsx). */
+  ecrituresParMinute: number;
+  /** Lectures (GET…) par minute et par adresse. */
+  lecturesParMinute: number;
+  /** Directs ouverts en même temps par adresse. */
+  fluxParAdresse: number;
+  /** Une séance enregistrée, en octets de JSON : une vraie en fait 2 à 3 Ko. */
+  seanceMaxiOctets: number;
+  /** Séances par équipe : une nouvelle au-delà est refusée, une mise à jour non. */
+  seancesParEquipe: number;
+  /** La base, en octets : au-delà, plus d'écriture, sauf pour effacer. */
+  baseMaxiOctets: number;
+}
+
+export const LIMITES_PAR_DEFAUT: LimitesServeur = {
+  ecrituresParMinute: 120,
+  lecturesParMinute: 600,
+  fluxParAdresse: 10,
+  seanceMaxiOctets: 64 * 1024,
+  seancesParEquipe: 10_000,
+  // Avec les copies de chaque nuit (trente) et de chaque mois, la place prise
+  // sur le disque du VPS reste de quelques gigaoctets au pire.
+  baseMaxiOctets: 100 * 1024 * 1024,
+};
+
+/** L'adresse du client, telle que le proxy l'a vue : la dernière de
+ *  X-Forwarded-For — celles d'avant peuvent être inventées par le client —,
+ *  sinon celle de la connexion. Le serveur ne doit donc être joignable que par
+ *  le proxy. */
+export function adresseDuClient(entetes: IncomingHttpHeaders, connexion: string | undefined): string {
+  const transmises = String(entetes['x-forwarded-for'] ?? '')
+    .split(',')
+    .map((adresse) => adresse.trim())
+    .filter(Boolean);
+  return transmises.at(-1) ?? connexion ?? 'inconnue';
+}
+
+type Seau = { credit: number; maj: number };
+
+/** Un seau à jetons par adresse : chaque requête prend un jeton ; il en revient
+ *  `parMinute` par minute, jusqu'à `parMinute` en réserve — la rafale. Le seau
+ *  se compte en millisecondes, pour que rien ne s'arrondisse : il se remplit
+ *  d'une milliseconde par milliseconde, jusqu'à une minute, et un jeton en vaut
+ *  `60 000 / parMinute`. `prendre` rend 0 quand la requête passe, sinon le temps
+ *  à attendre, en millisecondes, avant le prochain jeton. */
+export function creerSeaux(parMinute: number, maintenant: () => number) {
+  const jetonMs = MINUTE_MS / parMinute;
+  const seaux = new Map<string, Seau>();
+  /** Le contenu d'un seau à cet instant ; une horloge qui recule n'en retire pas. */
+  const creditA = (seau: Seau, instant: number) => Math.min(MINUTE_MS, seau.credit + Math.max(0, instant - seau.maj));
+  let oubliA = maintenant();
+  return {
+    prendre(adresse: string): number {
+      const instant = maintenant();
+      // Les seaux pleins sont oubliés : la mémoire ne grossit pas avec les
+      // adresses de passage.
+      const ecoule = instant - oubliA;
+      if (ecoule >= OUBLI_DES_ADRESSES_MS || ecoule < 0) {
+        oubliA = instant;
+        for (const [autre, seau] of seaux) if (creditA(seau, instant) >= MINUTE_MS) seaux.delete(autre);
+      }
+      const seau = seaux.get(adresse);
+      const credit = seau ? creditA(seau, instant) : MINUTE_MS;
+      const passe = credit >= jetonMs;
+      seaux.set(adresse, { credit: passe ? credit - jetonMs : credit, maj: instant });
+      return passe ? 0 : Math.ceil(jetonMs - credit);
+    },
+    /** Les adresses dont on se souvient. */
+    taille: () => seaux.size,
+  };
+}
+
 export interface OptionsServeur {
   port?: number;
   /** Dossier de la base. */
   donnees?: string;
   /** Horloge, remplaçable pour les tests. */
   maintenant?: () => number;
+  /** Les limites contre les abus ; celles qu'on ne donne pas gardent leur valeur par défaut. */
+  limites?: Partial<LimitesServeur>;
 }
 
 type Abonne = { reponse: ServerResponse; personne: string };
 
 export function demarrer(options: OptionsServeur = {}): Promise<Server> {
   const maintenant = options.maintenant ?? Date.now;
+  const limites = { ...LIMITES_PAR_DEFAUT, ...options.limites };
   const dossier = options.donnees ?? 'donnees';
   mkdirSync(dossier, { recursive: true });
   const base = new DatabaseSync(join(dossier, 'entrainement.sqlite'));
@@ -149,6 +248,8 @@ export function demarrer(options: OptionsServeur = {}): Promise<Server> {
       'ON CONFLICT (equipe, id) DO UPDATE SET personne = excluded.personne, date = excluded.date, ' +
       'realisation = excluded.realisation, recu = excluded.recu',
   );
+  const lireRealisation = base.prepare('SELECT 1 FROM historique WHERE equipe = ? AND id = ?');
+  const compterRealisations = base.prepare('SELECT COUNT(*) AS n FROM historique WHERE equipe = ?');
   const effacerRealisation = base.prepare('DELETE FROM historique WHERE equipe = ? AND id = ?');
   // Tout l'historique, depuis le premier jour.
   const lireHistorique = base.prepare('SELECT personne, realisation FROM historique WHERE equipe = ? ORDER BY date DESC');
@@ -205,13 +306,19 @@ export function demarrer(options: OptionsServeur = {}): Promise<Server> {
     reponse.writeHead(statut, enTetes);
     reponse.end(texte);
   };
-  const lireCorps = (requete: IncomingMessage): Promise<unknown> =>
+  /** Lit le corps JSON d'une requête, de `maxi` octets au plus. */
+  const lireCorps = (requete: IncomingMessage, maxi = CORPS_MAXI): Promise<unknown> =>
     new Promise((resoudre, rejeter) => {
+      // Un corps annoncé trop gros n'est pas lu : le refus part tout de suite.
+      if (Number(requete.headers['content-length']) > maxi) {
+        rejeter(new Error('trop gros'));
+        return;
+      }
       let taille = 0;
       const morceaux: Buffer[] = [];
       requete.on('data', (morceau: Buffer) => {
         taille += morceau.length;
-        if (taille > CORPS_MAXI) {
+        if (taille > maxi) {
           rejeter(new Error('trop gros'));
           requete.destroy();
           return;
@@ -228,8 +335,48 @@ export function demarrer(options: OptionsServeur = {}): Promise<Server> {
       requete.on('error', rejeter);
     });
 
+  // ------------------------------------------------ Les protections
+  const ecritures = creerSeaux(limites.ecrituresParMinute, maintenant);
+  const lectures = creerSeaux(limites.lecturesParMinute, maintenant);
+  /** Les directs ouverts en ce moment, par adresse. */
+  const fluxOuverts = new Map<string, number>();
+  /** Un refus « pas maintenant » (429), avec le temps à attendre : le téléphone
+   *  garde ce qu'il envoyait et réessaie plus tard. */
+  const refuser = (reponse: ServerResponse, erreur: string, attenteMs: number) => {
+    reponse.setHeader('Retry-After', String(Math.max(1, Math.ceil(attenteMs / 1000))));
+    json(reponse, 429, { erreur });
+  };
+  // La taille de la base, mesurée au plus une fois par minute. Les pages que
+  // libère un effacement se réutilisent : elles ne comptent pas, et effacer
+  // rend donc la place.
+  const pragma = (nom: string) => (base.prepare(`PRAGMA ${nom}`).get() as Record<string, number>)[nom];
+  let mesureeA = -Infinity;
+  let pleine = false;
+  /** Écrire dans une base pleine : refusé (507). Vrai quand la requête s'arrête là. */
+  const refuserSiPleine = (reponse: ServerResponse): boolean => {
+    const instant = maintenant();
+    if (instant - mesureeA >= MESURE_BASE_MS || instant < mesureeA) {
+      mesureeA = instant;
+      const octets = (pragma('page_count') - pragma('freelist_count')) * pragma('page_size');
+      const etaitPleine = pleine;
+      pleine = octets > limites.baseMaxiOctets;
+      // Les téléphones réessaient sans bruit : seul le journal du serveur le dit.
+      if (pleine && !etaitPleine) console.error(`Base pleine (${Math.round(octets / 2 ** 20)} Mo) : plus d'écriture, sauf pour effacer.`);
+    }
+    if (pleine) json(reponse, 507, { erreur: 'plus de place' });
+    return pleine;
+  };
+
   const serveur = createServer(async (requete, reponse) => {
     try {
+      // Le débit d'abord : une adresse qui en demande trop n'obtient plus que
+      // des refus, pour toutes les routes.
+      const client = adresseDuClient(requete.headers, requete.socket.remoteAddress);
+      const attenteMs = (METHODES_ECRITURE.has(requete.method ?? '') ? ecritures : lectures).prendre(client);
+      if (attenteMs > 0) {
+        refuser(reponse, 'trop de requêtes', attenteMs);
+        return;
+      }
       const url = new URL(requete.url ?? '/', 'http://serveur');
       const morceaux = url.pathname.split('/').filter(Boolean);
       if (requete.method === 'OPTIONS') {
@@ -251,6 +398,18 @@ export function demarrer(options: OptionsServeur = {}): Promise<Server> {
       if (rubrique === 'seances' && cle && CLE.test(cle)) {
         const cleFlux = `${equipe}/${cle}`;
         if (flux === 'flux' && requete.method === 'GET') {
+          // Un direct reste ouvert : on compte ceux de chaque adresse.
+          const ouverts = fluxOuverts.get(client) ?? 0;
+          if (ouverts >= limites.fluxParAdresse) {
+            refuser(reponse, 'trop de directs ouverts', ATTENTE_FLUX_MS);
+            return;
+          }
+          fluxOuverts.set(client, ouverts + 1);
+          requete.on('close', () => {
+            const restants = (fluxOuverts.get(client) ?? 1) - 1;
+            if (restants > 0) fluxOuverts.set(client, restants);
+            else fluxOuverts.delete(client);
+          });
           const personne = url.searchParams.get('personne') ?? '';
           reponse.writeHead(200, {
             ...entetes,
@@ -283,6 +442,7 @@ export function demarrer(options: OptionsServeur = {}): Promise<Server> {
           return;
         }
         if (flux === undefined && requete.method === 'POST') {
+          if (refuserSiPleine(reponse)) return;
           const corps = await lireCorps(requete);
           const envoi = lireEnvoi(corps);
           if (!envoi) {
@@ -320,11 +480,22 @@ export function demarrer(options: OptionsServeur = {}): Promise<Server> {
           return;
         }
         if (cle && IDENTIFIANT.test(cle) && requete.method === 'PUT') {
-          const corps = (await lireCorps(requete)) as { personne?: unknown; realisation?: { id?: unknown; date?: unknown } } | null;
+          if (refuserSiPleine(reponse)) return;
+          const corps = (await lireCorps(requete, limites.seanceMaxiOctets)) as {
+            personne?: unknown;
+            realisation?: { id?: unknown; date?: unknown };
+          } | null;
           const realisation = corps?.realisation;
           const date = typeof realisation?.date === 'string' ? realisation.date : '';
           if (!corps || !PERSONNES.has(String(corps.personne)) || realisation?.id !== cle || !/^\d{4}-\d{2}-\d{2}T/.test(date)) {
             json(reponse, 400, { erreur: 'séance illisible' });
+            return;
+          }
+          // Une équipe pleine n'accepte plus de nouvelle séance, mais garde à
+          // jour celles qu'elle a. « Pas maintenant » : le téléphone la renverra.
+          const nouvelle = lireRealisation.get(equipe, cle) === undefined;
+          if (nouvelle && (compterRealisations.get(equipe) as { n: number }).n >= limites.seancesParEquipe) {
+            json(reponse, 507, { erreur: 'équipe pleine' });
             return;
           }
           ecrireRealisation.run(equipe, cle, String(corps.personne), date, JSON.stringify(realisation), maintenant());

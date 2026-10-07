@@ -530,6 +530,20 @@ Avec Caddy, `docker compose stop api` et `docker compose start api`, depuis
 Les copies restent sur le VPS : chaque téléphone garde aussi ses propres
 séances.
 
+**Les protections.** Le serveur est public : il se défend seul. Chaque adresse
+(celle que Traefik ou Caddy a vue) peut faire 120 écritures et 600 lectures par
+minute, et garder 10 directs ouverts. C'est large : un téléphone qui envoie
+tout son historique d'un coup passe, un peu plus lentement. Une séance
+enregistrée pèse au plus 64 Ko (une vraie, 2 ou 3 Ko), une équipe garde au plus
+10 000 séances, et si la base dépasse 100 Mo (des dizaines d'années de
+séances), le serveur refuse d'écrire
+(effacer reste permis). Quand il répond « pas maintenant » (429 : trop de
+requêtes ; 507 : plus de place), le téléphone garde sa séance et la renvoie
+plus tard : rien ne se perd. Pour que cela marche, le serveur ne doit être
+joignable que par Traefik ou Caddy, qui lui donnent l'adresse de chacun (c'est
+le cas avec l'installateur). Les valeurs se règlent dans `serveur/serveur.ts`
+(`LIMITES_PAR_DEFAUT`).
+
 **La vérification automatique.** Le contrôle GitHub « Vérifier le site »
 vérifie aussi le serveur, à chaque push et chaque matin vers 7 h : il doit
 répondre, avec l'en-tête qui laisse le site lui parler, et sa dernière copie
@@ -602,7 +616,7 @@ src/
 ├── types.ts
 └── App.tsx
 serveur/
-├── serveur.ts                    # Le serveur : séance commune, historique, copies de sécurité, SQLite
+├── serveur.ts                    # Le serveur : séance commune, historique, copies de sécurité, protections, SQLite
 ├── installer.sh                  # Installation sur le VPS en une commande
 ├── Dockerfile, docker-compose.yml
 └── Caddyfile                     # HTTPS automatique

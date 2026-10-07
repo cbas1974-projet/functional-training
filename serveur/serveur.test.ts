@@ -1,11 +1,12 @@
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { existsSync, mkdirSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { AddressInfo } from 'node:net';
 import type { Server } from 'node:http';
 import { DatabaseSync } from 'node:sqlite';
-import { demarrer, faireLesCopies, jourDans } from './serveur.ts';
+import { adresseDuClient, creerSeaux, demarrer, faireLesCopies, jourDans } from './serveur.ts';
+import type { LimitesServeur } from './serveur.ts';
 
 const EQUIPE = 'equipe-essai-1234';
 const CLE = '2026-10-08_jeudi';
@@ -34,6 +35,32 @@ const appui = (action: object, a = horloge) =>
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify({ id: `appui-${(compteur += 1)}`, a, action }),
   });
+
+/** Remplace le serveur d'essai par un autre, sur la même base, aux limites données. */
+async function redemarrer(limites: Partial<LimitesServeur>) {
+  serveur.closeAllConnections();
+  await new Promise((resoudre) => serveur.close(resoudre));
+  serveur = await demarrer({ donnees: dossier, maintenant: () => horloge, limites });
+  adresse = `http://127.0.0.1:${(serveur.address() as AddressInfo).port}`;
+}
+
+/** Le corps d'une séance faite ; `titre` la grossit à volonté. */
+const corpsDeSeance = (id: string, titre = '') =>
+  JSON.stringify({
+    personne: 'sebastien',
+    realisation: { id, date: '2026-10-05T14:00:00.000Z', exercices: [], terminee: true, titre },
+  });
+const enregistrer = (id: string, titre = '', equipe = EQUIPE) =>
+  fetch(`${adresse}/api/equipes/${equipe}/historique/${id}`, {
+    method: 'PUT',
+    headers: { 'content-type': 'application/json' },
+    body: corpsDeSeance(id, titre),
+  });
+const effacer = (id: string, entetes: Record<string, string> = {}) =>
+  fetch(`${adresse}/api/equipes/${EQUIPE}/historique/${id}`, { method: 'DELETE', headers: entetes });
+const lireSeances = async (equipe = EQUIPE): Promise<{ realisation: { id: string; titre?: string } }[]> =>
+  (await (await fetch(`${adresse}/api/equipes/${equipe}/historique`)).json()).seances;
+const idsEnregistres = async (equipe = EQUIPE) => (await lireSeances(equipe)).map((s) => s.realisation.id).sort();
 
 /** Lit les événements d'un flux jusqu'à ce que `jusqua` soit satisfait. */
 async function lireFlux(reponse: Response, jusqua: (donnees: { etat: unknown; presents: string[] }) => boolean) {
@@ -157,6 +184,8 @@ describe('le serveur', () => {
   });
 
   it('renvoie tout l’historique depuis le premier jour, compressé en route', async () => {
+    // Six cents séances en parallèle : bien plus vite que le débit permis à un téléphone.
+    await redemarrer({ ecrituresParMinute: 100_000 });
     const debut = Date.UTC(2026, 9, 1);
     for (let lot = 0; lot < 12; lot += 1) {
       await Promise.all(
@@ -187,6 +216,219 @@ describe('le serveur', () => {
     adresse = `http://127.0.0.1:${(serveur.address() as AddressInfo).port}`;
     const relue = await (await fetch(`${adresse}/api/equipes/${EQUIPE}/seances/${CLE}`)).json();
     expect(relue.etat.debut).toBe(1_000_000);
+  });
+});
+
+describe('les protections', () => {
+  describe('le débit', () => {
+    it('un seau à jetons : une réserve, puis un jeton à la fois, et le temps à attendre', () => {
+      let instant = 0;
+      const seaux = creerSeaux(60, () => instant); // un jeton par seconde, soixante en réserve
+      for (let i = 0; i < 60; i += 1) expect(seaux.prendre('a')).toBe(0);
+      expect(seaux.prendre('a')).toBe(1000);
+      // Chaque adresse a son seau.
+      expect(seaux.prendre('b')).toBe(0);
+      instant += 400;
+      expect(seaux.prendre('a')).toBe(600);
+      instant += 600;
+      expect(seaux.prendre('a')).toBe(0);
+      expect(seaux.prendre('a')).toBe(1000);
+      // Une longue attente ne fait que remplir le seau : soixante jetons, pas davantage.
+      instant += 3_600_000;
+      for (let i = 0; i < 60; i += 1) expect(seaux.prendre('a')).toBe(0);
+      expect(seaux.prendre('a')).toBe(1000);
+    });
+
+    it('oublie les adresses au repos, pas celles qui servent encore', () => {
+      let instant = 0;
+      const seaux = creerSeaux(60, () => instant);
+      for (const adresse of ['a', 'b', 'c']) seaux.prendre(adresse);
+      expect(seaux.taille()).toBe(3);
+      // « d » vide son seau juste avant le ménage de la minute.
+      instant = 59_000;
+      for (let i = 0; i < 60; i += 1) seaux.prendre('d');
+      instant = 61_000;
+      seaux.prendre('e');
+      expect(seaux.taille()).toBe(2); // d et e : a, b et c, pleins, sont oubliés
+      instant = 122_000;
+      seaux.prendre('f');
+      expect(seaux.taille()).toBe(1); // d et e sont pleins à leur tour
+    });
+
+    it('une horloge qui recule ne bloque pas un seau', () => {
+      let instant = 3_600_000;
+      const seaux = creerSeaux(60, () => instant);
+      for (let i = 0; i < 60; i += 1) seaux.prendre('a');
+      instant = 0; // l'heure du VPS est recalée, une heure en arrière
+      expect(seaux.prendre('a')).toBe(1000);
+      instant = 1000;
+      expect(seaux.prendre('a')).toBe(0);
+    });
+
+    it('au-delà du débit des écritures : 429 avec Retry-After, puis ça repasse après l’attente', async () => {
+      await redemarrer({ ecrituresParMinute: 3 }); // trois en réserve, puis un toutes les 20 s
+      // Un appui, une séance, un effacement : toutes les écritures puisent au même seau.
+      expect((await appui({ type: 'commencer' })).status).toBe(200);
+      expect((await enregistrer('seance-1')).status).toBe(200);
+      expect((await effacer('seance-1')).status).toBe(200);
+      const refus = await enregistrer('seance-2');
+      expect(refus.status).toBe(429);
+      expect(refus.headers.get('retry-after')).toBe('20');
+      // Le téléphone doit pouvoir lire le refus : l'en-tête qui l'y autorise y est aussi.
+      expect(refus.headers.get('access-control-allow-origin')).toBe('*');
+      expect(await refus.json()).toEqual({ erreur: 'trop de requêtes' });
+      // Le refus n'écrit rien. Les lectures, elles, passent encore.
+      expect(await idsEnregistres()).toEqual([]);
+      horloge += 19_000;
+      expect((await enregistrer('seance-2')).status).toBe(429);
+      horloge += 1_000;
+      expect((await enregistrer('seance-2')).status).toBe(200);
+      expect(await idsEnregistres()).toEqual(['seance-2']);
+    });
+
+    it('les lectures ont leur seau à part, plus large ; refusées, elles disent aussi quand revenir', async () => {
+      await redemarrer({ lecturesParMinute: 2 }); // deux en réserve, puis un toutes les 30 s
+      expect((await fetch(`${adresse}/api/heure`)).status).toBe(200);
+      expect((await fetch(`${adresse}/api/heure`)).status).toBe(200);
+      const refus = await fetch(`${adresse}/api/heure`);
+      expect(refus.status).toBe(429);
+      expect(refus.headers.get('retry-after')).toBe('30');
+      // Les écritures ne s'en ressentent pas ; la pré-vérification d'un navigateur compte comme une lecture.
+      expect((await enregistrer('seance-1')).status).toBe(200);
+      expect((await fetch(`${adresse}/api/equipes/${EQUIPE}/historique/seance-1`, { method: 'OPTIONS' })).status).toBe(429);
+      horloge += 30_000;
+      expect((await fetch(`${adresse}/api/heure`)).status).toBe(200);
+    });
+
+    it('compte chaque client à son adresse : la dernière de X-Forwarded-For, celle que le proxy a vue', async () => {
+      await redemarrer({ ecrituresParMinute: 2 });
+      const aEffacer = (xff?: string) => effacer('seance-1', xff ? { 'x-forwarded-for': xff } : {});
+      expect((await aEffacer('203.0.113.1')).status).toBe(200);
+      expect((await aEffacer('203.0.113.1')).status).toBe(200);
+      expect((await aEffacer('203.0.113.1')).status).toBe(429);
+      // Il a beau inventer d'autres adresses en tête : le proxy a ajouté la sienne à la fin.
+      expect((await aEffacer('198.51.100.7, 203.0.113.1')).status).toBe(429);
+      // Un autre client, derrière le même proxy, a son propre seau ;
+      expect((await aEffacer('203.0.113.1, 203.0.113.2')).status).toBe(200);
+      // et celui qui n'a pas de proxy, l'adresse de sa connexion.
+      expect((await aEffacer()).status).toBe(200);
+    });
+
+    it('l’adresse du client : la dernière de X-Forwarded-For, sinon celle de la connexion', () => {
+      // 172.18.0.2 : le proxy, vu de la connexion.
+      const de = (xff?: string) => adresseDuClient(xff === undefined ? {} : { 'x-forwarded-for': xff }, '172.18.0.2');
+      expect(de('203.0.113.7')).toBe('203.0.113.7');
+      expect(de('1.2.3.4,  5.6.7.8 , 203.0.113.7')).toBe('203.0.113.7');
+      expect(de('2001:db8::1')).toBe('2001:db8::1');
+      expect(de('203.0.113.7, ')).toBe('203.0.113.7');
+      expect(de()).toBe('172.18.0.2');
+      expect(de('')).toBe('172.18.0.2');
+      expect(adresseDuClient({}, undefined)).toBe('inconnue');
+    });
+
+    it('un téléphone qui envoie tout son historique d’un coup passe, en ralentissant', async () => {
+      const depart = horloge;
+      let refus = 0;
+      for (let n = 0; n < 300; n += 1) {
+        // Une séance à la fois ; refusée, le téléphone attend ce que dit le serveur, puis recommence.
+        for (;;) {
+          const reponse = await enregistrer(`seance-${String(n).padStart(4, '0')}`);
+          if (reponse.status !== 429) {
+            expect(reponse.status).toBe(200);
+            break;
+          }
+          refus += 1;
+          horloge += Number(reponse.headers.get('retry-after')) * 1000;
+        }
+      }
+      expect(await idsEnregistres()).toHaveLength(300);
+      // La réserve en laisse passer cent vingt d'un coup ; le reste, deux par seconde.
+      expect(refus).toBeGreaterThan(0);
+      expect(horloge - depart).toBeGreaterThanOrEqual(60_000);
+    });
+
+    it('au plus quelques directs ouverts en même temps par adresse', async () => {
+      await redemarrer({ fluxParAdresse: 2 });
+      const ouvrir = (xff?: string) =>
+        fetch(`${adresse}/api/equipes/${EQUIPE}/seances/${CLE}/flux?personne=max`, {
+          headers: xff ? { 'x-forwarded-for': xff } : {},
+        });
+      const premier = await ouvrir();
+      const deuxieme = await ouvrir();
+      expect([premier.status, deuxieme.status]).toEqual([200, 200]);
+      const refus = await ouvrir();
+      expect(refus.status).toBe(429);
+      expect(refus.headers.get('retry-after')).toBe('30');
+      expect(await refus.json()).toEqual({ erreur: 'trop de directs ouverts' });
+      // Chaque adresse a ses directs.
+      expect((await ouvrir('203.0.113.9')).status).toBe(200);
+      // Un direct qui se ferme rend sa place.
+      await premier.body!.cancel();
+      await vi.waitFor(async () => expect((await ouvrir()).status).toBe(200));
+    });
+  });
+
+  describe('les tailles', () => {
+    afterEach(() => {
+      vi.restoreAllMocks();
+    });
+
+    it('refuse une séance trop grosse, et accepte celle qui tient pile dans 64 Ko', async () => {
+      const octets = (titre: string) => Buffer.byteLength(corpsDeSeance('seance-1', titre));
+      const pile = 'x'.repeat(64 * 1024 - octets(''));
+      expect(octets(pile)).toBe(64 * 1024);
+      expect((await enregistrer('seance-1', pile)).status).toBe(200);
+      const trop = await enregistrer('seance-2', `${pile}x`);
+      expect(trop.status).toBe(400);
+      expect(await trop.json()).toEqual({ erreur: 'trop gros' });
+      // Bien plus grosse : refusée de même, sans qu'on la lise.
+      expect((await enregistrer('seance-3', 'x'.repeat(200_000))).status).toBe(400);
+      // Rien n'a été gardé des refusées, et le serveur répond toujours.
+      expect(await idsEnregistres()).toEqual(['seance-1']);
+    });
+
+    it('une équipe garde au plus un certain nombre de séances : une nouvelle est refusée, une mise à jour passe', async () => {
+      await redemarrer({ seancesParEquipe: 3 });
+      for (const id of ['seance-1', 'seance-2', 'seance-3']) expect((await enregistrer(id)).status).toBe(200);
+      const refus = await enregistrer('seance-4');
+      expect(refus.status).toBe(507);
+      expect(await refus.json()).toEqual({ erreur: 'équipe pleine' });
+      // Une séance que l'équipe a déjà se met à jour, même pleine.
+      expect((await enregistrer('seance-2', 'corrigée')).status).toBe(200);
+      expect((await lireSeances()).find((s) => s.realisation.id === 'seance-2')?.realisation.titre).toBe('corrigée');
+      // Les autres équipes ne sont pas gênées.
+      expect((await enregistrer('seance-4', '', 'autre-equipe-5678')).status).toBe(200);
+      // Une séance effacée rend sa place.
+      expect((await effacer('seance-1')).status).toBe(200);
+      expect((await enregistrer('seance-4')).status).toBe(200);
+      expect(await idsEnregistres()).toEqual(['seance-2', 'seance-3', 'seance-4']);
+    });
+
+    it('une base trop grosse refuse d’écrire (507), sauf pour effacer ; elle ne se mesure qu’une fois par minute', async () => {
+      const journal = vi.spyOn(console, 'error').mockImplementation(() => {});
+      await redemarrer({ baseMaxiOctets: 100 * 1024 });
+      const grosse = 'x'.repeat(50_000);
+      // Mesurée à la première écriture, encore petite : tout passe, et la mesure vaut une minute.
+      for (const id of ['seance-1', 'seance-2', 'seance-3']) expect((await enregistrer(id, grosse)).status).toBe(200);
+      horloge += 59_000;
+      expect((await enregistrer('seance-4', grosse)).status).toBe(200);
+      // Une minute après la première mesure, la base pèse plus de 100 Ko.
+      horloge += 1_000;
+      const refus = await enregistrer('seance-5', grosse);
+      expect(refus.status).toBe(507);
+      expect(await refus.json()).toEqual({ erreur: 'plus de place' });
+      expect((await appui({ type: 'commencer' })).status).toBe(507);
+      // Lire, et effacer, restent permis.
+      expect(await idsEnregistres()).toHaveLength(4);
+      for (const id of ['seance-1', 'seance-2', 'seance-3', 'seance-4']) expect((await effacer(id)).status).toBe(200);
+      // Effacer rend la place, mais la mesure n'est refaite qu'une minute plus tard.
+      expect((await enregistrer('seance-5', grosse)).status).toBe(507);
+      horloge += 60_000;
+      expect((await enregistrer('seance-5', grosse)).status).toBe(200);
+      // Seul le journal du serveur le dit, une fois : les téléphones réessaient sans bruit.
+      expect(journal).toHaveBeenCalledTimes(1);
+      expect(journal.mock.calls[0][0]).toContain('Base pleine');
+    });
   });
 });
 
