@@ -6,6 +6,8 @@
 
 [build.environment]
   NODE_VERSION = "22"
+  # Le serveur du VPS : direct à deux, historique des deux, copies de sécurité.
+  VITE_SERVEUR = "https://srv1302277.hstgr.cloud"
 
 # Les vignettes d'exercices ne changent pas : cache long côté navigateur.
 [[headers]]

@@ -33,8 +33,9 @@ Claude, de son côté :
   - l'historique de chacun ;
   - « Refaire le programme » garde les répétitions, le serveur et le code
     d'équipe.
-- **Prêt, mais pas encore branché** : il manque l'installation du serveur
-  sur le VPS pour :
+- **Branché le 7 octobre** : le serveur est installé sur le VPS
+  (https://srv1302277.hstgr.cloud, « ✓ Copies de sécurité » affiché) et
+  `VITE_SERVEUR` est dans `netlify.toml`. Cela allume :
   - le direct à deux (une horloge commune pour les deux téléphones) ;
   - l'historique commun « Avec Max », tout depuis le premier jour ;
   - les copies de sécurité : une chaque nuit (les 30 dernières gardées) et
@@ -49,7 +50,9 @@ Claude, de son côté :
 
 ### En attente de Sébastien
 
-1. **Installer le serveur sur le VPS.**
+1. **Installer le serveur sur le VPS.** Fait le 7 octobre. Pour une mise à
+   jour, recoller la même ligne. Astuce : la console web de hPanel ajoute
+   `^[[200~` au collage ; taper d'abord `bind 'set enable-bracketed-paste off'`.
    - Dans hPanel : VPS → Manage → Web console. Coller cette ligne, puis
      envoyer une capture de la fin (« ✓ Serveur prêt ») :
 
