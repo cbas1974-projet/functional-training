@@ -41,7 +41,6 @@ const estConnu = (id: unknown): id is string =>
 
 export interface ProfilPersonne {
   id: Personne;
-  nom: string;
   /** Une série de plus aux exercices de poussée — pectoraux, épaules,
    *  triceps : le haut du corps est son point faible. */
   seriePlusPoussee: boolean;
@@ -56,7 +55,6 @@ export const PERSONNES: ProfilPersonne[] = [
   // Le dos à ménager : il s'étire pendant que Max fait sa série.
   {
     id: 'sebastien',
-    nom: 'Sébastien',
     seriePlusPoussee: false,
     derniereLegereMardi: true,
     etirementsPause: ['etir-rachis-debout', 'etir-ischios-debout', 'etir-inclinaison-tronc'],
@@ -65,7 +63,6 @@ export const PERSONNES: ProfilPersonne[] = [
   // d'étirer les cuisses et les mollets.
   {
     id: 'max',
-    nom: 'Max',
     seriePlusPoussee: true,
     derniereLegereMardi: false,
     etirementsPause: ['etir-quadriceps-debout', 'etir-mollet-mur', 'etir-fente-bras-leve'],
@@ -74,7 +71,9 @@ export const PERSONNES: ProfilPersonne[] = [
 
 const PROFILS = Object.fromEntries(PERSONNES.map((p) => [p.id, p])) as Record<Personne, ProfilPersonne>;
 
-export const NOM_PERSONNE: Record<Personne, string> = { sebastien: 'Sébastien', max: 'Max' };
+/** Les noms affichés. Les identifiants (`sebastien`, `max`) ne changent pas : ils
+ *  vivent dans les sauvegardes et sur le serveur. */
+export const NOM_PERSONNE: Record<Personne, string> = { sebastien: 'Speedy', max: 'Big Max' };
 
 export const autrePersonne = (personne: Personne): Personne =>
   personne === 'sebastien' ? 'max' : 'sebastien';

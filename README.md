@@ -4,6 +4,8 @@ Générateur de séances d'entraînement guidées, pensé pour le téléphone et
 un pratiquant de jiu-jitsu : **tempo lent, sans rebond**, pour solliciter les
 tendons et les ligaments sans charge excessive.
 
+Deux personnes s'en servent, **Speedy (Sébastien) et Big Max (Max)**, chacune sur son téléphone.
+
 L'application fonctionne entièrement dans le navigateur. Aucun compte, aucun
 serveur : les réglages, la séance en cours, l'historique et les mensurations
 sont enregistrés sur l'appareil.
@@ -35,11 +37,11 @@ du dos, épaules, extérieur et intérieur de cuisse. Rien à taper.
   4, 6, 8 ou 10 exercices, et le tempo parmi ceux de la liste ; la durée
   affichée suit. Ces deux réglages appartiennent au programme : les deux
   téléphones doivent avoir les mêmes pour que l'horloge commune soit juste.
-  Ils partent avec « Envoyer à Max », et les changer rappelle que l'autre
+  Ils partent avec « Envoyer à Big Max », et les changer rappelle que l'autre
   téléphone n'a pas encore le programme. La séance libre garde son propre
   tempo.
 - **Combien de temps** : à deux, une séance de six exercices dure environ
-  **1 h 15** (entre 1 h et 1 h 20 selon les exercices : Max fait une série de
+  **1 h 15** (entre 1 h et 1 h 20 selon les exercices : Big Max fait une série de
   plus aux poussées, et chaque paire s'installe avant « Go »). Quatre
   exercices, environ 55 minutes ; huit, 1 h 30 ; dix, près de 1 h 50.
   L'application ne retire plus d'exercice pour tenir dans l'heure : elle prend
@@ -61,7 +63,7 @@ du dos, épaules, extérieur et intérieur de cuisse. Rien à taper.
   l'application propose d'en refaire un. Commencé un vendredi ou un week-end,
   il part du lundi suivant.
 - **La semaine dure**, le jeudi une semaine sur deux (semaine B) : **même
-  poids, deux répétitions de plus** — Max 12, Sébastien 10. Si le dos
+  poids, deux répétitions de plus** — Big Max 12, Speedy 10. Si le dos
   s'arrondit, on arrête la série. Quand toutes les séries sont faites, le
   jeudi suivant propose **un cran de plus** : 5 lb (2,5 kg).
 - **Les pauses** : 1 min après une paire, 2 min quand elle compte la trap
@@ -90,9 +92,9 @@ du dos, épaules, extérieur et intérieur de cuisse. Rien à taper.
   « Ensemble » et « Chacun son tour », avec un crochet vert sur le choix du
   moment. Les poids libres, le kettlebell et les étirements se font
   ensemble, côte à côte ; les machines, une pour deux, chacun son tour —
-  **Max commence**, et la série de l'un est le repos de l'autre. Dans une
-  paire qui compte une machine, **on se croise** : Max au premier exercice,
-  Sébastien au second, puis on échange ; personne n'attend la machine, sauf
+  **Big Max commence**, et la série de l'un est le repos de l'autre. Dans une
+  paire qui compte une machine, **on se croise** : Big Max au premier exercice,
+  Speedy au second, puis on échange ; personne n'attend la machine, sauf
   si l'autre ne l'a pas encore quittée. Un toucher change la façon de faire,
   et la durée de la séance suit.
 - **Toucher une image** l'ouvre en grand, avec les consignes : pour voir le
@@ -132,36 +134,36 @@ la trap bar reste la première. À dix exercices, il arrive que la semaine B
 reprenne un exercice de la semaine A : les exercices du bas du corps qui
 s'opposent viennent à manquer.
 
-### Sébastien et Max, chacun sur son téléphone
+### Speedy et Big Max, chacun sur son téléphone
 
 Au premier lancement, l'application demande qui s'entraîne sur ce téléphone.
-Trois séries par exercice ; **Max fait deux répétitions de plus** (10 contre
-8, ce qui laisse à Sébastien une quinzaine de secondes de repos en plus) et
+Trois séries par exercice ; **Big Max fait deux répétitions de plus** (10 contre
+8, ce qui laisse à Speedy une quinzaine de secondes de repos en plus) et
 **une série de plus aux poussées** — pectoraux, épaules, triceps : le haut du
-corps est son point faible. Le mardi, **la dernière série de Sébastien se
+corps est son point faible. Le mardi, **la dernière série de Speedy se
 fait à la moitié de la charge**, pré-remplie : on garde du jus pour le
 jiu-jitsu. Les répétitions de chacun se règlent dans *Réglages*.
 
-En haut de l'accueil, **Seul** ou **Avec Max** :
+En haut de l'accueil, **Seul** ou **Avec Big Max** :
 
 - **Seul** : ses répétitions, ses pauses, son temps.
 - **À deux** : **une horloge commune**. Chaque série commence ensemble ;
-  celui qui a fini avant attend l'autre. Pendant la série de plus de Max,
-  l'écran de Sébastien annonce « Repos prolongé — Max fait sa série de plus ».
+  celui qui a fini avant attend l'autre. Pendant la série de plus de Big Max,
+  l'écran de Speedy annonce « Repos prolongé — Big Max fait sa série de plus ».
   La durée annoncée est la même sur les deux téléphones, et appuyer sur « Go »
   ensemble à chaque nouvel exercice les remet à la même seconde.
 - **Pendant la série de l'autre et les grosses pauses** — les deux minutes de
   la trap bar, et celle qui suit sa dernière série —, l'écran propose un
-  étirement, avec son image : le dos pour Sébastien, les cuisses et les
-  mollets pour Max, comme le physio le lui a demandé. 20 s de chaque côté, en
+  étirement, avec son image : le dos pour Speedy, les cuisses et les
+  mollets pour Big Max, comme le physio le lui a demandé. 20 s de chaque côté, en
   douceur, jamais jusqu'à la douleur.
 
 **En direct, avec le serveur.** Quand le serveur est branché (voir
-[Le serveur](#le-serveur-vps)), l'horloge commune passe par lui. Max ouvre
+[Le serveur](#le-serveur-vps)), l'horloge commune passe par lui. Big Max ouvre
 l'application le même jour, sur la même séance, en mode « Avec
-Sébastien » : les deux téléphones affichent la même étape à la même seconde.
+Speedy » : les deux téléphones affichent la même étape à la même seconde.
 Les téléphones ne se parlent pas entre eux, chacun parle au serveur. Un
-bandeau dit où on en est : « En direct avec Max », « Max n'a pas encore
+bandeau dit où on en est : « En direct avec Big Max », « Big Max n'a pas encore
 rejoint » ou « Hors ligne ». Si le réseau coupe, l'application continue
 seule ; un appui fait hors ligne part dès que le réseau revient, même si la
 page s'est rechargée entre-temps.
@@ -174,15 +176,15 @@ de quelqu'un, elle ne raccourcit que les attentes.**
 | Commencer | Ouvre la séance commune du jour, ou la rejoint là où elle en est |
 | Go | Lance le nouvel exercice pour les deux (demande confirmation si l'autre n'a pas fini le précédent) |
 | Pause / Reprendre | Arrête et relance le chrono des deux |
-| Suivant, pendant une attente | Écourte le repos, l'échauffement ou l'attente pour les deux, au plus jusqu'à la prochaine série de l'un ou de l'autre — refusé pendant la série de l'autre : « Max finit sa série. » Si les deux appuient en même temps, ça ne compte qu'une fois |
+| Suivant, pendant une attente | Écourte le repos, l'échauffement ou l'attente pour les deux, au plus jusqu'à la prochaine série de l'un ou de l'autre — refusé pendant la série de l'autre : « Big Max finit sa série. » Si les deux appuient en même temps, ça ne compte qu'une fois |
 | Suivant, pendant sa série | Si l'autre attend, il commence plus tôt ; sinon on finit plus tôt et on l'attend |
 | +15 s | Arrête le chrono des deux quinze secondes : le repos s'allonge, rien ne recule. Refusé si l'autre est en pleine série |
 | Passer l'exercice | Pour soi seul (un genou qui fait mal) : l'autre continue, on se retrouve au prochain « Go » |
 | Précédent | Désactivé : l'horloge est commune |
 
-**Envoyer à Max** (ou à Sébastien) partage un lien qui contient tout le
+**Envoyer à Big Max** (ou à Speedy) partage un lien qui contient tout le
 programme — les paires, les répétitions de chacun, le nombre d'exercices et
-le tempo compris : Max l'ouvre et a les mêmes séances, les mêmes semaines A
+le tempo compris : Big Max l'ouvre et a les mêmes séances, les mêmes semaines A
 et B, la même horloge. S'il
 avait déjà un programme, l'application lui demande s'il prend celui-ci. Tant
 que l'autre téléphone n'a pas le programme — au premier jour, ou après un
@@ -200,12 +202,12 @@ Sous la séance du jour, deux boutons discrets :
 
 - **Séance d'essai** : la séance du jour en version courte, **une dizaine de
   minutes** (un peu plus à deux : l'horloge suit le plus lent des deux). Une
-  seule série par exercice, pour les deux — la série de plus de Max n'y est
+  seule série par exercice, pour les deux — la série de plus de Big Max n'y est
   pas —, avec un tiers de répétitions en moins, des repos de 15 s, une mise
   en place courte, une demi-minute d'échauffement et une demi-minute
   d'étirements. Les exercices, les paires et le chacun son tour restent ceux
   de la séance.
-- **Voir comme Max** (ou comme Sébastien, selon le téléphone) : le même essai,
+- **Voir comme Big Max** (ou comme Speedy, selon le téléphone) : le même essai,
   vu par l'autre — ses répétitions, ses étirements, et qui commence quand c'est
   chacun son tour. Seul, sans le serveur.
 
@@ -226,7 +228,7 @@ relancer un une fois le réseau revenu.
 serveur), ni dans « la dernière fois » : la séance n'est pas marquée faite, et
 si la page se recharge, l'application ne propose pas de reprendre l'essai. Une
 séance interrompue qui attendait reste là, intacte. Un bandeau — « Essai —
-rien n'est enregistré », ou « Aperçu : l'écran de Max — rien n'est
+rien n'est enregistré », ou « Aperçu : l'écran de Big Max — rien n'est
 enregistré » — reste affiché du début à la fin.
 
 ### Séance libre
@@ -409,12 +411,12 @@ sa charge soulevée.
 
 Avec le serveur, chaque séance enregistrée part aussi dans **l'historique
 des deux**, et celles faites avant de brancher le serveur partent une fois.
-En haut de l'historique, **Moi** ou **Avec Max** : ses séances seules, ou
+En haut de l'historique, **Moi** ou **Avec Big Max** : ses séances seules, ou
 celles des deux, chacune avec son nom. Une séance supprimée sur son
 téléphone disparaît aussi de l'historique des deux.
 
 Le serveur garde **tout l'historique, depuis le premier jour**, et « Avec
-Max » le montre en entier. Le téléphone en garde des années : l'historique
+Big Max » le montre en entier. Le téléphone en garde des années : l'historique
 y prend au plus 1,5 million de caractères (plus de 700 séances), bien en
 dessous des 5 Mo qu'un navigateur donne à un site. Au-delà, les plus
 vieilles séances ne restent que sur le serveur.
@@ -595,7 +597,7 @@ choses : **la séance commune du jour** (l'horloge des deux téléphones),
 **l'historique des deux**, avec les charges, et leurs **mensurations**. Rien de
 confidentiel : pas de
 compte, pas de mot de passe. Un code d'équipe, tiré du programme et
-transmis avec le lien « Envoyer à Max », regroupe les deux téléphones. Il
+transmis avec le lien « Envoyer à Big Max », regroupe les deux téléphones. Il
 reste le même quand on refait le programme.
 
 Sans serveur, ou sans réseau, l'application fonctionne comme avant : tout
@@ -626,7 +628,7 @@ met le serveur à jour ; les données restent.
 
 **Brancher l'application.** Dans *Réglages → Serveur, pour le direct à deux*, coller l'adresse
 `https://srvXXXXXX.hstgr.cloud`, puis « Essayer ». L'adresse voyage avec le
-lien « Envoyer à Max ». On peut aussi la fixer pour tout le site, au moment
+lien « Envoyer à Big Max ». On peut aussi la fixer pour tout le site, au moment
 de publier : `VITE_SERVEUR = "https://srvXXXXXX.hstgr.cloud"` dans la
 section `[build.environment]` de `netlify.toml`.
 

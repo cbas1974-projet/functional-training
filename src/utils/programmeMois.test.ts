@@ -615,8 +615,8 @@ describe('la séance de chacun', () => {
       expect(bloc.autre).toEqual({ series: max.blocs[i].series, reps: max.blocs[i].reps });
       expect(max.blocs[i].autre).toEqual({ series: bloc.series, reps: bloc.reps });
     });
-    expect(seb.horloge).toEqual({ personne: 'sebastien', partenaire: 'Max', jeCommence: false });
-    expect(max.horloge).toEqual({ personne: 'max', partenaire: 'Sébastien', jeCommence: true });
+    expect(seb.horloge).toEqual({ personne: 'sebastien', partenaire: 'Big Max', jeCommence: false });
+    expect(max.horloge).toEqual({ personne: 'max', partenaire: 'Speedy', jeCommence: true });
     // Seul : son temps à lui.
     const seul = seancePourPersonne(jeudi, PARAMETRES, SEUL_SEB, LUNDI);
     expect(seul.blocs.some((b) => b.autre)).toBe(false);

@@ -433,7 +433,7 @@ function FeuilleReglages({
         <div className="flex flex-wrap gap-2">
           {PERSONNES.map((p) => (
             <Pastille key={p.id} selectionne={personne === p.id} onClick={() => onPersonne(p.id)}>
-              {p.nom}
+              {NOM_PERSONNE[p.id]}
             </Pastille>
           ))}
         </div>
@@ -441,13 +441,13 @@ function FeuilleReglages({
 
       <Groupe
         titre="Répétitions par série"
-        aide={`Trois séries ; Max en fait une de plus aux poussées. La semaine dure, le jeudi une semaine sur deux : ${REPS_SEMAINE_DURE} répétitions de plus chacun, même poids.`}
+        aide={`Trois séries ; ${NOM_PERSONNE.max} en fait une de plus aux poussées. La semaine dure, le jeudi une semaine sur deux : ${REPS_SEMAINE_DURE} répétitions de plus chacun, même poids.`}
       >
         <div className="space-y-2">
           {PERSONNES.map((p) => (
             <div key={p.id} className="flex flex-wrap items-center gap-2">
               <span className="w-24 text-sm font-semibold" style={{ color: 'var(--texte)' }}>
-                {p.nom}
+                {NOM_PERSONNE[p.id]}
               </span>
               {REPS_POSSIBLES.map((n) => (
                 <Pastille key={n} selectionne={reps[p.id] === n} onClick={() => onReps(p.id, n)}>
@@ -1138,7 +1138,7 @@ export default function Accueil({
               Qui s’entraîne sur ce téléphone ?
             </p>
             <p className="text-xs" style={{ color: 'var(--texte-discret)' }}>
-              Max fait deux répétitions de plus, et une série de plus aux poussées.
+              {NOM_PERSONNE.max} fait deux répétitions de plus, et une série de plus aux poussées.
             </p>
             <div className="mt-2 grid grid-cols-2 gap-2">
               {PERSONNES.map((p) => (
@@ -1149,7 +1149,7 @@ export default function Accueil({
                   className="rounded-xl px-3 text-base font-bold"
                   style={{ minHeight: 52, background: 'var(--accent)', color: 'var(--accent-texte)' }}
                 >
-                  {p.nom}
+                  {NOM_PERSONNE[p.id]}
                 </button>
               ))}
             </div>
@@ -1263,7 +1263,7 @@ export default function Accueil({
                   Semaine dure : même poids, {REPS_SEMAINE_DURE} répétitions de plus
                 </p>
                 <p className="chiffres text-sm" style={{ color: 'var(--texte-discret)' }}>
-                  Max {reps.max + REPS_SEMAINE_DURE}, Sébastien {reps.sebastien + REPS_SEMAINE_DURE}. Si le dos
+                  {NOM_PERSONNE.max} {reps.max + REPS_SEMAINE_DURE}, {NOM_PERSONNE.sebastien} {reps.sebastien + REPS_SEMAINE_DURE}. Si le dos
                   s’arrondit, on arrête la série.
                 </p>
               </div>

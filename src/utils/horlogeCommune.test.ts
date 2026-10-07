@@ -163,13 +163,13 @@ describe('les boutons, à deux', () => {
   const etat = avecGo(depart(), 0, 1_000_000);
 
   it('pendant la série de Max à la trap bar, le « Suivant » de Sébastien ne coupe rien', () => {
-    const decision = decisionSuivant(contexte(etapesSeb, etapesMax, etat, 1_020_000, 'Max'));
-    expect(decision).toEqual({ genre: 'refus', raison: 'Max finit sa série.' });
+    const decision = decisionSuivant(contexte(etapesSeb, etapesMax, etat, 1_020_000, 'Big Max'));
+    expect(decision).toEqual({ genre: 'refus', raison: 'Big Max finit sa série.' });
   });
 
   it('Max finit sa série plus tôt : Sébastien commence plus tôt', () => {
     const t = 1_020_000;
-    const ctx = contexte(etapesMax, etapesSeb, etat, t, 'Sébastien');
+    const ctx = contexte(etapesMax, etapesSeb, etat, t, 'Speedy');
     expect(etapesMax[ctx.position.index].type).toBe('serie');
     const decision = decisionSuivant(ctx);
     expect(decision).toMatchObject({ genre: 'commune', action: { type: 'saut', depuis: 1_000_000 } });
@@ -183,7 +183,7 @@ describe('les boutons, à deux', () => {
     const g1 = installation(etapesSeb, 1);
     const commun = avecGo(etat, 1, 2_000_000);
     const tSerie = 2_000_000 + 6_000; // la préparation passée
-    const ctx = contexte(etapesSeb, etapesMax, commun, tSerie, 'Max');
+    const ctx = contexte(etapesSeb, etapesMax, commun, tSerie, 'Big Max');
     expect(etapesSeb[ctx.position.index]).toMatchObject({ type: 'serie', groupe: 1 });
     const decision = decisionSuivant(ctx);
     expect(decision.genre).toBe('locale');
@@ -204,34 +204,34 @@ describe('les boutons, à deux', () => {
     const g1 = installation(etapesSeb, 1);
     const tDansTrapBar = 1_100_000;
     // Sébastien a passé l'exercice : il est à l'installation, Max non.
-    const passe = decisionPasserExercice(contexte(etapesSeb, etapesMax, etat, tDansTrapBar, 'Max'));
+    const passe = decisionPasserExercice(contexte(etapesSeb, etapesMax, etat, tDansTrapBar, 'Big Max'));
     expect(passe).toEqual({ genre: 'locale', ecart: { vers: g1, depuis: tDansTrapBar } });
     const { position } = positionAffichee(etapesSeb, etat, tDansTrapBar, (passe as { ecart: { vers: number; depuis: number } }).ecart);
     expect(position.index).toBe(g1);
-    const enAvance = decisionSuivant({ etapes: etapesSeb, etapesAutre: etapesMax, etat, t: tDansTrapBar, position, partenaire: 'Max' });
+    const enAvance = decisionSuivant({ etapes: etapesSeb, etapesAutre: etapesMax, etat, t: tDansTrapBar, position, partenaire: 'Big Max' });
     expect(enAvance).toMatchObject({ genre: 'commune', action: { type: 'go', groupe: 1 } });
-    expect((enAvance as { confirmer?: string }).confirmer).toMatch(/Max n’a pas fini/);
+    expect((enAvance as { confirmer?: string }).confirmer).toMatch(/Big Max n’a pas fini/);
     // Tous les deux à l'installation : pas de question.
     const tous = debutEtape(etapesSeb, installation(etapesSeb, 0) + 1, g1, 1_000_000) + 2000;
-    const ensemble = decisionSuivant(contexte(etapesSeb, etapesMax, etat, tous, 'Max'));
+    const ensemble = decisionSuivant(contexte(etapesSeb, etapesMax, etat, tous, 'Big Max'));
     expect(ensemble).toEqual({ genre: 'commune', action: { type: 'go', groupe: 1 } });
   });
 
   it('pendant l’échauffement et les repos à deux, « Suivant » fait repartir les deux', () => {
     const debut = depart();
-    expect(decisionSuivant(contexte(etapesSeb, etapesMax, debut, 60_000, 'Max'))).toMatchObject({
+    expect(decisionSuivant(contexte(etapesSeb, etapesMax, debut, 60_000, 'Big Max'))).toMatchObject({
       genre: 'commune',
       action: { type: 'saut' },
     });
   });
 
   it('« +15 s » vaut pour les deux, sauf pendant la série de l’autre', () => {
-    expect(decisionProlonger(contexte(etapesSeb, etapesMax, etat, 1_020_000, 'Max'), 15)).toEqual({
+    expect(decisionProlonger(contexte(etapesSeb, etapesMax, etat, 1_020_000, 'Big Max'), 15)).toEqual({
       genre: 'refus',
-      raison: 'Max est en pleine série.',
+      raison: 'Big Max est en pleine série.',
     });
     const tInstallation = debutEtape(etapesSeb, installation(etapesSeb, 0) + 1, installation(etapesSeb, 1), 1_000_000) + 2000;
-    expect(decisionProlonger(contexte(etapesSeb, etapesMax, etat, tInstallation, 'Max'), 15)).toEqual({
+    expect(decisionProlonger(contexte(etapesSeb, etapesMax, etat, tInstallation, 'Big Max'), 15)).toEqual({
       genre: 'commune',
       action: { type: 'prolonger', sec: 15 },
     });
@@ -242,7 +242,7 @@ describe('les boutons, à deux', () => {
   const tAttenteMax = 1_000_000 + 88_000;
 
   it('« Suivant » pendant une attente ne saute jamais la série de l’autre', () => {
-    const ctx = contexte(etapesMax, etapesSeb, etat, tAttenteMax, 'Sébastien');
+    const ctx = contexte(etapesMax, etapesSeb, etat, tAttenteMax, 'Speedy');
     expect(etapesMax[ctx.position.index]).toMatchObject({ type: 'repos', motif: 'tour' });
     const decision = decisionSuivant(ctx);
     const apres = appliquer(etat, envoi((decision as { action: ActionCommune }).action, tAttenteMax))!;
@@ -258,8 +258,8 @@ describe('les boutons, à deux', () => {
     const t1 = 2_000_000;
     const commun = avecGo(etat, 1, t1);
     const t = t1 + 100_000;
-    const deSeb = decisionSuivant(contexte(etapesSeb, etapesMax, commun, t, 'Max'));
-    const deMax = decisionSuivant(contexte(etapesMax, etapesSeb, commun, t + 300, 'Sébastien'));
+    const deSeb = decisionSuivant(contexte(etapesSeb, etapesMax, commun, t, 'Big Max'));
+    const deMax = decisionSuivant(contexte(etapesMax, etapesSeb, commun, t + 300, 'Speedy'));
     let apres = appliquer(commun, envoi((deSeb as { action: ActionCommune }).action, t))!;
     apres = appliquer(apres, envoi((deMax as { action: ActionCommune }).action, t + 300))!;
     expect(apres.sauts).toHaveLength(1);
@@ -272,7 +272,7 @@ describe('les boutons, à deux', () => {
   });
 
   it('« +15 s » arrête l’horloge un moment, sans revenir en arrière', () => {
-    const decision = decisionProlonger(contexte(etapesMax, etapesSeb, etat, tAttenteMax, 'Sébastien'), 15);
+    const decision = decisionProlonger(contexte(etapesMax, etapesSeb, etat, tAttenteMax, 'Speedy'), 15);
     expect(decision).toEqual({ genre: 'commune', action: { type: 'prolonger', sec: 15 } });
     const apres = appliquer(etat, envoi({ type: 'prolonger', sec: 15 }, tAttenteMax))!;
     const attente = positionCommune(etapesMax, etat, tAttenteMax).index;
@@ -286,7 +286,7 @@ describe('les boutons, à deux', () => {
   it('une série commencée à son rythme se finit à son rythme', () => {
     const t1 = 2_000_000;
     const commun = avecGo(etat, 1, t1);
-    const ctx = contexte(etapesSeb, etapesMax, commun, t1 + 1000, 'Max');
+    const ctx = contexte(etapesSeb, etapesMax, commun, t1 + 1000, 'Big Max');
     expect(etapesSeb[ctx.position.index].type).toBe('pret');
     const decision = decisionSuivant(ctx);
     expect(decision.genre).toBe('locale');
@@ -342,7 +342,7 @@ describe('on se croise, aussi le lundi et le mardi', () => {
       expect(ordre(seb).slice(0, 4)).toEqual([second, premier, second, premier]);
       // Pendant sa série, le « Suivant » de Sébastien ne coupe pas celle de Max.
       const position = positionCommune(seb, etat, go + 10_000);
-      const decision = decisionSuivant({ etapes: seb, etapesAutre: max, etat, t: go + 10_000, position, partenaire: 'Max' });
+      const decision = decisionSuivant({ etapes: seb, etapesAutre: max, etat, t: go + 10_000, position, partenaire: 'Big Max' });
       expect(decision.genre).toBe('locale');
     });
   }
