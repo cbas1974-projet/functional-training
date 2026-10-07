@@ -253,9 +253,10 @@ function fusionner(avant: Attente, apres: Attente): Attente {
  *  commence ensemble, et celui qui a fini avant attend l'autre (sa série est
  *  plus longue, ou il en fait une de plus). Chacun son tour sur une machine,
  *  celui qui commence d'abord, et la série de l'un est le repos de l'autre.
- *  Sur un groupe lié qui compte une machine, on se croise : celui qui
- *  commence prend le premier exercice, l'autre le suivant. Appuyer sur « Go »
- *  ensemble remet les deux téléphones à la même seconde. */
+ *  Sur une paire qui compte une machine, on se croise : celui qui commence
+ *  prend le premier exercice, l'autre le suivant, puis on échange — arrivé
+ *  à la machine avant que l'autre l'ait quittée, on l'attend. Appuyer sur
+ *  « Go » ensemble remet les deux téléphones à la même seconde. */
 function construireEtapesHorloge(seance: Seance): Etape[] {
   const { tempo } = seance.parametres;
   const aDeux = seance.blocs.some((bloc) => bloc.autre !== undefined);
@@ -307,28 +308,42 @@ function construireEtapesHorloge(seance: Seance): Etape[] {
     const ordreMoi = croise && !jeCommence ? decale : groupe;
     const ordreAutre = croise && jeCommence ? decale : groupe;
     const tours = Math.max(...groupe.map((bloc) => Math.max(bloc.series, seriesAutre(bloc))));
-    /** Le travail d'une personne dans un tour, transitions comprises. */
-    const travailDuTour = (
-      ordre: BlocSeries[],
+    const mesSeries = (bloc: BlocSeries) => bloc.series;
+    const mesReps = (bloc: BlocSeries) => bloc.reps;
+    /** Le tour k d'une personne : chacun de ses exercices, avec ce qui le
+     *  précède — la transition, et, quand on se croise, la machine que l'autre
+     *  n'a pas encore quittée : on l'attend. `fin` : où en est la personne. */
+    const tourDe = (
       k: number,
+      ordre: BlocSeries[],
       series: (bloc: BlocSeries) => number,
       reps: (bloc: BlocSeries) => number,
+      ordreDeLAutre: BlocSeries[],
+      seriesDeLAutre: (bloc: BlocSeries) => number,
+      repsDeLAutre: (bloc: BlocSeries) => number,
     ) => {
       const faits = ordre.filter((bloc) => k <= series(bloc));
-      return faits.reduce(
-        (total, bloc, i) =>
-          total + DUREE_PRET_SEC + duree(bloc, reps(bloc)) + (i < faits.length - 1 ? (bloc.transitionSec ?? 0) : 0),
-        0,
-      );
+      const [premierDeLAutre] = ordreDeLAutre.filter((bloc) => k <= seriesDeLAutre(bloc));
+      let fin = 0;
+      return faits.map((bloc, i) => {
+        const transition = i > 0 ? (faits[i - 1].transitionSec ?? 0) : 0;
+        const libre =
+          croise && i > 0 && bloc.tour && bloc === premierDeLAutre ? DUREE_PRET_SEC + duree(bloc, repsDeLAutre(bloc)) : 0;
+        const machine = Math.max(0, libre - (fin + transition));
+        fin += transition + machine + DUREE_PRET_SEC + duree(bloc, reps(bloc));
+        return { bloc, transition, machine, fin };
+      });
     };
     for (let k = 1; k <= tours; k += 1) {
-      const faits = ordreMoi.filter((bloc) => k <= bloc.series);
-      faits.forEach((bloc, i) => {
+      const miens = tourDe(k, ordreMoi, mesSeries, mesReps, ordreAutre, seriesAutre, repsAutre);
+      const siens = aDeux ? tourDe(k, ordreAutre, seriesAutre, repsAutre, ordreMoi, mesSeries, mesReps) : [];
+      miens.forEach(({ bloc, transition, machine }, i) => {
+        if (i > 0) attendre(transition, 'repos', miens[i - 1].bloc.exerciceId, g);
+        attendre(machine, 'tour', bloc.exerciceId, g);
         morceaux.push({ genre: 'travail', bloc, serie: k, groupe: g });
-        if (i < faits.length - 1) attendre(bloc.transitionSec ?? 0, 'repos', bloc.exerciceId, g);
       });
-      const moi = travailDuTour(ordreMoi, k, (bloc) => bloc.series, (bloc) => bloc.reps);
-      const lui = aDeux ? travailDuTour(ordreAutre, k, seriesAutre, repsAutre) : 0;
+      const moi = miens.at(-1)?.fin ?? 0;
+      const lui = siens.at(-1)?.fin ?? 0;
       if (lui > moi) attendre(lui - moi, moi === 0 ? 'serie-de-plus' : 'attente', groupe[0].exerciceId, g);
       if (k < tours) attendre(reposDuGroupe(groupe), 'repos', groupe[groupe.length - 1].exerciceId, g);
     }

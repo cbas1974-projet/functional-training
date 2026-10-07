@@ -23,18 +23,39 @@ du dos, épaules, extérieur et intérieur de cuisse. Rien à taper.
   quatre mouvements légers choisis pour le jour, et finit par **5 minutes
   d'étirements** du poster, avec leur image — trente secondes de chaque côté
   quand l'étirement se fait d'un côté. Juste avant, **les jambes pour finir** :
-  presse à cuisses, hack squat, traîneau ou marche du fermier.
-- **Jeudi, la séance de référence**, toujours la même, lourde, en séries
-  droites : le **soulevé de terre à la trap bar en premier**, quand le dos est
-  frais, un rowing poitrine contre le banc (la trap bar a déjà chargé le bas
-  du dos), le bas du dos, les épaules au-dessus de la tête, puis la presse ou
-  le hack squat. Le jeudi est le dernier entraînement avant trois jours de
-  repos ; les autres séances le préparent et l'entretiennent.
+  presse à cuisses, hack squat, traîneau ou marche du fermier, seul, en
+  séries.
+- **Par paires, tous les jours** : les exercices vont deux par deux, deux
+  exercices qui s'opposent. On fait les deux à la suite — 15 secondes pour
+  passer de l'un à l'autre —, puis **une seule pause après la paire : 1
+  minute, 2 minutes quand la paire compte la trap bar**. Trois tours. La
+  façon dont les paires sont formées est expliquée plus bas.
+- **Six exercices par séance — trois paires — et le dernier pour les
+  jambes**, au **tempo 4 s / 4 s + 2 s en bas**. Dans *Réglages*, on choisit
+  4, 6, 8 ou 10 exercices, et le tempo parmi ceux de la liste ; la durée
+  affichée suit. Ces deux réglages appartiennent au programme : les deux
+  téléphones doivent avoir les mêmes pour que l'horloge commune soit juste.
+  Ils partent avec « Envoyer à Max », et les changer rappelle que l'autre
+  téléphone n'a pas encore le programme. La séance libre garde son propre
+  tempo.
+- **Combien de temps** : à deux, une séance de six exercices dure environ
+  **1 h 15** (entre 1 h et 1 h 20 selon les exercices : Max fait une série de
+  plus aux poussées, et chaque paire s'installe avant « Go »). Quatre
+  exercices, environ 55 minutes ; huit, 1 h 30 ; dix, près de 1 h 50.
+  L'application ne retire plus d'exercice pour tenir dans l'heure : elle prend
+  le nombre choisi, les objectifs d'abord. Seul garde-fou : une séance qui
+  passerait deux heures et demie perdrait ses dernières paires.
+- **Jeudi, la séance de référence**, toujours la même, lourde : le
+  **soulevé de terre à la trap bar en premier**, quand le dos est frais, en
+  paire avec le haut du corps ; puis le bas du dos, les épaules au-dessus de
+  la tête, un rowing qui ne charge pas le bas du dos (la trap bar l'a déjà
+  fait), un développé et l'arrière des épaules, deux par deux ; enfin la
+  presse ou le hack squat. Le jeudi est le dernier entraînement avant trois
+  jours de repos ; les autres séances le préparent et l'entretiennent.
 - **Lundi, le bas du corps** (bas du dos, extérieur et intérieur de cuisse),
-  et **mardi, le haut** (épaules d'abord), en **enchaîné** : trois exercices à
-  la suite, puis 1 min 30 de pause, trois tours. Le mardi, jiu-jitsu des
-  adultes le soir : rien qui charge le bas du dos, et la marche du fermier pour
-  finir. Les machines restent hors des enchaînements.
+  et **mardi, le haut** (épaules d'abord). Le mardi, jiu-jitsu des adultes le
+  soir : rien qui charge le bas du dos, et la marche du fermier pour finir.
+  Le lundi et le mardi, les machines attendent la fin de la séance.
 - **Semaines A et B** : lundi et mardi alternent d'une semaine à l'autre —
   mêmes muscles, autres exercices. Le programme dure quatre semaines, puis
   l'application propose d'en refaire un. Commencé un vendredi ou un week-end,
@@ -43,28 +64,37 @@ du dos, épaules, extérieur et intérieur de cuisse. Rien à taper.
   poids, deux répétitions de plus** — Max 12, Sébastien 10. Si le dos
   s'arrondit, on arrête la série. Quand toutes les séries sont faites, le
   jeudi suivant propose **un cran de plus** : 5 lb (2,5 kg).
-- **Les pauses** : 2 min à la trap bar, 1 min 30 aux gros exercices, 1 min aux
-  petits muscles. Dans un exercice, ou un groupe enchaîné ou lié, le chrono ne
-  s'arrête pas. À chaque nouvel exercice, l'écran montre le suivant et **la
+- **Les pauses** : 1 min après une paire, 2 min quand elle compte la trap
+  bar. Un exercice fait seul garde les siennes : 2 min à la trap bar, 1 min 30
+  aux gros exercices, 1 min aux petits muscles. Dans une paire, le chrono ne
+  s'arrête pas. À chaque nouvelle paire, l'écran montre la suivante et **la
   charge à installer**, et la séance repart seulement sur **« Go »**.
-- **Lier deux exercices**, le jeudi : « Lier » sur un exercice allume les
-  autres en **vert** (bons partenaires : pousser et tirer, le haut et le bas)
-  ou en **rouge** (mêmes muscles, ou deux fois le bas du dos). Liés, ils
-  s'enchaînent sans pause ; la pause vient après la paire, et l'accueil dit
-  le temps gagné.
-- **Jamais deux exercices qui chargent le bas du dos dans le même
-  enchaînement**, aucun mouvement explosif, rien au-delà du niveau
-  intermédiaire, et seulement le matériel de la salle : haltères, kettlebells,
-  banc, tapis, et quatre machines — trap bar, presse à cuisses, hack squat,
-  traîneau. Elles ne sont sur aucun poster : leur image est un dessin simple,
-  à remplacer par une photo du même nom dans `public/exercices/`.
-- **En même temps ou chacun son tour** : chaque exercice porte sa façon de se
-  faire à deux. Les poids libres, le kettlebell et les étirements se font
-  côte à côte ; les machines, une pour deux, chacun son tour — **Max
-  commence**, et la série de l'un est le repos de l'autre. Sur un groupe lié
-  qui compte une machine, on se croise : Max au premier exercice, Sébastien
-  au second, puis on échange. Un toucher change la façon de faire, et la durée
-  de la séance suit.
+- **Les paires se voient** sur l'accueil : « Paire 1 », ses deux exercices
+  côte à côte, et ce qui les unit (« pousser ↔ tirer », « haut ↔ bas »,
+  « quadriceps ↔ ischios »…). Chaque exercice porte une petite étiquette :
+  pousse, tire, jambes, bas du dos, tronc ou tout le corps — et « bas du dos »
+  en plus quand il le charge sans le viser.
+- **Refaire une paire à la main** : « Séparer » défait une paire, ses deux
+  exercices se font alors seuls. « Faire une paire » sur un exercice seul
+  allume les autres exercices seuls en **vert**, bons partenaires, avec la
+  raison, ou en **rouge**, à éviter, avec la raison aussi. « Mettre en paire »
+  sur un vert les réunit. **« Refaire les paires »** remet les paires
+  automatiques.
+- **Jamais deux exercices qui chargent le bas du dos dans la même paire**,
+  aucun mouvement explosif, rien au-delà du niveau intermédiaire, et
+  seulement le matériel de la salle : haltères, kettlebells, banc, tapis, et
+  quatre machines — trap bar, presse à cuisses, hack squat, traîneau. Elles ne
+  sont sur aucun poster : leur image est un dessin simple, à remplacer par une
+  photo du même nom dans `public/exercices/`.
+- **Ensemble ou chacun son tour** : chaque exercice porte deux lignes,
+  « Ensemble » et « Chacun son tour », avec un crochet vert sur le choix du
+  moment. Les poids libres, le kettlebell et les étirements se font
+  ensemble, côte à côte ; les machines, une pour deux, chacun son tour —
+  **Max commence**, et la série de l'un est le repos de l'autre. Dans une
+  paire qui compte une machine, **on se croise** : Max au premier exercice,
+  Sébastien au second, puis on échange ; personne n'attend la machine, sauf
+  si l'autre ne l'a pas encore quittée. Un toucher change la façon de faire,
+  et la durée de la séance suit.
 - **Toucher une image** l'ouvre en grand, avec les consignes : pour voir le
   détail du mouvement avant de commencer.
 - **Changer** un exercice ouvre la liste des exercices des mêmes muscles, avec
@@ -72,7 +102,35 @@ du dos, épaules, extérieur et intérieur de cuisse. Rien à taper.
   avant ce qui revient un autre jour. Le changement vaut pour chaque séance de
   ce nom.
 - **Objectifs** et **Refaire**, dans *Réglages* : choisir d'autres muscles,
-  ou tirer un autre programme. L'historique et les charges restent.
+  ou tirer un autre programme. L'historique, les charges, le nombre
+  d'exercices et le tempo restent.
+
+### Comment les paires sont formées
+
+Une paire réunit deux exercices qui s'opposent : pendant que l'un travaille,
+l'autre souffle. La règle, plus stricte que l'ancien « Lier » :
+
+- **le haut avec le bas**, ou **pousser avec tirer** ;
+- les jours d'une seule partie du corps, des **muscles opposés** : quadriceps
+  et ischios (ou fessiers, ou bas du dos), intérieur et extérieur de cuisse,
+  biceps et triceps, pectoraux et dos, épaules et dos — et le **ventre avec le
+  bas du dos**, les deux côtés du tronc ;
+- **jamais deux exercices qui chargent le bas du dos**, et **jamais les mêmes
+  muscles principaux** — pas même une fente et un soulevé de terre, qui
+  travaillent tous les deux les fessiers ;
+- à deux, **de préférence une machine avec un exercice libre** : on se
+  croise, personne n'attend.
+
+Le tronc ne s'oppose qu'au bas du dos : il a sa place le lundi et le jeudi,
+jamais le mardi, qui ne charge pas le bas du dos.
+L'application choisit les exercices d'une séance deux par deux : chaque
+exercice n'entre que s'il a un partenaire possible. Puis elle forme les
+paires — le plus de paires possible, des muscles opposés plutôt que le haut
+avec le bas — sans tenir compte de l'ordre : « Refaire les paires » retombe
+toujours sur les mêmes. Les objectifs viennent en tête de séance, et le jeudi
+la trap bar reste la première. À dix exercices, il arrive que la semaine B
+reprenne un exercice de la semaine A : les exercices du bas du corps qui
+s'opposent viennent à manquer.
 
 ### Sébastien et Max, chacun sur son téléphone
 
@@ -123,8 +181,9 @@ de quelqu'un, elle ne raccourcit que les attentes.**
 | Précédent | Désactivé : l'horloge est commune |
 
 **Envoyer à Max** (ou à Sébastien) partage un lien qui contient tout le
-programme, liens et répétitions de chacun compris : Max l'ouvre et a les
-mêmes séances, les mêmes semaines A et B, la même horloge. S'il
+programme — les paires, les répétitions de chacun, le nombre d'exercices et
+le tempo compris : Max l'ouvre et a les mêmes séances, les mêmes semaines A
+et B, la même horloge. S'il
 avait déjà un programme, l'application lui demande s'il prend celui-ci. Tant
 que l'autre téléphone n'a pas le programme — au premier jour, ou après un
 changement —, l'accueil le rappelle. Une application installée sur l'écran
@@ -267,6 +326,10 @@ Ce que le tempo lent ne travaille pas, c'est la **vitesse**, la qualité qui
 décline le plus tôt avec l'âge. Le 2 s / 4 s, avec une montée décidée, et les
 mouvements explosifs du kettlebell sont là pour ça. Les autres tempos et
 nombres de répétitions restent disponibles.
+
+C'est le réglage de la séance libre. Le programme du mois, lui, part de
+**4 s / 4 s + 2 s en bas** : son tempo se règle à part, dans *Réglages*, et
+vaut pour les deux téléphones.
 
 ### Séance proposée
 Chaque exercice est présenté avec sa vignette, les séries et répétitions, les
@@ -600,7 +663,7 @@ src/
 ├── utils/
 │   ├── generateurSeance.ts       # Choix des exercices et calcul des volumes
 │   ├── etapesSeance.ts           # Machine à étapes de la séance guidée
-│   ├── programmeMois.ts          # Composition du programme, calendrier A/B, charges, lien
+│   ├── programmeMois.ts          # Composition du programme par paires, calendrier A/B, charges, lien
 │   ├── statistiques.ts           # Fréquence d'un exercice, charges par série, charge totale
 │   ├── etatCommun.ts             # La séance commune : ses appuis, partagés avec le serveur
 │   ├── horlogeCommune.ts         # Où en est chacun sur l'horloge commune, et la règle des boutons

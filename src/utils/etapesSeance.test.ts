@@ -2,8 +2,8 @@ import { describe, expect, it } from 'vitest';
 import type { Seance } from '../types';
 import { EXERCICES_PAR_ID } from '../data/exercices';
 import { DUREES_MINUTES, FORMATS, NIVEAUX, PARAMETRES_PAR_DEFAUT } from '../data/parametres';
-import { dureeSerieSec, genererSeance } from './generateurSeance';
-import { estPoussee, genererProgramme, lierDansProgramme, seancePourPersonne } from './programmeMois';
+import { dureeSerieSec, genererSeance, groupesDeBlocs } from './generateurSeance';
+import { basculerTour, delierDansProgramme, estPoussee, genererProgramme, seancePourPersonne } from './programmeMois';
 import type { ContexteSeance } from './programmeMois';
 import {
   CHANGEMENT_SEC,
@@ -600,6 +600,10 @@ describe('superset', () => {
 describe('l’horloge des séances du programme', () => {
   const programme = genererProgramme({ graine: 3, aujourdhui: new Date(2026, 9, 5) });
   const jeudiMois = programme.seances.find((s) => s.id === 'jeudi')!;
+  /** Le même jeudi, chaque exercice seul : la trap bar chacun son tour. */
+  const jeudiSeul = jeudiMois.exercices
+    .reduce((prog, id) => delierDansProgramme(prog, 'jeudi', id), programme)
+    .seances.find((s) => s.id === 'jeudi')!;
   const tempo = { monteeSec: 3, descenteSec: 3, pauseSec: 2 };
   const parametres = { ...PARAMETRES_PAR_DEFAUT, tempo };
   const SEB: ContexteSeance = { personne: 'sebastien', aDeux: true };
@@ -627,39 +631,58 @@ describe('l’horloge des séances du programme', () => {
     const d = debuts(etapes);
     return etapes.flatMap((e, i) => (e.type === 'serie' ? [{ exerciceId: e.exerciceId, debut: d[i], fin: d[i] + e.dureeSec }] : []));
   };
-
-  it('seul : chaque nouvel exercice attend « Go », après sa pause et l’installation', () => {
-    const seule = seancePourPersonne(jeudiMois, parametres, { personne: 'sebastien' });
-    const etapes = construireEtapes(seule);
-    const manuelles = etapes.filter((e) => e.type === 'repos' && e.manuel);
-    expect(manuelles).toHaveLength(seule.blocs.length);
-    expect(manuelles.map((e) => e.dureeSec)).toEqual(
-      seule.blocs.map((_, i) => (i === 0 ? 0 : seule.blocs[i - 1].reposSec) + INSTALLATION_SEC),
+  /** Le temps passé sur un exercice, préparation comprise : sur une machine,
+   *  on s'installe avant la série. */
+  const surExercice = (etapes: Etape[], exerciceId: string) => {
+    const d = debuts(etapes);
+    return etapes.flatMap((e, i) =>
+      e.type === 'serie' && e.exerciceId === exerciceId ? [{ debut: d[i - 1], fin: d[i] + e.dureeSec }] : [],
     );
-    // Seul, personne à attendre.
-    expect(etapes.some((e) => e.type === 'repos' && e.motif !== 'repos' && e.motif !== 'installation')).toBe(false);
+  };
+  const jamaisEnsemble = (a: { debut: number; fin: number }[], b: { debut: number; fin: number }[]) => {
+    for (const x of a) for (const y of b) expect(x.fin <= y.debut || y.fin <= x.debut).toBe(true);
+  };
+
+  it('seul : chaque nouvelle paire attend « Go », après la pause de la précédente et l’installation', () => {
+    for (const seanceMois of [jeudiMois, jeudiSeul]) {
+      const seule = seancePourPersonne(seanceMois, parametres, { personne: 'sebastien' });
+      const etapes = construireEtapes(seule);
+      const groupes = groupesDeBlocs(seule.blocs);
+      const manuelles = etapes.filter((e) => e.type === 'repos' && e.manuel);
+      expect(manuelles).toHaveLength(groupes.length);
+      expect(manuelles.map((e) => e.dureeSec)).toEqual(
+        groupes.map((_, g) => (g === 0 ? 0 : groupes[g - 1].at(-1)!.reposSec) + INSTALLATION_SEC),
+      );
+      // Seul, personne à attendre.
+      expect(etapes.some((e) => e.type === 'repos' && e.motif !== 'repos' && e.motif !== 'installation')).toBe(false);
+    }
+    // Trois paires et la finale : quatre « Go ».
+    expect(groupesDeBlocs(seancePourPersonne(jeudiMois, parametres, { personne: 'sebastien' }).blocs)).toHaveLength(4);
   });
 
   it('à deux, les « Go » tombent à la même seconde sur les deux téléphones', () => {
-    for (const s of programme.seances) {
+    for (const s of [...programme.seances, jeudiSeul]) {
       const [seb, max] = [etapesDe(s, SEB), etapesDe(s, MAX)];
       expect(instantsGo(seb)).toEqual(instantsGo(max));
       expect(dureeTotaleSec(seb)).toBe(dureeTotaleSec(max));
     }
   });
 
-  it('à deux, les séries côte à côte commencent ensemble', () => {
-    const [seb, max] = [series(etapesDe()), series(etapesDe(jeudiMois, MAX))];
-    const machines = new Set(jeudiMois.tour);
-    for (const id of jeudiMois.exercices.filter((x) => !machines.has(x))) {
-      const debutsSeb = seb.filter((x) => x.exerciceId === id).map((x) => x.debut);
-      const debutsMax = max.filter((x) => x.exerciceId === id).map((x) => x.debut);
-      expect(debutsMax.slice(0, debutsSeb.length)).toEqual(debutsSeb);
+  it('à deux, côte à côte, chaque tour d’une paire commence ensemble', () => {
+    for (const s of programme.seances) {
+      const [seb, max] = [series(etapesDe(s, SEB)), series(etapesDe(s, MAX))];
+      const machines = new Set(s.tour);
+      for (const [premier, second] of s.liens ?? []) {
+        if (machines.has(premier) || machines.has(second)) continue;
+        const debutsSeb = seb.filter((x) => x.exerciceId === premier).map((x) => x.debut);
+        const debutsMax = max.filter((x) => x.exerciceId === premier).map((x) => x.debut);
+        expect(debutsMax.slice(0, debutsSeb.length)).toEqual(debutsSeb);
+      }
     }
   });
 
-  it('chacun son tour sur la trap bar : Max commence, Sébastien attend sa série', () => {
-    const [seb, max] = [etapesDe(), etapesDe(jeudiMois, MAX)];
+  it('chacun son tour sur la trap bar seule : Max commence, Sébastien attend sa série', () => {
+    const [seb, max] = [etapesDe(jeudiSeul), etapesDe(jeudiSeul, MAX)];
     const goSeb = seb.findIndex((e) => e.type === 'repos' && e.manuel);
     expect(seb[goSeb + 1]).toMatchObject({
       type: 'repos',
@@ -670,14 +693,11 @@ describe('l’horloge des séances du programme', () => {
     expect(max[goMax + 1].type).toBe('pret');
     expect(max[goMax + 2]).toMatchObject({ type: 'serie', exerciceId: 'trap-bar-deadlift', reps: 10 });
     // Jamais les deux sur la machine en même temps.
-    const surBarre = (liste: ReturnType<typeof series>) => liste.filter((x) => x.exerciceId === 'trap-bar-deadlift');
-    for (const a of surBarre(series(seb))) {
-      for (const b of surBarre(series(max))) expect(a.fin <= b.debut || b.fin <= a.debut).toBe(true);
-    }
+    jamaisEnsemble(surExercice(seb, 'trap-bar-deadlift'), surExercice(max, 'trap-bar-deadlift'));
   });
 
   it('Max fait sa série de plus aux poussées : Sébastien a un repos prolongé', () => {
-    const seance = seancePourPersonne(jeudiMois, parametres, SEB);
+    const seance = seancePourPersonne(jeudiSeul, parametres, SEB);
     const poussee = seance.blocs.find((b) => estPoussee(EXERCICES_PAR_ID[b.exerciceId]) && !b.tour)!;
     expect(poussee.autre?.series).toBe(poussee.series + 1);
     const prolonge = construireEtapes(seance).find(
@@ -687,46 +707,82 @@ describe('l’horloge des séances du programme', () => {
     const maSerie = DUREE_PRET_SEC + serieDe(poussee.exerciceId, 8);
     const saSerie = DUREE_PRET_SEC + serieDe(poussee.exerciceId, 10);
     expect(prolonge?.dureeSec).toBe(saSerie - maSerie + poussee.reposSec + saSerie);
+    // En paire aussi, Sébastien attend la quatrième série de Max.
+    const enPaire = construireEtapes(seancePourPersonne(jeudiMois, parametres, SEB));
+    expect(enPaire.some((e) => e.type === 'repos' && e.motif === 'serie-de-plus')).toBe(true);
   });
 
-  it('dans un groupe lié avec une machine, on se croise : Max au premier exercice, Sébastien au second', () => {
+  it('dans la paire de la trap bar, on se croise : Max à la barre, Sébastien à l’autre exercice, puis on échange', () => {
     const [barre, autre] = jeudiMois.exercices;
-    const lie = lierDansProgramme(programme, 'jeudi', barre, autre).seances.find((s) => s.id === 'jeudi')!;
-    const [seb, max] = [etapesDe(lie, SEB), etapesDe(lie, MAX)];
+    expect(barre).toBe('trap-bar-deadlift');
+    expect(jeudiMois.liens?.[0]).toEqual([barre, autre]);
+    const [seb, max] = [etapesDe(jeudiMois, SEB), etapesDe(jeudiMois, MAX)];
     expect(seb.find((e) => e.type === 'serie')?.exerciceId).toBe(autre);
     expect(max.find((e) => e.type === 'serie')?.exerciceId).toBe(barre);
     expect(instantsGo(seb)).toEqual(instantsGo(max));
-    for (const a of series(seb).filter((x) => x.exerciceId === barre)) {
-      for (const b of series(max).filter((x) => x.exerciceId === barre)) {
-        expect(a.fin <= b.debut || b.fin <= a.debut).toBe(true);
+    // Jamais les deux à la barre, préparation comprise.
+    jamaisEnsemble(surExercice(seb, barre), surExercice(max, barre));
+  });
+
+  it('on se croise aussi le lundi et le mardi, sur une paire qui compte une machine', () => {
+    for (const id of ['lundi-a', 'mardi-a', 'lundi-b', 'mardi-b']) {
+      const [premier, second] = programme.seances.find((s) => s.id === id)!.liens![0];
+      // Une seule paire d'haltères de la bonne charge : le premier exercice,
+      // chacun son tour.
+      const seanceMois = basculerTour(programme, id, premier).seances.find((s) => s.id === id)!;
+      for (const tempoDuJour of [tempo, { monteeSec: 4, descenteSec: 4, pauseSec: 2 }]) {
+        const contexte = (qui: ContexteSeance) => ({ ...qui, tempo: tempoDuJour });
+        const seb = construireEtapes(seancePourPersonne(seanceMois, parametres, contexte(SEB)));
+        const max = construireEtapes(seancePourPersonne(seanceMois, parametres, contexte(MAX)));
+        // Max commence par le premier, Sébastien par le second.
+        expect(max.find((e) => e.type === 'serie')?.exerciceId, id).toBe(premier);
+        expect(seb.find((e) => e.type === 'serie')?.exerciceId, id).toBe(second);
+        // La même horloge sur les deux téléphones.
+        expect(instantsGo(seb)).toEqual(instantsGo(max));
+        expect(dureeTotaleSec(seb)).toBe(dureeTotaleSec(max));
+        // Chacun fait toutes ses séries, et jamais les deux sur la machine en
+        // même temps.
+        const blocsSeb = seancePourPersonne(seanceMois, parametres, contexte(SEB)).blocs;
+        for (const exerciceId of [premier, second]) {
+          const bloc = blocsSeb.find((b) => b.exerciceId === exerciceId)!;
+          expect(series(seb).filter((x) => x.exerciceId === exerciceId)).toHaveLength(bloc.series);
+          expect(series(max).filter((x) => x.exerciceId === exerciceId)).toHaveLength(bloc.autre!.series);
+        }
+        jamaisEnsemble(surExercice(seb, premier), surExercice(max, premier));
       }
     }
   });
 
   it('propose de s’étirer pendant la série de l’autre et les grosses pauses, pas à chaque repos', () => {
     const avecEtirement = (etapes: Etape[]) => etapes.filter(pauseAEtirement);
-    // À deux : chaque attente de la série de l'autre à la trap bar, puis la
-    // pause qui suit sa dernière série, avant d'installer le suivant.
-    const seb = etapesDe();
+    // À deux, la trap bar seule : chaque attente de la série de l'autre, puis
+    // la pause qui suit sa dernière série, avant d'installer le suivant.
+    const seb = etapesDe(jeudiSeul);
     const attentes = seb.filter((e) => e.type === 'repos' && e.motif === 'tour' && e.exerciceId === 'trap-bar-deadlift');
     expect(attentes.length).toBeGreaterThan(0);
     expect(attentes.every(pauseAEtirement)).toBe(true);
     const installations = seb.filter((e) => e.type === 'repos' && e.manuel);
     expect(installations.map(pauseAEtirement)).toEqual(
-      installations.map((_, g) => g > 0 && jeudiMois.exercices[g - 1] === 'trap-bar-deadlift'),
+      installations.map((_, g) => g > 0 && jeudiSeul.exercices[g - 1] === 'trap-bar-deadlift'),
     );
     // Seul : les deux minutes de la trap bar, jamais la minute trente des autres.
-    const seul = construireEtapes(seancePourPersonne(jeudiMois, parametres, { personne: 'sebastien' }));
+    const seul = construireEtapes(seancePourPersonne(jeudiSeul, parametres, { personne: 'sebastien' }));
     const grossesPauses = avecEtirement(seul).filter((e) => !(e.type === 'repos' && e.manuel));
     expect(grossesPauses.length).toBe(2);
     expect(grossesPauses.every((e) => e.exerciceId === 'trap-bar-deadlift' && e.dureeSec === 120)).toBe(true);
+    // En paire : les deux minutes après la paire de la trap bar, jamais la
+    // minute des autres paires.
+    const enPaire = construireEtapes(seancePourPersonne(jeudiMois, parametres, { personne: 'sebastien' }));
+    const apresPaire = avecEtirement(enPaire).filter((e) => !(e.type === 'repos' && e.manuel));
+    expect(apresPaire.length).toBe(2);
+    expect(apresPaire.every((e) => e.exerciceId === jeudiMois.exercices[1] && e.dureeSec === 120)).toBe(true);
   });
 
-  it('« Passer l’exercice » mène à l’installation du suivant', () => {
+  it('« Passer l’exercice » passe la paire et mène à l’installation de la suivante', () => {
     const etapes = etapesDe();
     const premiereSerie = etapes.findIndex((e) => e.type === 'serie');
     const apres = etapes[indexApresExercice(etapes, premiereSerie)];
     expect(apres).toMatchObject({ type: 'repos', manuel: true, motif: 'installation' });
-    expect(apres.exerciceId).toBe(jeudiMois.exercices[1]);
+    expect(apres.exerciceId).toBe(jeudiMois.exercices[2]);
   });
 });

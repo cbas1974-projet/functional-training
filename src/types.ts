@@ -394,24 +394,37 @@ export interface SeanceDuMois {
   /** Semaine A ou B ; absente, la séance revient toutes les semaines. */
   semaine?: 'A' | 'B';
   type: TypeSeanceMois;
-  /** 'series' : séries droites, repos entre chacune — le jeudi.
-   *  'enchaine' : blocs de trois exercices à la suite, puis une pause — le
-   *  lundi et le mardi. */
-  format: 'series' | 'enchaine';
-  /** Identifiants d'exercices de la bibliothèque, dans l'ordre de la séance. */
+  /** Séries : trois par exercice, les exercices par paires (`liens`). Les
+   *  anciens « enchaînés » de trois du lundi et du mardi n'existent plus : un
+   *  programme qui en avait est recomposé. */
+  format: 'series';
+  /** Identifiants d'exercices de la bibliothèque, dans l'ordre de la séance :
+   *  les deux exercices d'une paire côte à côte. */
   exercices: string[];
   /** Le dernier exercice, pour les jambes : presse, hack squat, traîneau ou
-   *  marche du fermier. En séries, après les enchaînements. */
+   *  marche du fermier. Seul, en séries, après les paires. */
   finale?: string;
   /** La partie du corps du jour : le bas le lundi, le haut le mardi, tout le
    *  corps le jeudi. */
   partie?: 'bas' | 'haut' | 'complet';
-  /** Exercices liés, qui s'enchaînent sans pause : la pause vient après le
-   *  groupe. Deux ou trois exercices chacun. */
+  /** Les paires : deux exercices opposés qui s'enchaînent sans pause ; la
+   *  pause vient après la paire. Un exercice hors paire se fait seul. */
   liens?: string[][];
   /** Exercices faits chacun son tour (une machine pour deux) ; les autres se
    *  font en même temps. */
   tour?: string[];
+}
+
+/** Les réglages du programme que les deux téléphones partagent. */
+export interface ReglagesDuo {
+  /** Les répétitions de chacun. */
+  reps?: Record<Personne, number>;
+  /** Le tempo des séances du programme ; la séance libre garde celui du
+   *  téléphone. */
+  tempo?: Tempo;
+  /** Le nombre d'exercices de chaque séance, sans compter le dernier pour
+   *  les jambes : 4, 6, 8 ou 10. */
+  exercices?: number;
 }
 
 export interface ProgrammeMois {
@@ -427,9 +440,11 @@ export interface ProgrammeMois {
   /** Version de la composition ; un programme plus ancien est recomposé
    *  avec la même graine. */
   version?: number;
-  /** À deux : les répétitions de chacun. Le lien les transporte, pour que
-   *  les deux téléphones calculent la même horloge. */
-  duo?: { reps: Record<Personne, number> };
+  /** Les réglages communs aux deux téléphones : les répétitions de chacun,
+   *  le tempo et le nombre d'exercices des séances. Le lien les transporte,
+   *  pour que les deux téléphones calculent la même horloge. Absents, ceux
+   *  par défaut. */
+  duo?: ReglagesDuo;
   /** Le code d'équipe qui regroupe les deux téléphones sur le serveur ;
    *  absent, il se tire de la graine et du premier lundi. */
   equipe?: string;

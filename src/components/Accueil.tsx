@@ -15,6 +15,7 @@ import type {
   ProgrammeMois,
   Seance,
   SeanceDuMois,
+  Tempo,
   UnitePoids,
 } from '../types';
 import { EXERCICES_PAR_ID, NOM_MUSCLE, cheminImage } from '../data/exercices';
@@ -26,20 +27,26 @@ import { SUFFIXE_UNITE, chargeTotale, uniteDeSeance } from '../utils/statistique
 import { bellSound } from '../utils/sounds';
 import {
   JOURS,
+  NOMBRES_EXERCICES,
   NOM_PERSONNE,
+  NOM_ROLE,
   PERSONNES,
+  REPOS_PAIRE_SEC,
   REPS_SEMAINE_DURE,
   SERIES_PROGRAMME,
-  TAILLE_ENCHAINEMENT,
-  accordLien,
+  TEMPO_PROGRAMME,
+  accordPaire,
   adresseServeurValide,
   alternatives,
   autrePersonne,
+  avecNombreExercices,
+  avecTempo,
   basculerTour,
   chargesPassees,
   delierDansProgramme,
   depuisIso,
   equipeDe,
+  estRetouche,
   estSemaineDure,
   exercicesAAugmenter,
   faiteCetteSemaine,
@@ -47,17 +54,22 @@ import {
   isoDate,
   lienDePartage,
   lierDansProgramme,
+  nombreExercicesDe,
+  pairesAutomatiques,
   prochaineDate,
   programmeDansLien,
+  refairePaires,
   refaireProgramme,
   remplacerDansProgramme,
   repsDuDuo,
+  rolesDe,
   seanceAProposer,
   seancePourPersonne,
   semaineDe,
   semainesEcoulees,
+  tempoDuProgramme,
 } from '../utils/programmeMois';
-import type { AccordLien, ContexteSeance } from '../utils/programmeMois';
+import type { AccordPaire, ContexteSeance } from '../utils/programmeMois';
 import type { ConfigSynchro } from '../hooks/useSeanceCommune';
 import { avecSeanceFaite, serveurDe } from '../utils/enLigne';
 import FicheExercice from './FicheExercice';
@@ -98,11 +110,6 @@ type FeuilleOuverte =
 const ACTION = 60;
 /** Répétitions qu'on peut choisir pour chacun. */
 const REPS_POSSIBLES = [6, 8, 10, 12];
-/** Pourquoi deux exercices ne se lient pas. */
-const RAISON_ROUGE: Record<Exclude<AccordLien, 'bon'>, string> = {
-  'memes-muscles': 'Mêmes muscles',
-  'bas-du-dos': 'Le bas du dos deux fois',
-};
 /** Un programme du mois dure quatre semaines ; ensuite on le refait. */
 const SEMAINES_PAR_MOIS = 4;
 const JOURS_COURTS = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
@@ -150,12 +157,15 @@ function dureeCourte(sec: number): string {
   return secondes === 0 ? `${minutes} min` : `${minutes} min ${secondes}`;
 }
 
-/** Où en est un exercice quand on lie : celui qu'on vient de choisir, un
- *  partenaire possible — vert ou rouge —, ou rien de tout ça. */
+/** « Pousser ↔ tirer » : la raison, avec sa majuscule. */
+const phrase = (texte: string) => texte.charAt(0).toUpperCase() + texte.slice(1);
+
+/** Où en est un exercice quand on forme une paire : libre, celui qu'on vient
+ *  de choisir, un partenaire possible — vert ou rouge —, ou déjà en paire. */
 type EtatLien =
   | { mode: 'libre'; onLier: () => void }
   | { mode: 'choisi'; onAnnuler: () => void }
-  | { mode: 'candidat'; accord: AccordLien; onLier: () => void }
+  | { mode: 'candidat'; accord: AccordPaire; onLier: () => void }
   | { mode: 'aucun' };
 
 /** Bandeau d'une question ou d'un rappel, en haut de l'accueil. */
@@ -184,8 +194,33 @@ function BoutonSecondaire({
   );
 }
 
-/** Un exercice de la séance : l'image du poster, les muscles, le volume du
- *  jour — et celui de l'autre, à deux —, les charges de la dernière fois. */
+/** Une des deux lignes « Ensemble » / « Chacun son tour » : un crochet vert
+ *  sur le choix actif. */
+function ChoixTour({ actif, onClick, children }: { actif: boolean; onClick: () => void; children: ReactNode }) {
+  return (
+    <button
+      type="button"
+      onClick={actif ? undefined : onClick}
+      aria-pressed={actif}
+      className="flex w-full items-center gap-2 rounded-lg px-2 text-left text-xs"
+      style={{
+        minHeight: 32,
+        background: 'transparent',
+        color: actif ? 'var(--texte)' : 'var(--texte-discret)',
+        fontWeight: actif ? 700 : 500,
+      }}
+    >
+      <span aria-hidden="true" className="w-4 shrink-0 text-center font-bold" style={{ color: 'var(--montee)' }}>
+        {actif ? '✓' : ''}
+      </span>
+      {children}
+    </button>
+  );
+}
+
+/** Un exercice de la séance : l'image du poster, les muscles et son rôle, le
+ *  volume du jour — et celui de l'autre, à deux —, les charges de la
+ *  dernière fois. */
 function LigneExercice({
   bloc,
   exercice,
@@ -209,7 +244,7 @@ function LigneExercice({
   onImage: () => void;
 }) {
   const tour = bloc.tour === true;
-  const rouge = lien.mode === 'candidat' && lien.accord !== 'bon';
+  const rouge = lien.mode === 'candidat' && lien.accord.accord !== 'bon';
   const cadre =
     lien.mode === 'choisi'
       ? 'var(--accent)'
@@ -218,11 +253,30 @@ function LigneExercice({
           ? 'var(--alerte)'
           : 'var(--montee)'
         : 'transparent';
+  const [role, ...autresRoles] = rolesDe(exercice);
   return (
     <li className="p-3" style={{ background: 'var(--surface-haute)', borderRadius: 14, border: `2px solid ${cadre}` }}>
       <FicheExercice exercice={exercice} taille="petite" onImage={onImage}>
         <p className="text-xs" style={{ color: 'var(--texte-discret)' }}>
           {musclesCibles(exercice)}
+        </p>
+        {/* Son rôle : pousse, tire, jambes… et « bas du dos » quand il le charge. */}
+        <p className="mt-1 flex flex-wrap gap-1">
+          <span
+            className="rounded-full px-2 text-[11px] font-semibold"
+            style={{ border: '1px solid var(--bordure)', color: 'var(--texte)' }}
+          >
+            {NOM_ROLE[role]}
+          </span>
+          {autresRoles.map((autre) => (
+            <span
+              key={autre}
+              className="rounded-full px-2 text-[11px] font-semibold"
+              style={{ border: '1px solid var(--pause)', color: 'var(--pause)' }}
+            >
+              {NOM_ROLE[autre]}
+            </span>
+          ))}
         </p>
         <div className="flex items-center justify-between gap-2">
           <p className="chiffres text-base font-bold" style={{ color: 'var(--texte)' }}>
@@ -259,34 +313,26 @@ function LigneExercice({
             )}
           </p>
         )}
-        <div className="mt-1 flex flex-wrap gap-2">
-          {/* À deux : côte à côte, ou chacun son tour sur la machine. */}
+        {/* À deux : côte à côte, ou chacun son tour sur la machine. */}
+        <div role="group" aria-label="À deux" className="mt-1">
+          <ChoixTour actif={!tour} onClick={onBasculerTour}>
+            Ensemble
+          </ChoixTour>
+          <ChoixTour actif={tour} onClick={onBasculerTour}>
+            Chacun son tour
+          </ChoixTour>
+        </div>
+        {/* Un exercice seul : on lui choisit un partenaire. */}
+        {lien.mode === 'libre' && (
           <button
             type="button"
-            onClick={onBasculerTour}
-            aria-pressed={tour}
-            className="rounded-full px-3 text-xs font-semibold"
-            style={{
-              minHeight: 34,
-              background: 'transparent',
-              border: `1px solid ${tour ? 'var(--pause)' : 'var(--bordure)'}`,
-              color: tour ? 'var(--pause)' : 'var(--texte-discret)',
-            }}
+            onClick={lien.onLier}
+            className="mt-1 rounded-full px-3 text-xs font-semibold"
+            style={{ minHeight: 34, background: 'transparent', border: '1px solid var(--accent)', color: 'var(--accent)' }}
           >
-            {tour ? 'Chacun son tour' : 'En même temps'}
+            Faire une paire
           </button>
-          {/* Le jeudi : enchaîner avec un autre exercice, sans pause. */}
-          {lien.mode === 'libre' && (
-            <button
-              type="button"
-              onClick={lien.onLier}
-              className="rounded-full px-3 text-xs font-semibold"
-              style={{ minHeight: 34, background: 'transparent', border: '1px solid var(--accent)', color: 'var(--accent)' }}
-            >
-              Lier
-            </button>
-          )}
-        </div>
+        )}
         {lien.mode === 'choisi' && (
           <button
             type="button"
@@ -300,31 +346,40 @@ function LigneExercice({
         {lien.mode === 'candidat' &&
           (rouge ? (
             <p className="mt-2 text-sm font-semibold" style={{ color: 'var(--alerte)' }}>
-              {RAISON_ROUGE[lien.accord as Exclude<AccordLien, 'bon'>]} : à ne pas lier
+              À éviter : {lien.accord.raison}
             </p>
           ) : (
-            <button
-              type="button"
-              onClick={lien.onLier}
-              className="mt-2 w-full rounded-xl px-3 text-sm font-bold"
-              style={{ minHeight: CIBLE, background: 'var(--montee)', color: 'var(--fond)' }}
-            >
-              Lier ici
-            </button>
+            <>
+              <p className="mt-2 text-sm font-semibold" style={{ color: 'var(--montee)' }}>
+                Bon partenaire : {lien.accord.raison}
+              </p>
+              <button
+                type="button"
+                onClick={lien.onLier}
+                className="mt-1 w-full rounded-xl px-3 text-sm font-bold"
+                style={{ minHeight: CIBLE, background: 'var(--montee)', color: 'var(--fond)' }}
+              >
+                Mettre en paire
+              </button>
+            </>
           ))}
       </FicheExercice>
     </li>
   );
 }
 
-/** Les réglages : qui s'entraîne, les répétitions de chacun, l'unité, le
- *  programme, le tempo. */
+/** Les réglages : qui s'entraîne, les répétitions de chacun, le nombre
+ *  d'exercices et le tempo du programme, l'unité, le programme, l'affichage. */
 function FeuilleReglages({
   personne,
   parametres,
   reps,
+  nombreExercices,
+  tempo,
   onPersonne,
   onReps,
+  onNombreExercices,
+  onTempo,
   onParametres,
   onObjectifs,
   onRefaire,
@@ -336,10 +391,16 @@ function FeuilleReglages({
   personne: Personne | null;
   parametres: ParametresSeance;
   reps: Record<Personne, number>;
+  /** Le nombre d'exercices et le tempo du programme : les mêmes sur les deux
+   *  téléphones. */
+  nombreExercices: number;
+  tempo: Tempo;
   serveur: string | null;
   onServeur: (adresse: string | null) => void;
   onPersonne: (personne: Personne) => void;
   onReps: (personne: Personne, reps: number) => void;
+  onNombreExercices: (nombre: number) => void;
+  onTempo: (tempo: Tempo) => void;
   onParametres: (partiel: Partial<ParametresSeance>) => void;
   onObjectifs: () => void;
   onRefaire: () => void;
@@ -378,6 +439,36 @@ function FeuilleReglages({
         </div>
       </Groupe>
 
+      <Groupe
+        titre="Exercices par séance"
+        aide="Deux par deux, sans compter le dernier pour les jambes. Changer le nombre recompose les séances, avec les mêmes objectifs."
+      >
+        <div className="flex flex-wrap gap-2">
+          {NOMBRES_EXERCICES.map((n) => (
+            <Pastille key={n} selectionne={nombreExercices === n} onClick={() => onNombreExercices(n)}>
+              <span className="chiffres">{n}</span>
+            </Pastille>
+          ))}
+        </div>
+      </Groupe>
+
+      <Groupe
+        titre="Tempo des séances"
+        aide="Le nombre d’exercices et le tempo sont les mêmes sur les deux téléphones : ils partent avec le programme. La séance libre garde son tempo à elle."
+      >
+        <div className="space-y-2">
+          {TEMPOS.map((t) => (
+            <Choix
+              key={t.nom}
+              selectionne={memeTempo(tempo, t.tempo)}
+              onClick={() => onTempo(t.tempo)}
+              nom={memeTempo(t.tempo, TEMPO_PROGRAMME) ? `${t.nom} · par défaut` : t.nom}
+              description={t.description}
+            />
+          ))}
+        </div>
+      </Groupe>
+
       <Groupe titre="Unité des charges">
         <div className="flex flex-wrap gap-2">
           {UNITES_POIDS.map((u) => (
@@ -408,22 +499,9 @@ function FeuilleReglages({
           className="flex cursor-pointer select-none items-center text-sm font-bold"
           style={{ color: 'var(--texte-discret)', minHeight: CIBLE, listStyle: 'none' }}
         >
-          Tempo et affichage
+          Affichage
         </summary>
         <div className="space-y-5 pb-2">
-          <Groupe titre="Tempo">
-            <div className="space-y-2">
-              {TEMPOS.map((t) => (
-                <Choix
-                  key={t.nom}
-                  selectionne={memeTempo(parametres.tempo, t.tempo)}
-                  onClick={() => onParametres({ tempo: t.tempo })}
-                  nom={t.nom}
-                  description={t.description}
-                />
-              ))}
-            </div>
-          </Groupe>
           <Groupe titre="Guide visuel pendant la série">
             <div className="space-y-2">
               {GUIDES_VISUELS.map((guide) => (
@@ -695,7 +773,7 @@ export default function Accueil({
   /** L'autre téléphone n'a pas ce programme-ci : premier lancement, ou
    *  programme changé depuis le dernier envoi. Gardé dans la sauvegarde. */
   const aRenvoyer = etat.programmeARenvoyer === true;
-  /** Le jeudi : l'exercice choisi pour le lier à un autre. */
+  /** L'exercice seul choisi pour former une paire avec un autre. */
   const [aLier, setALier] = useState<string | null>(null);
 
   const maintenant = new Date();
@@ -717,6 +795,8 @@ export default function Accueil({
       aDeux,
       semaineDure,
       reps: repsDuDuo(programme),
+      // Le tempo du programme, le même sur les deux téléphones.
+      tempo: tempoDuProgramme(programme),
       augmenter: exercicesAAugmenter(historique, programme, seanceMois, depuisIso(jourSeance)),
     }),
     [personne, aDeux, semaineDure, programme, historique, seanceMois, jourSeance],
@@ -761,13 +841,15 @@ export default function Accueil({
     surtitre = `Prochaine séance · ${dateLongue(proposee.date)}`;
   }
 
-  const enchaine = seanceMois.format === 'enchaine';
   // Le dernier exercice, pour les jambes, se montre à part.
   const dernier = seance.blocs[seance.blocs.length - 1];
   const blocFinal = seanceMois.finale && dernier?.exerciceId === seanceMois.finale ? dernier : undefined;
   const principaux = blocFinal ? seance.blocs.slice(0, -1) : seance.blocs;
-  // Les blocs d'enchaînement, ou les exercices liés du jeudi.
+  // Les paires, et les exercices seuls.
   const groupes = groupesDeBlocs(principaux);
+  const avecPaires = groupes.some((groupe) => groupe.length > 1);
+  // Les paires ont été retouchées : on peut remettre les automatiques.
+  const pairesRetouchees = useMemo(() => !pairesAutomatiques(seanceMois), [seanceMois]);
   const echauffement = seance.echauffement ?? [];
   const etirements = [...new Set((seance.retourCalme ?? []).map((m) => m.exerciceId).filter(estUnExercice))];
   const avecTrapBar = seance.blocs.some((bloc) => bloc.exerciceId === 'trap-bar-deadlift');
@@ -780,23 +862,18 @@ export default function Accueil({
     setLienACopier(null);
   };
 
-  /** Le temps que fait gagner un groupe lié. */
-  const gainDuLien = (exerciceId: string): number => {
-    const deliee = delierDansProgramme(programme, seanceMois.id, exerciceId).seances.find((s) => s.id === seanceMois.id);
-    return deliee ? seancePourPersonne(deliee, parametres, contexte).dureeEstimeeSec - seance.dureeEstimeeSec : 0;
-  };
-
-  /** Le jeudi, lier deux exercices : le premier choisi, puis un vert. */
-  const lie = (id: string) => (seanceMois.liens ?? []).some((groupe) => groupe.includes(id));
-  const choixLien = aLier !== null && seanceMois.exercices.includes(aLier) ? aLier : null;
+  /** Former une paire : un exercice seul, puis un partenaire — vert s'il
+   *  s'y oppose, rouge s'il faut l'éviter. */
+  const enPaire = (id: string) => (seanceMois.liens ?? []).some((groupe) => groupe.includes(id));
+  const choixLien = aLier !== null && seanceMois.exercices.includes(aLier) && !enPaire(aLier) ? aLier : null;
   const etatLien = (bloc: BlocSeries): EtatLien => {
     const id = bloc.exerciceId;
-    if (seanceMois.format !== 'series' || bloc === blocFinal || lie(id)) return { mode: 'aucun' };
+    if (bloc === blocFinal || enPaire(id)) return { mode: 'aucun' };
     if (!choixLien) return { mode: 'libre', onLier: () => setALier(id) };
     if (id === choixLien) return { mode: 'choisi', onAnnuler: () => setALier(null) };
     return {
       mode: 'candidat',
-      accord: accordLien(EXERCICES_PAR_ID[choixLien], EXERCICES_PAR_ID[id]),
+      accord: accordPaire(EXERCICES_PAR_ID[choixLien], EXERCICES_PAR_ID[id]),
       onLier: () => {
         modifierProgramme((prec) => lierDansProgramme(prec, seanceMois.id, choixLien, id));
         setALier(null);
@@ -841,7 +918,21 @@ export default function Accueil({
   /** Les répétitions de chacun voyagent avec le programme : les deux
    *  téléphones en tirent la même horloge. */
   const changerReps = (qui: Personne, n: number) =>
-    modifierProgramme((prec) => ({ ...prec, duo: { reps: { ...repsDuDuo(prec), [qui]: n } } }));
+    modifierProgramme((prec) => ({ ...prec, duo: { ...prec.duo, reps: { ...repsDuDuo(prec), [qui]: n } } }));
+
+  /** Le nombre d'exercices et le tempo voyagent aussi avec le programme. Un
+   *  autre nombre recompose les séances : on prévient s'il y a des retouches
+   *  à perdre. */
+  const nombreExercices = nombreExercicesDe(programme);
+  const changerNombreExercices = (n: number) => {
+    if (n === nombreExercices) return;
+    if (estRetouche(programme) && !window.confirm('Les exercices changés à la main et les paires refaites seront perdus. Continuer ?')) {
+      return;
+    }
+    setALier(null);
+    modifierProgramme((prec) => avecNombreExercices(prec, n));
+  };
+  const changerTempo = (tempo: Tempo) => modifierProgramme((prec) => avecTempo(prec, tempo));
 
   const changerProgramme = (nouveau: ProgrammeMois, aRenvoyerEnsuite = true) => {
     onChange((prec) => ({ ...prec, programme: nouveau, programmeARenvoyer: aRenvoyerEnsuite }));
@@ -1097,15 +1188,13 @@ export default function Accueil({
             </h2>
             <p className="chiffres mt-1 text-sm" style={{ color: 'var(--texte-discret)' }}>
               ≈ {formaterDuree(Math.round(seance.dureeEstimeeSec / 60) * 60)}
-              {aDeux && autre ? ` avec ${autre}` : ''} · {seance.blocs.length} exercices ·{' '}
-              {enchaine ? `${SERIES_PROGRAMME} tours` : `${SERIES_PROGRAMME} séries`}
+              {aDeux && autre ? ` avec ${autre}` : ''} · {seance.blocs.length} exercices · {SERIES_PROGRAMME} séries
               {seanceMois.semaine ? ` · semaine ${seanceMois.semaine}` : ''}
             </p>
             <p className="mt-2 text-sm" style={{ color: 'var(--texte-discret)' }}>
-              {enchaine
-                ? `${TAILLE_ENCHAINEMENT} exercices à la suite, puis 1 min 30 de pause.`
-                : `Pauses : ${avecTrapBar ? '2 min à la trap bar, ' : ''}1 min 30 aux gros exercices, 1 min aux petits.`}{' '}
-              À chaque nouvel exercice, on installe, puis on repart sur « Go ».
+              {avecPaires
+                ? `Par paires : les deux exercices à la suite, puis ${dureeCourte(REPOS_PAIRE_SEC)} de pause${avecTrapBar ? ', 2 min avec la trap bar' : ''}. À chaque nouvelle paire, on installe, puis on repart sur « Go ».`
+                : `Pauses : ${avecTrapBar ? '2 min à la trap bar, ' : ''}1 min 30 aux gros exercices, 1 min aux petits. À chaque nouvel exercice, on installe, puis on repart sur « Go ».`}
             </p>
 
             {semaineDure && (
@@ -1146,50 +1235,66 @@ export default function Accueil({
 
             {choixLien && (
               <p className="mt-3 rounded-xl p-3 text-sm" style={{ background: 'var(--surface-haute)', color: 'var(--texte)' }}>
-                Touchez « Lier ici » sur un exercice vert : les deux s’enchaînent sans pause, la pause vient après.
-                Rouge : à ne pas lier.
+                Touchez « Mettre en paire » sur un exercice vert : les deux se font à la suite, la pause vient
+                après. Rouge : à éviter, la raison est dessous.
               </p>
             )}
 
-            {enchaine ? (
-              groupes.map((groupe, index) => (
-                <div key={index} className="mt-3">
-                  <p className="mb-2 text-sm font-bold" style={{ color: 'var(--texte)' }}>
-                    Bloc {index + 1}
-                  </p>
-                  <ul className="space-y-2">{groupe.map(ligne)}</ul>
-                </div>
-              ))
-            ) : (
-              <div className="mt-3 space-y-2">
-                {groupes.map((groupe) => {
-                  if (groupe.length === 1) return <ul key={groupe[0].exerciceId}>{ligne(groupe[0])}</ul>;
-                  const gain = gainDuLien(groupe[0].exerciceId);
-                  return (
-                    <div
-                      key={groupe[0].exerciceId}
-                      className="space-y-2 rounded-2xl p-2"
-                      style={{ border: '2px solid var(--montee)' }}
-                    >
-                      <div className="flex items-center justify-between gap-2 pl-1">
+            {/* Les paires : deux exercices opposés, à la suite, puis la pause. */}
+            <div className="mt-3 space-y-2">
+              {groupes.map((groupe) => {
+                if (groupe.length === 1) return <ul key={groupe[0].exerciceId}>{ligne(groupe[0])}</ul>;
+                const numero = groupes.filter((g) => g.length > 1).indexOf(groupe) + 1;
+                const [a, b] = groupe.map((bloc) => EXERCICES_PAR_ID[bloc.exerciceId]);
+                const accord = a && b ? accordPaire(a, b) : null;
+                const bonne = accord?.accord === 'bon';
+                // À deux, une machine dans la paire : chacun commence par un exercice.
+                const croisee = aDeux && groupe.some((bloc) => bloc.tour);
+                return (
+                  <div
+                    key={groupe[0].exerciceId}
+                    className="space-y-2 rounded-2xl p-2"
+                    style={{ border: `2px solid ${bonne ? 'var(--montee)' : 'var(--alerte)'}` }}
+                  >
+                    <div className="flex items-start justify-between gap-2 pl-1">
+                      <div className="min-w-0">
                         <p className="text-sm font-bold" style={{ color: 'var(--texte)' }}>
-                          Liés, sans pause
-                          {gain > 0 && <span className="chiffres"> · {dureeCourte(gain)} gagnées</span>}
+                          Paire {numero}
                         </p>
-                        <button
-                          type="button"
-                          onClick={() => modifierProgramme((prec) => delierDansProgramme(prec, seanceMois.id, groupe[0].exerciceId))}
-                          className="shrink-0 rounded-xl px-2 text-sm font-semibold"
-                          style={{ minHeight: 40, background: 'transparent', color: 'var(--accent)' }}
-                        >
-                          Délier
-                        </button>
+                        {accord && (
+                          <p className="text-xs font-semibold" style={{ color: bonne ? 'var(--montee)' : 'var(--alerte)' }}>
+                            {bonne ? phrase(accord.raison) : `À éviter : ${accord.raison}`}
+                            {croisee ? ' · à deux, on se croise' : ''}
+                          </p>
+                        )}
                       </div>
-                      <ul className="space-y-2">{groupe.map(ligne)}</ul>
+                      <button
+                        type="button"
+                        onClick={() => modifierProgramme((prec) => delierDansProgramme(prec, seanceMois.id, groupe[0].exerciceId))}
+                        className="shrink-0 rounded-xl px-2 text-sm font-semibold"
+                        style={{ minHeight: 40, background: 'transparent', color: 'var(--accent)' }}
+                      >
+                        Séparer
+                      </button>
                     </div>
-                  );
-                })}
-              </div>
+                    <ul className="space-y-2">{groupe.map(ligne)}</ul>
+                  </div>
+                );
+              })}
+            </div>
+
+            {pairesRetouchees && (
+              <button
+                type="button"
+                onClick={() => {
+                  setALier(null);
+                  modifierProgramme((prec) => refairePaires(prec, seanceMois.id));
+                }}
+                className="mt-3 w-full rounded-xl px-3 text-sm font-semibold"
+                style={SECONDAIRE}
+              >
+                Refaire les paires
+              </button>
             )}
 
             {blocFinal && (
@@ -1334,6 +1439,10 @@ export default function Accueil({
           personne={personne}
           parametres={parametres}
           reps={reps}
+          nombreExercices={nombreExercices}
+          tempo={tempoDuProgramme(programme)}
+          onNombreExercices={changerNombreExercices}
+          onTempo={changerTempo}
           serveur={programme.serveur ?? null}
           onServeur={(adresse) =>
             modifierProgramme((prec) => {

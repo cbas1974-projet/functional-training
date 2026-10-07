@@ -2,9 +2,11 @@
 // bibliothèque des posters, à partir d'objectifs musculaires — bas du dos,
 // épaules, extérieur et intérieur de cuisse par défaut. Le jeudi, la séance de
 // référence, lourde, toujours la même ; le lundi le bas du corps et le mardi
-// le haut, en enchaîné, qui alternent d'une semaine à l'autre : mêmes muscles,
-// autres exercices. Chacun la suit sur son téléphone, avec ses répétitions et
-// ses charges ; à deux, les deux téléphones déroulent la même horloge.
+// le haut, qui alternent d'une semaine à l'autre : mêmes muscles, autres
+// exercices. Tous les jours, les exercices vont par paires d'exercices
+// opposés : les deux à la suite, puis une pause. Chacun suit la séance sur son
+// téléphone, avec ses répétitions et ses charges ; à deux, les deux téléphones
+// déroulent la même horloge.
 import type {
   BlocSeries,
   Exercice,
@@ -15,13 +17,17 @@ import type {
   PatternMoteur,
   Personne,
   ProgrammeMois,
+  ReglagesDuo,
   Seance,
   SeanceDuMois,
   SeanceRealisee,
+  Tempo,
   UnitePoids,
 } from '../types';
-import { EXERCICES, EXERCICES_PAR_ID } from '../data/exercices';
+import { EXERCICES, EXERCICES_PAR_ID, NOM_MUSCLE } from '../data/exercices';
+import { TEMPOS } from '../data/parametres';
 import { construireEtapes, dureeTotaleSec } from './etapesSeance';
+import { memeTempo } from './formatage';
 import { cleMouvement, familleDe } from './generateurSeance';
 import { exercicesPourMuscles, musclesDe } from './muscles';
 import { convertirPoids, uniteDeSeance } from './statistiques';
@@ -99,15 +105,34 @@ export const OBJECTIFS_PAR_DEFAUT = ['bas-du-dos', 'epaules', 'exterieur-cuisse'
  *  les machines — trap bar, presse à cuisses, hack squat, traîneau. */
 export const MATERIELS_PROGRAMME: Materiel[] = ['halteres', 'kettlebell', 'banc', 'tapis', 'salle'];
 
+/** Le nombre d'exercices qu'on peut choisir pour chaque séance, sans compter
+ *  le dernier pour les jambes : deux, trois, quatre ou cinq paires. */
+export const NOMBRES_EXERCICES = [4, 6, 8, 10];
+/** Six exercices, trois paires, et le dernier pour les jambes. */
+export const EXERCICES_PAR_DEFAUT = 6;
+/** Le tempo des séances du programme : 4 s / 4 s, et 2 s en bas. */
+export const TEMPO_PROGRAMME: Tempo = { monteeSec: 4, descenteSec: 4, pauseSec: 2 };
+
+/** Le nombre d'exercices des séances de ce programme. */
+export const nombreExercicesDe = (programme: Pick<ProgrammeMois, 'duo'>): number =>
+  programme.duo?.exercices ?? EXERCICES_PAR_DEFAUT;
+
+/** Le tempo des séances de ce programme : le même sur les deux téléphones. */
+export const tempoDuProgramme = (programme: Pick<ProgrammeMois, 'duo'>): Tempo =>
+  programme.duo?.tempo ?? TEMPO_PROGRAMME;
+
 /** Version de la composition. Un programme plus ancien est recomposé, avec
  *  la même graine : 3 = le bas du corps le lundi, le haut le mardi, la séance
- *  de référence le jeudi. */
-export const VERSION_PROGRAMME = 3;
+ *  de référence le jeudi ; 4 = des paires d'exercices opposés tous les jours,
+ *  au nombre d'exercices choisi. */
+export const VERSION_PROGRAMME = 4;
 
-/** Une séance vise l'heure, échauffement et étirements compris. */
+/** La durée inscrite dans les réglages d'une séance du programme ; la vraie
+ *  est celle de ses étapes. */
 const DUREE_REFERENCE_MIN = 60;
-/** Au-delà, une séance perd ses derniers exercices. */
-export const DUREE_MAXI_SEC = 65 * 60;
+/** Garde-fou : une séance ne dépasse pas deux heures et demie. Au-delà, elle
+ *  perd ses dernières paires — même à dix exercices, on n'y arrive pas. */
+export const DUREE_MAXI_SEC = 150 * 60;
 /** Trois séries par exercice ; Max en fait une de plus aux poussées. */
 export const SERIES_PROGRAMME = 3;
 /** La semaine dure, le jeudi une semaine sur deux : même poids, deux
@@ -117,21 +142,19 @@ export const REPS_SEMAINE_DURE = 2;
 const CRAN: Record<UnitePoids, number> = { lb: 5, kg: 2.5 };
 /** Le mardi soir, le jiu-jitsu des adultes. */
 const JOUR_JIU_JITSU = 2;
-/** Repos après une série d'un gros exercice, et après un tour d'enchaîné. */
+/** Repos après une série d'un gros exercice fait seul. */
 export const REPOS_SEC = 90;
 /** Repos après une série d'un petit muscle : bras, épaules en isolation,
  *  abdominaux, mollets, intérieur et extérieur de cuisse. */
 export const REPOS_PETITS_SEC = 60;
-/** La trap bar, le jeudi : la plus lourde, deux minutes. */
+/** La trap bar : la plus lourde, deux minutes — seule, ou après sa paire. */
 export const REPOS_TRAP_BAR_SEC = 120;
-/** Deux exercices liés : le temps de passer de l'un à l'autre. */
+/** Après une paire : une minute. */
+export const REPOS_PAIRE_SEC = 60;
+/** Les deux exercices d'une paire : le temps de passer de l'un à l'autre. */
 export const TRANSITION_LIEN_SEC = 15;
 /** Tenue des exercices au temps : planche, marche du fermier. */
 const TENUE_SEC = 30;
-/** Un enchaîné, c'est trois exercices à la suite, puis la pause. */
-export const TAILLE_ENCHAINEMENT = 3;
-/** Neuf exercices les jours faciles : trois enchaînements de trois. */
-const EXERCICES_JOUR_FACILE = 9;
 /** On tire parmi les meilleurs candidats d'un emplacement : deux programmes
  *  ne se ressemblent pas tous, sans jamais prendre un exercice hors sujet. */
 const MEILLEURS = 3;
@@ -151,8 +174,9 @@ interface Emplacement {
   /** Les machines de la salle y ont leur place ; ailleurs, elles attendent
    *  la fin de la séance. */
   salle?: boolean;
-  /** Place d'un objectif : quand la séance déborde, on la garde. */
-  objectif?: boolean;
+  /** Les places qui lui font le meilleur partenaire, dans l'ordre : c'est
+   *  là qu'on cherche d'abord l'autre exercice de sa paire. */
+  avec?: string[];
 }
 
 /** Jeudi : tout le corps, lourd. Lundi : le bas. Mardi : le haut. */
@@ -169,41 +193,66 @@ const gabaritDe = (seance: SeanceAGabarit): Gabarit => {
 
 const TRONC: PatternMoteur[] = ['anti-rotation', 'flexion-tronc', 'rotation', 'flexion-laterale'];
 
-/** Le jeudi s'ouvre sur la trap bar, quand le dos est frais. */
-const CHARNIERE_TRAP_BAR: Emplacement = { cle: 'charniere', muscles: ['ischios', 'fessiers'], principal: ['ischios'], patterns: ['charniere'], salle: true, preferer: (e) => e.materiel === 'salle' };
+const principauxDe = (exercice: Exercice): Muscle[] => exercice.musclesPrincipaux ?? [];
+
+/** Le jeudi s'ouvre sur la trap bar, quand le dos est frais — en paire avec
+ *  le haut du corps : à deux, on se croise sur la machine. */
+const CHARNIERE_TRAP_BAR: Emplacement = { cle: 'charniere', muscles: ['ischios', 'fessiers'], principal: ['ischios'], patterns: ['charniere'], salle: true, preferer: (e) => e.materiel === 'salle', avec: ['tirage', 'epaules', 'poussee'] };
 /** Sans les machines : un soulevé de terre roumain ou au kettlebell. Pas un
  *  pont fessier ; et le bas du dos a sa place à lui. */
-const CHARNIERE_LIBRE: Emplacement = { cle: 'charniere', muscles: ['ischios', 'fessiers'], principal: ['ischios'], patterns: ['charniere'], preferer: (e) => !(e.musclesPrincipaux ?? []).includes('lombaires') };
+const CHARNIERE_LIBRE: Emplacement = { cle: 'charniere', muscles: ['ischios', 'fessiers'], principal: ['ischios'], patterns: ['charniere'], preferer: (e) => !principauxDe(e).includes('lombaires'), avec: ['tirage', 'epaules', 'poussee'] };
 /** Sans les machines, le jeudi garde aussi un squat, à deux jambes : les
  *  fentes, qui tordent le genou, attendent le lundi. */
-const SQUAT_LOURD: Emplacement = { cle: 'jambes', muscles: ['quadriceps', 'fessiers'], principal: ['quadriceps', 'fessiers'], patterns: ['squat'], preferer: (e) => e.cotes === 'bilateral' };
+const SQUAT_LOURD: Emplacement = { cle: 'jambes', muscles: ['quadriceps', 'fessiers'], principal: ['quadriceps', 'fessiers'], patterns: ['squat'], preferer: (e) => e.cotes === 'bilateral', avec: ['epaules', 'poussee', 'tirage', 'oiseau'] };
 
+/** Les places de base de chaque jour, après celles des objectifs. Chacune
+ *  dit avec quelles places elle fait une bonne paire. */
 const BASE: Record<Gabarit, Emplacement[]> = {
   dure: [
     // On tire, sans charger le bas du dos — la trap bar l'a déjà fait : un
     // rowing poitrine contre le banc plutôt que buste penché.
-    { cle: 'tirage', muscles: ['dorsaux', 'trapezes', 'biceps'], principal: ['dorsaux'], patterns: ['tirage-horizontal', 'tirage-vertical'], preferer: (e) => !chargeLeBasDuDos(e) },
-    // On pousse une charge : un développé sur banc avant les pompes. Dernière
-    // place de base, c'est elle qui part quand la séance déborde.
-    { cle: 'poussee', muscles: ['pectoraux', 'triceps', 'epaules'], principal: ['pectoraux'], patterns: ['poussee-horizontale'], preferer: (e) => e.materiel === 'banc' },
+    { cle: 'tirage', muscles: ['dorsaux', 'trapezes', 'biceps'], principal: ['dorsaux'], patterns: ['tirage-horizontal', 'tirage-vertical'], preferer: (e) => !chargeLeBasDuDos(e), avec: ['charniere', 'bas-du-dos', 'poussee'] },
+    // On pousse une charge : un développé sur banc avant les pompes.
+    { cle: 'poussee', muscles: ['pectoraux', 'triceps', 'epaules'], principal: ['pectoraux'], patterns: ['poussee-horizontale'], preferer: (e) => e.materiel === 'banc', avec: ['oiseau', 'tirage', 'bas-du-dos'] },
+    // L'arrière des épaules, qui les tient en place.
+    { cle: 'oiseau', muscles: ['epaules', 'trapezes', 'dorsaux'], principal: ['epaules', 'trapezes'], patterns: ['tirage-horizontal', 'tirage-vertical'], avec: ['poussee'] },
+    { cle: 'biceps', muscles: ['biceps', 'avant-bras'], principal: ['biceps'], avec: ['triceps'] },
+    { cle: 'triceps', muscles: ['triceps'], principal: ['triceps'], avec: ['biceps'] },
+    { cle: 'jambes', muscles: ['quadriceps', 'fessiers'], principal: ['quadriceps'], patterns: ['squat', 'fente'], preferer: (e) => e.cotes === 'bilateral', avec: ['coiffe', 'epaules', 'oiseau', 'tirage'] },
+    { cle: 'coiffe', muscles: ['coiffe-rotateurs', 'epaules'], principal: ['coiffe-rotateurs'], avec: ['jambes', 'mollets'] },
+    { cle: 'tronc', muscles: ['abdominaux', 'obliques'], principal: ['abdominaux', 'obliques'], patterns: TRONC, avec: ['bas-du-dos'] },
+    { cle: 'bas-du-dos', muscles: ['lombaires', 'fessiers'], principal: ['lombaires'], preferer: (e) => !principauxDe(e).includes('ischios'), avec: ['tronc', 'epaules', 'poussee'] },
+    { cle: 'mollets', muscles: ['mollets'], principal: ['mollets'], avec: ['coiffe', 'biceps', 'triceps'] },
   ],
   bas: [
-    { cle: 'fente', muscles: ['quadriceps', 'fessiers'], principal: ['quadriceps', 'fessiers'], patterns: ['fente'] },
-    { cle: 'ischios', muscles: ['ischios', 'fessiers'], principal: ['ischios'], patterns: ['charniere'] },
-    { cle: 'tronc', muscles: ['abdominaux', 'obliques'], principal: ['abdominaux', 'obliques'], patterns: TRONC },
-    { cle: 'fessiers', muscles: ['fessiers'], principal: ['fessiers'] },
-    { cle: 'squat', muscles: ['quadriceps', 'fessiers'], principal: ['quadriceps'], patterns: ['squat'] },
-    { cle: 'mollets', muscles: ['mollets'], principal: ['mollets'] },
+    // L'avant et l'arrière de la cuisse : une fente avec un exercice des
+    // ischios, un squat avec une charnière. Ils ne doivent pas partager les
+    // fessiers : les fentes et les charnières les travaillent presque toutes.
+    { cle: 'fente', muscles: ['quadriceps', 'fessiers'], principal: ['quadriceps', 'fessiers'], patterns: ['fente'], avec: ['ischios', 'cuisse-arriere'] },
+    { cle: 'ischios', muscles: ['ischios', 'fessiers'], principal: ['ischios'], patterns: ['charniere'], avec: ['cuisse-avant', 'squat', 'fente'] },
+    { cle: 'tronc', muscles: ['abdominaux', 'obliques'], principal: ['abdominaux', 'obliques'], patterns: TRONC, avec: ['bas-du-dos'] },
+    { cle: 'bas-du-dos', muscles: ['lombaires', 'fessiers', 'ischios'], principal: ['lombaires'], avec: ['tronc', 'cuisse-avant', 'squat'] },
+    { cle: 'squat', muscles: ['quadriceps', 'fessiers'], principal: ['quadriceps'], patterns: ['squat'], avec: ['fessiers', 'ischios', 'cuisse-arriere'] },
+    { cle: 'fessiers', muscles: ['fessiers'], principal: ['fessiers'], avec: ['squat', 'cuisse-avant'] },
+    { cle: 'abducteurs', muscles: ['abducteurs'], principal: ['abducteurs'], avec: ['adducteurs'] },
+    { cle: 'adducteurs', muscles: ['adducteurs'], principal: ['adducteurs'], avec: ['abducteurs'] },
+    { cle: 'cuisse-avant', muscles: ['quadriceps'], principal: ['quadriceps'], patterns: ['isolation'], avec: ['cuisse-arriere', 'ischios', 'fessiers'] },
+    { cle: 'cuisse-arriere', muscles: ['ischios'], principal: ['ischios'], patterns: ['isolation'], avec: ['cuisse-avant', 'squat', 'fente'] },
   ],
+  // Le haut du corps : pousser avec tirer. Le tronc n'y a pas de partenaire —
+  // il s'oppose au bas du dos, que le mardi ne charge pas.
   haut: [
-    { cle: 'tirage', muscles: ['dorsaux', 'trapezes'], principal: ['dorsaux'], patterns: ['tirage-horizontal', 'tirage-vertical'] },
-    { cle: 'poussee', muscles: ['pectoraux', 'triceps'], principal: ['pectoraux'], patterns: ['poussee-horizontale', 'poussee-verticale'] },
-    { cle: 'tronc', muscles: ['abdominaux', 'obliques'], principal: ['abdominaux', 'obliques'], patterns: TRONC },
-    { cle: 'coiffe', muscles: ['coiffe-rotateurs'], principal: ['coiffe-rotateurs'] },
-    { cle: 'biceps', muscles: ['biceps', 'avant-bras'], principal: ['biceps'] },
-    { cle: 'triceps', muscles: ['triceps'], principal: ['triceps'] },
-    { cle: 'rotation', muscles: ['obliques'], principal: ['obliques'], patterns: ['rotation', 'anti-rotation'] },
-    { cle: 'dorsaux', muscles: ['dorsaux'], principal: ['dorsaux'], patterns: ['tirage-vertical', 'tirage-horizontal'] },
+    { cle: 'tirage', muscles: ['dorsaux', 'trapezes'], principal: ['dorsaux'], patterns: ['tirage-horizontal', 'tirage-vertical'], avec: ['epaules', 'poussee'] },
+    { cle: 'poussee', muscles: ['pectoraux', 'triceps'], principal: ['pectoraux'], patterns: ['poussee-horizontale', 'poussee-verticale'], avec: ['tirage', 'dorsaux'] },
+    { cle: 'biceps', muscles: ['biceps', 'avant-bras'], principal: ['biceps'], avec: ['triceps', 'bras'] },
+    { cle: 'triceps', muscles: ['triceps'], principal: ['triceps'], avec: ['biceps', 'bras'] },
+    { cle: 'epaules', muscles: ['epaules', 'coiffe-rotateurs'], principal: ['epaules'], patterns: ['poussee-verticale', 'isolation'], avec: ['dorsaux', 'trapezes', 'tirage'] },
+    { cle: 'dorsaux', muscles: ['dorsaux'], principal: ['dorsaux'], patterns: ['tirage-vertical', 'tirage-horizontal'], avec: ['poussee', 'coiffe', 'epaules'] },
+    { cle: 'coiffe', muscles: ['coiffe-rotateurs'], principal: ['coiffe-rotateurs'], avec: ['dorsaux', 'trapezes'] },
+    { cle: 'trapezes', muscles: ['trapezes'], principal: ['trapezes'], avec: ['coiffe', 'poussee-bis'] },
+    { cle: 'poussee-bis', muscles: ['pectoraux', 'triceps'], principal: ['pectoraux'], avec: ['oiseau', 'trapezes'] },
+    { cle: 'oiseau', muscles: ['epaules', 'trapezes', 'dorsaux'], principal: ['dorsaux', 'trapezes'], patterns: ['tirage-horizontal', 'isolation'], avec: ['poussee-bis', 'poussee'] },
+    { cle: 'avant-bras', muscles: ['avant-bras', 'biceps'], principal: ['avant-bras'], avec: ['triceps', 'poussee-bis', 'coiffe'] },
   ],
 };
 
@@ -213,50 +262,57 @@ const PAR_OBJECTIF: Record<
   { emplacement: Emplacement; gabarits: Gabarit[]; surcharge?: Partial<Record<Gabarit, Partial<Emplacement>>> }
 > = {
   'bas-du-dos': {
-    emplacement: { cle: 'bas-du-dos', muscles: ['lombaires', 'fessiers', 'ischios'], principal: ['lombaires'] },
+    // Le lundi, avec le ventre : les deux côtés du tronc.
+    emplacement: { cle: 'bas-du-dos', muscles: ['lombaires', 'fessiers', 'ischios'], principal: ['lombaires'], avec: ['tronc', 'cuisse-avant', 'squat'] },
     gabarits: ['dure', 'bas'],
     // Le jeudi, le soulevé de terre a déjà chargé l'arrière des cuisses : pour
-    // le bas du dos, un exercice qui ne soit pas une deuxième charnière lourde.
-    surcharge: { dure: { preferer: (e) => !(e.musclesPrincipaux ?? []).includes('ischios') } },
+    // le bas du dos, un exercice qui ne soit pas une deuxième charnière
+    // lourde, en paire avec les épaules.
+    surcharge: { dure: { preferer: (e) => !principauxDe(e).includes('ischios'), avec: ['epaules', 'poussee', 'tirage', 'tronc'] } },
   },
   epaules: {
-    emplacement: { cle: 'epaules', muscles: ['epaules', 'coiffe-rotateurs'], principal: ['epaules'] },
+    emplacement: { cle: 'epaules', muscles: ['epaules', 'coiffe-rotateurs'], principal: ['epaules'], avec: ['tirage', 'dorsaux', 'trapezes'] },
     gabarits: ['dure', 'haut'],
     // Le jeudi, les épaules se travaillent lourd : un développé au-dessus de la tête.
-    surcharge: { dure: { muscles: ['epaules', 'triceps'], patterns: ['poussee-verticale'] } },
+    surcharge: { dure: { muscles: ['epaules', 'triceps'], patterns: ['poussee-verticale'], avec: ['bas-du-dos', 'tirage', 'jambes'] } },
   },
   'exterieur-cuisse': {
-    emplacement: { cle: 'abducteurs', muscles: ['abducteurs'], principal: ['abducteurs'] },
+    emplacement: { cle: 'abducteurs', muscles: ['abducteurs'], principal: ['abducteurs'], avec: ['adducteurs'] },
     gabarits: ['bas'],
   },
   'interieur-cuisse': {
-    emplacement: { cle: 'adducteurs', muscles: ['adducteurs'], principal: ['adducteurs'] },
+    emplacement: { cle: 'adducteurs', muscles: ['adducteurs'], principal: ['adducteurs'], avec: ['abducteurs'] },
     gabarits: ['bas'],
   },
   bras: {
-    emplacement: { cle: 'bras', muscles: ['biceps', 'triceps', 'avant-bras'], principal: ['biceps', 'triceps'] },
+    emplacement: { cle: 'bras', muscles: ['biceps', 'triceps', 'avant-bras'], principal: ['biceps', 'triceps'], avec: ['triceps', 'biceps'] },
     gabarits: ['haut'],
   },
+  // Le ventre s'oppose au bas du dos : il a sa place les jours qui le
+  // travaillent, pas le mardi.
   tronc: {
-    emplacement: { cle: 'tronc', muscles: ['abdominaux', 'obliques'], principal: ['abdominaux', 'obliques'], patterns: TRONC },
-    gabarits: ['bas', 'haut'],
+    emplacement: { cle: 'tronc', muscles: ['abdominaux', 'obliques'], principal: ['abdominaux', 'obliques'], patterns: TRONC, avec: ['bas-du-dos'] },
+    gabarits: ['bas', 'dure'],
   },
   jambes: {
-    emplacement: { cle: 'jambes', muscles: ['quadriceps', 'fessiers', 'ischios'], principal: ['quadriceps', 'ischios'] },
+    emplacement: { cle: 'jambes', muscles: ['quadriceps', 'fessiers', 'ischios'], principal: ['quadriceps', 'ischios'], avec: ['ischios', 'cuisse-arriere', 'cuisse-avant', 'squat'] },
     gabarits: ['dure', 'bas'],
+    surcharge: { dure: { avec: ['epaules', 'tirage', 'poussee', 'oiseau', 'coiffe'] } },
   },
   'haut-du-dos': {
-    emplacement: { cle: 'tirage', muscles: ['dorsaux', 'trapezes'], principal: ['dorsaux', 'trapezes'] },
+    emplacement: { cle: 'tirage', muscles: ['dorsaux', 'trapezes'], principal: ['dorsaux', 'trapezes'], avec: ['epaules', 'poussee'] },
     gabarits: ['dure', 'haut'],
+    surcharge: { dure: { avec: ['charniere', 'poussee', 'bas-du-dos'] } },
   },
 };
 
-/** Les places d'une séance, dans l'ordre où on les remplit. */
+/** Les places d'une séance, dans l'ordre où on les remplit : le jeudi, la
+ *  charnière d'abord, fraîche ; puis les objectifs, puis les places de base. */
 function emplacementsDe(gabarit: Gabarit, objectifs: string[], materiels: Materiel[]): Emplacement[] {
   const parObjectif = objectifs
     .map((id) => PAR_OBJECTIF[id])
     .filter((o) => o !== undefined && o.gabarits.includes(gabarit))
-    .map((o) => ({ ...o.emplacement, ...o.surcharge?.[gabarit], objectif: true }));
+    .map((o) => ({ ...o.emplacement, ...o.surcharge?.[gabarit] }));
   const resultat: Emplacement[] = [];
   const cles = new Set<string>();
   const ajouter = (emplacement: Emplacement) => {
@@ -265,18 +321,13 @@ function emplacementsDe(gabarit: Gabarit, objectifs: string[], materiels: Materi
     resultat.push(emplacement);
   };
   if (gabarit === 'dure') {
-    // La charnière d'abord, fraîche ; pousser et tirer ; les objectifs
-    // ensuite. Les jambes finissent la séance, à part.
     const machines = materiels.includes('salle');
     ajouter(machines ? CHARNIERE_TRAP_BAR : CHARNIERE_LIBRE);
     if (!machines) ajouter(SQUAT_LOURD);
-    BASE.dure.forEach(ajouter);
-    parObjectif.forEach(ajouter);
-    return resultat;
   }
   parObjectif.forEach(ajouter);
   BASE[gabarit].forEach(ajouter);
-  return resultat.slice(0, EXERCICES_JOUR_FACILE);
+  return resultat;
 }
 
 // ------------------------------------------------------------- Le choix
@@ -319,64 +370,299 @@ interface Preferences {
   dejaPris: Set<string>;
   /** Exercices à repousser en fin de liste. */
   repousser?: (exercice: Exercice) => boolean;
-  /** Exercices à n'utiliser qu'à défaut de tout autre. */
-  eviter?: (exercice: Exercice) => boolean;
 }
 
-/** Remplit une place : les exercices qui la visent le mieux, puis un tirage
- *  parmi les trois premiers. On relâche les exigences pas à pas plutôt que de
- *  laisser la place vide. */
-function choisir(
+/** Les exercices qui remplissent le mieux une place : ceux qui la visent, au
+ *  meilleur rang des préférences, du plus direct au plus accessoire. On
+ *  relâche les exigences pas à pas plutôt que de laisser la place vide — sauf
+ *  pour un partenaire (`strict`), qui doit en viser les muscles. `admis`
+ *  écarte des exercices à chaque pas. */
+function classer(
   emplacement: Emplacement,
   candidats: Exercice[],
   preferences: Preferences,
-  alea: () => number,
-): Exercice | null {
+  { strict = false, admis = () => true }: { strict?: boolean; admis?: (exercice: Exercice) => boolean } = {},
+): Exercice[] {
   const libres = candidats.filter(
     (e) => !preferences.exclus.has(cleMouvement(e)) && (e.materiel !== 'salle' || emplacement.salle),
   );
   const filtres: ((e: Exercice) => boolean)[] = [
     (e) => (!emplacement.patterns || emplacement.patterns.includes(e.pattern)) && viseLePrincipal(e, emplacement.principal),
     (e) => viseLePrincipal(e, emplacement.principal),
-    () => true,
+    ...(strict ? [] : [() => true]),
   ];
   for (const filtre of filtres) {
-    const classes = exercicesPourMuscles(libres.filter(filtre), emplacement.muscles);
+    const classes = exercicesPourMuscles(libres.filter(filtre), emplacement.muscles).filter(admis);
     if (classes.length === 0) continue;
     const rang = (e: Exercice) =>
-      (preferences.eviter?.(e) ? 8 : 0) +
       (preferences.dejaPris.has(cleMouvement(e)) ? 4 : 0) +
       (preferences.repousser?.(e) ? 2 : 0) +
       (emplacement.preferer && !emplacement.preferer(e) ? 1 : 0);
     const ordonnes = [...classes].sort((a, b) => rang(a) - rang(b));
-    const tete = ordonnes.slice(0, MEILLEURS).filter((e) => rang(e) === rang(ordonnes[0]));
-    const poids = tete.map((_, i) => MEILLEURS - i);
-    let tirage = alea() * poids.reduce((somme, p) => somme + p, 0);
-    for (let i = 0; i < tete.length; i += 1) {
-      tirage -= poids[i];
-      if (tirage < 0) return tete[i];
-    }
-    return tete[0];
+    return ordonnes.filter((e) => rang(e) === rang(ordonnes[0]));
   }
-  return null;
+  return [];
 }
 
-/** Range les exercices d'un jour facile en enchaînements de trois, avec au
- *  plus un exercice qui charge le bas du dos par enchaînement : enchaîner
- *  deux charnières, c'est le dos qui lâche avant les jambes. */
-export function enEnchainements(exercices: Exercice[]): Exercice[] {
-  const nombre = Math.max(1, Math.ceil(exercices.length / TAILLE_ENCHAINEMENT));
-  const blocs: Exercice[][] = Array.from({ length: nombre }, () => []);
-  const dos = exercices.filter(chargeLeBasDuDos);
-  const autres = exercices.filter((e) => !chargeLeBasDuDos(e));
-  dos.forEach((exercice, i) => blocs[i % nombre].push(exercice));
-  // Chaque bloc se remplit jusqu'à trois avant le suivant : la séance guidée
-  // redécoupe la liste trois par trois, elle doit retomber sur ces blocs-là.
-  for (const exercice of autres) {
-    const cible = blocs.find((bloc) => bloc.length < TAILLE_ENCHAINEMENT) ?? blocs[blocs.length - 1];
-    cible.push(exercice);
+/** Remplit une place : un tirage parmi les trois premiers candidats — deux
+ *  programmes ne se ressemblent pas tous, sans jamais prendre un exercice
+ *  hors sujet. */
+function choisir(
+  emplacement: Emplacement,
+  candidats: Exercice[],
+  preferences: Preferences,
+  alea: () => number,
+  options: { strict?: boolean; admis?: (exercice: Exercice) => boolean } = {},
+): Exercice | null {
+  const tete = classer(emplacement, candidats, preferences, options).slice(0, MEILLEURS);
+  if (tete.length === 0) return null;
+  const poids = tete.map((_, i) => MEILLEURS - i);
+  let tirage = alea() * poids.reduce((somme, p) => somme + p, 0);
+  for (let i = 0; i < tete.length; i += 1) {
+    tirage -= poids[i];
+    if (tirage < 0) return tete[i];
   }
-  return blocs.flat();
+  return tete[0];
+}
+
+// ------------------------------------------------------------- Les paires
+
+/** Ce que fait un exercice dans la séance : son étiquette sur l'accueil. */
+export type Role = 'pousse' | 'tire' | 'jambes' | 'bas-du-dos' | 'tronc' | 'corps-entier';
+
+export const NOM_ROLE: Record<Role, string> = {
+  pousse: 'pousse',
+  tire: 'tire',
+  jambes: 'jambes',
+  'bas-du-dos': 'bas du dos',
+  tronc: 'tronc',
+  'corps-entier': 'tout le corps',
+};
+
+const MUSCLES_HAUT: Muscle[] = ['nuque', 'trapezes', 'epaules', 'coiffe-rotateurs', 'pectoraux', 'dorsaux', 'biceps', 'triceps', 'avant-bras'];
+const MUSCLES_BAS: Muscle[] = ['fessiers', 'abducteurs', 'ischios', 'quadriceps', 'adducteurs', 'mollets'];
+
+/** L'exercice vise au moins un de ces muscles. */
+const vise = (exercice: Exercice, ...muscles: Muscle[]) => principauxDe(exercice).some((m) => muscles.includes(m));
+
+/** Pousser ou tirer : le schéma de mouvement d'abord, sinon les muscles — un
+ *  curl ou un oiseau tirent, une extension des triceps pousse. */
+function sensDe(exercice: Exercice): 'pousse' | 'tire' {
+  if (exercice.pattern === 'poussee-horizontale' || exercice.pattern === 'poussee-verticale') return 'pousse';
+  if (exercice.pattern === 'tirage-horizontal' || exercice.pattern === 'tirage-vertical') return 'tire';
+  return vise(exercice, 'dorsaux', 'trapezes', 'biceps', 'avant-bras') && !vise(exercice, 'pectoraux', 'triceps')
+    ? 'tire'
+    : 'pousse';
+}
+
+/** Le rôle d'un exercice : le tronc, le bas du dos, les jambes, tout le
+ *  corps, ou le haut du corps, qui pousse ou qui tire. */
+export function roleDe(exercice: Exercice): Role {
+  if (TRONC.includes(exercice.pattern)) return 'tronc';
+  if (vise(exercice, 'lombaires')) return 'bas-du-dos';
+  const haut = vise(exercice, ...MUSCLES_HAUT);
+  const bas = vise(exercice, ...MUSCLES_BAS);
+  if (exercice.groupe === 'corps-entier' || (haut && bas)) return 'corps-entier';
+  if (bas) return 'jambes';
+  return haut ? sensDe(exercice) : 'tronc';
+}
+
+/** Les étiquettes d'un exercice : son rôle, et « bas du dos » quand il le
+ *  charge sans le viser — deux exercices qui le chargent ne vont jamais
+ *  ensemble. */
+export function rolesDe(exercice: Exercice): Role[] {
+  const role = roleDe(exercice);
+  return role !== 'bas-du-dos' && chargeLeBasDuDos(exercice) ? [role, 'bas-du-dos'] : [role];
+}
+
+/** La partie du corps d'un exercice : le bas du dos compte avec les jambes. */
+function partieDe(exercice: Exercice): 'haut' | 'bas' | 'tronc' | 'corps-entier' {
+  const role = roleDe(exercice);
+  if (role === 'pousse' || role === 'tire') return 'haut';
+  if (role === 'jambes' || role === 'bas-du-dos') return 'bas';
+  return role;
+}
+
+/** Travaille le haut du corps, seul ou avec le reste. */
+const avecLeHaut = (exercice: Exercice) =>
+  partieDe(exercice) === 'haut' || (partieDe(exercice) === 'corps-entier' && vise(exercice, ...MUSCLES_HAUT));
+
+/** Ce qui a sa place chaque jour : le lundi, le bas du corps et le tronc ;
+ *  le mardi, le haut du corps seulement, et rien qui charge le bas du dos —
+ *  jiu-jitsu le soir ; le jeudi, tout, mais le haut du corps sans charger le
+ *  bas du dos : la trap bar l'a déjà fait. */
+const DANS_LE_JOUR: Record<Gabarit, (exercice: Exercice) => boolean> = {
+  dure: (e) => !(partieDe(e) === 'haut' && chargeLeBasDuDos(e)),
+  bas: (e) =>
+    partieDe(e) === 'bas' || partieDe(e) === 'tronc' || (partieDe(e) === 'corps-entier' && vise(e, ...MUSCLES_BAS)),
+  haut: (e) => partieDe(e) === 'haut' && !chargeLeBasDuDos(e),
+};
+
+/** Ce qui fait une bonne paire : deux exercices qui s'opposent. Des plus
+ *  précises aux plus larges ; des muscles opposés valent un peu mieux que le
+ *  haut avec le bas. Chaque test lit la paire dans un sens ; on essaie les
+ *  deux. */
+const OPPOSITIONS: { raison: string; force: number; test: (a: Exercice, b: Exercice) => boolean }[] = [
+  {
+    raison: 'biceps ↔ triceps',
+    force: 3,
+    test: (a, b) => vise(a, 'biceps') && sensDe(a) === 'tire' && vise(b, 'triceps') && sensDe(b) === 'pousse',
+  },
+  {
+    raison: 'pectoraux ↔ dos',
+    force: 3,
+    test: (a, b) => vise(a, 'pectoraux') && sensDe(a) === 'pousse' && vise(b, 'dorsaux', 'trapezes') && sensDe(b) === 'tire',
+  },
+  {
+    raison: 'épaules ↔ dos',
+    force: 3,
+    test: (a, b) => vise(a, 'epaules') && sensDe(a) === 'pousse' && vise(b, 'dorsaux', 'trapezes') && sensDe(b) === 'tire',
+  },
+  { raison: 'intérieur ↔ extérieur de cuisse', force: 3, test: (a, b) => vise(a, 'adducteurs') && vise(b, 'abducteurs') },
+  { raison: 'quadriceps ↔ ischios', force: 3, test: (a, b) => vise(a, 'quadriceps') && vise(b, 'ischios') },
+  { raison: 'quadriceps ↔ bas du dos', force: 3, test: (a, b) => vise(a, 'quadriceps') && vise(b, 'lombaires') },
+  { raison: 'quadriceps ↔ fessiers', force: 3, test: (a, b) => vise(a, 'quadriceps') && vise(b, 'fessiers') },
+  // Le ventre et le bas du dos : les deux côtés du tronc.
+  { raison: 'ventre ↔ bas du dos', force: 3, test: (a, b) => roleDe(a) === 'tronc' && vise(a, 'abdominaux', 'obliques') && vise(b, 'lombaires') },
+  { raison: 'pousser ↔ tirer', force: 2, test: (a, b) => avecLeHaut(a) && avecLeHaut(b) && sensDe(a) === 'pousse' && sensDe(b) === 'tire' },
+  { raison: 'haut ↔ bas', force: 2, test: (a, b) => partieDe(a) === 'haut' && partieDe(b) === 'bas' },
+];
+
+const oppositionDe = (a: Exercice, b: Exercice) => OPPOSITIONS.find((o) => o.test(a, b) || o.test(b, a));
+
+/** Deux exercices en paire : un bon partenaire, ou un à éviter. */
+export type Accord = 'bon' | 'bas-du-dos' | 'memes-muscles' | 'pas-opposes';
+
+export interface AccordPaire {
+  accord: Accord;
+  /** Ce qui les unit (« pousser ↔ tirer ») ou pourquoi les éviter ensemble
+   *  (« le bas du dos deux fois »). */
+  raison: string;
+}
+
+const NOM_PARTIE = { haut: 'le haut du corps', bas: 'les jambes', tronc: 'le tronc', 'corps-entier': 'tout le corps' };
+
+/** La règle des paires : jamais deux exercices qui chargent le bas du dos,
+ *  jamais les mêmes muscles principaux ; et deux exercices qui s'opposent —
+ *  le haut avec le bas, pousser avec tirer, ou des muscles opposés :
+ *  quadriceps et ischios, intérieur et extérieur de cuisse, biceps et
+ *  triceps, pectoraux ou épaules et dos, ventre et bas du dos. */
+export function accordPaire(a: Exercice, b: Exercice): AccordPaire {
+  // La bibliothèque ne change pas : un accord calculé une fois l'est pour de bon.
+  const deLaBibliotheque = EXERCICES_PAR_ID[a.id] === a && EXERCICES_PAR_ID[b.id] === b;
+  const cle = `${a.id}|${b.id}`;
+  const connu = deLaBibliotheque ? ACCORDS.get(cle) : undefined;
+  if (connu) return connu;
+  const accord = calculerAccord(a, b);
+  if (deLaBibliotheque) ACCORDS.set(cle, accord);
+  return accord;
+}
+
+/** Les accords déjà calculés. */
+const ACCORDS = new Map<string, AccordPaire>();
+
+function calculerAccord(a: Exercice, b: Exercice): AccordPaire {
+  if (chargeLeBasDuDos(a) && chargeLeBasDuDos(b)) return { accord: 'bas-du-dos', raison: 'le bas du dos deux fois' };
+  const communs = principauxDe(a).filter((m) => principauxDe(b).includes(m));
+  if (a.id === b.id || communs.length > 0) {
+    const noms = communs.map((m) => NOM_MUSCLE[m].toLowerCase()).join(', ');
+    return { accord: 'memes-muscles', raison: noms ? `mêmes muscles : ${noms}` : 'mêmes muscles' };
+  }
+  const opposition = oppositionDe(a, b);
+  if (opposition) return { accord: 'bon', raison: opposition.raison };
+  const [pa, pb] = [partieDe(a), partieDe(b)];
+  if (pa === 'haut' && pb === 'haut') {
+    return { accord: 'pas-opposes', raison: sensDe(a) === 'pousse' ? 'pas opposés : pousser deux fois' : 'pas opposés : tirer deux fois' };
+  }
+  return { accord: 'pas-opposes', raison: pa === pb ? `pas opposés : deux fois ${NOM_PARTIE[pa]}` : 'pas opposés' };
+}
+
+/** La force d'une bonne paire : celle de l'opposition, et deux de plus pour
+ *  une machine avec un exercice libre — à deux, on se croise, personne
+ *  n'attend. -1 pour une paire à éviter. */
+function forcePaire(a: Exercice, b: Exercice): number {
+  if (accordPaire(a, b).accord !== 'bon') return -1;
+  const machines = [a, b].filter((e) => e.materiel === 'salle').length;
+  return (oppositionDe(a, b)?.force ?? 0) + (machines === 1 ? 2 : 0);
+}
+
+/** Les paires automatiques d'une liste d'exercices : le plus de paires
+ *  possible, puis les plus fortes. Elles ne dépendent pas de l'ordre de la
+ *  liste — refaites, elles retombent sur les mêmes ; l'ordre, lui, est
+ *  gardé : chaque paire prend la place de son premier exercice, et la trap
+ *  bar reste en tête. */
+export function apparier(ids: string[]): { exercices: string[]; paires: string[][] } {
+  const uniques = [...new Set(ids)];
+  const tries = uniques.filter(estConnu).sort();
+  const forces = tries.map((a) => tries.map((b) => (a === b ? -1 : forcePaire(EXERCICES_PAR_ID[a], EXERCICES_PAR_ID[b]))));
+  const libres = tries.map(() => true);
+  const enCours: [number, number][] = [];
+  let meilleur = { paires: [] as [number, number][], force: 0 };
+  // On essaie toutes les façons d'apparier : dix exercices au plus, c'est
+  // quelques milliers d'essais.
+  const explorer = (force: number) => {
+    const i = libres.indexOf(true);
+    const restants = libres.filter(Boolean).length;
+    if (enCours.length + Math.floor(restants / 2) < meilleur.paires.length) return;
+    if (i < 0) {
+      const mieux =
+        enCours.length > meilleur.paires.length || (enCours.length === meilleur.paires.length && force > meilleur.force);
+      if (mieux) meilleur = { paires: [...enCours], force };
+      return;
+    }
+    libres[i] = false;
+    for (let j = i + 1; j < tries.length; j += 1) {
+      if (!libres[j] || forces[i][j] < 0) continue;
+      libres[j] = false;
+      enCours.push([i, j]);
+      explorer(force + forces[i][j]);
+      enCours.pop();
+      libres[j] = true;
+    }
+    explorer(force);
+    libres[i] = true;
+  };
+  explorer(0);
+
+  const partenaire = new Map<string, string>();
+  for (const [i, j] of meilleur.paires) {
+    partenaire.set(tries[i], tries[j]);
+    partenaire.set(tries[j], tries[i]);
+  }
+  const exercices: string[] = [];
+  const paires: string[][] = [];
+  for (const id of uniques) {
+    if (exercices.includes(id)) continue;
+    const autre = partenaire.get(id);
+    exercices.push(id, ...(autre ? [autre] : []));
+    if (autre) paires.push([id, autre]);
+  }
+  return { exercices, paires };
+}
+
+/** La séance avec ses paires automatiques. */
+function avecPairesAutomatiques(seance: SeanceDuMois): SeanceDuMois {
+  const { exercices, paires } = apparier(seance.exercices);
+  return rangee({ ...seance, exercices, liens: paires });
+}
+
+/** Les mêmes paires, dans n'importe quel ordre. */
+const empreinte = (paires: string[][] = []) =>
+  paires
+    .map((paire) => [...paire].sort().join('+'))
+    .sort()
+    .join(',');
+
+/** La séance a encore ses paires automatiques. */
+export const pairesAutomatiques = (seance: Pick<SeanceDuMois, 'exercices' | 'liens'>): boolean =>
+  empreinte(apparier(seance.exercices).paires) === empreinte(seance.liens);
+
+/** « Refaire les paires » : la séance retrouve ses paires automatiques. */
+export function refairePaires(programme: ProgrammeMois, seanceId: string): ProgrammeMois {
+  return {
+    ...programme,
+    seances: programme.seances.map((s) => (s.id === seanceId ? avecPairesAutomatiques(s) : s)),
+  };
 }
 
 // ------------------------------------------------------------- Pour finir : les jambes
@@ -489,17 +775,24 @@ export interface OptionsProgramme {
   alternance?: boolean;
   graine?: number;
   aujourdhui?: Date;
+  /** Le nombre d'exercices de chaque séance, sans le dernier pour les
+   *  jambes : 4, 6, 8 ou 10 ; six par défaut. */
+  exercices?: number;
 }
 
-/** Réglages complets pour mesurer une séance : le tempo lent, 3 s / 3 s et
- *  2 s en bas. */
+/** Un nombre d'exercices qu'on peut choisir, ou rien. */
+const nombreValide = (nombre: unknown): number | undefined =>
+  typeof nombre === 'number' && NOMBRES_EXERCICES.includes(nombre) ? nombre : undefined;
+
+/** Réglages complets pour mesurer une séance : le tempo du programme, 4 s /
+ *  4 s et 2 s en bas. */
 const parametresMesure: ParametresSeance = {
   dureeMinutes: DUREE_REFERENCE_MIN,
   zones: ['bas', 'haut', 'dos', 'gainage', 'complet'],
   niveau: 'intermediaire',
   discipline: 'musculation',
   format: 'series',
-  tempo: { monteeSec: 3, descenteSec: 3, pauseSec: 2 },
+  tempo: { ...TEMPO_PROGRAMME },
   materiels: ['halteres'],
   explosifs: false,
   seriesParExercice: 3,
@@ -515,45 +808,82 @@ export function genererProgramme(options: OptionsProgramme = {}): ProgrammeMois 
   const objectifs = options.objectifs ?? OBJECTIFS_PAR_DEFAUT;
   const materiels = options.materiels ?? MATERIELS_PROGRAMME;
   const alternance = options.alternance ?? true;
+  const nombre = nombreValide(options.exercices) ?? EXERCICES_PAR_DEFAUT;
   const graine = (options.graine ?? Date.now()) >>> 0;
   const alea = aleatoire(graine);
   const candidats = candidatsProgramme(materiels);
   const dejaPris = new Set<string>();
-  /** Exercices pris pour un objectif : ceux qu'on garde quand ça déborde. */
-  const surObjectif = new Set<string>();
 
+  /** Les exercices d'une séance, deux par deux, jusqu'au nombre choisi : les
+   *  objectifs d'abord — le jeudi, la trap bar en tête. Chaque place prend
+   *  son exercice, puis lui cherche un partenaire qui s'y oppose : dans les
+   *  places qu'elle suggère, puis dans les suivantes. Sans partenaire
+   *  possible, la place est laissée. */
   const composer = (gabarit: Gabarit, interdits: Exercice[] = []): Exercice[] => {
-    const pris: Exercice[] = [];
-    const exclus = new Set(interdits.map(cleMouvement));
-    const emplacements = emplacementsDe(gabarit, objectifs, materiels);
-    // Les jours faciles, autant d'exercices pour le bas du dos que
-    // d'enchaînements, pas plus.
-    const quotaDos = gabarit === 'dure' ? 3 : Math.ceil(emplacements.length / TAILLE_ENCHAINEMENT);
-    for (const emplacement of emplacements) {
-      const tropDeDos = pris.filter(chargeLeBasDuDos).length >= quotaDos;
-      const choisi = choisir(
-        emplacement,
-        candidats,
-        {
-          exclus,
+    // Le mardi, jiu-jitsu le soir : rien qui charge le bas du dos.
+    const duJour = candidats.filter(DANS_LE_JOUR[gabarit]);
+    const bonsAvec = (exercice: Exercice) => duJour.filter((e) => accordPaire(exercice, e).accord === 'bon');
+    const places = emplacementsDe(gabarit, objectifs, materiels);
+    /** Les exercices pris, et la place de chacun : la séance suit l'ordre
+     *  des places — les objectifs d'abord. */
+    const pris: { exercice: Exercice; place: number }[] = [];
+    // Au plus un exercice sur trois qui charge le bas du dos, et jamais deux
+    // dans une paire.
+    const quotaDos = gabarit === 'dure' ? 3 : Math.ceil(nombre / 3);
+
+    /** Remplit ces places deux par deux, sans les mouvements exclus. */
+    const remplir = (restantes: Emplacement[], exclus: Set<string>) => {
+      const preferences = (sans?: Exercice): Preferences => {
+        const tropDeDos = pris.filter((p) => chargeLeBasDuDos(p.exercice)).length >= quotaDos;
+        return {
+          exclus: sans ? new Set([...exclus, cleMouvement(sans)]) : exclus,
           dejaPris,
           // Les mouvements à deux mains ou en alternant d'abord : une série
           // d'un seul côté coûte deux fois le temps — et le jeudi, à deux
           // mains, on charge plus lourd.
           repousser: (e) => (tropDeDos && chargeLeBasDuDos(e)) || e.cotes === 'unilateral',
-          // Le mardi, jiu-jitsu le soir : rien qui charge le bas du dos, même
-          // un exercice déjà fait le jeudi passe avant.
-          ...(gabarit === 'haut' ? { eviter: chargeLeBasDuDos } : {}),
-        },
-        alea,
-      );
-      if (!choisi) continue;
-      pris.push(choisi);
-      exclus.add(cleMouvement(choisi));
-      dejaPris.add(cleMouvement(choisi));
-      if (emplacement.objectif) surObjectif.add(choisi.id);
+        };
+      };
+      const prendre = (exercice: Exercice, place: Emplacement) => {
+        pris.push({ exercice, place: places.indexOf(place) });
+        exclus.add(cleMouvement(exercice));
+        dejaPris.add(cleMouvement(exercice));
+      };
+      /** Les places où chercher le partenaire : celles que la place suggère
+       *  d'abord, puis les autres, dans l'ordre. */
+      const ouChercher = (emplacement: Emplacement) => {
+        const suggerees = emplacement.avec ?? [];
+        const rang = (place: Emplacement) =>
+          suggerees.includes(place.cle) ? suggerees.indexOf(place.cle) : suggerees.length;
+        return [...restantes].sort((a, b) => rang(a) - rang(b));
+      };
+      while (pris.length + 2 <= nombre && restantes.length > 0) {
+        const emplacement = restantes.shift()!;
+        // Un exercice n'entre que s'il a un partenaire possible.
+        const aUnPartenaire = (premier: Exercice) =>
+          restantes.some((place) => classer(place, bonsAvec(premier), preferences(premier), { strict: true }).length > 0);
+        const premier = choisir(emplacement, duJour, preferences(), alea, { admis: aUnPartenaire });
+        if (!premier) continue;
+        for (const place of ouChercher(emplacement)) {
+          const second = choisir(place, bonsAvec(premier), preferences(premier), alea, { strict: true });
+          if (!second) continue;
+          prendre(premier, emplacement);
+          prendre(second, place);
+          restantes.splice(restantes.indexOf(place), 1);
+          break;
+        }
+      }
+    };
+
+    remplir([...places], new Set(interdits.map(cleMouvement)));
+    // La semaine B prend d'autres exercices que la semaine A. Quand il n'en
+    // reste plus assez pour faire des paires — à dix exercices, le bas du
+    // corps vient à manquer —, elle en reprend quelques-uns.
+    if (pris.length + 2 <= nombre && interdits.length > 0) {
+      const libres = places.filter((_, i) => !pris.some((p) => p.place === i));
+      remplir(libres, new Set(pris.map((p) => cleMouvement(p.exercice))));
     }
-    return pris;
+    return pris.sort((a, b) => a.place - b.place).map((p) => p.exercice);
   };
 
   /** Le dernier exercice : hors des mouvements de la séance, et pas déjà le
@@ -574,103 +904,65 @@ export function genererProgramme(options: OptionsProgramme = {}): ProgrammeMois 
     return retenue;
   };
 
-  /** La séance complète : sa fin pour les jambes, et ce qui se fait chacun
-   *  son tour — d'office, les machines, une pour deux. */
-  const complete = (seance: Omit<SeanceDuMois, 'finale' | 'tour'>, finale: Exercice | undefined): SeanceDuMois => {
-    const ids = [...seance.exercices, ...(finale ? [finale.id] : [])];
-    const tour = ids.filter((id) => EXERCICES_PAR_ID[id].materiel === 'salle');
-    return { ...seance, ...(finale ? { finale: finale.id } : {}), ...(tour.length > 0 ? { tour } : {}) };
-  };
-
-  /** Le lundi et le mardi : des enchaînements de trois, puis le dernier
-   *  exercice en séries. */
-  const enchainee = (
-    id: string,
-    nom: string,
-    jour: number,
-    semaine: 'A' | 'B' | undefined,
-    gabarit: 'bas' | 'haut',
+  /** Une séance du programme : ses exercices par paires, puis le dernier,
+   *  pour les jambes, seul. Les machines se font chacun son tour, une pour
+   *  deux — dans une paire, on se croise. */
+  const seanceDe = (
+    entete: Pick<SeanceDuMois, 'id' | 'nom' | 'jour' | 'semaine' | 'type' | 'partie'>,
+    gabarit: Gabarit,
     exercices: Exercice[],
   ): SeanceDuMois => {
     const finale = finaleDe(gabarit, exercices);
-    const seance = (liste: Exercice[]): SeanceDuMois =>
-      complete(
-        {
-          id,
-          nom,
-          jour,
-          ...(semaine ? { semaine } : {}),
-          type: 'facile',
-          partie: gabarit,
-          format: 'enchaine',
-          exercices: enEnchainements(liste).map((e) => e.id),
-        },
-        finale,
+    const avec = (ids: string[]): SeanceDuMois => {
+      const tour = [...ids, ...(finale ? [finale.id] : [])].filter((id) => EXERCICES_PAR_ID[id].materiel === 'salle');
+      return avecPairesAutomatiques(
+        rangee({
+          ...entete,
+          format: 'series',
+          exercices: ids,
+          ...(finale ? { finale: finale.id } : {}),
+          ...(tour.length > 0 ? { tour } : {}),
+        }),
       );
-    // À deux, aux répétitions d'usage, la séance tient dans l'heure : on
-    // retire les dernières places, les moins prioritaires — jusqu'à un
-    // enchaînement de trois et une paire.
-    let retenus = exercices;
-    while (retenus.length > 5 && dureeSec(seance(retenus)) > DUREE_MAXI_SEC) {
-      retenus = retenus.slice(0, -1);
+    };
+    // Le garde-fou : au-delà de deux heures, la séance perd ses dernières
+    // paires — jamais la première, celle de la trap bar le jeudi.
+    let seance = avec(exercices.map((e) => e.id));
+    while ((seance.liens ?? []).length > 2 && dureeSec(seance) > DUREE_MAXI_SEC) {
+      const derniere = seance.liens!.at(-1)!;
+      seance = avec(seance.exercices.filter((id) => !derniere.includes(id)));
     }
-    // Un exercice seul dans le dernier bloc n'est plus un enchaînement.
-    if (retenus.length > 6 && retenus.length % TAILLE_ENCHAINEMENT === 1) retenus = retenus.slice(0, -1);
-    // Plus d'exercices pour le bas du dos que d'enchaînements : deux finiraient
-    // ensemble. On retire les derniers en trop ; l'objectif « bas du dos »,
-    // placé en tête, reste.
-    while (retenus.filter(chargeLeBasDuDos).length > Math.ceil(retenus.length / TAILLE_ENCHAINEMENT)) {
-      const dernier = retenus.map(chargeLeBasDuDos).lastIndexOf(true);
-      retenus = retenus.filter((_, i) => i !== dernier);
-    }
-    return seance(retenus);
+    return seance;
   };
 
   // Le jeudi d'abord : c'est la séance de référence, les autres l'entourent
   // avec d'autres exercices.
-  const principalJeudi = composer('dure');
-  const finaleJeudi = finaleDe('dure', principalJeudi);
-  const jeudiAvec = (liste: Exercice[]): SeanceDuMois =>
-    complete(
-      {
-        id: 'jeudi',
-        nom: 'Jeudi — séance de référence',
-        jour: 4,
-        type: 'dure',
-        partie: 'complet',
-        format: 'series',
-        exercices: liste.map((e) => e.id),
-      },
-      finaleJeudi,
-    );
-  // Elle tient dans l'heure : on retire d'abord les places de base (jamais la
-  // trap bar, en tête), les objectifs en dernier.
-  let retenusJeudi = principalJeudi;
-  while (retenusJeudi.length > 4 && dureeSec(jeudiAvec(retenusJeudi)) > DUREE_MAXI_SEC) {
-    const retirables = retenusJeudi.map((_, i) => i).filter((i) => i > 0);
-    const deBase = retirables.filter((i) => !surObjectif.has(retenusJeudi[i].id));
-    const retrait = (deBase.length > 0 ? deBase : retirables).at(-1);
-    retenusJeudi = retenusJeudi.filter((_, i) => i !== retrait);
-  }
-  const jeudi = jeudiAvec(retenusJeudi);
-
+  const jeudi = seanceDe(
+    { id: 'jeudi', nom: 'Jeudi — séance de référence', jour: 4, type: 'dure', partie: 'complet' },
+    'dure',
+    composer('dure'),
+  );
   const lundiA = composer('bas');
   const mardiA = composer('haut');
+  const lundi = (id: string, nom: string, semaine: 'A' | 'B' | undefined, exercices: Exercice[]) =>
+    seanceDe({ id, nom, jour: 1, ...(semaine ? { semaine } : {}), type: 'facile', partie: 'bas' }, 'bas', exercices);
+  const mardi = (id: string, nom: string, semaine: 'A' | 'B' | undefined, exercices: Exercice[]) =>
+    seanceDe({ id, nom, jour: 2, ...(semaine ? { semaine } : {}), type: 'facile', partie: 'haut' }, 'haut', exercices);
   let seances: SeanceDuMois[];
   if (alternance) {
     const lundiB = composer('bas', lundiA);
     const mardiB = composer('haut', mardiA);
     seances = [
-      enchainee('lundi-a', 'Lundi A — bas du corps', 1, 'A', 'bas', lundiA),
-      enchainee('mardi-a', 'Mardi A — haut du corps', 2, 'A', 'haut', mardiA),
+      lundi('lundi-a', 'Lundi A — bas du corps', 'A', lundiA),
+      mardi('mardi-a', 'Mardi A — haut du corps', 'A', mardiA),
       jeudi,
-      enchainee('lundi-b', 'Lundi B — bas du corps', 1, 'B', 'bas', lundiB),
-      enchainee('mardi-b', 'Mardi B — haut du corps', 2, 'B', 'haut', mardiB),
+      lundi('lundi-b', 'Lundi B — bas du corps', 'B', lundiB),
+      mardi('mardi-b', 'Mardi B — haut du corps', 'B', mardiB),
     ];
   } else {
     seances = [
-      enchainee('lundi', 'Lundi — bas du corps', 1, undefined, 'bas', lundiA),
-      enchainee('mardi', 'Mardi — haut du corps', 2, undefined, 'haut', mardiA),
+      lundi('lundi', 'Lundi — bas du corps', undefined, lundiA),
+      mardi('mardi', 'Mardi — haut du corps', undefined, mardiA),
       jeudi,
     ];
   }
@@ -682,7 +974,65 @@ export function genererProgramme(options: OptionsProgramme = {}): ProgrammeMois 
     graine,
     seances,
     version: VERSION_PROGRAMME,
+    // Un autre nombre que celui par défaut est retenu : une recomposition
+    // le reprend.
+    ...(nombre !== EXERCICES_PAR_DEFAUT ? { duo: { exercices: nombre } } : {}),
   };
+}
+
+/** La séance, ses champs toujours dans le même ordre : les deux téléphones
+ *  comparent leurs séances telles quelles. */
+function rangee(seance: SeanceDuMois): SeanceDuMois {
+  return {
+    id: seance.id,
+    nom: seance.nom,
+    jour: seance.jour,
+    ...(seance.semaine ? { semaine: seance.semaine } : {}),
+    type: seance.type,
+    ...(seance.partie ? { partie: seance.partie } : {}),
+    format: 'series',
+    exercices: seance.exercices,
+    ...(seance.finale ? { finale: seance.finale } : {}),
+    ...(seance.liens && seance.liens.length > 0 ? { liens: seance.liens } : {}),
+    ...(seance.tour && seance.tour.length > 0 ? { tour: seance.tour } : {}),
+  };
+}
+
+/** Le même programme, recomposé avec la même graine, les mêmes objectifs et
+ *  le même premier lundi : les deux téléphones retombent sur les mêmes
+ *  séances. Les réglages du duo, le code d'équipe et le serveur restent. */
+function recomposer(programme: ProgrammeMois): ProgrammeMois {
+  const recompose = genererProgramme({
+    objectifs: programme.objectifs,
+    materiels: [...new Set<Materiel>([...programme.materiels, ...MATERIELS_PROGRAMME])],
+    graine: programme.graine,
+    alternance: programme.seances.some((s) => s.semaine !== undefined),
+    aujourdhui: depuisIso(programme.debut),
+    exercices: nombreExercicesDe(programme),
+  });
+  return {
+    ...recompose,
+    ...(programme.duo ? { duo: programme.duo } : {}),
+    ...(programme.equipe ? { equipe: programme.equipe } : {}),
+    ...(programme.serveur ? { serveur: programme.serveur } : {}),
+  };
+}
+
+/** Le programme a été retouché à la main : un exercice changé, une paire
+ *  refaite, chacun son tour basculé. Le recomposer perdrait ces retouches. */
+export const estRetouche = (programme: ProgrammeMois): boolean =>
+  JSON.stringify(recomposer(programme).seances) !== JSON.stringify(programme.seances.map(rangee));
+
+/** Un autre nombre d'exercices : les séances sont recomposées avec la même
+ *  graine — les deux téléphones retombent sur les mêmes. */
+export function avecNombreExercices(programme: ProgrammeMois, nombre: number): ProgrammeMois {
+  return recomposer({ ...programme, duo: { ...programme.duo, exercices: nombreValide(nombre) ?? EXERCICES_PAR_DEFAUT } });
+}
+
+/** Un autre tempo pour les séances du programme : les mêmes exercices, une
+ *  autre durée. */
+export function avecTempo(programme: ProgrammeMois, tempo: Tempo): ProgrammeMois {
+  return { ...programme, duo: { ...programme.duo, tempo: { ...tempo } } };
 }
 
 // ------------------------------------------------------------- La séance de chacun
@@ -697,6 +1047,9 @@ export interface ContexteSeance {
   semaineDure?: boolean;
   /** Les répétitions de chacun ; absentes, celles d'usage. */
   reps?: Partial<Record<Personne, number>>;
+  /** Le tempo du programme, le même sur les deux téléphones ; absent, celui
+   *  des réglages du téléphone. */
+  tempo?: Tempo;
   /** Exercices dont la semaine dure a réussi : un cran de plus. */
   augmenter?: string[];
 }
@@ -716,12 +1069,18 @@ export function estPoussee(exercice: Exercice): boolean {
 const estPetitMuscle = (exercice: Exercice) =>
   exercice.pattern === 'isolation' || TRONC.includes(exercice.pattern) || exercice.groupe === 'mollets';
 
-/** Le repos après une série : deux minutes à la trap bar le jeudi, une minute
- *  trente aux gros exercices, une minute aux petits muscles. */
+/** Le repos après une série d'un exercice fait seul : deux minutes à la trap
+ *  bar le jeudi, une minute trente aux gros exercices, une minute aux petits
+ *  muscles. */
 export function reposDe(exercice: Exercice, seance: Pick<SeanceDuMois, 'type'>): number {
   if (exercice.id === 'trap-bar-deadlift' && seance.type === 'dure') return REPOS_TRAP_BAR_SEC;
   return estPetitMuscle(exercice) ? REPOS_PETITS_SEC : REPOS_SEC;
 }
+
+/** La pause après une paire : une minute, deux quand elle compte la trap
+ *  bar. */
+export const reposDePaire = (paire: string[]): number =>
+  paire.includes('trap-bar-deadlift') ? REPOS_TRAP_BAR_SEC : REPOS_PAIRE_SEC;
 
 /** La séance du programme, mise aux réglages de la personne : c'est elle que
  *  déroule la séance guidée — tapis ou rameur, bille, répétitions comptées,
@@ -736,7 +1095,6 @@ export function seancePourPersonne(
   const moi = contexte.personne ?? null;
   const partenaire = moi && contexte.aDeux ? autrePersonne(moi) : null;
   const enTour = new Set(seanceMois.tour ?? []);
-  const enchaine = seanceMois.format === 'enchaine';
   const enPlus = contexte.semaineDure && seanceMois.type === 'dure' ? REPS_SEMAINE_DURE : 0;
   const augmenter = new Set(contexte.augmenter ?? []);
   const legere = moi !== null && PROFILS[moi].derniereLegereMardi && seanceMois.jour === JOUR_JIU_JITSU;
@@ -758,7 +1116,7 @@ export function seancePourPersonne(
       exerciceId: exercice.id,
       series: mien.series,
       reps: mien.reps,
-      reposSec: enchaine && !finale ? REPOS_SEC : reposDe(exercice, seanceMois),
+      reposSec: reposDe(exercice, seanceMois),
       ...(enTour.has(exercice.id) ? { tour: true } : {}),
       ...(partenaire ? { autre: volumeDe(partenaire, exercice, finale) } : {}),
       ...(legere && charge ? { derniereLegere: true } : {}),
@@ -766,20 +1124,16 @@ export function seancePourPersonne(
     };
   };
 
-  // Le jeudi, deux exercices liés s'enchaînent sans pause ; la pause vient
-  // après le groupe, la plus longue des siennes.
-  const liens = enchaine ? [] : (seanceMois.liens ?? []);
-  const blocs: BlocSeries[] = seanceMois.exercices.filter(estConnu).map((id, index) => {
+  // Les deux exercices d'une paire s'enchaînent sans pause ; la pause vient
+  // après la paire. Un exercice hors paire se fait seul, avec ses pauses.
+  const paires = seanceMois.liens ?? [];
+  const blocs: BlocSeries[] = seanceMois.exercices.filter(estConnu).map((id) => {
     const bloc = blocDe(EXERCICES_PAR_ID[id], false);
-    if (enchaine) return { ...bloc, superset: Math.floor(index / TAILLE_ENCHAINEMENT), transitionSec: 0 };
-    const lien = liens.findIndex((groupe) => groupe.includes(id));
-    if (lien < 0) return bloc;
-    const reposDuLien = Math.max(
-      ...liens[lien].filter(estConnu).map((membre) => reposDe(EXERCICES_PAR_ID[membre], seanceMois)),
-    );
-    return { ...bloc, superset: lien, transitionSec: TRANSITION_LIEN_SEC, reposSec: reposDuLien };
+    const paire = paires.findIndex((groupe) => groupe.includes(id));
+    if (paire < 0) return bloc;
+    return { ...bloc, superset: paire, transitionSec: TRANSITION_LIEN_SEC, reposSec: reposDePaire(paires[paire]) };
   });
-  // Pour finir, en séries.
+  // Pour finir, seul, en séries.
   if (estConnu(seanceMois.finale)) blocs.push(blocDe(EXERCICES_PAR_ID[seanceMois.finale], true));
 
   const echauffement = echauffementDe(seanceMois);
@@ -792,10 +1146,12 @@ export function seancePourPersonne(
       ...parametres,
       discipline: 'musculation',
       dureeMinutes: DUREE_REFERENCE_MIN,
-      format: enchaine ? 'circuit' : 'series',
-      styleCircuit: 'enchaine',
+      // Par paires : deux exercices en alternance, comme un superset.
+      format: paires.length > 0 ? 'superset' : 'series',
+      ...(paires.length > 0 ? { tailleRotation: 2 as const } : {}),
       seriesParExercice: SERIES_PROGRAMME,
-      tempo: { ...parametres.tempo },
+      // Le tempo du programme : le même sur les deux téléphones.
+      tempo: { ...(contexte.tempo ?? parametres.tempo) },
     },
     graine: 0,
     echauffementSec: dureeDes(echauffement),
@@ -1053,24 +1409,12 @@ export function basculerTour(programme: ProgrammeMois, seanceId: string, exercic
   };
 }
 
-// ------------------------------------------------------------- Lier deux exercices
+// ------------------------------------------------------------- Les paires, à la main
 
-/** Deux exercices qu'on lie, le jeudi : bons partenaires quand ils ne
- *  travaillent pas les mêmes muscles — pousser et tirer, le haut et le bas — et
- *  ne chargent pas tous les deux le bas du dos. */
-export type AccordLien = 'bon' | 'memes-muscles' | 'bas-du-dos';
-
-export function accordLien(a: Exercice, b: Exercice): AccordLien {
-  if (chargeLeBasDuDos(a) && chargeLeBasDuDos(b)) return 'bas-du-dos';
-  const principaux = new Set(a.musclesPrincipaux ?? []);
-  const communs = a.groupe === b.groupe || (b.musclesPrincipaux ?? []).some((m) => principaux.has(m));
-  return communs ? 'memes-muscles' : 'bon';
-}
-
-/** Lie deux exercices d'une séance en séries : ils s'enchaînent sans pause,
- *  la pause vient après la paire. Le second de la séance vient se placer
- *  juste après le premier — la trap bar reste en tête. Un exercice déjà lié ne
- *  se lie pas une seconde fois. */
+/** Met deux exercices libres en paire : ils s'enchaînent sans pause, la
+ *  pause vient après la paire. Le second de la séance vient se placer juste
+ *  après le premier — la trap bar reste en tête. Un exercice déjà en paire,
+ *  ou le dernier pour les jambes, n'entre pas dans une autre. */
 export function lierDansProgramme(
   programme: ProgrammeMois,
   seanceId: string,
@@ -1080,7 +1424,7 @@ export function lierDansProgramme(
   return {
     ...programme,
     seances: programme.seances.map((s) => {
-      if (s.id !== seanceId || s.format !== 'series' || unId === autreId) return s;
+      if (s.id !== seanceId || unId === autreId) return s;
       const liens = s.liens ?? [];
       const libre = (id: string) => s.exercices.includes(id) && !liens.some((groupe) => groupe.includes(id));
       if (!libre(unId) || !libre(autreId)) return s;
@@ -1088,24 +1432,21 @@ export function lierDansProgramme(
         s.exercices.indexOf(unId) < s.exercices.indexOf(autreId) ? [unId, autreId] : [autreId, unId];
       const sans = s.exercices.filter((id) => id !== second);
       const place = sans.indexOf(premier) + 1;
-      return {
-        ...s,
-        exercices: [...sans.slice(0, place), second, ...sans.slice(place)],
-        liens: [...liens, [premier, second]],
-      };
+      const exercices = [...sans.slice(0, place), second, ...sans.slice(place)];
+      // Les paires dans l'ordre de la séance.
+      const paires = [...liens, [premier, second]].sort((a, b) => exercices.indexOf(a[0]) - exercices.indexOf(b[0]));
+      return rangee({ ...s, exercices, liens: paires });
     }),
   };
 }
 
-/** Délie le groupe d'un exercice : chacun retrouve ses pauses. */
+/** Sépare la paire d'un exercice : chacun se fait seul, avec ses pauses. */
 export function delierDansProgramme(programme: ProgrammeMois, seanceId: string, exerciceId: string): ProgrammeMois {
   return {
     ...programme,
     seances: programme.seances.map((s) => {
       if (s.id !== seanceId || !s.liens) return s;
-      const deliee: SeanceDuMois = { ...s, liens: s.liens.filter((groupe) => !groupe.includes(exerciceId)) };
-      if (deliee.liens?.length === 0) delete deliee.liens;
-      return deliee;
+      return rangee({ ...s, liens: s.liens.filter((groupe) => !groupe.includes(exerciceId)) });
     }),
   };
 }
@@ -1195,14 +1536,17 @@ function depuisBase64Url(code: string): string {
   return new TextDecoder().decode(Uint8Array.from(binaire, (c) => c.charCodeAt(0)));
 }
 
-/** Les liens lisibles : deux ou trois exercices de la séance, côte à côte,
- *  chacun dans un seul groupe. */
-function lireLiens(brut: unknown[], exercices: string[]): string[][] {
+/** Les paires lisibles : deux exercices de la séance, côte à côte, chacun
+ *  dans une seule paire. Le lien de partage note un exercice par sa place
+ *  dans la liste reçue (`recus`). */
+function lireLiens(brut: unknown[], recus: unknown[], exercices: string[]): string[][] {
   const pris = new Set<string>();
   const liens: string[][] = [];
   for (const groupe of brut) {
-    if (!Array.isArray(groupe) || groupe.length < 2 || groupe.length > 3) continue;
-    const ids = groupe.filter((id): id is string => estConnu(id) && exercices.includes(id) && !pris.has(id));
+    if (!Array.isArray(groupe) || groupe.length !== 2) continue;
+    const ids = groupe
+      .map((id: unknown) => (typeof id === 'number' && Number.isInteger(id) ? recus[id] : id))
+      .filter((id): id is string => estConnu(id) && exercices.includes(id) && !pris.has(id));
     if (ids.length !== groupe.length || new Set(ids).size !== ids.length) continue;
     const places = ids.map((id) => exercices.indexOf(id));
     if (!places.every((place, i) => i === 0 || place === places[i - 1] + 1)) continue;
@@ -1212,13 +1556,26 @@ function lireLiens(brut: unknown[], exercices: string[]): string[][] {
   return liens;
 }
 
-/** Les répétitions du duo, si les deux sont lisibles. */
+/** Les réglages du duo qu'on peut lire : les répétitions, si les deux sont
+ *  lisibles ; un tempo de la liste ; un nombre d'exercices qu'on peut
+ *  choisir. */
 function lireDuo(brut: unknown): ProgrammeMois['duo'] {
-  const reps = (brut as { reps?: Partial<Record<Personne, unknown>> } | null | undefined)?.reps;
+  const duo = brut as { reps?: Partial<Record<Personne, unknown>>; tempo?: unknown; exercices?: unknown } | null | undefined;
   const lire = (n: unknown) => (typeof n === 'number' && Number.isInteger(n) && n >= 1 && n <= 30 ? n : null);
-  const sebastien = lire(reps?.sebastien);
-  const max = lire(reps?.max);
-  return sebastien !== null && max !== null ? { reps: { sebastien, max } } : undefined;
+  const sebastien = lire(duo?.reps?.sebastien);
+  const max = lire(duo?.reps?.max);
+  const tempoLu = duo?.tempo;
+  const tempo =
+    typeof tempoLu === 'object' && tempoLu !== null
+      ? TEMPOS.find((t) => memeTempo(t.tempo, tempoLu as Tempo))?.tempo
+      : undefined;
+  const exercices = nombreValide(duo?.exercices);
+  const lu: ReglagesDuo = {
+    ...(sebastien !== null && max !== null ? { reps: { sebastien, max } } : {}),
+    ...(tempo ? { tempo: { ...tempo } } : {}),
+    ...(exercices ? { exercices } : {}),
+  };
+  return Object.keys(lu).length > 0 ? lu : undefined;
 }
 
 const CODE_EQUIPE = /^[A-Za-z0-9_-]{10,40}$/;
@@ -1229,11 +1586,12 @@ export const equipeDe = (programme: Pick<ProgrammeMois, 'equipe' | 'graine' | 'd
   programme.equipe ?? `p${(programme.graine >>> 0).toString(36)}${programme.debut.replace(/-/g, '')}`;
 
 /** Un nouveau programme à la place de l'ancien : d'autres exercices, mais les
- *  réglages du duo restent — les répétitions de chacun, le serveur et le code
- *  d'équipe : l'historique commun continue d'un programme à l'autre. */
+ *  réglages du duo restent — les répétitions de chacun, le tempo, le nombre
+ *  d'exercices —, le serveur et le code d'équipe : l'historique commun
+ *  continue d'un programme à l'autre. */
 export function refaireProgramme(ancien: ProgrammeMois, options: OptionsProgramme): ProgrammeMois {
   return {
-    ...genererProgramme(options),
+    ...genererProgramme({ exercices: nombreExercicesDe(ancien), ...options }),
     ...(ancien.duo ? { duo: ancien.duo } : {}),
     ...(ancien.serveur ? { serveur: ancien.serveur } : {}),
     equipe: equipeDe(ancien),
@@ -1277,7 +1635,7 @@ export function validerProgramme(brut: unknown): ProgrammeMois | null {
         ? s.tour.filter((id) => estConnu(id) && (exercices.includes(id) || id === finale))
         : [];
       const partie = s.partie === 'bas' || s.partie === 'haut' || s.partie === 'complet' ? s.partie : undefined;
-      const liens = Array.isArray(s.liens) ? lireLiens(s.liens, exercices) : [];
+      const liens = Array.isArray(s.liens) ? lireLiens(s.liens, s.exercices, exercices) : [];
       return {
         id: s.id,
         nom: s.nom,
@@ -1285,7 +1643,7 @@ export function validerProgramme(brut: unknown): ProgrammeMois | null {
         ...(s.semaine === 'A' || s.semaine === 'B' ? { semaine: s.semaine } : {}),
         type: s.type === 'dure' ? 'dure' : 'facile',
         ...(partie ? { partie } : {}),
-        format: s.format === 'series' ? 'series' : 'enchaine',
+        format: 'series' as const,
         exercices,
         ...(finale ? { finale } : {}),
         ...(liens.length > 0 ? { liens } : {}),
@@ -1309,28 +1667,25 @@ export function validerProgramme(brut: unknown): ProgrammeMois | null {
 }
 
 /** Un programme d'une version précédente — l'ancienne semaine, la séance
- *  dure le lundi — est recomposé avec la même graine, les mêmes objectifs et
- *  le même premier lundi : les deux téléphones retombent sur le même
- *  programme. */
+ *  dure le lundi, les enchaînés de trois — est recomposé avec la même
+ *  graine, les mêmes objectifs et le même premier lundi : les deux téléphones
+ *  retombent sur le même programme. */
 function mettreANiveau(programme: ProgrammeMois): ProgrammeMois {
   if ((programme.version ?? 1) >= VERSION_PROGRAMME) return programme;
-  const recompose = genererProgramme({
-    objectifs: programme.objectifs,
-    materiels: [...new Set<Materiel>([...programme.materiels, ...MATERIELS_PROGRAMME])],
-    graine: programme.graine,
-    alternance: programme.seances.some((s) => s.semaine !== undefined),
-    aujourdhui: depuisIso(programme.debut),
-  });
-  return {
-    ...recompose,
-    ...(programme.duo ? { duo: programme.duo } : {}),
-    ...(programme.equipe ? { equipe: programme.equipe } : {}),
-    ...(programme.serveur ? { serveur: programme.serveur } : {}),
-  };
+  return recomposer(programme);
 }
 
+/** Le programme dans un lien. Une paire s'y note par la place de ses deux
+ *  exercices dans la séance, plutôt que par leurs noms : le lien reste assez
+ *  court pour un texto. */
 export function encoderProgramme(programme: ProgrammeMois): string {
-  return versBase64Url(JSON.stringify(programme));
+  const court = {
+    ...programme,
+    seances: programme.seances.map((s) =>
+      s.liens ? { ...s, liens: s.liens.map((paire) => paire.map((id) => s.exercices.indexOf(id))) } : s,
+    ),
+  };
+  return versBase64Url(JSON.stringify(court));
 }
 
 export function decoderProgramme(code: string): ProgrammeMois | null {

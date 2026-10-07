@@ -14,10 +14,12 @@ import {
   tempsDesEtapesQuittees,
 } from './horlogeCommune';
 import type { Contexte, Ecart } from './horlogeCommune';
-import { genererProgramme, seancePourPersonne } from './programmeMois';
+import { basculerTour, delierDansProgramme, genererProgramme, seancePourPersonne } from './programmeMois';
 
 const programme = genererProgramme({ graine: 3, aujourdhui: new Date(2026, 9, 5) });
-const jeudi = programme.seances.find((s) => s.id === 'jeudi')!;
+// La trap bar séparée de sa paire : seule, chacun son tour, Max d'abord.
+// L'exercice qui la suit se fait seul aussi, côte à côte.
+const jeudi = delierDansProgramme(programme, 'jeudi', 'trap-bar-deadlift').seances.find((s) => s.id === 'jeudi')!;
 const parametres = { ...PARAMETRES_PAR_DEFAUT, tempo: { monteeSec: 3, descenteSec: 3, pauseSec: 2 } };
 const seanceSeb = seancePourPersonne(jeudi, parametres, { personne: 'sebastien', aDeux: true });
 const seanceMax = seancePourPersonne(jeudi, parametres, { personne: 'max', aDeux: true });
@@ -315,4 +317,33 @@ describe('le temps passé sur les étapes', () => {
     const ici = installation(etapesMax, 0);
     expect(tempsDesEtapesQuittees(etapesMax, { index: ici, ecouleSec: 200 }, { index: ici + 1, ecouleSec: 0 }, 0.08)).toEqual([[ici, 200]]);
   });
+});
+
+describe('on se croise, aussi le lundi et le mardi', () => {
+  for (const id of ['lundi-a', 'mardi-a']) {
+    it(`${id} : une machine dans la paire, Max la prend, Sébastien fait l’autre exercice, puis on échange`, () => {
+      const [premier, second] = programme.seances.find((s) => s.id === id)!.liens![0];
+      const seanceMois = basculerTour(programme, id, premier).seances.find((s) => s.id === id)!;
+      const pourSeb = seancePourPersonne(seanceMois, parametres, { personne: 'sebastien', aDeux: true });
+      const seb = construireEtapes(pourSeb);
+      const max = construireEtapes(seancePourPersonne(seanceMois, parametres, { personne: 'max', aDeux: true }));
+      // Le téléphone de Sébastien voit les étapes de Max telles que Max les voit.
+      const vuesParSeb = construireEtapes(perspectiveAutre(pourSeb)!);
+      expect(vuesParSeb.map((e) => [e.type, e.dureeSec, e.exerciceId])).toEqual(max.map((e) => [e.type, e.dureeSec, e.exerciceId]));
+      // Dix secondes après « Go » : chacun dans sa série, pas sur le même exercice.
+      const go = 1_000_000;
+      const etat = avecGo(depart(), 0, go);
+      const ici = (etapes: Etape[]) => etapes[positionCommune(etapes, etat, go + 10_000).index];
+      expect(ici(max)).toMatchObject({ type: 'serie', exerciceId: premier });
+      expect(ici(seb)).toMatchObject({ type: 'serie', exerciceId: second });
+      // Puis on échange, à chaque tour.
+      const ordre = (etapes: Etape[]) => etapes.filter((e) => e.type === 'serie' && e.groupe === 0).map((e) => e.exerciceId);
+      expect(ordre(max).slice(0, 4)).toEqual([premier, second, premier, second]);
+      expect(ordre(seb).slice(0, 4)).toEqual([second, premier, second, premier]);
+      // Pendant sa série, le « Suivant » de Sébastien ne coupe pas celle de Max.
+      const position = positionCommune(seb, etat, go + 10_000);
+      const decision = decisionSuivant({ etapes: seb, etapesAutre: max, etat, t: go + 10_000, position, partenaire: 'Max' });
+      expect(decision.genre).toBe('locale');
+    });
+  }
 });
