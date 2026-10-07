@@ -194,6 +194,41 @@ Chacun note ses charges sur son téléphone. La séance guidée **propose la
 charge de la dernière fois**, série par série, et l'affiche sous la saisie
 (« Dernière fois : 25 · 30 · 30 »).
 
+### Essayer sans rien enregistrer
+
+Sous la séance du jour, deux boutons discrets :
+
+- **Séance d'essai** : la séance du jour en version courte, **une dizaine de
+  minutes** (un peu plus à deux : l'horloge suit le plus lent des deux). Une
+  seule série par exercice, pour les deux — la série de plus de Max n'y est
+  pas —, avec un tiers de répétitions en moins, des repos de 15 s, une mise
+  en place courte, une demi-minute d'échauffement et une demi-minute
+  d'étirements. Les exercices, les paires et le chacun son tour restent ceux
+  de la séance.
+- **Voir comme Max** (ou comme Sébastien, selon le téléphone) : le même essai,
+  vu par l'autre — ses répétitions, ses étirements, et qui commence quand c'est
+  chacun son tour. Seul, sans le serveur.
+
+À deux avec le serveur, l'essai se fait en direct comme une vraie séance, mais
+sur **sa propre séance commune**, numérotée : « -essai-1 », « -essai-2 »…
+s'ajoutent au nom de la séance, et la vraie séance du jour ne reprend pas là où
+l'essai s'est arrêté. En lançant l'essai, le téléphone demande au serveur où en
+sont les essais du jour : celui que l'autre vient de lancer — commencé, pas
+fini, bougé il y a moins de 20 minutes — se rejoint ; sinon on prend le premier
+numéro libre. Deux téléphones qui lancent en même temps tombent donc sur le même
+essai, et on peut refaire l'essai autant de fois qu'on veut le même soir, sans
+retomber sur « Essai terminé ». Un essai quitté en route se rejoint pendant 20
+minutes. Si le serveur ne répond pas (quatre secondes au plus), l'essai part
+quand même, sur le numéro 1 : s'il est déjà pris par un essai fini, il faudra en
+relancer un une fois le réseau revenu.
+
+**Rien n'est gardé.** Ni dans l'historique (ni sur le téléphone, ni sur le
+serveur), ni dans « la dernière fois » : la séance n'est pas marquée faite, et
+si la page se recharge, l'application ne propose pas de reprendre l'essai. Une
+séance interrompue qui attendait reste là, intacte. Un bandeau — « Essai —
+rien n'est enregistré », ou « Aperçu : l'écran de Max — rien n'est
+enregistré » — reste affiché du début à la fin.
+
 ### Séance libre
 - **Durée** : 5, 10, 15, 20, 30, 45 ou 60 minutes.
 - **Zones travaillées** : tout le corps, ou une combinaison (haut du corps,
@@ -664,6 +699,7 @@ src/
 │   ├── generateurSeance.ts       # Choix des exercices et calcul des volumes
 │   ├── etapesSeance.ts           # Machine à étapes de la séance guidée
 │   ├── programmeMois.ts          # Composition du programme par paires, calendrier A/B, charges, lien
+│   ├── essai.ts                  # La séance d'essai : la séance du jour en dix minutes, sans rien garder, et sa séance commune numérotée
 │   ├── statistiques.ts           # Fréquence d'un exercice, charges par série, charge totale
 │   ├── etatCommun.ts             # La séance commune : ses appuis, partagés avec le serveur
 │   ├── horlogeCommune.ts         # Où en est chacun sur l'horloge commune, et la règle des boutons

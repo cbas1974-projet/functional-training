@@ -241,7 +241,8 @@ describe('genererProgramme', () => {
         }
       }
     }
-  });
+    // Des centaines de programmes : plus long que les cinq secondes d'usage.
+  }, 30_000);
 
   it('dit la raison de chaque paire : des muscles opposés, pousser avec tirer, le haut avec le bas', () => {
     const raisons = new Set(programmes.flatMap((p) => p.seances.flatMap((s) => pairesDe(s).map(([a, b]) => accordPaire(a, b).raison))));

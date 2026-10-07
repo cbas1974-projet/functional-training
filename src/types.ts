@@ -297,6 +297,9 @@ export interface Seance {
     /** À deux : c'est moi qui commence quand c'est chacun son tour sur une
      *  machine, et moi qui prends le premier exercice d'un groupe lié. */
     jeCommence?: boolean;
+    /** La mise en place avant chaque nouvel exercice, en secondes ; absente,
+     *  30 s. L'essai la raccourcit. */
+    installationSec?: number;
   };
   blocs: BlocSeries[];
   circuit: Circuit | null;

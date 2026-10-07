@@ -261,6 +261,7 @@ function construireEtapesHorloge(seance: Seance): Etape[] {
   const { tempo } = seance.parametres;
   const aDeux = seance.blocs.some((bloc) => bloc.autre !== undefined);
   const jeCommence = seance.horloge?.jeCommence ?? true;
+  const installationSec = seance.horloge?.installationSec ?? INSTALLATION_SEC;
   const seriesAutre = (bloc: BlocSeries) => (aDeux ? (bloc.autre?.series ?? 0) : 0);
   const repsAutre = (bloc: BlocSeries) => bloc.autre?.reps ?? 0;
   const blocs = seance.blocs.filter((bloc) => bloc.series > 0 || seriesAutre(bloc) > 0);
@@ -278,7 +279,7 @@ function construireEtapesHorloge(seance: Seance): Etape[] {
     // Nouvel exercice : la pause de l'exercice d'avant, l'installation, puis
     // « Go ».
     const pause = g > 0 ? reposDuGroupe(groupes[g - 1]) : 0;
-    attendre(pause + INSTALLATION_SEC, 'installation', groupe[0].exerciceId, g, true);
+    attendre(pause + installationSec, 'installation', groupe[0].exerciceId, g, true);
 
     const machine = groupe[0];
     if (aDeux && groupe.length === 1 && machine.tour && machine.autre) {

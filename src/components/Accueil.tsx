@@ -72,6 +72,16 @@ import {
 import type { AccordPaire, ContexteSeance } from '../utils/programmeMois';
 import type { ConfigSynchro } from '../hooks/useSeanceCommune';
 import { avecSeanceFaite, serveurDe } from '../utils/enLigne';
+import {
+  ESSAI,
+  apercuDe,
+  identifiantSeanceEssai,
+  lecteurDeSeanceEssai,
+  raccourcirPourEssai,
+  seanceApercu,
+  trouverNumeroEssai,
+} from '../utils/essai';
+import type { Essai } from '../utils/essai';
 import FicheExercice from './FicheExercice';
 import ImageEnGrand from './ImageEnGrand';
 import SeanceGuidee from './SeanceGuidee';
@@ -98,6 +108,8 @@ interface SeanceActive {
   demarrage: 'debut' | 'reprise';
   /** À deux, avec le serveur : la séance commune à rejoindre. */
   synchro?: ConfigSynchro;
+  /** Un essai ou un aperçu : rien n'est enregistré. */
+  essai?: Essai;
 }
 
 type FeuilleOuverte =
@@ -125,6 +137,14 @@ const SECONDAIRE = {
   background: 'var(--surface-haute)',
   border: '1px solid var(--bordure)',
   color: 'var(--texte)',
+} as const;
+
+/** Les boutons qu'on ne cherche pas tout de suite : l'essai, l'aperçu. */
+const DISCRET = {
+  minHeight: CIBLE,
+  background: 'transparent',
+  border: '1px solid var(--bordure)',
+  color: 'var(--texte-discret)',
 } as const;
 
 /** « Mar A » : le nom court d'une séance, pour les pastilles de la semaine. */
@@ -775,6 +795,8 @@ export default function Accueil({
   const aRenvoyer = etat.programmeARenvoyer === true;
   /** L'exercice seul choisi pour former une paire avec un autre. */
   const [aLier, setALier] = useState<string | null>(null);
+  /** Un essai en direct demande son numéro au serveur : quelques secondes au plus. */
+  const [lancement, setLancement] = useState(false);
 
   const maintenant = new Date();
   const proposee = seanceAProposer(programme, historique, maintenant);
@@ -813,9 +835,10 @@ export default function Accueil({
     const precedente = historique.find((h) => h.titre === active.seance.titre);
     return precedente ? chargeTotale(precedente, uniteDeSeance(active.seance.parametres)) : undefined;
   }, [active, historique]);
+  // Dans l'aperçu, c'est l'écran de l'autre : nos charges n'y ont pas leur place.
   const chargesActives = useMemo(
     () =>
-      active
+      active && active.essai?.genre !== 'apercu'
         ? chargesPassees(
             historique,
             active.seance.blocs.map((bloc) => bloc.exerciceId),
@@ -1001,6 +1024,43 @@ export default function Accueil({
       demarrage: 'reprise',
       synchro: duMois ? configSynchro(duMois.id, enCours.seance.horloge?.partenaire !== undefined) : undefined,
     });
+  };
+
+  /** L'essai : la séance du jour en version courte, sans rien garder. À deux
+   *  avec le serveur, il se fait en direct sur sa propre séance commune,
+   *  numérotée : on rejoint l'essai que l'autre vient de lancer, sinon on
+   *  prend le premier numéro libre. La vraie séance du jour ne reprend pas là
+   *  où il s'arrête. Une séance interrompue, s'il y en a une, attend toujours. */
+  const lancerEssai = async () => {
+    if (seance.blocs.length === 0) return;
+    bellSound.unlock();
+    setALier(null);
+    const courte = raccourcirPourEssai(seancePourPersonne(seanceMois, parametres, contexte));
+    const jour = isoDate(new Date());
+    let synchro = configSynchro(seanceMois.id, aDeux);
+    if (synchro) {
+      setLancement(true);
+      try {
+        const numero = await trouverNumeroEssai(
+          lecteurDeSeanceEssai({ serveur: synchro.serveur, equipe: synchro.equipe, jour, seanceId: seanceMois.id }),
+          courte,
+        );
+        synchro = { ...synchro, cle: `${jour}_${identifiantSeanceEssai(seanceMois.id, numero)}` };
+      } finally {
+        setLancement(false);
+      }
+    }
+    setActive({ seance: courte, progression: null, demarrage: 'debut', synchro, essai: ESSAI });
+  };
+
+  /** Voir comme l'autre : le même essai, avec ses répétitions et ses
+   *  étirements. Seul, sans le serveur. */
+  const lancerApercu = () => {
+    const apercu = seanceApercu(seanceMois, parametres, contexte);
+    if (!apercu || !autre || apercu.blocs.length === 0) return;
+    bellSound.unlock();
+    setALier(null);
+    setActive({ seance: apercu, progression: null, demarrage: 'debut', essai: apercuDe(autre) });
   };
 
   const partager = async () => {
@@ -1358,6 +1418,19 @@ export default function Accueil({
               Commencer
             </button>
           </div>
+
+          {/* Pour essayer sans rien garder : la séance en version courte, ou
+              l'écran de l'autre. */}
+          <div className={`mt-1 grid gap-2 ${autre ? 'grid-cols-2' : 'grid-cols-1'}`}>
+            <button type="button" onClick={() => void lancerEssai()} className="rounded-xl px-3 text-sm font-semibold" style={DISCRET}>
+              Séance d’essai
+            </button>
+            {autre && (
+              <button type="button" onClick={lancerApercu} className="rounded-xl px-3 text-sm font-semibold" style={DISCRET}>
+                Voir comme {autre}
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Le programme : où on en est, et l'envoyer à l'autre. Objectifs et
@@ -1481,17 +1554,31 @@ export default function Accueil({
         <ImageEnGrand exercice={EXERCICES_PAR_ID[enGrand]} onFermer={fermerImage} />
       )}
 
+      {lancement && (
+        <div
+          role="status"
+          className="fixed inset-0 z-50 flex items-center justify-center px-6 text-center"
+          style={{ background: 'var(--fond)', color: 'var(--texte-discret)' }}
+        >
+          Un instant : on regarde si {autre ?? 'l’autre'} a déjà lancé l’essai…
+        </div>
+      )}
+
       {active && (
         <SeanceGuidee
           seance={active.seance}
           progression={active.progression}
           demarrage={active.demarrage}
           synchro={active.synchro}
+          essai={active.essai}
           chargeDerniereFois={chargeDerniereFois}
           chargesPassees={chargesActives}
-          onProgression={(progression) => onChange((prec) => ({ ...prec, enCours: progression }))}
+          onProgression={(progression) => {
+            // Un essai ne laisse aucune trace : ni reprise, ni séance interrompue effacée.
+            if (!active.essai) onChange((prec) => ({ ...prec, enCours: progression }));
+          }}
           onTerminee={(realisee) => {
-            onChange((prec) => avecSeanceFaite(prec, realisee));
+            if (!active.essai) onChange((prec) => avecSeanceFaite(prec, realisee));
             setActive(null);
             setChoisie(null);
             // Retour en haut : la séance faite, et la suivante.

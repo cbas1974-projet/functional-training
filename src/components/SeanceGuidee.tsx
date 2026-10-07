@@ -39,6 +39,7 @@ import {
 import type { Etape, EtatMaintien, EtatMetronome, PhaseTempo, Suivant } from '../utils/etapesSeance';
 import { estMobilite, secondesParRep } from '../utils/generateurSeance';
 import { libelleTempo } from '../utils/formatage';
+import type { Essai } from '../utils/essai';
 import { autrePersonne, chargeDeSerie, chargeLeBasDuDos, etirementsPauseDe } from '../utils/programmeMois';
 import { decisionPasserExercice, decisionProlonger, decisionSuivant, perspectiveAutre } from '../utils/horlogeCommune';
 import { tempsActifMs } from '../utils/etatCommun';
@@ -76,6 +77,9 @@ export interface SeanceGuideeProps {
   /** La charge totale soulevée la dernière fois, dans l'unité de la séance :
    *  le chiffre à battre. */
   chargeDerniereFois?: number;
+  /** Un essai ou un aperçu : rien n'est enregistré — ni la progression, ni la
+   *  séance faite. Son bandeau reste affiché du début à la fin. */
+  essai?: Essai;
 }
 
 // ------------------------------------------------------------- Réglages
@@ -358,6 +362,7 @@ export default function SeanceGuidee({
   demarrage,
   synchro,
   chargeDerniereFois,
+  essai,
 }: SeanceGuideeProps) {
   // La progression proposée à la reprise est figée à l'ouverture : les
   // sauvegardes que nous envoyons ensuite reviennent dans cette même prop.
@@ -572,7 +577,8 @@ export default function SeanceGuidee({
   });
 
   useEffect(() => {
-    if (!etat || !demarreeLe || clotureeRef.current) return;
+    // Un essai ne laisse rien : pas de reprise proposée au rechargement.
+    if (!etat || !demarreeLe || clotureeRef.current || essai) return;
     const derniere = sauvegardeRef.current;
     const nouvelleEtape = derniere.visite !== etat.visite;
     const periodique = maintenant - derniere.ms >= INTERVALLE_SAUVEGARDE_MS;
@@ -588,7 +594,7 @@ export default function SeanceGuidee({
       demarreeLe,
       sauvegardeeLe: new Date(maintenant).toISOString(),
     });
-  }, [etat, demarreeLe, maintenant, poids, seanceActive, index, tempsTotalEcoule, tempsAvecCourante]);
+  }, [etat, demarreeLe, maintenant, poids, seanceActive, index, tempsTotalEcoule, tempsAvecCourante, essai]);
 
   // ------------------------------------------------ Actions
 
@@ -714,7 +720,8 @@ export default function SeanceGuidee({
 
   const abandonner = () => {
     clotureeRef.current = true;
-    onProgression(null);
+    // Un essai ne touche pas à la séance interrompue qui attend, s'il y en a une.
+    if (!essai) onProgression(null);
     onQuitter();
   };
 
@@ -736,6 +743,7 @@ export default function SeanceGuidee({
     const partielle = realisation(false);
     const faites = partielle.exercices.reduce((total, e) => total + e.seriesFaites, 0);
     if (
+      !essai &&
       faites > 0 &&
       window.confirm(
         `Enregistrer cette séance partielle (${pluriel(faites, 'série')} faite${faites > 1 ? 's' : ''}) dans l’historique ?`,
@@ -862,6 +870,7 @@ export default function SeanceGuidee({
         <CorpsFin
           realisee={realisation(true)}
           chargeDerniereFois={chargeDerniereFois}
+          essai={essai}
           onEnregistrer={enregistrer}
           onAbandonner={abandonner}
         />
@@ -885,6 +894,7 @@ export default function SeanceGuidee({
         }
         ecouleSec={tempsTotalEcoule}
         resteSec={tempsRestant}
+        bandeau={essai?.bandeau}
         onQuitter={quitter}
       />
       {enCommun && (
@@ -1091,6 +1101,8 @@ interface EnTeteProps {
   avancement: number;
   ecouleSec: number;
   resteSec: number;
+  /** Essai ou aperçu : une ligne tout en haut, qui ne quitte pas l'écran. */
+  bandeau?: string;
   onQuitter: () => void;
 }
 
@@ -1102,6 +1114,7 @@ function EnTete({
   avancement,
   ecouleSec,
   resteSec,
+  bandeau,
   onQuitter,
 }: EnTeteProps) {
   const rempli = Math.min(100, Math.max(0, avancement * 100));
@@ -1110,6 +1123,18 @@ function EnTete({
       className="sticky top-0 z-10"
       style={{ background: 'var(--surface)', borderBottom: '1px solid var(--bordure)' }}
     >
+      {bandeau && (
+        <div
+          className="px-4 pb-1 text-center text-xs font-bold"
+          style={{
+            background: 'var(--tenue)',
+            color: 'var(--accent-texte)',
+            paddingTop: 'max(0.25rem, env(safe-area-inset-top))',
+          }}
+        >
+          {bandeau}
+        </div>
+      )}
       <div className="h-1 w-full" style={{ background: 'var(--bordure)' }}>
         <div
           className="h-full transition-[width] duration-300"
@@ -1118,7 +1143,7 @@ function EnTete({
       </div>
       <div
         className="mx-auto max-w-md px-4 pb-2"
-        style={{ paddingTop: 'max(0.5rem, env(safe-area-inset-top))' }}
+        style={{ paddingTop: bandeau ? '0.5rem' : 'max(0.5rem, env(safe-area-inset-top))' }}
       >
         <div className="flex items-center justify-between gap-3">
           <div className="min-w-0">
@@ -1695,6 +1720,8 @@ function CorpsRepos({ etape, resteSec, partenaire, charge, etirement, onProlonge
 interface CorpsFinProps {
   realisee: SeanceRealisee;
   chargeDerniereFois?: number;
+  /** Un essai : rien à enregistrer, un seul bouton pour fermer. */
+  essai?: Essai;
   onEnregistrer: () => void;
   onAbandonner: () => void;
 }
@@ -1725,7 +1752,7 @@ function ChargeSoulevee({ total, derniere, unite }: { total: number; derniere?: 
   );
 }
 
-function CorpsFin({ realisee, chargeDerniereFois, onEnregistrer, onAbandonner }: CorpsFinProps) {
+function CorpsFin({ realisee, chargeDerniereFois, essai, onEnregistrer, onAbandonner }: CorpsFinProps) {
   const seriesFaites = realisee.exercices.reduce((total, e) => total + e.seriesFaites, 0);
   const seriesPrevues = realisee.exercices.reduce((total, e) => total + e.seriesPrevues, 0);
   const total = chargeTotale(realisee);
@@ -1733,7 +1760,7 @@ function CorpsFin({ realisee, chargeDerniereFois, onEnregistrer, onAbandonner }:
   return (
     <div className="space-y-4">
       <div className="text-center">
-        <h2 className="text-2xl font-bold">Bravo, séance terminée</h2>
+        <h2 className="text-2xl font-bold">{essai ? essai.titreFin : 'Bravo, séance terminée'}</h2>
         <p className="mt-1" style={{ color: 'var(--texte-discret)' }}>
           Durée réelle <span className="chiffres font-semibold">{formaterMmSs(realisee.dureeReelleSec)}</span> ·
           prévue <span className="chiffres">{formaterMmSs(realisee.dureePrevueSec)}</span>
@@ -1743,7 +1770,8 @@ function CorpsFin({ realisee, chargeDerniereFois, onEnregistrer, onAbandonner }:
         </p>
       </div>
 
-      {total > 0 && (
+      {/* Un essai n'est pas comparé à la dernière fois : il ne sera pas gardé. */}
+      {total > 0 && !essai && (
         <ChargeSoulevee total={total} derniere={chargeDerniereFois} unite={uniteDeSeance(realisee.parametres)} />
       )}
 
@@ -1794,12 +1822,20 @@ function CorpsFin({ realisee, chargeDerniereFois, onEnregistrer, onAbandonner }:
         </table>
       </div>
 
-      <Bouton variante="montee" onClick={onEnregistrer} className="w-full">
-        Enregistrer la séance
-      </Bouton>
-      <Bouton variante="neutre" onClick={onAbandonner} className="w-full">
-        Ne pas enregistrer
-      </Bouton>
+      {essai ? (
+        <Bouton variante="montee" onClick={onAbandonner} className="w-full">
+          {essai.boutonFin}
+        </Bouton>
+      ) : (
+        <>
+          <Bouton variante="montee" onClick={onEnregistrer} className="w-full">
+            Enregistrer la séance
+          </Bouton>
+          <Bouton variante="neutre" onClick={onAbandonner} className="w-full">
+            Ne pas enregistrer
+          </Bouton>
+        </>
+      )}
     </div>
   );
 }
