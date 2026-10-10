@@ -96,22 +96,18 @@ Claude, de son côté :
 
 ### En attente de Sébastien
 
-1. **Mettre à jour le serveur du VPS** : recoller la ligne d'installation.
-   Sans ça, les mesures attendent dans le téléphone et les protections ne
-   marchent pas.
-   - Aller dans hPanel → VPS → Manage → Web console.
-   - Taper d'abord `bind 'set enable-bracketed-paste off'`, sinon le collage
-     ajoute `^[[200~`.
-   - Coller :
+Le serveur du VPS a été mis à jour le 10 octobre (mensurations,
+protections, machines des cuisses). Pour une prochaine mise à jour du
+serveur : hPanel → VPS → Manage → Web console, taper
+`bind 'set enable-bracketed-paste off'`, puis coller la ligne
+d'installation du README.
 
-     ```
-     curl -fsSL https://raw.githubusercontent.com/cbas1974-projet/functional-training/main/serveur/installer.sh | sh -s -- srv1302277.hstgr.cloud
-     ```
-2. **Faire examiner la jambe de Speedy** (l'impression qu'elle « lâche »).
+
+1. **Faire examiner la jambe de Speedy** (l'impression qu'elle « lâche »).
    Ensuite, rouvrir `EXERCICES_MIS_DE_COTE` dans `programmeMois.ts` selon
    l'avis du professionnel.
-3. **La liste des étirements du physio de Big Max.**
-4. **Les images.** Les 6 dessins des machines (`trap-bar-deadlift`,
+2. **La liste des étirements du physio de Big Max.**
+3. **Les images.** Les 6 dessins des machines (`trap-bar-deadlift`,
    `leg-press`, `hack-squat`, `traineau`, `leg-extension-machine`,
    `leg-curl-machine`) sont à refaire avec Gemini, sur le PC de Sébastien.
    - Les demandes, prêtes à coller, sont dans [IMAGES_A_FAIRE.md](IMAGES_A_FAIRE.md)
