@@ -114,7 +114,8 @@ Claude, de son côté :
 4. **Les images.** Les 6 dessins des machines (`trap-bar-deadlift`,
    `leg-press`, `hack-squat`, `traineau`, `leg-extension-machine`,
    `leg-curl-machine`) sont à refaire avec Gemini, sur le PC de Sébastien.
-   - Les demandes, prêtes à coller, sont dans la conversation du 7 octobre.
+   - Les demandes, prêtes à coller, sont dans [IMAGES_A_FAIRE.md](IMAGES_A_FAIRE.md)
+     (Gemini « Nano Banana »).
    - Joindre `public/exercices/goblet-squat.png` comme modèle de style :
      poster noir et blanc, femme en brassière, positions 1 et 2 dans des
      ronds noirs, petite silhouette anatomique en haut à gauche, format
