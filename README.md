@@ -270,7 +270,7 @@ charge de la dernière fois**, série par série, et l'affiche sous la saisie
 
 ### Essayer sans rien enregistrer
 
-Sous la séance du jour, deux boutons discrets :
+Sous le titre de la séance du jour, deux boutons :
 
 - **Séance d'essai** : la séance du jour en version courte, **une dizaine de
   minutes** (un peu plus à deux : l'horloge suit le plus lent des deux). Une

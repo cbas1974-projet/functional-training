@@ -1255,6 +1255,18 @@ export default function Accueil({
                 ? `Par paires : les deux exercices à la suite, puis la pause de la paire : 1 min aux petits muscles, 1 min 30 avec un gros exercice${avecTrapBar ? ', 2 min avec la trap bar' : ''}. À chaque nouvelle paire, on installe, puis on repart sur « Go ».`
                 : `Pauses : ${avecTrapBar ? '2 min à la trap bar, ' : ''}1 min 30 aux gros exercices, 1 min aux petits. À chaque nouvel exercice, on installe, puis on repart sur « Go ».`}
             </p>
+            {/* Pour essayer sans rien garder : la séance en version courte, ou
+                l'écran de l'autre. */}
+            <div className={`mt-3 grid gap-2 ${autre ? 'grid-cols-2' : 'grid-cols-1'}`}>
+              <button type="button" onClick={() => void lancerEssai()} className="rounded-xl px-3 py-2.5 text-sm font-semibold" style={DISCRET}>
+                Séance d’essai
+              </button>
+              {autre && (
+                <button type="button" onClick={lancerApercu} className="rounded-xl px-3 py-2.5 text-sm font-semibold" style={DISCRET}>
+                  Voir comme {autre}
+                </button>
+              )}
+            </div>
 
             {semaineDure && (
               <div className="mt-3 rounded-xl p-3" style={{ background: 'var(--surface-haute)', border: '1px solid var(--pause)' }}>
@@ -1422,18 +1434,6 @@ export default function Accueil({
             </button>
           </div>
 
-          {/* Pour essayer sans rien garder : la séance en version courte, ou
-              l'écran de l'autre. */}
-          <div className={`mt-1 grid gap-2 ${autre ? 'grid-cols-2' : 'grid-cols-1'}`}>
-            <button type="button" onClick={() => void lancerEssai()} className="rounded-xl px-3 text-sm font-semibold" style={DISCRET}>
-              Séance d’essai
-            </button>
-            {autre && (
-              <button type="button" onClick={lancerApercu} className="rounded-xl px-3 text-sm font-semibold" style={DISCRET}>
-                Voir comme {autre}
-              </button>
-            )}
-          </div>
         </div>
 
         {/* Le programme : où on en est, et l'envoyer à l'autre. Objectifs et
