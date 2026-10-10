@@ -100,6 +100,26 @@ describe('consignes de précaution', () => {
   });
 });
 
+describe('machines de la salle', () => {
+  it('compte six machines, chacune avec son dessin', () => {
+    const machines = EXERCICES.filter((e) => e.materiel === 'salle').map((e) => e.id);
+    expect(machines).toEqual([
+      'trap-bar-deadlift', 'leg-press', 'hack-squat', 'traineau', 'leg-extension-machine', 'leg-curl-machine',
+    ]);
+    for (const id of machines) expect(FICHIERS.has(`${id}.png`), id).toBe(true);
+  });
+
+  it('ménage les genoux à l’extension des jambes ; garde l’extension et le leg curl aux haltères', () => {
+    const extension = EXERCICES_PAR_ID['leg-extension-machine'];
+    expect([extension.sansPauseEnBas, extension.genouAMenager]).toEqual([true, true]);
+    expect(consignesDe(extension).slice(0, 2)).toEqual([CONSIGNE_SANS_PAUSE, CONSIGNE_GENOU]);
+    const flexion = EXERCICES_PAR_ID['leg-curl-machine'];
+    expect([flexion.pattern, flexion.musclesPrincipaux, flexion.cotes]).toEqual(['isolation', ['ischios'], 'bilateral']);
+    expect(EXERCICES_PAR_ID['leg-extension'].materiel).toBe('banc');
+    expect(EXERCICES_PAR_ID['hamstring-curl'].materiel).toBe('banc');
+  });
+});
+
 describe('postures de yoga', () => {
   it('compte les 57 postures du poster', () => {
     expect(EXERCICES_YOGA).toHaveLength(57);

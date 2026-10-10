@@ -19,6 +19,30 @@ Claude, de son côté :
 4. Résume en quelques lignes simples ce qui attend, propose par quoi
    commencer, et attend le feu vert de Sébastien avant les gros changements.
 
+## Séance du 10 octobre 2026
+
+- **Deux machines ajoutées**, à la demande de Sébastien : l'**extension des
+  jambes** (l'avant de la cuisse, assis) et la **flexion des jambes couché**
+  (l'arrière de la cuisse, allongé sur le ventre). Elles sont dans la
+  bibliothèque, avec un dessin simple dans le même style que les autres
+  machines (`leg-extension-machine`, `leg-curl-machine`).
+- **Le lundi, elles vont en paire**, juste après les objectifs, dès six
+  exercices, en semaine A comme en semaine B : ce sont les préférées du duo.
+  À quatre exercices, les objectifs prennent toute la place.
+- **À deux, on se croise** : Big Max commence sur l'une, Speedy sur l'autre,
+  puis on échange. Personne n'attend la machine. Une minute de pause après la
+  paire.
+- **Les genoux de Big Max** : à l'extension, pas d'arrêt genoux pliés, pas
+  plus bas que l'angle droit, une charge modérée ; si le genou fait mal, on
+  réduit l'amplitude. À la flexion couché, les hanches restent collées au banc,
+  sans cambrer le bas du dos.
+- **Le programme est recomposé** (version 5) à la prochaine ouverture, avec la
+  même graine, pareil sur les deux téléphones. Le mardi et le jeudi ne
+  changent pas ; un exercice changé à la main se perd, comme à chaque
+  nouvelle version.
+- L'extension et le leg curl aux haltères restent dans la bibliothèque. Les
+  2 nouveaux dessins sont à refaire avec les 4 autres (point 4 plus bas).
+
 ## Fermeture du 7 octobre 2026
 
 ### Où on en est
@@ -83,9 +107,9 @@ Claude, de son côté :
    Ensuite, rouvrir `EXERCICES_MIS_DE_COTE` dans `programmeMois.ts` selon
    l'avis du professionnel.
 3. **La liste des étirements du physio de Big Max.**
-4. **Les images.** Les 4 dessins des machines (`trap-bar-deadlift`,
-   `leg-press`, `hack-squat`, `traineau`) sont à refaire avec Gemini, sur le PC
-   de Sébastien.
+4. **Les images.** Les 6 dessins des machines (`trap-bar-deadlift`,
+   `leg-press`, `hack-squat`, `traineau`, `leg-extension-machine`,
+   `leg-curl-machine`) sont à refaire avec Gemini, sur le PC de Sébastien.
    - Les demandes, prêtes à coller, sont dans la conversation du 7 octobre.
    - Joindre `public/exercices/goblet-squat.png` comme modèle de style :
      poster noir et blanc, femme en brassière, positions 1 et 2 dans des
@@ -158,7 +182,7 @@ Claude, de son côté :
   (`cbas1974-projet`). GitHub la suspend après 60 jours sans commit sur un
   dépôt public ; on la relance dans l'onglet *Actions*.
 - **Vérifications** :
-  - `npx vitest run` (701 tests) ;
+  - `npx vitest run` (709 tests) ;
   - `npx tsc -b --noEmit` ;
   - `npx eslint .` ;
   - `npm run build`.

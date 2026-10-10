@@ -3,7 +3,7 @@ import type { Seance } from '../types';
 import { EXERCICES_PAR_ID } from '../data/exercices';
 import { DUREES_MINUTES, FORMATS, NIVEAUX, PARAMETRES_PAR_DEFAUT } from '../data/parametres';
 import { dureeSerieSec, estimerDureeSec, genererSeance, groupesDeBlocs, secondesParRep } from './generateurSeance';
-import { basculerTour, delierDansProgramme, estPoussee, genererProgramme, seancePourPersonne } from './programmeMois';
+import { TRANSITION_LIEN_SEC, basculerTour, delierDansProgramme, estPoussee, genererProgramme, seancePourPersonne } from './programmeMois';
 import type { ContexteSeance } from './programmeMois';
 import {
   CHANGEMENT_SEC,
@@ -849,6 +849,44 @@ describe('l’horloge des séances du programme', () => {
           expect(series(max).filter((x) => x.exerciceId === exerciceId)).toHaveLength(bloc.autre!.series);
         }
         jamaisEnsemble(surExercice(seb, premier), surExercice(max, premier));
+      }
+    }
+  });
+
+  it('le lundi, deux machines en paire — extension et flexion des jambes : on se croise, chacun sur la sienne, puis on échange', () => {
+    for (const id of ['lundi-a', 'lundi-b']) {
+      const seanceMois = programme.seances.find((s) => s.id === id)!;
+      const paire = seanceMois.liens!.find((l) => l.includes('leg-extension-machine'))!;
+      expect(paire, id).toEqual(['leg-extension-machine', 'leg-curl-machine']);
+      expect(seanceMois.tour, id).toEqual(expect.arrayContaining(paire));
+      const [premier, second] = paire;
+      for (const tempoDuJour of [tempo, { monteeSec: 4, descenteSec: 4, pauseSec: 2 }]) {
+        const contexte = (qui: ContexteSeance) => ({ ...qui, tempo: tempoDuJour });
+        const pourSeb = seancePourPersonne(seanceMois, parametres, contexte(SEB));
+        const pourMax = seancePourPersonne(seanceMois, parametres, contexte(MAX));
+        const [seb, max] = [construireEtapes(pourSeb), construireEtapes(pourMax)];
+        const g = groupesDeBlocs(pourSeb.blocs).findIndex((groupe) => groupe.some((b) => b.exerciceId === premier));
+        const ordre = (etapes: Etape[]) => etapes.filter((e) => e.type === 'serie' && e.groupe === g).map((e) => e.exerciceId);
+        // Big Max commence sur l'extension, Speedy sur la flexion, puis on échange.
+        expect(ordre(max), id).toEqual([premier, second, premier, second, premier, second]);
+        expect(ordre(seb), id).toEqual([second, premier, second, premier, second, premier]);
+        // Jamais les deux sur la même machine, préparation comprise.
+        jamaisEnsemble(surExercice(seb, premier), surExercice(max, premier));
+        jamaisEnsemble(surExercice(seb, second), surExercice(max, second));
+        // Big Max, plus de répétitions, ne trouve jamais sa machine occupée ;
+        // Speedy attend au plus qu'il la quitte : la différence de leurs séries.
+        expect(max.filter((e) => e.type === 'repos' && e.motif === 'tour' && e.groupe === g), id).toEqual([]);
+        const attente = DUREE_PRET_SEC + serieDe(premier, 10) - (DUREE_PRET_SEC + serieDe(second, 8)) - TRANSITION_LIEN_SEC;
+        for (const e of seb.filter((x) => x.type === 'repos' && x.motif === 'tour' && x.groupe === g)) {
+          expect(e.dureeSec, id).toBeLessThanOrEqual(Math.max(0, attente));
+        }
+        // La même horloge, et la durée annoncée est celle des étapes.
+        expect(instantsGo(seb)).toEqual(instantsGo(max));
+        expect(dureeTotaleSec(seb)).toBe(dureeTotaleSec(max));
+        expect(pourSeb.dureeEstimeeSec).toBe(dureeTotaleSec(seb));
+        expect(pourMax.dureeEstimeeSec).toBe(dureeTotaleSec(max));
+        // Deux petits muscles : une minute après la paire.
+        expect(pourSeb.blocs.filter((b) => paire.includes(b.exerciceId)).map((b) => b.reposSec)).toEqual([60, 60]);
       }
     }
   });

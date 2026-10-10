@@ -1,5 +1,5 @@
 // Assemble l'application construite (dist/) en UN SEUL fichier HTML autonome :
-// styles, script et les 41 images sont intégrés. Le fichier obtenu s'ouvre
+// styles, script et toutes les images sont intégrés. Le fichier obtenu s'ouvre
 // directement dans un navigateur (téléphone compris), sans serveur, et peut
 // être déposé tel quel chez n'importe quel hébergeur.
 //

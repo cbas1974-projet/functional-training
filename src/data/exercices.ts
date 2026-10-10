@@ -1804,7 +1804,8 @@ export const EXERCICES: Exercice[] = [
   },
   // Les 68 exercices des deux posters « Kettlebell Workouts ».
   ...EXERCICES_KETTLEBELL,
-  // Les machines de la salle, dessinées : trap bar, presse, hack squat, traîneau.
+  // Les machines de la salle, dessinées : trap bar, presse, hack squat, traîneau,
+  // extension et flexion des jambes.
   ...EXERCICES_SALLE,
   // Les 57 postures du poster « Yoga Poses » et les 52 étirements du poster
   // « Stretching Exercises ». Famille « mobilité » : tenues au temps, sans

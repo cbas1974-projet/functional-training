@@ -104,7 +104,8 @@ export const etirementsPauseDe = (personne: Personne): string[] =>
 export const OBJECTIFS_PAR_DEFAUT = ['bas-du-dos', 'epaules', 'exterieur-cuisse', 'interieur-cuisse'];
 
 /** Ce qu'on trouve dans la salle : haltères, kettlebells, bancs, tapis, et
- *  les machines — trap bar, presse à cuisses, hack squat, traîneau. */
+ *  les machines — trap bar, presse à cuisses, hack squat, traîneau,
+ *  extension et flexion des jambes. */
 export const MATERIELS_PROGRAMME: Materiel[] = ['halteres', 'kettlebell', 'banc', 'tapis', 'salle'];
 
 /** Le nombre d'exercices qu'on peut choisir pour chaque séance, sans compter
@@ -127,8 +128,9 @@ export const tempoDuProgramme = (programme: Pick<ProgrammeMois, 'duo'>): Tempo =
 /** Version de la composition. Un programme plus ancien est recomposé, avec
  *  la même graine : 3 = le bas du corps le lundi, le haut le mardi, la séance
  *  de référence le jeudi ; 4 = des paires d'exercices opposés tous les jours,
- *  au nombre d'exercices choisi. */
-export const VERSION_PROGRAMME = 4;
+ *  au nombre d'exercices choisi ; 5 = le lundi, la paire des deux machines
+ *  des cuisses (extension et flexion des jambes). */
+export const VERSION_PROGRAMME = 5;
 
 /** La durée inscrite dans les réglages d'une séance du programme ; la vraie
  *  est celle de ses étapes. */
@@ -232,6 +234,10 @@ interface Emplacement {
   /** Les machines de la salle y ont leur place ; ailleurs, elles attendent
    *  la fin de la séance. */
   salle?: boolean;
+  /** Les favoris du duo pour cette place : ils passent devant tous les
+   *  autres — une machine comprise, même sans `salle` —, et la semaine B les
+   *  reprend comme la semaine A. */
+  favoris?: string[];
   /** Les places qui lui font le meilleur partenaire, dans l'ordre : c'est
    *  là qu'on cherche d'abord l'autre exercice de sa paire. */
   avec?: string[];
@@ -283,6 +289,15 @@ const BASE: Record<Gabarit, Emplacement[]> = {
     { cle: 'mollets', muscles: ['mollets'], principal: ['mollets'], avec: ['coiffe', 'biceps', 'triceps'] },
   ],
   bas: [
+    // Les deux machines des cuisses, en paire : l'extension des jambes
+    // (quadriceps) avec la flexion des jambes couché (ischios). Ce sont les
+    // préférées du duo, demandées par Sébastien : elles viennent juste après
+    // les objectifs, dès six exercices, et chaque lundi, semaine A comme
+    // semaine B (`favoris`). À deux, chacun commence sur l'une, puis on
+    // échange : personne n'attend. Sans les machines, ces places prennent
+    // l'extension et le leg curl aux haltères.
+    { cle: 'cuisse-avant', muscles: ['quadriceps'], principal: ['quadriceps'], patterns: ['isolation'], favoris: ['leg-extension-machine'], avec: ['cuisse-arriere', 'ischios', 'fessiers'] },
+    { cle: 'cuisse-arriere', muscles: ['ischios'], principal: ['ischios'], patterns: ['isolation'], favoris: ['leg-curl-machine'], avec: ['cuisse-avant', 'squat', 'fente'] },
     // L'avant et l'arrière de la cuisse : un exercice à deux jambes avec un
     // exercice des ischios, un squat avec une charnière. Les fentes sont mises
     // de côté (`EXERCICES_MIS_DE_COTE`) : la place « fente » reste le nom de
@@ -297,8 +312,6 @@ const BASE: Record<Gabarit, Emplacement[]> = {
     { cle: 'fessiers', muscles: ['fessiers'], principal: ['fessiers'], avec: ['squat', 'cuisse-avant'] },
     { cle: 'abducteurs', muscles: ['abducteurs'], principal: ['abducteurs'], avec: ['adducteurs'] },
     { cle: 'adducteurs', muscles: ['adducteurs'], principal: ['adducteurs'], avec: ['abducteurs'] },
-    { cle: 'cuisse-avant', muscles: ['quadriceps'], principal: ['quadriceps'], patterns: ['isolation'], avec: ['cuisse-arriere', 'ischios', 'fessiers'] },
-    { cle: 'cuisse-arriere', muscles: ['ischios'], principal: ['ischios'], patterns: ['isolation'], avec: ['cuisse-avant', 'squat', 'fente'] },
   ],
   // Le haut du corps : pousser avec tirer. Le tronc n'y a pas de partenaire —
   // il s'oppose au bas du dos, que le mardi ne charge pas.
@@ -453,7 +466,7 @@ function classer(
   const libres = candidats.filter(
     (e) =>
       !preferences.exclus.has(cleMouvement(e)) &&
-      (e.materiel !== 'salle' || emplacement.salle) &&
+      (e.materiel !== 'salle' || emplacement.salle || emplacement.favoris?.includes(e.id)) &&
       (!emplacement.parmi || emplacement.parmi.includes(e.id)),
   );
   const filtres: ((e: Exercice) => boolean)[] = [
@@ -465,7 +478,9 @@ function classer(
     const classes = exercicesPourMuscles(libres.filter(filtre), emplacement.muscles).filter(admis);
     if (classes.length === 0) continue;
     const rang = (e: Exercice) =>
-      (preferences.dejaPris.has(cleMouvement(e)) ? 4 : 0) +
+      emplacement.favoris?.includes(e.id)
+        ? -1
+        : (preferences.dejaPris.has(cleMouvement(e)) ? 4 : 0) +
       (preferences.repousser?.(e) ? 2 : 0) +
       (emplacement.preferer && !emplacement.preferer(e) ? 1 : 0);
     const ordonnes = [...classes].sort((a, b) => rang(a) - rang(b));
@@ -649,13 +664,24 @@ function calculerAccord(a: Exercice, b: Exercice): AccordPaire {
   return { accord: 'pas-opposes', raison: pa === pb ? `pas opposés : deux fois ${NOM_PARTIE[pa]}` : 'pas opposés' };
 }
 
-/** La force d'une bonne paire : celle de l'opposition, et deux de plus pour
- *  une machine avec un exercice libre — à deux, on se croise, personne
- *  n'attend. -1 pour une paire à éviter. */
+/** Une machine avec un exercice libre : à deux, on se croise, personne
+ *  n'attend. */
+const BONUS_MACHINE = 2;
+/** Deux machines différentes : on se croise aussi — Big Max commence sur
+ *  l'une, Speedy sur l'autre, puis on échange. Le bonus est plus fort que
+ *  celui de deux paires « machine + exercice libre » réunies (deux fois
+ *  `BONUS_MACHINE`, avec des oppositions au plus aussi fortes) : la paire
+ *  des deux machines — l'extension et la flexion des jambes, le lundi — ne
+ *  se défait jamais pour aller chacune avec un exercice libre. */
+const BONUS_DEUX_MACHINES = 6;
+
+/** La force d'une bonne paire : celle de l'opposition, plus le bonus des
+ *  machines, où l'on se croise. -1 pour une paire à éviter. */
 function forcePaire(a: Exercice, b: Exercice): number {
   if (accordPaire(a, b).accord !== 'bon') return -1;
   const machines = [a, b].filter((e) => e.materiel === 'salle').length;
-  return (oppositionDe(a, b)?.force ?? 0) + (machines === 1 ? 2 : 0);
+  const bonus = machines === 2 ? BONUS_DEUX_MACHINES : machines === 1 ? BONUS_MACHINE : 0;
+  return (oppositionDe(a, b)?.force ?? 0) + bonus;
 }
 
 /** Les paires automatiques d'une liste d'exercices : le plus de paires
@@ -946,7 +972,10 @@ export function genererProgramme(options: OptionsProgramme = {}): ProgrammeMois 
     // La semaine B prend d'autres exercices que la semaine A — sauf ceux qui
     // visent un muscle à peine servi (`reprise`) : sans eux, le bas du dos et
     // les cuisses n'auraient plus d'exercice direct, ni le ventre de partenaire.
-    const reprenable = (e: Exercice) => places.some((p) => p.reprise && p.principal && viseLePrincipal(e, p.principal));
+    // Les favoris du duo (`favoris`, les deux machines des cuisses) reviennent
+    // eux aussi : c'est leur paire du lundi, chaque semaine.
+    const reprenable = (e: Exercice) =>
+      places.some((p) => (p.reprise && p.principal && viseLePrincipal(e, p.principal)) || p.favoris?.includes(e.id));
     remplir([...places], new Set(interdits.filter((e) => !reprenable(e)).map(cleMouvement)));
     // Quand il n'en reste plus assez pour faire des paires — à dix exercices, le
     // bas du corps vient à manquer —, elle en reprend quelques-uns de plus.

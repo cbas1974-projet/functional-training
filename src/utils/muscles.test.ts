@@ -12,9 +12,9 @@ import {
 const MUSCULATION = EXERCICES.filter((e) => (e.famille ?? 'musculation') === 'musculation');
 
 describe('lecture des planches anatomiques', () => {
-  it('les 149 exercices chargés ont au moins un muscle principal', () => {
-    // 77 aux haltères, 68 au kettlebell, 4 machines de la salle.
-    expect(MUSCULATION).toHaveLength(149);
+  it('les 151 exercices chargés ont au moins un muscle principal', () => {
+    // 77 aux haltères, 68 au kettlebell, 6 machines de la salle.
+    expect(MUSCULATION).toHaveLength(151);
     const sans = MUSCULATION.filter((e) => (e.musclesPrincipaux ?? []).length === 0);
     expect(sans.map((e) => e.id)).toEqual([]);
   });

@@ -65,14 +65,22 @@ du dos, épaules, extérieur et intérieur de cuisse. Rien à taper.
 - **Lundi, le bas du corps** (bas du dos, extérieur et intérieur de cuisse),
   et **mardi, le haut** (épaules d'abord). Le mardi, jiu-jitsu des adultes le
   soir : rien qui charge le bas du dos, et la marche du fermier pour finir.
-  Le lundi et le mardi, les machines attendent la fin de la séance.
+- **Le lundi, les deux machines des cuisses vont ensemble** : l'extension des
+  jambes (l'avant de la cuisse) avec la flexion des jambes couché (l'arrière).
+  Ce sont les préférées du duo. Elles forment la paire qui suit les objectifs,
+  dès six exercices, chaque lundi. À quatre exercices, les objectifs prennent
+  toute la place. Pour les genoux de Big Max, à l'extension : pas d'arrêt
+  genoux pliés, pas plus bas que l'angle droit, une charge modérée.
+  Les autres machines (presse, hack squat, traîneau) attendent la fin de la
+  séance, le lundi comme le mardi.
 - **Semaines A et B** : lundi et mardi alternent d'une semaine à l'autre —
   mêmes muscles, autres exercices. Le lundi fait exception pour le bas du dos
   et les cuisses : il ne reste qu'un exercice direct pour le bas du dos (le
   Superman au kettlebell), deux pour l'intérieur de cuisse (le squat sumo, la
   fente latérale tournée avec développé) et deux pour l'extérieur (la bouche
   d'incendie, l'élévation latérale de jambe). La semaine B les reprend plutôt
-  que de laisser l'objectif sans exercice direct. Le programme dure quatre
+  que de laisser l'objectif sans exercice direct. Elle reprend aussi la paire
+  des deux machines des cuisses, voulue chaque lundi. Le programme dure quatre
   semaines, puis l'application propose d'en refaire un. Commencé un vendredi ou
   un week-end, il part du lundi suivant.
 - **La semaine dure**, le jeudi une semaine sur deux (semaine B) : **même
@@ -91,8 +99,9 @@ du dos, épaules, extérieur et intérieur de cuisse. Rien à taper.
   ou le genou. Pour le dos : les soulevés de terre (trap bar, roumain,
   kettlebell, sur une jambe), le good morning, les rowings buste penché, les
   oiseaux et la tondeuse. Pour les genoux : les squats (haltères, gobelet,
-  sumo, kettlebell), la chaise au mur, les thrusters, la presse à cuisses et le
-  hack squat, les fentes et la montée sur marche. Quel que soit le tempo, ces
+  sumo, kettlebell), la chaise au mur, les thrusters, la presse à cuisses, le
+  hack squat et l'extension des jambes à la machine, les fentes et la montée
+  sur marche. Quel que soit le tempo, ces
   exercices se font en descendant contrôlé et en remontant sans rebond :
   l'arrêt en bas vaut 0 seconde, pour les deux. La répétition est plus courte,
   la bille ne se pose pas au pied du rail, et la durée annoncée en tient
@@ -134,7 +143,8 @@ du dos, épaules, extérieur et intérieur de cuisse. Rien à taper.
 - **Jamais deux exercices qui chargent le bas du dos dans la même paire**,
   aucun mouvement explosif, rien au-delà du niveau intermédiaire, et
   seulement le matériel de la salle : haltères, kettlebells, banc, tapis, et
-  quatre machines — trap bar, presse à cuisses, hack squat, traîneau. Elles ne
+  six machines — trap bar, presse à cuisses, hack squat, traîneau, extension
+  et flexion des jambes. Elles ne
   sont sur aucun poster : leur image est un dessin simple, à remplacer par une
   photo du même nom dans `public/exercices/`.
 - **Ensemble ou chacun son tour** : chaque exercice porte deux lignes,
@@ -144,7 +154,9 @@ du dos, épaules, extérieur et intérieur de cuisse. Rien à taper.
   **Big Max commence**, et la série de l'un est le repos de l'autre. Dans une
   paire qui compte une machine, **on se croise** : Big Max au premier exercice,
   Speedy au second, puis on échange ; personne n'attend la machine, sauf
-  si l'autre ne l'a pas encore quittée. Un toucher change la façon de faire,
+  si l'autre ne l'a pas encore quittée. C'est pareil pour une paire de deux
+  machines, comme l'extension et la flexion des jambes : Big Max commence
+  sur l'une, Speedy sur l'autre, puis on échange. Un toucher change la façon de faire,
   et la durée de la séance suit.
 - **Toucher une image** l'ouvre en grand, avec les consignes : pour voir le
   détail du mouvement avant de commencer.
@@ -169,8 +181,10 @@ l'autre souffle. La règle, plus stricte que l'ancien « Lier » :
 - **jamais deux exercices qui chargent le bas du dos**, et **jamais les mêmes
   muscles principaux** — pas même une fente et un soulevé de terre, qui
   travaillent tous les deux les fessiers ;
-- à deux, **de préférence une machine avec un exercice libre** : on se
-  croise, personne n'attend.
+- à deux, **de préférence une machine avec un exercice libre**, ou **deux
+  machines différentes** : on se croise, personne n'attend. Deux machines
+  ensemble comptent plus que deux paires « machine et exercice libre » :
+  l'extension et la flexion des jambes ne se séparent pas.
 
 Le tronc ne s'oppose qu'au bas du dos : il a sa place le lundi et le jeudi,
 jamais le mardi, qui ne charge pas le bas du dos.
@@ -182,9 +196,10 @@ toujours sur les mêmes. Les objectifs viennent en tête de séance, et le jeudi
 la trap bar reste la première. L'intérieur et l'extérieur de cuisse, deux
 objectifs, vont toujours ensemble quand ils le peuvent. Depuis que les fentes
 sont mises de côté, les exercices du bas du corps qui s'opposent sont rares :
-le lundi de la semaine B reprend le Superman au kettlebell, un exercice de plus
-à huit exercices, deux de plus à dix (le plus souvent le squat sumo et la
-flexion de jambe). Le mardi ne reprend rien, et le jeudi n'a pas de semaine B.
+le lundi de la semaine B reprend le Superman au kettlebell, et parfois, à huit
+ou dix exercices, un ou deux exercices de plus (le plus souvent le squat sumo).
+Il reprend aussi, chaque fois, la paire des deux machines des cuisses : c'est
+la préférée du duo. Le mardi ne reprend rien, et le jeudi n'a pas de semaine B.
 
 ### Speedy et Big Max, chacun sur son téléphone
 
@@ -479,13 +494,13 @@ y prend au plus 1,5 million de caractères (plus de 700 séances), bien en
 dessous des 5 Mo qu'un navigateur donne à un site. Au-delà, les plus
 vieilles séances ne restent que sur le serveur.
 
-La bibliothèque présente les **258 exercices** classés par zone, avec les
+La bibliothèque présente les **260 exercices** classés par zone, avec les
 six posters d'origine consultables en entier. Un filtre sépare les trois
 familles :
 
 | Famille | Nombre | Comment ça se travaille |
 | --- | --- | --- |
-| Musculation | 149 | Répétitions au tempo, avec une charge — 77 aux haltères, 68 au kettlebell, 4 machines de la salle |
+| Musculation | 151 | Répétitions au tempo, avec une charge — 77 aux haltères, 68 au kettlebell, 6 machines de la salle |
 | Yoga | 57 | Postures tenues au temps, sans charge |
 | Étirements | 52 | Positions tenues au temps, sans charge |
 
@@ -641,7 +656,7 @@ puis ouvrir l'adresse « Network » affichée.
 | `npm run build:unique` | Fichier HTML autonome dans `dist-unique/` |
 
 `npm run build:unique` produit un unique fichier `SGtraining.html` qui
-contient les styles, le script et les 41 images. Il s'ouvre directement depuis
+contient les styles, le script et les 266 images (260 exercices et 6 posters). Il s'ouvre directement depuis
 un téléphone, sans serveur ni connexion.
 
 ## Mise en ligne (Netlify)
@@ -793,7 +808,7 @@ src/
 │   └── BibliothequeExercices.tsx
 ├── data/
 │   ├── exercices.ts              # Les 77 exercices et leurs points d'attention
-│   ├── salle.ts                  # Trap bar, presse, hack squat, traîneau
+│   ├── salle.ts                  # Les machines : trap bar, presse, hack squat, traîneau, extension et flexion des jambes
 │   └── parametres.ts             # Durées, tempos, niveaux, formats, zones
 ├── utils/
 │   ├── generateurSeance.ts       # Choix des exercices et calcul des volumes

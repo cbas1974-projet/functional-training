@@ -3,6 +3,8 @@
 // (même nom de fichier dans `public/exercices/`).
 //
 // Une seule machine pour deux : ces exercices se font chacun son tour.
+// L'extension et la flexion des jambes, deux machines, vont ensemble en
+// paire le lundi : chacun commence sur l'une, puis on échange.
 
 import type { Exercice } from '../types';
 
@@ -103,5 +105,54 @@ export const EXERCICES_SALLE: Exercice[] = [
       'Chacun son tour : l’autre souffle pendant ce temps.',
     ],
     interetJjb: 'La poussée des jambes du passage de garde et de l’amenée au sol.',
+  },
+  {
+    id: 'leg-extension-machine',
+    nomFr: 'Extension des jambes à la machine',
+    nomEn: 'Leg Extension',
+    zone: 'bas',
+    groupe: 'quadriceps',
+    muscles: 'Quadriceps',
+    musclesPrincipaux: ['quadriceps'],
+    materiel: 'salle',
+    pattern: 'isolation',
+    niveauMin: 1,
+    cotes: 'bilateral',
+    unite: 'reps',
+    // Les genoux de Big Max : pas d'arrêt genoux pliés sous la charge.
+    sansPauseEnBas: true,
+    genouAMenager: true,
+    position: 'Assis, le dos contre le dossier, le coussin sur le bas des tibias',
+    pointsAttention: [
+      'Régler le dossier pour que le genou soit dans l’axe de la machine.',
+      'Le coussin sur le bas du tibia, juste au-dessus du pied.',
+      'Tenir les poignées : les hanches restent collées au siège.',
+      'Monter jusqu’aux jambes tendues sans donner de coup ; on peut tenir une seconde jambes tendues, puis redescendre lentement.',
+      'À cause des genoux : partir pas plus bas que l’angle droit, avec une charge modérée. Si le genou fait mal, réduire l’amplitude.',
+    ],
+    interetJjb: 'Un genou solide pour la garde et pour se relever.',
+  },
+  {
+    id: 'leg-curl-machine',
+    nomFr: 'Flexion des jambes couché, à la machine',
+    nomEn: 'Lying Leg Curl',
+    zone: 'bas',
+    groupe: 'ischios-fessiers',
+    muscles: 'Ischio-jambiers, mollets',
+    musclesPrincipaux: ['ischios'],
+    musclesSecondaires: ['mollets'],
+    materiel: 'salle',
+    pattern: 'isolation',
+    niveauMin: 1,
+    cotes: 'bilateral',
+    unite: 'reps',
+    position: 'Allongé sur le ventre, les genoux juste au bord du banc, le coussin au-dessus des talons, les mains sur les poignées',
+    pointsAttention: [
+      'Le genou aligné sur l’axe de la machine, juste au bord du banc.',
+      'Les hanches et le ventre collés au banc, sans cambrer le bas du dos.',
+      'Plier les genoux sans décoller le bassin.',
+      'Revenir lentement, sans laisser tomber la charge ni donner de coup en bas.',
+    ],
+    interetJjb: 'Les ischios qui ferment la garde, et qui protègent le genou.',
   },
 ];

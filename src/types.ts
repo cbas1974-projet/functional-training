@@ -71,7 +71,8 @@ export type Materiel =
   | 'swissball'
   | 'tapis'
   /** Les machines de la salle : trap bar, presse à cuisses, hack squat,
-   *  traîneau. Une pour deux : on s'y relaie. */
+   *  traîneau, extension et flexion des jambes. Une pour deux : on s'y
+   *  relaie. */
   | 'salle';
 
 /** Schéma de mouvement. C'est la clé de l'équilibre d'une séance : on évite

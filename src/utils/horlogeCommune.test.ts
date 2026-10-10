@@ -352,4 +352,25 @@ describe('on se croise, aussi le lundi et le mardi', () => {
       expect(decision.genre).toBe('locale');
     });
   }
+
+  it('lundi : la paire des deux machines des cuisses — chacun sur la sienne, puis on échange', () => {
+    const lundi = programme.seances.find((s) => s.id === 'lundi-a')!;
+    const g = lundi.liens!.findIndex((l) => l.includes('leg-extension-machine'));
+    expect(lundi.liens![g]).toEqual(['leg-extension-machine', 'leg-curl-machine']);
+    const pourSeb = seancePourPersonne(lundi, parametres, { personne: 'sebastien', aDeux: true });
+    const seb = construireEtapes(pourSeb);
+    const max = construireEtapes(seancePourPersonne(lundi, parametres, { personne: 'max', aDeux: true }));
+    // Le téléphone de Speedy voit les étapes de Big Max telles que Big Max les voit.
+    const vuesParSeb = construireEtapes(perspectiveAutre(pourSeb)!);
+    expect(vuesParSeb.map((e) => [e.type, e.dureeSec, e.exerciceId])).toEqual(max.map((e) => [e.type, e.dureeSec, e.exerciceId]));
+    expect(dureeTotaleSec(seb)).toBe(dureeTotaleSec(max));
+    // Dix secondes après le « Go » de la paire : chacun sur sa machine.
+    const go = 1_000_000;
+    const etat = avecGo(depart(), g, go);
+    const index = (etapes: Etape[]) => etapes.findIndex((e) => e.type === 'repos' && e.manuel && e.groupe === g) + 1;
+    const ici = (etapes: Etape[]) => etapes[positionCommune(etapes, etat, go + 10_000).index];
+    expect(index(seb)).toBeGreaterThan(0);
+    expect(ici(max)).toMatchObject({ type: 'serie', exerciceId: 'leg-extension-machine' });
+    expect(ici(seb)).toMatchObject({ type: 'serie', exerciceId: 'leg-curl-machine' });
+  });
 });

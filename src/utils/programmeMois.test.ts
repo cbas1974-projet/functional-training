@@ -119,6 +119,9 @@ const exercicesDe = (seance: SeanceDuMois): Exercice[] => seance.exercices.map((
  *  l'extérieur de cuisse et de l'intérieur de cuisse : la semaine B du lundi
  *  peut les reprendre. */
 const DIRECTS_DU_LUNDI = ['kb-superman', 'fire-hydrant', 'kb-side-leg-raise', 'sumo-squat', 'kb-rotating-side-lunge-press'];
+/** Les deux machines des cuisses, la paire préférée du duo : chaque lundi,
+ *  semaine A comme semaine B. */
+const MACHINES_DU_LUNDI = ['leg-extension-machine', 'leg-curl-machine'];
 /** Les étirements des jambes de chaque fin de séance : mollet, avant de la cuisse,
  *  arrière de la cuisse, fessier. */
 const ETIREMENTS_DES_JAMBES = ['etir-mollet-mur', 'etir-quadriceps-cote', 'etir-ischios-allonge', 'etir-fessier-chiffre-4'];
@@ -190,10 +193,11 @@ describe('genererProgramme', () => {
         const deA = new Set(exercicesDe(seanceNommee(p, a)).map(cleMouvement));
         const repris = exercicesDe(seanceNommee(p, b)).filter((e) => deA.has(cleMouvement(e)));
         // Le mardi, rien n'est repris. Le lundi, seuls reviennent les exercices
-        // directs du bas du dos et de l'intérieur ou l'extérieur de cuisse : il
-        // n'en reste qu'un ou deux de chaque.
-        expect(repris.filter((e) => b.startsWith('mardi') || !DIRECTS_DU_LUNDI.includes(e.id)), `${p.graine} · ${b}`).toEqual([]);
-        expect(repris.length, `${p.graine} · ${b}`).toBeLessThanOrEqual(2);
+        // directs du bas du dos et de l'intérieur ou l'extérieur de cuisse — il
+        // n'en reste qu'un ou deux de chaque —, et les deux machines des cuisses.
+        const permis = [...DIRECTS_DU_LUNDI, ...MACHINES_DU_LUNDI];
+        expect(repris.filter((e) => b.startsWith('mardi') || !permis.includes(e.id)), `${p.graine} · ${b}`).toEqual([]);
+        expect(repris.filter((e) => !MACHINES_DU_LUNDI.includes(e.id)).length, `${p.graine} · ${b}`).toBeLessThanOrEqual(2);
       }
     }
   });
@@ -265,9 +269,11 @@ describe('genererProgramme', () => {
       }
       // D'une séance à l'autre, la fin change.
       expect(new Set(p.seances.map((s) => cleMouvement(EXERCICES_PAR_ID[s.finale!]))).size).toBeGreaterThanOrEqual(2);
-      // Le lundi et le mardi, les machines attendent la fin de la séance.
+      // Le lundi et le mardi, les autres machines attendent la fin de la
+      // séance : le lundi n'a que la paire des deux machines des cuisses.
       for (const s of p.seances.filter((x) => x.type === 'facile')) {
-        expect(exercicesDe(s).filter((e) => e.materiel === 'salle')).toEqual([]);
+        const machines = exercicesDe(s).filter((e) => e.materiel === 'salle').map((e) => e.id);
+        expect(machines, `${p.graine} · ${s.id}`).toEqual(s.partie === 'bas' ? MACHINES_DU_LUNDI : []);
       }
     }
   });
@@ -1087,16 +1093,20 @@ describe('les précautions : exercices mis de côté', () => {
     expect(alternatives(ancienne, 'lundi-a', 'reverse-lunge', 200).filter((e) => MIS_DE_COTE.includes(e.id))).toEqual([]);
   });
 
-  it('remplit la place « fente » du lundi avec un exercice à deux jambes — les machines attendent la fin', () => {
-    // Sans objectif, c'est la première place du lundi : son exercice ouvre la séance.
+  it('remplit la place « fente » du lundi avec un exercice à deux jambes — la presse et le hack squat attendent la fin', () => {
+    // Sans objectif, la séance s'ouvre sur la paire des deux machines des
+    // cuisses ; la place « fente » vient juste après : son exercice ouvre la
+    // paire suivante.
     const sansMachine = DEUX_JAMBES.filter((id) => EXERCICES_PAR_ID[id].materiel !== 'salle');
     for (const nombre of NOMBRES_EXERCICES) {
       for (const graine of GRAINES.slice(0, 8)) {
         const programme = programmeCompose(nombre, [], graine);
         for (const id of ['lundi-a', 'lundi-b']) {
           const lundi = seanceNommee(programme, id);
-          expect(sansMachine, `${nombre} · ${graine} · ${id}`).toContain(lundi.exercices[0]);
-          expect(exercicesDe(lundi).filter((e) => e.materiel === 'salle')).toEqual([]);
+          const cas = `${nombre} · ${graine} · ${id}`;
+          expect(lundi.liens?.[0], cas).toEqual(MACHINES_DU_LUNDI);
+          expect(sansMachine, cas).toContain(lundi.exercices[2]);
+          expect(exercicesDe(lundi).filter((e) => e.materiel === 'salle').map((e) => e.id), cas).toEqual(MACHINES_DU_LUNDI);
         }
       }
     }
@@ -1164,6 +1174,66 @@ describe('les précautions : exercices mis de côté', () => {
   });
 });
 
+describe('les machines des cuisses, le lundi', () => {
+  it('chaque lundi, semaines A et B, l’extension et la flexion des jambes vont en paire, juste après les objectifs', () => {
+    for (const nombre of [6, 8, 10]) {
+      for (const graine of GRAINES.slice(0, 8)) {
+        const programme = programmeCompose(nombre, undefined, graine);
+        for (const id of ['lundi-a', 'lundi-b']) {
+          const lundi = seanceNommee(programme, id);
+          const cas = `${nombre} · ${graine} · ${id}`;
+          const g = (lundi.liens ?? []).findIndex((l) => l.includes('leg-extension-machine'));
+          expect(lundi.liens?.[g], cas).toEqual(MACHINES_DU_LUNDI);
+          expect(accordPaire(EXERCICES_PAR_ID['leg-extension-machine'], EXERCICES_PAR_ID['leg-curl-machine']).raison).toBe('quadriceps ↔ ischios');
+          // Pas reléguées à la fin : à six, la troisième paire, juste après les
+          // deux paires des objectifs ; au-delà, seules les paires des objectifs
+          // (bas du dos et ventre, intérieur et extérieur de cuisse) passent
+          // devant.
+          if (nombre === 6) expect(g, cas).toBe(2);
+          const objectifs = ['lombaires', 'abdominaux', 'obliques', 'abducteurs', 'adducteurs'];
+          for (const avant of pairesDe(lundi).slice(0, g)) {
+            expect(avant.some((e) => (e.musclesPrincipaux ?? []).some((m) => objectifs.includes(m))), `${cas} · ${avant.map((e) => e.id)}`).toBe(true);
+          }
+          // Une machine pour deux : chacun son tour, et une minute de pause
+          // après la paire, deux petits muscles.
+          expect(lundi.tour, cas).toEqual(expect.arrayContaining(MACHINES_DU_LUNDI));
+          expect(reposDePaire(MACHINES_DU_LUNDI, lundi)).toBe(REPOS_PETITS_SEC);
+        }
+      }
+    }
+  });
+
+  it('à quatre exercices, les objectifs prennent toute la place ; sans objectif, les machines ouvrent le lundi', () => {
+    for (const graine of GRAINES.slice(0, 8)) {
+      for (const id of ['lundi-a', 'lundi-b']) {
+        const court = seanceNommee(programmeCompose(4, undefined, graine), id);
+        expect(court.exercices.filter((x) => MACHINES_DU_LUNDI.includes(x))).toEqual([]);
+        const libre = seanceNommee(programmeCompose(4, [], graine), id);
+        expect(libre.liens?.[0]).toEqual(MACHINES_DU_LUNDI);
+      }
+    }
+  });
+
+  it('sans les machines, ces places prennent l’extension et le leg curl aux haltères', () => {
+    const sansMachine = genererProgramme({ graine: 1, aujourdhui: LUNDI, materiels: ['halteres', 'kettlebell', 'banc', 'tapis'] });
+    for (const s of sansMachine.seances) {
+      expect(exercicesDe(s).filter((e) => e.materiel === 'salle')).toEqual([]);
+      expect(s.tour).toBeUndefined();
+    }
+  });
+
+  it('deux machines différentes en paire se croisent aussi : la paire ne se défait pas pour aller avec des exercices libres', () => {
+    // Séparées, chacune avec un exercice libre, elles feraient deux paires
+    // « machine + libre » ; ensemble, elles restent ensemble.
+    const { paires } = apparier(['goblet-squat', 'leg-extension-machine', 'hamstring-curl', 'leg-curl-machine']);
+    expect(paires).toEqual([['goblet-squat', 'hamstring-curl'], ['leg-extension-machine', 'leg-curl-machine']]);
+    // Une machine seule va toujours de préférence avec un exercice libre.
+    expect(apparier(['kb-superman', 'leg-extension-machine', 'v-sit-cross-jab']).paires).toEqual([
+      ['kb-superman', 'leg-extension-machine'],
+    ]);
+  });
+});
+
 describe('les précautions : arrêt en bas', () => {
   /** Pour le dos, puis pour les genoux. */
   const POUR_LE_DOS = [
@@ -1173,7 +1243,7 @@ describe('les précautions : arrêt en bas', () => {
   const POUR_LES_GENOUX = [
     'squat', 'goblet-squat', 'kb-goblet-squat', 'sumo-squat', 'thruster', 'kb-thruster', 'hack-squat', 'leg-press',
     'reverse-lunge', 'kb-lunge', 'elevated-reverse-lunge', 'step-up', 'side-lunge', 'kb-side-lunge', 'curtsy-lunge',
-    'kb-wall-squat-press', 'kb-lunge-press', 'kb-rotating-side-lunge-press',
+    'kb-wall-squat-press', 'kb-lunge-press', 'kb-rotating-side-lunge-press', 'leg-extension-machine',
   ];
   const marque = (id: string) => EXERCICES_PAR_ID[id].sansPauseEnBas === true;
   const tempoAvecPause = { monteeSec: 3, descenteSec: 3, pauseSec: 2 };
