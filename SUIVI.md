@@ -40,8 +40,12 @@ Claude, de son côté :
   même graine, pareil sur les deux téléphones. Le mardi et le jeudi ne
   changent pas ; un exercice changé à la main se perd, comme à chaque
   nouvelle version.
-- L'extension et le leg curl aux haltères restent dans la bibliothèque. Les
-  2 nouveaux dessins sont à refaire avec les 4 autres (point 4 plus bas).
+- L'extension et le leg curl aux haltères restent dans la bibliothèque, mais
+  jamais dans la même séance que leur machine : c'est le même mouvement. Pour
+  que le lundi à dix exercices trouve encore ses paires, la place « fente »
+  accepte aussi la chaise au mur avec développé et le thruster.
+- Les 2 nouveaux dessins sont à refaire avec les 4 autres (point 4 plus
+  bas).
 
 ## Fermeture du 7 octobre 2026
 
@@ -182,7 +186,7 @@ Claude, de son côté :
   (`cbas1974-projet`). GitHub la suspend après 60 jours sans commit sur un
   dépôt public ; on la relance dans l'onglet *Actions*.
 - **Vérifications** :
-  - `npx vitest run` (709 tests) ;
+  - `npx vitest run` (710 tests) ;
   - `npx tsc -b --noEmit` ;
   - `npx eslint .` ;
   - `npm run build`.

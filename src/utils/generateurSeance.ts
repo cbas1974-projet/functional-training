@@ -594,16 +594,23 @@ function premierNonVide<T>(...listes: T[][]): T[] {
   return listes.find((liste) => liste.length > 0) ?? [];
 }
 
+/** Les mouvements qui portent un autre nom anglais : la flexion des jambes
+ *  couché à la machine (« Lying Leg Curl ») est le leg curl à l'haltère
+ *  (« Hamstring Curl »). L'extension des jambes, elle, porte le même nom
+ *  (« Leg Extension ») à la machine et à l'haltère. */
+const MEME_MOUVEMENT = new Map([['lyinglegcurl', 'hamstringcurl']]);
+
 /** Le mouvement d'un exercice, indépendamment du matériel : le squat gobelet
  *  aux haltères et au kettlebell portent le même nom anglais sur leurs posters.
  *  Une séance ne doit pas les tirer tous les deux. Espaces et traits d'union
  *  ne comptent pas : « Woodchop » et « Wood Chop » sont le même bûcheron. */
 export function cleMouvement(exercice: Exercice): string {
-  return exercice.nomEn
+  const cle = exercice.nomEn
     .toLowerCase()
     .replace(/[’']/g, '')
     .replace(/^(dumbbell|weighted)\s+/, '')
     .replace(/[\s-]+/g, '');
+  return MEME_MOUVEMENT.get(cle) ?? cle;
 }
 
 /** Parcourt le cycle de zones et retient au plus `maximum` exercices, en

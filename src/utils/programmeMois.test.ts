@@ -1038,7 +1038,10 @@ describe('les précautions : exercices mis de côté', () => {
     'kb-good-morning', 'bent-over-row', 'kb-bent-over-row', 'seesaw-row',
   ];
   /** Les exercices à deux jambes qui remplissent la place « fente » du lundi. */
-  const DEUX_JAMBES = ['leg-press', 'hack-squat', 'goblet-squat', 'kb-goblet-squat', 'glute-bridge', 'frog-pump'];
+  const DEUX_JAMBES = [
+    'leg-press', 'hack-squat', 'goblet-squat', 'kb-goblet-squat', 'glute-bridge', 'frog-pump',
+    'kb-wall-squat-press', 'thruster', 'kb-thruster',
+  ];
   const toutes = (programme: ProgrammeMois) =>
     programme.seances.flatMap((s) => [...s.exercices, ...(s.finale ? [s.finale] : [])]);
 
@@ -1202,6 +1205,34 @@ describe('les machines des cuisses, le lundi', () => {
       }
     }
   });
+
+  it('jamais la machine et l’haltère du même mouvement dans une séance, ni proposés par « Changer »', () => {
+    const MEMES = [
+      ['leg-extension-machine', 'leg-extension'],
+      ['leg-curl-machine', 'hamstring-curl'],
+    ];
+    for (const [machine, libre] of MEMES) {
+      expect(cleMouvement(EXERCICES_PAR_ID[machine])).toBe(cleMouvement(EXERCICES_PAR_ID[libre]));
+    }
+    for (const nombre of NOMBRES_EXERCICES) {
+      for (const graine of GRAINES) {
+        const programme = programmeCompose(nombre, undefined, graine);
+        for (const s of programme.seances) {
+          const ids = [...s.exercices, s.finale!];
+          for (const [machine, libre] of MEMES) {
+            expect(ids.includes(machine) && ids.includes(libre), `${nombre} · ${graine} · ${s.id} · ${machine}`).toBe(false);
+          }
+        }
+      }
+    }
+    // « Changer » ne propose pas l'haltère quand la machine est déjà là.
+    const lundi = seanceNommee(programmes[0], 'lundi-a');
+    const autre = lundi.exercices.find((id) => !lundi.liens![2].includes(id) && id !== 'kb-superman')!;
+    const choix = alternatives(programmes[0], 'lundi-a', autre, 200).map((e) => e.id);
+    expect(choix).not.toContain('hamstring-curl');
+    expect(choix).not.toContain('leg-extension');
+    expect(alternatives(programmes[0], 'lundi-a', 'leg-curl-machine', 200).map((e) => e.id)).not.toContain('hamstring-curl');
+  }, 30_000);
 
   it('à quatre exercices, les objectifs prennent toute la place ; sans objectif, les machines ouvrent le lundi', () => {
     for (const graine of GRAINES.slice(0, 8)) {

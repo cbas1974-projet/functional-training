@@ -123,8 +123,11 @@ du dos, épaules, extérieur et intérieur de cuisse. Rien à taper.
   genou sur le banc. Ces exercices restent dans la bibliothèque et dans la
   séance libre ; le programme ne les compose plus et « Changer » ne les
   propose plus. La place « fente » du lundi se remplit avec un exercice à deux
-  jambes : un squat gobelet, le pont fessier ou le pont grenouille (la presse
-  et le hack squat, des machines, restent pour la fin de la séance). Pour les
+  jambes : un squat gobelet, le pont fessier, le pont grenouille, ou un squat
+  avec développé — la chaise au mur, le thruster (la presse et le hack squat,
+  des machines, restent pour la fin de la séance). Une machine et son
+  équivalent aux haltères (l'extension des jambes, le leg curl) ne vont jamais
+  dans la même séance : c'est le même mouvement. Pour les
   remettre plus tard, il suffit de retirer leur nom de la liste
   `EXERCICES_MIS_DE_COTE` (`src/utils/programmeMois.ts`, où le commentaire dit
   aussi comment rendre ses fentes à la place du lundi), puis de refaire le

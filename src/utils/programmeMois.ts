@@ -208,8 +208,15 @@ export const EXERCICES_MIS_DE_COTE: string[] = [
  *  côté : des exercices à deux jambes. La presse à cuisses et le hack squat sont
  *  des machines : le lundi, elles attendent la fin de la séance (leur place est
  *  celle du dernier exercice), si bien que la place se remplit en pratique avec
- *  un squat gobelet, le pont fessier ou la pompe de grenouille. */
-const DEUX_JAMBES = ['leg-press', 'hack-squat', 'goblet-squat', 'kb-goblet-squat', 'glute-bridge', 'frog-pump'];
+ *  un squat gobelet, le pont fessier ou la pompe de grenouille — ou un squat
+ *  avec développé (la chaise au mur, le thruster) : ils ne travaillent pas les
+ *  fessiers, si bien qu'un soulevé de terre roumain peut leur faire face. Sans
+ *  eux, à dix exercices, le lundi de la semaine B manquerait de paires depuis
+ *  que le leg curl à l'haltère ne revient plus à côté de la machine. */
+const DEUX_JAMBES = [
+  'leg-press', 'hack-squat', 'goblet-squat', 'kb-goblet-squat', 'glute-bridge', 'frog-pump',
+  'kb-wall-squat-press', 'thruster', 'kb-thruster',
+];
 
 // ------------------------------------------------------------- Emplacements
 
