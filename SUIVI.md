@@ -19,6 +19,27 @@ Claude, de son côté :
 4. Résume en quelques lignes simples ce qui attend, propose par quoi
    commencer, et attend le feu vert de Sébastien avant les gros changements.
 
+## Séance du 11 octobre 2026
+
+- **Lourd, correct ou léger**, à la demande de Sébastien : comme on ne monte
+  pas les charges à chaque séance, chacun dit comment c'était. Après la
+  dernière série de chaque exercice, trois gros boutons (facultatifs), pendant
+  la pause qui suit — ou aux étirements pour le dernier exercice. La réponse
+  est gardée avec l'exercice dans l'historique, part vers le serveur avec lui,
+  et s'affiche en petit dans le détail d'une séance.
+- **Léger deux fois de suite**, à la même charge : la fois d'après, la charge
+  proposée monte de 5 lb (2,5 kg), avec « Léger les 2 dernières fois : on
+  monte de 5 lb » dans la séance et « ↑ +5 lb proposé » sur l'accueil.
+  **Lourd deux fois de suite** : un cran de moins. Une montée ne se propose
+  qu'une fois : quand la charge change, le compte repart de zéro. Avec la
+  semaine dure réussie du jeudi, un seul cran, pas deux ; « lourd » passe avant.
+  Les seuils et le cran sont des constantes (`src/utils/ressenti.ts`).
+- L'essai et « Voir comme » montrent les boutons mais ne gardent rien. La
+  proposition ne vaut que pour les séances du programme ; en séance libre, on
+  peut répondre, mais la charge n'est pas ajustée.
+- Le serveur n'a pas changé : il garde la séance telle qu'elle arrive, le
+  ressenti compris (un test le vérifie). Pas de mise à jour du VPS à faire.
+
 ## Séance du 10 octobre 2026
 
 - **Deux machines ajoutées**, à la demande de Sébastien : l'**extension des

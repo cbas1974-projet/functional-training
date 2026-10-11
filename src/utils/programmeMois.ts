@@ -31,7 +31,8 @@ import { construireEtapes, dureeTotaleSec } from './etapesSeance';
 import { memeTempo } from './formatage';
 import { cleMouvement, familleDe } from './generateurSeance';
 import { exercicesPourMuscles, musclesDe } from './muscles';
-import { convertirPoids, uniteDeSeance } from './statistiques';
+import { CRAN_CHARGE as CRAN, convertirPoids, uniteDeSeance } from './statistiques';
+import { ajustementDeCharge, avecCran } from './ressenti';
 
 /** L'identifiant désigne bien un exercice de la bibliothèque — et non une
  *  propriété héritée comme « constructor », qu'un lien trafiqué glisserait. */
@@ -143,8 +144,6 @@ export const SERIES_PROGRAMME = 3;
 /** La semaine dure, le jeudi une semaine sur deux : même poids, deux
  *  répétitions de plus. */
 export const REPS_SEMAINE_DURE = 2;
-/** Après une semaine dure réussie, un cran de plus. */
-const CRAN: Record<UnitePoids, number> = { lb: 5, kg: 2.5 };
 /** Le mardi soir, le jiu-jitsu des adultes. */
 const JOUR_JIU_JITSU = 2;
 /** Repos après une série d'un gros exercice, fait seul ; après une paire, c'est
@@ -1159,6 +1158,10 @@ export interface ContexteSeance {
   tempo?: Tempo;
   /** Exercices dont la semaine dure a réussi : un cran de plus. */
   augmenter?: string[];
+  /** Exercices dont le ressenti demande un changement de charge : léger deux
+   *  fois de suite, un cran de plus ; lourd deux fois de suite, un cran de
+   *  moins (`ressentisQuiChangent`). */
+  ressentis?: Record<string, 'leger' | 'lourd'>;
 }
 
 const PATTERNS_POUSSEE: PatternMoteur[] = ['poussee-horizontale', 'poussee-verticale'];
@@ -1205,6 +1208,8 @@ export function seancePourPersonne(
   const enTour = new Set(seanceMois.tour ?? []);
   const enPlus = contexte.semaineDure && seanceMois.type === 'dure' ? REPS_SEMAINE_DURE : 0;
   const augmenter = new Set(contexte.augmenter ?? []);
+  const ressentis = contexte.ressentis ?? {};
+  const cran = CRAN[uniteDeSeance(parametres)];
   const legere = moi !== null && PROFILS[moi].derniereLegereMardi && seanceMois.jour === JOUR_JIU_JITSU;
 
   /** Séries et répétitions d'une personne sur un exercice. */
@@ -1228,7 +1233,10 @@ export function seancePourPersonne(
       ...(enTour.has(exercice.id) ? { tour: true } : {}),
       ...(partenaire ? { autre: volumeDe(partenaire, exercice, finale) } : {}),
       ...(legere && charge ? { derniereLegere: true } : {}),
-      ...(augmenter.has(exercice.id) && charge ? { ajoutCharge: CRAN[uniteDeSeance(parametres)] } : {}),
+      ...(augmenter.has(exercice.id) && charge ? { ajoutCharge: cran } : {}),
+      ...(charge && Object.prototype.hasOwnProperty.call(ressentis, exercice.id)
+        ? { ajustementRessenti: ressentis[exercice.id] === 'leger' ? cran : -cran }
+        : {}),
     };
   };
 
@@ -1602,10 +1610,11 @@ export function chargeLegere(charge: number, unite: UnitePoids): number {
 }
 
 /** La charge proposée pour une série d'une séance du programme : celle de
- *  `chargeProposee`, un cran de plus après une semaine dure réussie, et la
- *  moitié pour la dernière série légère du mardi. */
+ *  `chargeProposee`, un cran de plus après une semaine dure réussie ou deux
+ *  « léger » de suite (un seul cran, jamais deux), un cran de moins après deux
+ *  « lourd » de suite, et la moitié pour la dernière série légère du mardi. */
 export function chargeDeSerie(
-  bloc: Pick<BlocSeries, 'series' | 'ajoutCharge' | 'derniereLegere'> | undefined,
+  bloc: Pick<BlocSeries, 'series' | 'ajoutCharge' | 'ajustementRessenti' | 'derniereLegere'> | undefined,
   saisies: number[],
   passees: number[],
   serie: number,
@@ -1613,8 +1622,8 @@ export function chargeDeSerie(
 ): number {
   const deja = saisies[serie - 1] ?? 0;
   if (deja > 0) return deja;
-  const ajout = bloc?.ajoutCharge ?? 0;
-  const reference = ajout > 0 ? passees.map((charge) => (charge > 0 ? charge + ajout : 0)) : passees;
+  const ajout = ajustementDeCharge(bloc)?.ajout ?? 0;
+  const reference = ajout !== 0 ? passees.map((charge) => (charge > 0 ? avecCran(charge, ajout) : 0)) : passees;
   if (bloc?.derniereLegere && serie > 1 && serie === bloc.series) {
     return chargeLegere(chargeProposee(saisies, reference, serie - 1), unite);
   }

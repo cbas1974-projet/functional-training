@@ -22,6 +22,10 @@ export function uniteDeSeance(parametres: Pick<ParametresSeance, 'unitePoids'>):
 
 export const SUFFIXE_UNITE: Record<UnitePoids, string> = { lb: 'lb', kg: 'kg' };
 
+/** Un cran de charge : 5 lb, ou 2,5 kg — le pas des haltères. C'est le saut
+ *  de la semaine dure réussie, et celui du ressenti. */
+export const CRAN_CHARGE: Record<UnitePoids, number> = { lb: 5, kg: 2.5 };
+
 /** Arrondi utile pour une charge : la livre entière, le demi-kilo. Les
  *  haltères n'existent pas en fractions plus fines. */
 export function arrondirPoids(valeur: number, unite: UnitePoids): number {

@@ -14,6 +14,7 @@ import type {
   GuideVisuel,
   MouvementGuide,
   ProgressionSeance,
+  Ressenti,
   Seance,
   SeanceRealisee,
   Tempo,
@@ -45,11 +46,13 @@ import { decisionPasserExercice, decisionProlonger, decisionSuivant, perspective
 import { tempsActifMs } from '../utils/etatCommun';
 import type { Contexte, Decision } from '../utils/horlogeCommune';
 import { SUFFIXE_UNITE, chargeTotale, libellePoidsParSerie, uniteDeSeance } from '../utils/statistiques';
+import { ajustementDeCharge, avecRessentis, exercicesAEvaluer, motRessenti, phraseRessenti } from '../utils/ressenti';
 import { ajouterTemps, useMoteurEtapes } from '../hooks/useMoteurEtapes';
 import { useMoteurCommun } from '../hooks/useMoteurCommun';
 import { useSeanceCommune } from '../hooks/useSeanceCommune';
 import type { ConfigSynchro } from '../hooks/useSeanceCommune';
 import { useVerrouEcran } from '../hooks/useVerrouEcran';
+import BoutonsRessenti from './BoutonsRessenti';
 import PaceurTempo from './PaceurTempo';
 import type { LectureTempo } from './PaceurTempo';
 
@@ -371,6 +374,8 @@ export default function SeanceGuidee({
   const [seanceActive, setSeanceActive] = useState<Seance>(seance);
   // Charges saisies : une valeur par série, index 0 = première série.
   const [poids, setPoids] = useState<Record<string, number[]>>({});
+  // Le ressenti de chaque exercice, dit après sa dernière série (facultatif).
+  const [ressentis, setRessentis] = useState<Record<string, Ressenti>>({});
   const [demarreeLe, setDemarreeLe] = useState<string | null>(null);
 
   const etapes = useMemo(() => construireEtapes(seanceActive), [seanceActive]);
@@ -570,10 +575,16 @@ export default function SeanceGuidee({
   }, [onProgression]);
   /** Vrai dès que la séance est enregistrée ou abandonnée : plus de sauvegarde. */
   const clotureeRef = useRef(false);
-  const sauvegardeRef = useRef<{ visite: number; ms: number; poids: Record<string, number[]> | null }>({
+  const sauvegardeRef = useRef<{
+    visite: number;
+    ms: number;
+    poids: Record<string, number[]> | null;
+    ressentis: Record<string, Ressenti> | null;
+  }>({
     visite: 0,
     ms: 0,
     poids: null,
+    ressentis: null,
   });
 
   useEffect(() => {
@@ -582,19 +593,20 @@ export default function SeanceGuidee({
     const derniere = sauvegardeRef.current;
     const nouvelleEtape = derniere.visite !== etat.visite;
     const periodique = maintenant - derniere.ms >= INTERVALLE_SAUVEGARDE_MS;
-    const poidsModifie = derniere.poids !== poids;
+    const poidsModifie = derniere.poids !== poids || derniere.ressentis !== ressentis;
     if (!nouvelleEtape && !periodique && !poidsModifie) return;
-    sauvegardeRef.current = { visite: etat.visite, ms: maintenant, poids };
+    sauvegardeRef.current = { visite: etat.visite, ms: maintenant, poids, ressentis };
     onProgressionRef.current({
       seance: seanceActive,
       indexEtape: index,
       tempsCumuleSec: Math.round(tempsTotalEcoule),
       tempsParEtapeSec: tempsAvecCourante.map((t) => Math.round(t)),
       poids,
+      ressentis,
       demarreeLe,
       sauvegardeeLe: new Date(maintenant).toISOString(),
     });
-  }, [etat, demarreeLe, maintenant, poids, seanceActive, index, tempsTotalEcoule, tempsAvecCourante, essai]);
+  }, [etat, demarreeLe, maintenant, poids, ressentis, seanceActive, index, tempsTotalEcoule, tempsAvecCourante, essai]);
 
   // ------------------------------------------------ Actions
 
@@ -604,6 +616,7 @@ export default function SeanceGuidee({
     temps: number[],
     poidsInitial: Record<string, number[]>,
     debut: string,
+    ressentisInitiaux: Record<string, Ressenti> = {},
   ) => {
     // Geste utilisateur : on en profite pour débloquer l'audio et l'écran.
     bellSound.unlock();
@@ -611,6 +624,7 @@ export default function SeanceGuidee({
     clotureeRef.current = false;
     setSeanceActive(source);
     setPoids(poidsInitial);
+    setRessentis(ressentisInitiaux);
     setDemarreeLe(debut);
     // À deux : on commence la séance commune, ou on la rejoint.
     if (enCommun) commune.envoyer({ type: 'commencer' });
@@ -630,6 +644,7 @@ export default function SeanceGuidee({
       sauvee.tempsParEtapeSec ?? [],
       sauvee.poids ?? {},
       sauvee.demarreeLe || new Date().toISOString(),
+      sauvee.ressentis ?? {},
     );
   };
 
@@ -709,8 +724,16 @@ export default function SeanceGuidee({
       return suivants;
     });
 
+  /** Dit le ressenti d'un exercice ; en toucher un autre plus tard le change. */
+  const choisirRessenti = (exerciceId: string, ressenti: Ressenti) =>
+    setRessentis((precedents) => (precedents[exerciceId] === ressenti ? precedents : { ...precedents, [exerciceId]: ressenti }));
+
+  // Un essai ne garde rien : sa séance faite n'est jamais enregistrée, ressentis compris.
   const realisation = (terminee: boolean): SeanceRealisee =>
-    agregerRealisation(seanceActive, etapes, tempsAvecCourante, poids, tempsTotalEcoule, terminee);
+    avecRessentis(
+      agregerRealisation(seanceActive, etapes, tempsAvecCourante, poids, tempsTotalEcoule, terminee),
+      ressentis,
+    );
 
   const enregistrer = () => {
     clotureeRef.current = true;
@@ -779,24 +802,39 @@ export default function SeanceGuidee({
 
   const exercice = etape.exerciceId ? exerciceDeSeance(etape.exerciceId) : null;
   const ambiance = ambianceEtape(etape);
+  // Après la dernière série d'un exercice : lourd, correct ou léger ? Pendant
+  // la pause qui suit, ou, pour le dernier exercice, aux étirements.
+  const panneauRessenti = (
+    <BoutonsRessenti
+      exercices={exercicesAEvaluer(etapes, index)
+        .map(exerciceDeSeance)
+        .filter((e) => !estPosture(e))
+        .map((e) => ({ id: e.id, nom: e.nomFr }))}
+      ressentis={ressentis}
+      onChoisir={choisirRessenti}
+    />
+  );
   let corps: ReactNode;
   switch (etape.type) {
     case 'echauffement':
     case 'retourCalme':
       corps = (
-        <CorpsMouvements
-          titre={
-            etape.type === 'echauffement'
-              ? seanceActive.echauffement
-                ? 'Échauffement : on monte doucement en température'
-                : 'Échauffement articulaire, sans charge'
-              : 'Étirements doux, sans à-coups'
-          }
-          mouvements={mouvements ?? []}
-          indexMouvement={indexMouvement}
-          resteMouvementSec={resteMouvement}
-          resteSec={reste}
-        />
+        <div className="space-y-4">
+          <CorpsMouvements
+            titre={
+              etape.type === 'echauffement'
+                ? seanceActive.echauffement
+                  ? 'Échauffement : on monte doucement en température'
+                  : 'Échauffement articulaire, sans charge'
+                : 'Étirements doux, sans à-coups'
+            }
+            mouvements={mouvements ?? []}
+            indexMouvement={indexMouvement}
+            resteMouvementSec={resteMouvement}
+            resteSec={reste}
+          />
+          {etape.type === 'retourCalme' && panneauRessenti}
+        </div>
       );
       break;
     case 'pret':
@@ -859,6 +897,7 @@ export default function SeanceGuidee({
           partenaire={partenaire}
           charge={charge > 0 ? `${charge} ${SUFFIXE_UNITE[unitePoids]}` : undefined}
           etirement={etirement}
+          ressenti={panneauRessenti}
           onProlonger={prolongerRepos}
           onPasser={suivant}
         />
@@ -1330,6 +1369,8 @@ function CorpsTravail({
   // sinon celle de la dernière fois — un cran de plus après une semaine dure
   // réussie, la moitié pour la dernière série légère du mardi.
   const valeurDepart = chargeDeSerie(bloc, poidsSeries, chargesPassees, serieCourante, unitePoids);
+  // Le cran proposé sur la charge de la dernière fois : semaine dure réussie, ou ressenti.
+  const ajustement = chargesPassees.some((charge) => charge > 0) ? ajustementDeCharge(bloc) : null;
   const serieLegere =
     etape.type === 'serie' && bloc?.derniereLegere === true && etape.serie === etape.series && etape.series > 1;
   // Une série longue qui charge le bas du dos : le rappel qui protège.
@@ -1460,9 +1501,14 @@ function CorpsTravail({
               Dernière fois : {chargesPassees.map((charge) => (charge > 0 ? charge : '—')).join(' · ')}
             </span>
           )}
-          {bloc?.ajoutCharge !== undefined && chargesPassees.some((charge) => charge > 0) && (
-            <span className="chiffres block text-xs font-semibold" style={{ color: 'var(--montee)' }}>
-              +{bloc.ajoutCharge} {SUFFIXE_UNITE[unitePoids]} : semaine dure réussie
+          {ajustement && (
+            <span
+              className="chiffres block text-xs font-semibold"
+              style={{ color: ajustement.ajout > 0 ? 'var(--montee)' : 'var(--descente)' }}
+            >
+              {ajustement.motif === 'semaine-dure'
+                ? `+${ajustement.ajout} ${SUFFIXE_UNITE[unitePoids]} : semaine dure réussie`
+                : phraseRessenti(ajustement.motif, ajustement.ajout, unitePoids)}
             </span>
           )}
         </span>
@@ -1600,6 +1646,8 @@ interface CorpsReposProps {
   charge?: string;
   /** Un étirement à faire pendant la pause. */
   etirement?: string;
+  /** Le ressenti à dire sur l'exercice qui vient de finir, s'il y en a un. */
+  ressenti?: ReactNode;
   onProlonger: () => void;
   onPasser: () => void;
 }
@@ -1622,7 +1670,7 @@ function titreRepos(etape: CorpsReposProps['etape'], partenaire: string | undefi
   }
 }
 
-function CorpsRepos({ etape, resteSec, partenaire, charge, etirement, onProlonger, onPasser }: CorpsReposProps) {
+function CorpsRepos({ etape, resteSec, partenaire, charge, etirement, ressenti, onProlonger, onPasser }: CorpsReposProps) {
   const { suivant } = etape;
   const exerciceSuivant = suivant.type === 'retourCalme' ? null : exerciceDeSeance(suivant.exerciceId);
   // Nouvel exercice : on repart ensemble sur « Go », quand tout est prêt.
@@ -1644,6 +1692,8 @@ function CorpsRepos({ etape, resteSec, partenaire, charge, etirement, onProlonge
           Prêts ? On repart sur « Go ».
         </p>
       )}
+
+      {ressenti}
 
       {etire && (
         <div className="flex items-center gap-3 rounded-2xl p-3 text-left" style={{ background: 'var(--surface)' }}>
@@ -1805,6 +1855,11 @@ function CorpsFin({ realisee, chargeDerniereFois, essai, onEnregistrer, onAbando
                   </td>
                   <td className="px-2 py-2 font-medium" style={bordure}>
                     {exercice.nomFr}
+                    {realise.ressenti && (
+                      <span className="block text-xs font-normal" style={{ color: 'var(--texte-discret)' }}>
+                        Ressenti : {motRessenti(realise.ressenti)}
+                      </span>
+                    )}
                   </td>
                   <td
                     className={`${cellule} ${complet ? 'font-semibold' : ''}`}

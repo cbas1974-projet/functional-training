@@ -5,6 +5,7 @@
 import type { EntrainementState, Mesure, Personne, ProgrammeMois, SeanceRealisee } from '../types';
 import { PARAMETRES_PAR_DEFAUT } from '../data/parametres';
 import { lireMesure, trierMesures } from './mesures';
+import { estRessenti } from './ressenti';
 import { adresseServeurValide, equipeDe } from './programmeMois';
 
 /** L'adresse fixée au moment de publier le site, s'il y en a une. */
@@ -128,6 +129,7 @@ function lireSeanceDeQuelquun(brut: unknown): SeanceDeQuelquun | null {
     dureeSec: nombre(e.dureeSec),
     ...(typeof e.poids === 'number' ? { poids: e.poids } : {}),
     ...(Array.isArray(e.poidsParSerie) ? { poidsParSerie: e.poidsParSerie.map(nombre) } : {}),
+    ...(estRessenti(e.ressenti) ? { ressenti: e.ressenti } : {}),
   }));
   return {
     personne: brut.personne,

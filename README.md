@@ -86,7 +86,8 @@ du dos, épaules, extérieur et intérieur de cuisse. Rien à taper.
 - **La semaine dure**, le jeudi une semaine sur deux (semaine B) : **même
   poids, deux répétitions de plus** — Big Max 12, Speedy 10. Si le dos
   s'arrondit, on arrête la série. Quand toutes les séries sont faites, le
-  jeudi suivant propose **un cran de plus** : 5 lb (2,5 kg).
+  jeudi suivant propose **un cran de plus** : 5 lb (2,5 kg). Le cran de plus
+  peut aussi venir du ressenti, voir [Lourd, correct ou léger ?](#lourd-correct-ou-léger-).
 - **Les pauses** : après une paire, la plus longue des pauses de ses deux
   exercices — 1 min si ce sont deux petits muscles (bras, épaules en isolation,
   ventre, mollets, intérieur et extérieur de cuisse), 1 min 30 avec un gros
@@ -297,7 +298,8 @@ quand même, sur le numéro 1 : s'il est déjà pris par un essai fini, il faudr
 relancer un une fois le réseau revenu.
 
 **Rien n'est gardé.** Ni dans l'historique (ni sur le téléphone, ni sur le
-serveur), ni dans « la dernière fois » : la séance n'est pas marquée faite, et
+serveur), ni dans « la dernière fois », ni les réponses à « lourd, correct ou
+léger » : la séance n'est pas marquée faite, et
 si la page se recharge, l'application ne propose pas de reprendre l'essai. Une
 séance interrompue qui attendait reste là, intacte. Un bandeau — « Essai —
 rien n'est enregistré », ou « Aperçu : l'écran de Big Max — rien n'est
@@ -468,6 +470,9 @@ exercice par un autre de la même zone.
 - **Poids saisi série par série**, en livres : le champ est pré-rempli avec la
   charge de la série précédente, sinon celle de la dernière fois ; il n'y a
   qu'à la corriger quand elle change.
+- **Lourd, correct ou léger ?** Après la dernière série de chaque exercice,
+  trois gros boutons, pour dire comment la charge a été. C'est facultatif :
+  voir plus bas.
 - Retour au calme guidé, puis écran de fin récapitulatif, avec la **charge
   totale soulevée** : poids × répétitions de chaque série faite, les deux
   côtés pour un exercice unilatéral. À côté, l'écart avec la dernière fois
@@ -477,10 +482,53 @@ exercice par un autre de la même zone.
 - La séance reprend où elle en était si la page est rechargée : l'accueil
   propose de la reprendre.
 
+### Lourd, correct ou léger ?
+
+On ne monte pas les charges à chaque séance. Alors, pour savoir quand le faire,
+chacun dit comment c'était.
+
+- **Où.** Après la dernière série d'un exercice, pendant la pause qui suit :
+  « Comment était la charge ? » et trois gros boutons, **Lourd**, **Correct**,
+  **Léger**. À deux exercices en paire, les deux sont là pendant la pause de la
+  paire. Pour le tout dernier exercice, c'est pendant les étirements. Un seul
+  toucher ; en toucher un autre plus tard, avant la fin de la pause, change la
+  réponse. On peut aussi ne rien toucher : c'est facultatif.
+- **Qui.** Chacun répond pour lui, sur son téléphone, pour chaque exercice.
+- **Ce qui est gardé.** La réponse est notée avec l'exercice dans la séance
+  enregistrée, et elle part avec l'historique vers le serveur. L'historique
+  l'écrit en petit à côté de la charge (« léger »). Les séances d'avant se lisent
+  comme avant, sans réponse.
+- **Léger deux fois de suite**, avec la même charge : la fois d'après, la charge
+  proposée monte d'un cran, **5 lb (2,5 kg)**, et l'écran le dit : « Léger les 2
+  dernières fois : on monte de 5 lb ». Sur l'accueil, l'exercice porte
+  « ↑ +5 lb proposé ».
+- **Lourd deux fois de suite** : la charge proposée descend d'un cran, avec
+  « Lourd les 2 dernières fois : on redescend de 5 lb » et « ↓ −5 lb proposé »
+  sur l'accueil. On ne descend pas sous un cran (un haltère de 5 lb reste à
+  5 lb).
+- **Sinon**, on garde la charge de la dernière fois, comme avant. « Correct »,
+  ou une réponse différente entre les deux, remet le compte à zéro.
+- **Une montée ne se propose qu'une fois.** Dès que la charge change, le compte
+  repart de zéro : c'est la réponse à la nouvelle charge qui décide, et deux
+  « léger » de plus sont nécessaires pour proposer un autre cran. Tant qu'on
+  garde la même charge, la proposition reste. Une séance où on n'a rien dit ne
+  coupe rien.
+- **Avec la semaine dure.** Si le cran de la semaine dure réussie (jeudi) et celui
+  du ressenti tombent sur le même exercice, on ne monte que d'un cran, pas de
+  deux. Si le ressenti dit « lourd deux fois de suite », il passe avant : on
+  redescend.
+- Les deux seuils (« deux fois ») et le cran sont des constantes de
+  `src/utils/ressenti.ts` et `src/utils/statistiques.ts`. La proposition ne
+  concerne que les séances du programme ; en séance libre, on peut répondre
+  (c'est gardé) mais la charge n'est pas ajustée.
+- **L'essai et « Voir comme »** montrent les boutons, mais rien n'est gardé :
+  comme le reste, la réponse ne va ni dans l'historique, ni sur le serveur, et
+  l'écran de l'autre n'a pas nos propositions.
+
 ### Historique et bibliothèque
 Chaque séance enregistrée conserve la date, la durée réelle et prévue, et pour
 chaque exercice les séries faites, le temps passé et la charge de chaque série
-(« 30 · 30 · 35 lb »). Chaque séance garde l'unité dans laquelle elle a été
+(« 30 · 30 · 35 lb »), et le ressenti quand on l'a dit (« léger »). Chaque séance garde l'unité dans laquelle elle a été
 saisie : changer d'unité ne réécrit pas le passé, et les statistiques
 convertissent ce qu'il faut pour rester comparables. Chaque séance affiche
 sa charge soulevée.
@@ -804,6 +852,7 @@ src/
 │   ├── FicheExercice.tsx         # Vignette et nom d'un exercice
 │   ├── ImageEnGrand.tsx          # L'image d'un exercice en grand, avec ses consignes
 │   ├── PaceurTempo.tsx           # La bille qui monte et descend au tempo
+│   ├── BoutonsRessenti.tsx       # Les trois boutons : lourd, correct, léger
 │   ├── HistoriqueEntrainement.tsx
 │   ├── Progression.tsx           # L'onglet Progression : mensurations et trois graphiques
 │   ├── Mesures.tsx               # Formulaire et listes des mesures (poids, taille, âge)
@@ -819,6 +868,7 @@ src/
 │   ├── programmeMois.ts          # Composition du programme par paires, calendrier A/B, charges, lien
 │   ├── essai.ts                  # La séance d'essai : la séance du jour en dix minutes, sans rien garder, et sa séance commune numérotée
 │   ├── statistiques.ts           # Fréquence d'un exercice, charges par série, charge totale
+│   ├── ressenti.ts               # Lourd, correct ou léger : quand proposer un cran de plus ou de moins
 │   ├── etatCommun.ts             # La séance commune : ses appuis, partagés avec le serveur
 │   ├── horlogeCommune.ts         # Où en est chacun sur l'horloge commune, et la règle des boutons
 │   ├── enLigne.ts                # Le serveur hors séance : envoi des séances et des mesures, historique des deux

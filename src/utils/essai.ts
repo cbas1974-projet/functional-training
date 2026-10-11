@@ -77,15 +77,20 @@ export function raccourcirPourEssai(seance: Seance): Seance {
 
 /** L'aperçu : le même essai, vu par l'autre — ses répétitions, qui commence
  *  quand c'est chacun son tour, ses étirements. Rien de ce téléphone n'y
- *  entre : pas le cran de plus que proposent ses propres charges. Null tant
- *  qu'on ne sait pas qui est l'autre. */
+ *  entre : pas le cran de plus que proposent ses propres charges, ni ses
+ *  ressentis. Null tant qu'on ne sait pas qui est l'autre. */
 export function seanceApercu(
   seanceMois: SeanceDuMois,
   parametres: ParametresSeance,
   contexte: ContexteSeance,
 ): Seance | null {
   if (!contexte.personne) return null;
-  const autre: ContexteSeance = { ...contexte, personne: autrePersonne(contexte.personne), augmenter: [] };
+  const autre: ContexteSeance = {
+    ...contexte,
+    personne: autrePersonne(contexte.personne),
+    augmenter: [],
+    ressentis: {},
+  };
   return raccourcirPourEssai(seancePourPersonne(seanceMois, parametres, autre));
 }
 

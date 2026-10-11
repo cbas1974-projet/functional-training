@@ -7,6 +7,7 @@ import { formaterDuree } from '../utils/generateurSeance';
 import { calculerStatistiques, formaterDateFr, libelleZones } from '../utils/formatage';
 import { SUFFIXE_UNITE, chargeTotale, libellePoidsParSerie, uniteDeSeance } from '../utils/statistiques';
 import { chargerHistoriquePartage } from '../utils/enLigne';
+import { motRessenti } from '../utils/ressenti';
 import type { Partage } from '../utils/enLigne';
 import { rappelMesure } from '../utils/mesures';
 import { NOM_PERSONNE } from '../utils/programmeMois';
@@ -356,6 +357,8 @@ export default function HistoriqueEntrainement({
                                     </span>
                                   </>
                                 )}
+                                {/* Ce que la personne a dit de la charge, s'il y a lieu. */}
+                                {exo.ressenti && ` · ${motRessenti(exo.ressenti)}`}
                               </p>
                             </FicheExercice>
                           );
