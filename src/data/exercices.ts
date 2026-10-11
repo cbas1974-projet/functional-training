@@ -582,7 +582,9 @@ export const EXERCICES: Exercice[] = [
     groupe: 'dorsaux',
     muscles: 'Dorsaux, rhomboïdes, biceps',
     musclesPrincipaux: ['dorsaux'],
-    musclesSecondaires: ['trapezes', 'biceps'],
+    // Buste penché sans appui : le bas du dos tient la position, comme au
+    // rowing buste penché — la planche ne le noircit pas.
+    musclesSecondaires: ['trapezes', 'biceps', 'lombaires'],
     materiel: 'halteres',
     pattern: 'tirage-horizontal',
     niveauMin: 2,

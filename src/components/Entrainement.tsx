@@ -436,22 +436,6 @@ export default function Entrainement({ etat, onChange }: EntrainementProps) {
         </div>
 
         <div className="space-y-5 px-4">
-          {/* La discipline commande tout le reste : une séance de yoga n'a ni
-              tempo, ni séries, ni charge à saisir. */}
-          <Groupe titre="Discipline" aide={disciplineSelectionnee?.description}>
-            <div className="flex flex-wrap gap-2">
-              {DISCIPLINES.map((d) => (
-                <Pastille
-                  key={d.id}
-                  selectionne={discipline === d.id}
-                  onClick={() => mettreAJourParametres({ discipline: d.id })}
-                >
-                  {d.nom}
-                </Pastille>
-              ))}
-            </div>
-          </Groupe>
-
           <Groupe titre="Durée">
             <div className="flex flex-wrap gap-2">
               {DUREES_MINUTES.map((duree) => (
@@ -578,54 +562,6 @@ export default function Entrainement({ etat, onChange }: EntrainementProps) {
                 </div>
               </Groupe>
 
-              {/* Le format reste au premier plan : au tempo lent, c'est lui qui
-                  décide combien d'exercices tiennent dans la durée demandée. */}
-              <Groupe titre="Format" aide={formatSelectionne?.description}>
-                <div className="flex flex-wrap gap-2">
-                  {FORMATS.map((f) => (
-                    <Pastille
-                      key={f.id}
-                      selectionne={parametres.format === f.id}
-                      onClick={() => mettreAJourParametres({ format: f.id })}
-                    >
-                      {f.nom}
-                    </Pastille>
-                  ))}
-                </div>
-              </Groupe>
-
-              {(parametres.format === 'circuit' || parametres.format === 'mixte') && (
-                <Groupe titre="Style de circuit" aide={styleSelectionne?.description}>
-                  <div className="flex flex-wrap gap-2">
-                    {STYLES_CIRCUIT.map((c) => (
-                      <Pastille
-                        key={c.id}
-                        selectionne={styleCircuit === c.id}
-                        onClick={() => mettreAJourParametres({ styleCircuit: c.id })}
-                      >
-                        {c.nom}
-                      </Pastille>
-                    ))}
-                  </div>
-                </Groupe>
-              )}
-
-              {parametres.format === 'superset' && (
-                <Groupe titre="Exercices par enchaînement" aide={tailleSelectionnee?.description}>
-                  <div className="flex flex-wrap gap-2">
-                    {TAILLES_ROTATION.map((t) => (
-                      <Pastille
-                        key={t.nom}
-                        selectionne={parametres.tailleRotation === t.valeur}
-                        onClick={() => mettreAJourParametres({ tailleRotation: t.valeur })}
-                      >
-                        {t.nom}
-                      </Pastille>
-                    ))}
-                  </div>
-                </Groupe>
-              )}
-
               <Groupe titre="Unité des charges" aide={uniteSelectionnee?.description}>
                 <div className="flex flex-wrap gap-2">
                   {UNITES_POIDS.map((u) => (
@@ -647,10 +583,81 @@ export default function Entrainement({ etat, onChange }: EntrainementProps) {
               className="flex cursor-pointer select-none items-center text-sm font-bold"
               style={{ color: 'var(--texte-discret)', minHeight: CIBLE, listStyle: 'none' }}
             >
-              Réglages avancés
+              Plus de réglages
             </summary>
 
+            {/* Ce qui sert peu : la discipline (yoga, étirements), le format
+                (superset, circuit, tabata…), le niveau, le matériel, les
+                explosifs. Les valeurs par défaut ne changent pas. */}
             <div className="space-y-5 pb-2">
+              {/* La discipline commande tout le reste : une séance de yoga n'a ni
+                  tempo, ni séries, ni charge à saisir. */}
+              <Groupe titre="Discipline" aide={disciplineSelectionnee?.description}>
+                <div className="flex flex-wrap gap-2">
+                  {DISCIPLINES.map((d) => (
+                    <Pastille
+                      key={d.id}
+                      selectionne={discipline === d.id}
+                      onClick={() => mettreAJourParametres({ discipline: d.id })}
+                    >
+                      {d.nom}
+                    </Pastille>
+                  ))}
+                </div>
+              </Groupe>
+
+              {!mobilite && (
+                <>
+                  {/* Le format : au tempo lent, c'est lui qui décide combien
+                      d'exercices tiennent dans la durée demandée. */}
+                  <Groupe titre="Format" aide={formatSelectionne?.description}>
+                    <div className="flex flex-wrap gap-2">
+                      {FORMATS.map((f) => (
+                        <Pastille
+                          key={f.id}
+                          selectionne={parametres.format === f.id}
+                          onClick={() => mettreAJourParametres({ format: f.id })}
+                        >
+                          {f.nom}
+                        </Pastille>
+                      ))}
+                    </div>
+                  </Groupe>
+
+                  {(parametres.format === 'circuit' || parametres.format === 'mixte') && (
+                    <Groupe titre="Style de circuit" aide={styleSelectionne?.description}>
+                      <div className="flex flex-wrap gap-2">
+                        {STYLES_CIRCUIT.map((c) => (
+                          <Pastille
+                            key={c.id}
+                            selectionne={styleCircuit === c.id}
+                            onClick={() => mettreAJourParametres({ styleCircuit: c.id })}
+                          >
+                            {c.nom}
+                          </Pastille>
+                        ))}
+                      </div>
+                    </Groupe>
+                  )}
+
+                  {parametres.format === 'superset' && (
+                    <Groupe titre="Exercices par enchaînement" aide={tailleSelectionnee?.description}>
+                      <div className="flex flex-wrap gap-2">
+                        {TAILLES_ROTATION.map((t) => (
+                          <Pastille
+                            key={t.nom}
+                            selectionne={parametres.tailleRotation === t.valeur}
+                            onClick={() => mettreAJourParametres({ tailleRotation: t.valeur })}
+                          >
+                            {t.nom}
+                          </Pastille>
+                        ))}
+                      </div>
+                    </Groupe>
+                  )}
+                </>
+              )}
+
               <Groupe titre="Niveau" aide={niveauSelectionne?.description}>
                 <div className="flex flex-wrap gap-2">
                   {NIVEAUX.map((n) => (

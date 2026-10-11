@@ -2,7 +2,8 @@
 // 30 s la série pour les swings, arrachés, épaulé, tirage haut et balanciers
 // (de chaque côté, avec les 5 s pour changer de côté, d'un seul bras), 20 s
 // pour les sauts et le burpee. Seul, à deux sur l'horloge commune, en essai,
-// en séance libre — et toujours hors du programme du mois.
+// en séance libre — et hors du programme du mois, sauf le swing à deux mains,
+// qui ouvre le jeudi.
 import { describe, expect, it } from 'vitest';
 import type { Etape } from './etapesSeance';
 import type { BlocSeries, FormatSeance, Niveau, Seance, SeanceDuMois, SeanceRealisee, StyleCircuit } from '../types';
@@ -172,7 +173,7 @@ describe('les 16 explosifs, au temps', () => {
     expect(consignesDe(EXERCICES_PAR_ID['hammer-curl'])).not.toContain(CONSIGNE_EXPLOSIF_AU_TEMPS);
   });
 
-  it('ne sortent qu’avec l’option « explosifs », et jamais dans le programme', () => {
+  it('ne sortent qu’avec l’option « explosifs » ; au programme, seul le swing à deux mains, en tête du jeudi', () => {
     const materiels = ['halteres', 'kettlebell', 'banc', 'tapis'] as const;
     const parametres = { ...PARAMETRES_PAR_DEFAUT, niveau: 'avance' as Niveau, materiels: [...materiels] };
     const sans = exercicesDisponibles({ ...parametres, explosifs: false }).map((e) => e.id);
@@ -181,12 +182,17 @@ describe('les 16 explosifs, au temps', () => {
       expect(sans, id).not.toContain(id);
       expect(avec, id).toContain(id);
     }
+    // Ni « Changer » ni le choix des autres places ne les prennent.
     expect(candidatsProgramme([...materiels, 'salle']).filter((e) => e.explosif)).toEqual([]);
     for (let graine = 1; graine <= 40; graine += 1) {
-      for (const exercices of [4, 6, 8, 10]) {
+      for (const exercices of [4, 6, 8]) {
         const programme = genererProgramme({ graine, exercices, aujourdhui: LUNDI });
-        const ids = programme.seances.flatMap((s) => [...s.exercices, s.finale ?? '']);
-        expect(ids.filter((id) => TOUS.includes(id)), `${graine} ${exercices}`).toEqual([]);
+        for (const s of programme.seances) {
+          const ids = [...s.exercices, s.finale ?? ''];
+          const attendus = s.jour === 4 ? ['kb-double-arm-swing'] : [];
+          expect(ids.filter((id) => TOUS.includes(id)), `${graine} ${exercices} ${s.id}`).toEqual(attendus);
+          if (s.jour === 4) expect(s.exercices[0], `${graine} ${exercices} ${s.id}`).toBe('kb-double-arm-swing');
+        }
       }
     }
   });
@@ -273,23 +279,19 @@ describe('les explosifs et le poids', () => {
     expect(chargeReglable(EXERCICES_PAR_ID['kb-halo'])).toBe(true);
   });
 
-  it('au programme à la main : le cran du ressenti, de la semaine dure, et la dernière série légère du mardi', () => {
+  it('au programme à la main : le cran du ressenti, comme les autres', () => {
     const seance = seancePourPersonne(
       MARDI,
       PARAMETRES,
-      { ...SEUL_SEB, ressentis: { 'kb-snatch': 'leger', 'kb-jump-squat': 'lourd' }, augmenter: ['kb-single-arm-swing'] },
+      { ...SEUL_SEB, ressentis: { 'kb-snatch': 'leger', 'kb-jump-squat': 'lourd', 'farmers-walk': 'leger' } },
       LUNDI,
     );
     const bloc = (id: string) => seance.blocs.find((b) => b.exerciceId === id)!;
     expect(bloc('kb-snatch').ajustementRessenti).toBe(5);
     expect(bloc('kb-jump-squat').ajustementRessenti).toBe(-5);
-    expect(bloc('kb-single-arm-swing').ajoutCharge).toBe(5);
     expect(ajustementDeCharge(bloc('kb-snatch'))).toMatchObject({ motif: 'leger', ajout: 5 });
     expect(ajustementDeCharge(bloc('kb-jump-squat'))).toMatchObject({ motif: 'lourd', ajout: -5 });
-    expect(ajustementDeCharge(bloc('kb-single-arm-swing'))).toMatchObject({ motif: 'semaine-dure', ajout: 5 });
-    for (const id of MARDI.exercices) expect(bloc(id).derniereLegere, id).toBe(true);
     // Le fermier, lui, ne se règle pas.
-    expect(bloc('farmers-walk').derniereLegere).toBeUndefined();
     expect(bloc('farmers-walk').ajustementRessenti).toBeUndefined();
   });
 
@@ -314,11 +316,11 @@ describe('les explosifs et le poids', () => {
         },
       ],
     });
-    expect(propositionDeCharge([fait(9, 'leger'), fait(8, 'leger')], 'kb-single-arm-swing', 'lb')).toMatchObject({
+    expect(propositionDeCharge([fait(9, 'leger'), fait(8, 'leger')], 'kb-single-arm-swing', 'lb', 'max')).toMatchObject({
       ressenti: 'leger',
       ajout: 5,
     });
-    expect(propositionDeCharge([fait(9, 'lourd'), fait(8, 'lourd')], 'kb-single-arm-swing', 'lb')).toMatchObject({
+    expect(propositionDeCharge([fait(9, 'lourd'), fait(8, 'lourd')], 'kb-single-arm-swing', 'lb', 'max')).toMatchObject({
       ressenti: 'lourd',
       ajout: -5,
     });
@@ -336,8 +338,8 @@ describe('les explosifs et le poids', () => {
 });
 
 describe('les explosifs au programme à la main : mêmes secondes pour les deux, durées exactes', () => {
-  it('le même temps pour Speedy et Big Max : leurs répétitions et la semaine dure ne comptent pas au temps', () => {
-    for (const contexte of [SEUL_SEB, SEUL_MAX, DUO_SEB, DUO_MAX, { ...DUO_SEB, semaineDure: true }, { ...SEUL_MAX, reps: { max: 12 } }]) {
+  it('le même temps pour Speedy et Big Max : leurs répétitions ne comptent pas au temps', () => {
+    for (const contexte of [SEUL_SEB, SEUL_MAX, DUO_SEB, DUO_MAX, { ...SEUL_MAX, reps: { max: 12 } }]) {
       const seance = seancePourPersonne(MARDI, PARAMETRES, contexte, LUNDI);
       for (const id of MARDI.exercices) {
         const bloc = seance.blocs.find((b) => b.exerciceId === id)!;

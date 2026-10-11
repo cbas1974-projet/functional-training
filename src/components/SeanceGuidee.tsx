@@ -13,6 +13,7 @@ import type {
   Exercice,
   GuideVisuel,
   MouvementGuide,
+  Personne,
   ProgressionSeance,
   Ressenti,
   Seance,
@@ -925,6 +926,7 @@ export default function SeanceGuidee({
           guideVisuel={guideVisuel}
           lireEcouleSec={lireEcouleSec}
           bloc={blocDe(etape.exerciceId)}
+          personne={personne}
           poidsSeries={poids[etape.exerciceId] ?? []}
           chargesPassees={chargesPassees[etape.exerciceId] ?? []}
           unitePoids={unitePoids}
@@ -945,7 +947,6 @@ export default function SeanceGuidee({
               poids[cible.exerciceId] ?? [],
               chargesPassees[cible.exerciceId] ?? [],
               cible.serie,
-              unitePoids,
             )
           : 0;
       // Un étirement par longue pause, à tour de rôle.
@@ -1414,8 +1415,10 @@ interface CorpsTravailProps {
   guideVisuel: GuideVisuel;
   /** Horloge de l'étape, lue à chaque image par la bille. */
   lireEcouleSec: () => number;
-  /** Le bloc de la séance : cran de plus, dernière série légère. */
+  /** Le bloc de la séance : le cran que propose le ressenti. */
   bloc?: BlocSeries;
+  /** Qui s'entraîne : les seuils du ressenti sont les siens. */
+  personne?: Personne;
   /** Charges déjà saisies pour cet exercice, index 0 = première série. */
   poidsSeries: number[];
   /** Charges de la dernière fois, série par série ; vide si aucune. */
@@ -1439,6 +1442,7 @@ function CorpsTravail({
   guideVisuel,
   lireEcouleSec,
   bloc,
+  personne,
   poidsSeries,
   chargesPassees,
   unitePoids,
@@ -1450,13 +1454,11 @@ function CorpsTravail({
   const serieCourante = etape.type === 'serie' ? etape.serie : etape.tour;
   const dejaSaisi = poidsSeries[serieCourante - 1] ?? 0;
   // Sans saisie pour cette série, on propose la charge de la série d'avant,
-  // sinon celle de la dernière fois — un cran de plus après une semaine dure
-  // réussie, la moitié pour la dernière série légère du mardi.
-  const valeurDepart = chargeDeSerie(bloc, poidsSeries, chargesPassees, serieCourante, unitePoids);
-  // Le cran proposé sur la charge de la dernière fois : semaine dure réussie, ou ressenti.
+  // sinon celle de la dernière fois — un cran plus loin si le ressenti le
+  // demande.
+  const valeurDepart = chargeDeSerie(bloc, poidsSeries, chargesPassees, serieCourante);
+  // Le cran proposé sur la charge de la dernière fois : le ressenti.
   const ajustement = chargesPassees.some((charge) => charge > 0) ? ajustementDeCharge(bloc) : null;
-  const serieLegere =
-    etape.type === 'serie' && bloc?.derniereLegere === true && etape.serie === etape.series && etape.series > 1;
   // Une série longue qui charge le bas du dos : le rappel qui protège.
   const dosAMenager = etape.type === 'serie' && etape.reps >= 10 && chargeLeBasDuDos(exercice);
 
@@ -1499,14 +1501,12 @@ function CorpsTravail({
         </div>
       </div>
 
-      {(serieLegere || dosAMenager) && (
+      {dosAMenager && (
         <p
           className="rounded-2xl px-4 py-2 text-sm font-semibold"
-          style={{ background: 'var(--surface)', color: serieLegere ? 'var(--accent)' : 'var(--alerte)' }}
+          style={{ background: 'var(--surface)', color: 'var(--alerte)' }}
         >
-          {serieLegere
-            ? 'Série légère : la moitié de la charge. On garde du jus pour le jiu-jitsu.'
-            : 'Si le dos s’arrondit, on arrête la série.'}
+          Si le dos s’arrondit, on arrête la série.
         </p>
       )}
 
@@ -1598,9 +1598,7 @@ function CorpsTravail({
               className="chiffres block text-xs font-semibold"
               style={{ color: ajustement.ajout > 0 ? 'var(--montee)' : 'var(--descente)' }}
             >
-              {ajustement.motif === 'semaine-dure'
-                ? `+${ajustement.ajout} ${SUFFIXE_UNITE[unitePoids]} : semaine dure réussie`
-                : phraseRessenti(ajustement.motif, ajustement.ajout, unitePoids)}
+              {phraseRessenti(ajustement.motif, ajustement.ajout, unitePoids, personne)}
             </span>
           )}
         </span>

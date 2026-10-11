@@ -334,14 +334,10 @@ export interface BlocSeries {
   /** À deux : les séries et les répétitions de l'autre sur cet exercice. Les
    *  deux téléphones en tirent la même horloge. Absent = seul. */
   autre?: { series: number; reps: number };
-  /** Ma dernière série se fait à la moitié de la charge : un soir de
-   *  jiu-jitsu, on suit le rythme sans se vider. */
-  derniereLegere?: boolean;
-  /** Semaine dure réussie : la charge de la dernière fois, plus ce cran. */
-  ajoutCharge?: number;
   /** Le ressenti des dernières fois : la charge de la dernière fois, plus ce
-   *  cran (léger deux fois de suite) ou moins ce cran (lourd deux fois de
-   *  suite) ; négatif = on redescend. Voir `ajustementDeCharge`. */
+   *  cran (léger assez de fois de suite : quatre pour Speedy, deux pour Big
+   *  Max) ou moins ce cran (lourd deux fois de suite) ; négatif = on
+   *  redescend. Voir `ajustementDeCharge`. */
   ajustementRessenti?: number;
 }
 
@@ -531,10 +527,10 @@ export interface Mesure {
 // ------------------------------------------------------------- Programme du mois
 //
 // Le vrai entraînement : l'application choisit les exercices dans la
-// bibliothèque des posters, à partir d'objectifs musculaires. Le jeudi, la
-// séance de référence, lourde, toujours la même ; le bas du corps le lundi et
-// le haut le mardi, qui alternent d'une semaine à l'autre — mêmes muscles,
-// autres exercices. Chacun s'entraîne avec l'application sur son propre
+// bibliothèque des posters, à partir d'objectifs musculaires. Le lundi, tout
+// le corps, la grosse séance ; le mardi, le haut ; le jeudi, les jambes. Les
+// trois jours alternent d'une semaine à l'autre — mêmes muscles, autres
+// exercices. Chacun s'entraîne avec l'application sur son propre
 // téléphone, seul ou à deux sur une horloge commune.
 
 /** Qui s'entraîne sur ce téléphone. */
@@ -543,7 +539,8 @@ export type Personne = 'sebastien' | 'max';
 export type TypeSeanceMois = 'dure' | 'facile';
 
 export interface SeanceDuMois {
-  /** 'lundi-a', 'mardi-a', 'jeudi', 'lundi-b', 'mardi-b'. */
+  /** 'lundi-a', 'mardi-a', 'jeudi-a', 'lundi-b', 'mardi-b', 'jeudi-b' ; sans
+   *  alternance, 'lundi', 'mardi', 'jeudi'. */
   id: string;
   nom: string;
   /** Jour de la semaine : 1 = lundi, 2 = mardi, 4 = jeudi. */
@@ -558,11 +555,12 @@ export interface SeanceDuMois {
   /** Identifiants d'exercices de la bibliothèque, dans l'ordre de la séance :
    *  les deux exercices d'une paire côte à côte. */
   exercices: string[];
-  /** Le dernier exercice, pour les jambes : presse, hack squat, traîneau ou
-   *  marche du fermier. Seul, en séries, après les paires. */
+  /** Le dernier exercice : la presse ou le hack squat le lundi, la marche du
+   *  fermier le mardi, le traîneau le jeudi. Seul, en séries, après les
+   *  paires. */
   finale?: string;
-  /** La partie du corps du jour : le bas le lundi, le haut le mardi, tout le
-   *  corps le jeudi. */
+  /** La partie du corps du jour : tout le corps le lundi (type 'dure'), le
+   *  haut le mardi, le bas le jeudi. */
   partie?: 'bas' | 'haut' | 'complet';
   /** Les paires : deux exercices opposés qui s'enchaînent sans pause ; la
    *  pause vient après la paire. Un exercice hors paire se fait seul. */
@@ -574,13 +572,16 @@ export interface SeanceDuMois {
 
 /** Les réglages du programme que les deux téléphones partagent. */
 export interface ReglagesDuo {
-  /** Les répétitions de chacun. */
+  /** Les répétitions de chacun les jours de jiu-jitsu de Speedy (mardi,
+   *  jeudi) ; Big Max fait les siennes tous les jours. */
   reps?: Record<Personne, number>;
+  /** Les répétitions de Speedy le lundi, sans jiu-jitsu le soir. */
+  repsLundi?: number;
   /** Le tempo des séances du programme ; la séance libre garde celui du
    *  téléphone. */
   tempo?: Tempo;
-  /** Le nombre d'exercices de chaque séance, sans compter le dernier pour
-   *  les jambes : 4, 6, 8 ou 10. */
+  /** Le nombre d'exercices du mardi et du jeudi, sans compter le dernier :
+   *  4, 6 ou 8. Le lundi en a deux de plus. */
   exercices?: number;
 }
 

@@ -1,12 +1,13 @@
 // Le ressenti : après la dernière série d'un exercice, on dit si la charge
 // était lourde, correcte ou légère. Un seul toucher, facultatif. Comme on ne
-// monte pas les charges à chaque séance, c'est ce qui dit quand le faire :
-// léger deux fois de suite, on propose un cran de plus ; lourd deux fois de
-// suite, un cran de moins.
+// monte pas les charges à chaque séance, c'est ce qui dit quand le faire — et
+// c'est la seule règle de progression du programme : léger assez de fois de
+// suite (quatre pour Speedy, deux pour Big Max), on propose un cran de plus ;
+// lourd deux fois de suite, un cran de moins.
 //
 // Tout est pur et se recalcule depuis l'historique : rien n'est stocké en
 // plus du ressenti lui-même, dans la séance faite.
-import type { BlocSeries, Ressenti, SeanceRealisee, UnitePoids } from '../types';
+import type { BlocSeries, Personne, Ressenti, SeanceRealisee, UnitePoids } from '../types';
 import type { Etape } from './etapesSeance';
 import { CRAN_CHARGE, SUFFIXE_UNITE, convertirPoids, poidsDe, uniteDeSeance } from './statistiques';
 
@@ -33,11 +34,22 @@ export function lireRessentis(brut: unknown): Record<string, Ressenti> {
 // ------------------------------------------------------------- Quand changer la charge
 
 /** Combien de « léger » de suite, au même poids, avant de proposer un cran de
- *  plus. */
-export const RESSENTIS_POUR_MONTER = 2;
+ *  plus. Speedy : quatre — avec le jiu-jitsu le soir, il reste léger
+ *  longtemps. Big Max : deux. */
+export const RESSENTIS_POUR_MONTER: Record<Personne, number> = { sebastien: 4, max: 2 };
 /** Combien de « lourd » de suite, au même poids, avant de proposer un cran de
- *  moins. */
-export const RESSENTIS_POUR_DESCENDRE = 2;
+ *  moins : deux, pour les deux. */
+export const RESSENTIS_POUR_DESCENDRE: Record<Personne, number> = { sebastien: 2, max: 2 };
+
+/** Les seuils d'une personne. Sans personne connue, les plus prudents : on
+ *  monte le plus tard, on descend le plus tôt. */
+export function seuilsRessenti(personne?: Personne | null): { monter: number; descendre: number } {
+  if (personne) return { monter: RESSENTIS_POUR_MONTER[personne], descendre: RESSENTIS_POUR_DESCENDRE[personne] };
+  return {
+    monter: Math.max(...Object.values(RESSENTIS_POUR_MONTER)),
+    descendre: Math.min(...Object.values(RESSENTIS_POUR_DESCENDRE)),
+  };
+}
 
 export interface PropositionCharge {
   /** Léger : on monte. Lourd : on redescend. */
@@ -80,8 +92,9 @@ function passagesDe(historique: SeanceRealisee[], exerciceId: string, unite: Uni
 }
 
 /** Ce que le ressenti propose pour un exercice, d'après l'historique de la
- *  personne : un cran de plus après deux « léger » de suite, un cran de moins
- *  après deux « lourd » de suite, sinon rien.
+ *  personne : un cran de plus après assez de « léger » de suite (quatre pour
+ *  Speedy, deux pour Big Max), un cran de moins après deux « lourd » de
+ *  suite, sinon rien.
  *
  *  Les ressentis comptent à partir du dernier, tant que la charge est la même :
  *  dès qu'elle a changé — on a monté, ou descendu — le compte repart de zéro,
@@ -93,7 +106,9 @@ export function propositionDeCharge(
   historique: SeanceRealisee[],
   exerciceId: string,
   unite: UnitePoids,
+  personne?: Personne | null,
 ): PropositionCharge | null {
+  const seuils = seuilsRessenti(personne);
   let reference: number | undefined;
   let ressenti: Ressenti | undefined;
   let fois = 0;
@@ -109,9 +124,9 @@ export function propositionDeCharge(
   }
   if (reference === undefined) return null;
   const cran = CRAN_CHARGE[unite];
-  if (ressenti === 'leger' && fois >= RESSENTIS_POUR_MONTER) return { ressenti, ajout: cran, fois };
+  if (ressenti === 'leger' && fois >= seuils.monter) return { ressenti, ajout: cran, fois };
   // On ne descend pas sous un cran : un haltère de 5 lb est le plus léger.
-  if (ressenti === 'lourd' && fois >= RESSENTIS_POUR_DESCENDRE && reference > cran) {
+  if (ressenti === 'lourd' && fois >= seuils.descendre && reference > cran) {
     return { ressenti, ajout: -cran, fois };
   }
   return null;
@@ -122,10 +137,11 @@ export function ressentisQuiChangent(
   historique: SeanceRealisee[],
   exerciceIds: string[],
   unite: UnitePoids,
+  personne?: Personne | null,
 ): Record<string, 'leger' | 'lourd'> {
   const resultat: Record<string, 'leger' | 'lourd'> = {};
   for (const id of new Set(exerciceIds)) {
-    const proposition = propositionDeCharge(historique, id, unite);
+    const proposition = propositionDeCharge(historique, id, unite, personne);
     if (proposition) resultat[id] = proposition.ressenti;
   }
   return resultat;
@@ -137,21 +153,14 @@ export function ressentisQuiChangent(
 export interface AjustementCharge {
   /** Le cran à ajouter à la charge de la dernière fois (négatif : on redescend). */
   ajout: number;
-  motif: 'semaine-dure' | 'leger' | 'lourd';
+  motif: 'leger' | 'lourd';
 }
 
-/** Ce que propose un bloc : le cran de la semaine dure réussie, ou celui du
- *  ressenti — jamais les deux à la fois. Les deux montent : un seul cran, pas
- *  deux. Le ressenti « lourd » passe avant : si le corps dit lourd deux fois de
- *  suite, la semaine dure réussie ne fait pas monter. */
-export function ajustementDeCharge(
-  bloc: Pick<BlocSeries, 'ajoutCharge' | 'ajustementRessenti'> | undefined,
-): AjustementCharge | null {
-  const semaine = bloc?.ajoutCharge ?? 0;
-  const ressenti = bloc?.ajustementRessenti ?? 0;
-  if (ressenti < 0) return { ajout: ressenti, motif: 'lourd' };
-  if (semaine > 0) return { ajout: Math.max(semaine, ressenti), motif: 'semaine-dure' };
-  if (ressenti > 0) return { ajout: ressenti, motif: 'leger' };
+/** Ce que propose un bloc : le cran du ressenti, s'il y en a un. */
+export function ajustementDeCharge(bloc: Pick<BlocSeries, 'ajustementRessenti'> | undefined): AjustementCharge | null {
+  const ajout = bloc?.ajustementRessenti ?? 0;
+  if (ajout < 0) return { ajout, motif: 'lourd' };
+  if (ajout > 0) return { ajout, motif: 'leger' };
   return null;
 }
 
@@ -170,12 +179,19 @@ export function libelleCran(ajout: number, unite: UnitePoids): string {
   return `${ajout < 0 ? '−' : '+'}${nombreFr(Math.abs(ajout))} ${SUFFIXE_UNITE[unite]}`;
 }
 
-/** La phrase de la séance guidée, sous la saisie du poids. */
-export function phraseRessenti(motif: 'leger' | 'lourd', ajout: number, unite: UnitePoids): string {
+/** La phrase de la séance guidée, sous la saisie du poids : « Léger les 4
+ *  dernières fois : on monte de 5 lb ». */
+export function phraseRessenti(
+  motif: 'leger' | 'lourd',
+  ajout: number,
+  unite: UnitePoids,
+  personne?: Personne | null,
+): string {
   const cran = `${nombreFr(Math.abs(ajout))} ${SUFFIXE_UNITE[unite]}`;
+  const seuils = seuilsRessenti(personne);
   return motif === 'leger'
-    ? `Léger les ${RESSENTIS_POUR_MONTER} dernières fois : on monte de ${cran}`
-    : `Lourd les ${RESSENTIS_POUR_DESCENDRE} dernières fois : on redescend de ${cran}`;
+    ? `Léger les ${seuils.monter} dernières fois : on monte de ${cran}`
+    : `Lourd les ${seuils.descendre} dernières fois : on redescend de ${cran}`;
 }
 
 /** La petite ligne de l'accueil : « ↑ +5 lb proposé », « ↓ −5 lb proposé ». */
@@ -183,11 +199,11 @@ export function ligneProposition(motif: 'leger' | 'lourd', ajout: number, unite:
   return `${motif === 'leger' ? '↑' : '↓'} ${libelleCran(ajout, unite)} proposé`;
 }
 
-/** Pourquoi, en quelques mots : « léger 2 fois de suite ». */
-export const raisonProposition = (motif: 'leger' | 'lourd'): string =>
-  motif === 'leger'
-    ? `léger ${RESSENTIS_POUR_MONTER} fois de suite`
-    : `lourd ${RESSENTIS_POUR_DESCENDRE} fois de suite`;
+/** Pourquoi, en quelques mots : « léger 4 fois de suite ». */
+export function raisonProposition(motif: 'leger' | 'lourd', personne?: Personne | null): string {
+  const seuils = seuilsRessenti(personne);
+  return motif === 'leger' ? `léger ${seuils.monter} fois de suite` : `lourd ${seuils.descendre} fois de suite`;
+}
 
 // ------------------------------------------------------------- Dans la séance guidée
 
