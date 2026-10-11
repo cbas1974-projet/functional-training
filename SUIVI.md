@@ -21,6 +21,15 @@ Claude, de son côté :
 
 ## Séance du 11 octobre 2026
 
+- **EN PAUSE — à reprendre en premier.** La nouvelle semaine (lundi tout le
+  corps 8 exercices, toi 10 / Big Max 10 ; mardi le haut ; jeudi les jambes en
+  modéré avec le swing ; sans semaine dure ni demi-charge ; fentes revenues ;
+  « léger » 4 fois pour Speedy, 2 pour Big Max) est sur la branche `semaine`,
+  code et tests faits, README et vérifications à finir, puis à fusionner dans
+  `main`. L'audit de la logique est dans `docs/audit-logique.md` (branche
+  `semaine`) : à présenter en liste courte, avec un avis par point, avant
+  d'en coder quoi que ce soit. L'audit dans le navigateur est à relancer.
+
 - **La routine du soir**, demandée par Sébastien (« des étirements ou de la
   mobilité à faire tous les soirs, pas mon entraînement ») — **dix minutes au
   plus**, « pas plus, sinon je ne la ferai pas » : une carte en haut de
