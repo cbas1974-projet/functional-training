@@ -26,12 +26,12 @@ import { formaterDateFr, graineAleatoire, memeTempo } from '../utils/formatage';
 import { SUFFIXE_UNITE, chargeTotale, uniteDeSeance } from '../utils/statistiques';
 import { bellSound } from '../utils/sounds';
 import {
+  EXERCICES_EN_PLUS_LUNDI,
   JOURS,
   NOMBRES_EXERCICES,
   NOM_PERSONNE,
   NOM_ROLE,
   PERSONNES,
-  REPS_SEMAINE_DURE,
   SERIES_PROGRAMME,
   TEMPO_PROGRAMME,
   accordPaire,
@@ -46,8 +46,6 @@ import {
   depuisIso,
   equipeDe,
   estRetouche,
-  estSemaineDure,
-  exercicesAAugmenter,
   faiteCetteSemaine,
   faiteLe,
   isoDate,
@@ -55,12 +53,13 @@ import {
   lierDansProgramme,
   nombreExercicesDe,
   pairesAutomatiques,
-  prochaineDate,
   programmeDansLien,
   refairePaires,
   refaireProgramme,
   remplacerDansProgramme,
   repsDuDuo,
+  repsDuJour,
+  repsLundiDe,
   rolesDe,
   seanceAProposer,
   seancePourPersonne,
@@ -245,6 +244,7 @@ function ChoixTour({ actif, onClick, children }: { actif: boolean; onClick: () =
 function LigneExercice({
   bloc,
   exercice,
+  personne,
   partenaire,
   passees,
   unite,
@@ -255,6 +255,8 @@ function LigneExercice({
 }: {
   bloc: BlocSeries;
   exercice: Exercice;
+  /** Qui s'entraîne ici : les seuils du ressenti sont les siens. */
+  personne: Personne | null;
   /** À deux : le prénom de l'autre, dont on montre le volume. */
   partenaire: string | null;
   passees: number[] | undefined;
@@ -265,7 +267,7 @@ function LigneExercice({
   onImage: () => void;
 }) {
   const tour = bloc.tour === true;
-  // Le cran proposé sur la dernière charge : semaine dure réussie, ou ressenti.
+  // Le cran que propose le ressenti sur la dernière charge.
   const ajustement = ajustementDeCharge(bloc);
   const rouge = lien.mode === 'candidat' && lien.accord.accord !== 'bon';
   const cadre =
@@ -319,30 +321,19 @@ function LigneExercice({
             {partenaire} : {volume(bloc.autre, exercice)}
           </p>
         )}
-        {bloc.derniereLegere && (
-          <p className="text-xs" style={{ color: 'var(--texte-discret)' }}>
-            Dernière série légère : la moitié de la charge.
-          </p>
-        )}
         {passees && passees.some((charge) => charge > 0) && (
           <p className="chiffres text-xs" style={{ color: 'var(--texte-discret)' }}>
             Dernière fois : {passees.map((charge) => (charge > 0 ? charge : '—')).join(' · ')}{' '}
             {SUFFIXE_UNITE[unite]}
-            {ajustement?.motif === 'semaine-dure' && (
-              <strong style={{ color: 'var(--montee)' }}>
-                {' '}
-                · +{ajustement.ajout} {SUFFIXE_UNITE[unite]} proposés
-              </strong>
-            )}
           </p>
         )}
         {/* Le ressenti des dernières fois : léger, on monte ; lourd, on redescend. */}
-        {passees && passees.some((charge) => charge > 0) && ajustement && ajustement.motif !== 'semaine-dure' && (
+        {passees && passees.some((charge) => charge > 0) && ajustement && (
           <p className="chiffres text-xs" style={{ color: 'var(--texte-discret)' }}>
             <strong style={{ color: ajustement.motif === 'leger' ? 'var(--montee)' : 'var(--descente)' }}>
               {ligneProposition(ajustement.motif, ajustement.ajout, unite)}
             </strong>{' '}
-            · {raisonProposition(ajustement.motif)}
+            · {raisonProposition(ajustement.motif, personne)}
           </p>
         )}
         {/* À deux : côte à côte, ou chacun son tour sur la machine. */}
@@ -406,10 +397,12 @@ function FeuilleReglages({
   personne,
   parametres,
   reps,
+  repsLundi,
   nombreExercices,
   tempo,
   onPersonne,
   onReps,
+  onRepsLundi,
   onNombreExercices,
   onTempo,
   onParametres,
@@ -422,7 +415,11 @@ function FeuilleReglages({
 }: {
   personne: Personne | null;
   parametres: ParametresSeance;
+  /** Les répétitions de chacun les jours de jiu-jitsu (mardi, jeudi) ; Big Max
+   *  fait les siennes tous les jours. */
   reps: Record<Personne, number>;
+  /** Les répétitions de Speedy le lundi. */
+  repsLundi: number;
   /** Le nombre d'exercices et le tempo du programme : les mêmes sur les deux
    *  téléphones. */
   nombreExercices: number;
@@ -431,6 +428,7 @@ function FeuilleReglages({
   onServeur: (adresse: string | null) => void;
   onPersonne: (personne: Personne) => void;
   onReps: (personne: Personne, reps: number) => void;
+  onRepsLundi: (reps: number) => void;
   onNombreExercices: (nombre: number) => void;
   onTempo: (tempo: Tempo) => void;
   onParametres: (partiel: Partial<ParametresSeance>) => void;
@@ -453,19 +451,30 @@ function FeuilleReglages({
 
       <Groupe
         titre="Répétitions par série"
-        aide={`Trois séries ; ${NOM_PERSONNE.max} en fait une de plus aux poussées. La semaine dure, le jeudi une semaine sur deux : ${REPS_SEMAINE_DURE} répétitions de plus chacun, même poids.`}
+        aide={`Trois séries ; ${NOM_PERSONNE.max} en fait une de plus aux poussées. Le mardi et le jeudi, jiu-jitsu le soir : ${NOM_PERSONNE.sebastien} en fait moins.`}
       >
-        <div className="space-y-2">
-          {PERSONNES.map((p) => (
-            <div key={p.id} className="flex flex-wrap items-center gap-2">
-              <span className="w-24 text-sm font-semibold" style={{ color: 'var(--texte)' }}>
-                {NOM_PERSONNE[p.id]}
-              </span>
-              {REPS_POSSIBLES.map((n) => (
-                <Pastille key={n} selectionne={reps[p.id] === n} onClick={() => onReps(p.id, n)}>
-                  <span className="chiffres">{n}</span>
-                </Pastille>
-              ))}
+        <div className="space-y-3">
+          {[
+            { cle: 'seb-lundi', nom: `${NOM_PERSONNE.sebastien} · lundi`, valeur: repsLundi, choisir: onRepsLundi },
+            {
+              cle: 'seb-jiu-jitsu',
+              nom: `${NOM_PERSONNE.sebastien} · mardi et jeudi (jiu-jitsu le soir)`,
+              valeur: reps.sebastien,
+              choisir: (n: number) => onReps('sebastien', n),
+            },
+            { cle: 'max', nom: `${NOM_PERSONNE.max} · tous les jours`, valeur: reps.max, choisir: (n: number) => onReps('max', n) },
+          ].map((ligne) => (
+            <div key={ligne.cle}>
+              <p className="mb-1 text-sm font-semibold" style={{ color: 'var(--texte)' }}>
+                {ligne.nom}
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {REPS_POSSIBLES.map((n) => (
+                  <Pastille key={n} selectionne={ligne.valeur === n} onClick={() => ligne.choisir(n)}>
+                    <span className="chiffres">{n}</span>
+                  </Pastille>
+                ))}
+              </div>
             </div>
           ))}
         </div>
@@ -473,7 +482,7 @@ function FeuilleReglages({
 
       <Groupe
         titre="Exercices par séance"
-        aide="Deux par deux, sans compter le dernier pour les jambes. Changer le nombre recompose les séances, avec les mêmes objectifs."
+        aide={`Le mardi et le jeudi ; le lundi, la grosse séance, en a ${EXERCICES_EN_PLUS_LUNDI} de plus. Deux par deux, sans compter le dernier exercice. Changer le nombre recompose les séances, avec les mêmes objectifs.`}
       >
         <div className="flex flex-wrap gap-2">
           {NOMBRES_EXERCICES.map((n) => (
@@ -482,6 +491,9 @@ function FeuilleReglages({
             </Pastille>
           ))}
         </div>
+        <p className="chiffres mt-2 text-xs" style={{ color: 'var(--texte-discret)' }}>
+          Lundi {nombreExercices + EXERCICES_EN_PLUS_LUNDI} · mardi {nombreExercices} · jeudi {nombreExercices}
+        </p>
       </Groupe>
 
       <Groupe
@@ -699,8 +711,8 @@ function FeuilleObjectifs({
   return (
     <Feuille titre="Objectifs" onFermer={onFermer}>
       <p className="text-sm" style={{ color: 'var(--texte-discret)' }}>
-        L’application prend dans les posters les exercices qui travaillent ces muscles : le bas du corps le
-        lundi, le haut le mardi, et lourd le jeudi.
+        L’application prend dans les posters les exercices qui travaillent ces muscles : tout le corps le
+        lundi, le haut le mardi, les jambes le jeudi.
       </p>
       <div className="space-y-2">
         {OBJECTIFS_MUSCULAIRES.map((objectif) => (
@@ -750,7 +762,7 @@ function FeuilleChanger({
     <Feuille titre="Changer d’exercice" onFermer={onFermer}>
       <p className="text-sm" style={{ color: 'var(--texte-discret)' }}>
         À la place de <strong style={{ color: 'var(--texte)' }}>{actuel.nomFr}</strong> ({musclesCibles(actuel)}),
-        pour chaque {seanceMois.type === 'dure' ? 'jeudi' : `« ${seanceMois.nom} »`}.
+        pour chaque « {seanceMois.nom} ».
       </p>
       {choix.length === 0 ? (
         <p className="text-sm" style={{ color: 'var(--texte-discret)' }}>
@@ -817,29 +829,24 @@ export default function Accueil({
   // À deux par défaut, dès qu'on sait qui s'entraîne ici.
   const aDeux = personne !== null && etat.aDeux !== false;
   const reps = repsDuDuo(programme);
-  // Le jour de la séance affichée : la semaine dure et le cran de plus en
-  // dépendent.
-  const jourSeance = isoDate(
-    proposee?.seance.id === seanceMois.id ? proposee.date : prochaineDate(programme, seanceMois, maintenant),
-  );
-  const semaineDure = estSemaineDure(programme, seanceMois, depuisIso(jourSeance));
   const contexte = useMemo<ContexteSeance>(
     () => ({
       personne,
       aDeux,
-      semaineDure,
-      reps: repsDuDuo(programme),
+      // Les répétitions du jour : le lundi, Speedy en fait autant que Big Max.
+      reps: repsDuJour(programme, seanceMois.jour),
       // Le tempo du programme, le même sur les deux téléphones.
       tempo: tempoDuProgramme(programme),
-      augmenter: exercicesAAugmenter(historique, programme, seanceMois, depuisIso(jourSeance)),
-      // Léger deux fois de suite : un cran de plus ; lourd : un cran de moins.
+      // Léger assez de fois de suite (quatre pour Speedy, deux pour Big Max) :
+      // un cran de plus ; lourd deux fois : un cran de moins.
       ressentis: ressentisQuiChangent(
         historique,
         [...seanceMois.exercices, ...(seanceMois.finale ? [seanceMois.finale] : [])],
         unite,
+        personne,
       ),
     }),
-    [personne, aDeux, semaineDure, programme, historique, seanceMois, jourSeance, unite],
+    [personne, aDeux, programme, historique, seanceMois, unite],
   );
   const seance = useMemo(() => seancePourPersonne(seanceMois, parametres, contexte), [seanceMois, parametres, contexte]);
   const passees = useMemo(
@@ -894,7 +901,6 @@ export default function Accueil({
   const echauffement = seance.echauffement ?? [];
   const etirements = [...new Set((seance.retourCalme ?? []).map((m) => m.exerciceId).filter(estUnExercice))];
   const avecTrapBar = seance.blocs.some((bloc) => bloc.exerciceId === 'trap-bar-deadlift');
-  const aAugmenter = seance.blocs.filter((bloc) => ajustementDeCharge(bloc)?.motif === 'semaine-dure').length;
 
   /** Toute retouche du programme : l'autre téléphone devra le recevoir. */
   const modifierProgramme = (modifier: (prec: ProgrammeMois) => ProgrammeMois) => {
@@ -931,6 +937,7 @@ export default function Accueil({
         key={bloc.exerciceId}
         bloc={bloc}
         exercice={exercice}
+        personne={personne}
         partenaire={aDeux ? autre : null}
         passees={passees[bloc.exerciceId]}
         unite={unite}
@@ -943,6 +950,8 @@ export default function Accueil({
   };
 
   const semaineDuMois = semainesEcoulees(programme, maintenant);
+  /** Combien de jours d'entraînement par semaine : une colonne chacun. */
+  const joursDuProgramme = new Set(programme.seances.map((s) => s.jour)).size;
   const objectifs =
     programme.objectifs
       .map((id) => OBJECTIFS_MUSCULAIRES.find((o) => o.id === id)?.nom)
@@ -960,6 +969,7 @@ export default function Accueil({
    *  téléphones en tirent la même horloge. */
   const changerReps = (qui: Personne, n: number) =>
     modifierProgramme((prec) => ({ ...prec, duo: { ...prec.duo, reps: { ...repsDuDuo(prec), [qui]: n } } }));
+  const changerRepsLundi = (n: number) => modifierProgramme((prec) => ({ ...prec, duo: { ...prec.duo, repsLundi: n } }));
 
   /** Le nombre d'exercices et le tempo voyagent aussi avec le programme. Un
    *  autre nombre recompose les séances : on prévient s'il y a des retouches
@@ -1156,7 +1166,8 @@ export default function Accueil({
               Qui s’entraîne sur ce téléphone ?
             </p>
             <p className="text-xs" style={{ color: 'var(--texte-discret)' }}>
-              {NOM_PERSONNE.max} fait deux répétitions de plus, et une série de plus aux poussées.
+              Le mardi et le jeudi, {NOM_PERSONNE.max} fait deux répétitions de plus ; il fait une série de plus
+              aux poussées.
             </p>
             <div className="mt-2 grid grid-cols-2 gap-2">
               {PERSONNES.map((p) => (
@@ -1218,11 +1229,12 @@ export default function Accueil({
           </div>
         )}
 
-        {/* La semaine : les séances du programme, d'un appui. */}
+        {/* La semaine : les séances du programme, d'un appui — une ligne par
+            jour de la semaine, la semaine A puis la semaine B. */}
         <nav
           aria-label="Séances du programme"
           className="grid gap-2"
-          style={{ gridTemplateColumns: `repeat(${programme.seances.length}, minmax(0, 1fr))` }}
+          style={{ gridTemplateColumns: `repeat(${joursDuProgramme}, minmax(0, 1fr))` }}
         >
           {programme.seances.map((s) => {
             const selectionnee = s.id === seanceMois.id;
@@ -1297,23 +1309,6 @@ export default function Accueil({
               )}
             </div>
 
-            {semaineDure && (
-              <div className="mt-3 rounded-xl p-3" style={{ background: 'var(--surface-haute)', border: '1px solid var(--pause)' }}>
-                <p className="text-sm font-bold" style={{ color: 'var(--texte)' }}>
-                  Semaine dure : même poids, {REPS_SEMAINE_DURE} répétitions de plus
-                </p>
-                <p className="chiffres text-sm" style={{ color: 'var(--texte-discret)' }}>
-                  {NOM_PERSONNE.max} {reps.max + REPS_SEMAINE_DURE}, {NOM_PERSONNE.sebastien} {reps.sebastien + REPS_SEMAINE_DURE}. Si le dos
-                  s’arrondit, on arrête la série.
-                </p>
-              </div>
-            )}
-            {aAugmenter > 0 && (
-              <p className="mt-3 text-sm font-semibold" style={{ color: 'var(--montee)' }}>
-                Semaine dure réussie : un cran de plus proposé sur {aAugmenter}{' '}
-                {aAugmenter > 1 ? 'exercices' : 'exercice'}.
-              </p>
-            )}
 
             {echauffement.length > 0 && (
               <div className="mt-3 rounded-xl p-3" style={{ background: 'var(--surface-haute)' }}>
@@ -1544,6 +1539,7 @@ export default function Accueil({
           personne={personne}
           parametres={parametres}
           reps={reps}
+          repsLundi={repsLundiDe(programme)}
           nombreExercices={nombreExercices}
           tempo={tempoDuProgramme(programme)}
           onNombreExercices={changerNombreExercices}
@@ -1559,6 +1555,7 @@ export default function Accueil({
           }
           onPersonne={choisirPersonne}
           onReps={changerReps}
+          onRepsLundi={changerRepsLundi}
           onParametres={mettreAJourParametres}
           onObjectifs={() => setFeuille({ type: 'objectifs' })}
           onRefaire={demanderRefaire}

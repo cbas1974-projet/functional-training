@@ -344,12 +344,6 @@ describe('seanceApercu', () => {
     expect(apercu.blocs.every((b) => b.autre !== undefined)).toBe(true);
   });
 
-  it('ne mêle rien de ce téléphone à l’écran de l’autre : pas son cran de plus', () => {
-    const contexte = { ...SEUL_SEB, augmenter: ['trap-bar-deadlift'] };
-    expect(essai(JEUDI, contexte).blocs[0].ajoutCharge).toBeDefined();
-    expect(seanceApercu(JEUDI, PARAMETRES, contexte)!.blocs.some((b) => b.ajoutCharge !== undefined)).toBe(false);
-  });
-
   it('ni le cran que demandent ses ressentis : léger ou lourd deux fois de suite, c’est pour ce téléphone', () => {
     const contexte = { ...SEUL_SEB, ressentis: { 'trap-bar-deadlift': 'leger' as const, 'seesaw-row': 'lourd' as const } };
     expect(essai(JEUDI, contexte).blocs.map((b) => b.ajustementRessenti)).toContain(5);

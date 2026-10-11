@@ -578,6 +578,8 @@ export const EXERCICES_KETTLEBELL: Exercice[] = [
     explosif: true,
     position: 'Debout, pieds larges, kettlebell entre les pieds',
     pointsAttention: [
+      // En tête du jeudi, au programme : la consigne de Sébastien.
+      'Ce sont les fesses qui lancent, pas le dos. Commencer léger. Si le dos tire : Lourd.',
       'C’est une charnière, pas un squat : les hanches poussent la cloche.',
       'Les bras ne lèvent rien, ils accompagnent.',
       'Serrer fessiers et ventre en haut, sans se pencher en arrière.',

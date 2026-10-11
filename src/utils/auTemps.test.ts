@@ -124,8 +124,8 @@ describe('les cercles du kettlebell, au temps', () => {
 });
 
 describe('les cercles au programme', () => {
-  it('le même temps pour Speedy et Big Max : leurs répétitions et la semaine dure ne comptent pas au temps', () => {
-    for (const contexte of [SEUL_SEB, SEUL_MAX, DUO_SEB, DUO_MAX, { ...DUO_SEB, semaineDure: true }, { ...SEUL_MAX, reps: { max: 12 } }]) {
+  it('le même temps pour Speedy et Big Max : leurs répétitions ne comptent pas au temps', () => {
+    for (const contexte of [SEUL_SEB, SEUL_MAX, DUO_SEB, DUO_MAX, { ...SEUL_MAX, reps: { max: 12 } }]) {
       const seance = seancePourPersonne(MARDI, PARAMETRES, contexte, LUNDI);
       for (const id of ['kb-halo', 'kb-around-the-body']) {
         const bloc = seance.blocs.find((b) => b.exerciceId === id)!;
@@ -148,7 +148,7 @@ describe('les cercles au programme', () => {
     expect([taille.series, taille.autre?.series]).toEqual([3, 3]);
   });
 
-  it('garde la charge : notée, montée ou baissée au ressenti, la dernière série légère du mardi', () => {
+  it('garde la charge : notée, montée ou baissée au ressenti', () => {
     for (const id of CERCLES) expect(chargeReglable(EXERCICES_PAR_ID[id]), id).toBe(true);
     expect(chargeReglable(EXERCICES_PAR_ID['hammer-curl'])).toBe(true);
     // Les portages et les tenues gardent leur règle : c'est le temps qui compte.
@@ -158,9 +158,8 @@ describe('les cercles au programme', () => {
     const seance = seancePourPersonne(MARDI, PARAMETRES, { ...SEUL_SEB, ressentis: { 'kb-halo': 'leger' } }, LUNDI);
     const bloc = seance.blocs.find((b) => b.exerciceId === 'kb-halo')!;
     expect(bloc.ajustementRessenti).toBe(5);
-    expect(bloc.derniereLegere).toBe(true);
-    const fermier = seance.blocs.find((b) => b.exerciceId === 'farmers-walk')!;
-    expect(fermier.derniereLegere).toBeUndefined();
+    // Plus de dernière série à la moitié de la charge, le mardi.
+    expect('derniereLegere' in bloc).toBe(false);
   });
 
   it('annonce exactement la durée de ses étapes, seul comme à deux', () => {

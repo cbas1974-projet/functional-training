@@ -17,12 +17,12 @@ import type { Contexte, Ecart } from './horlogeCommune';
 import { basculerTour, delierDansProgramme, genererProgramme, seancePourPersonne } from './programmeMois';
 
 const programme = genererProgramme({ graine: 3, aujourdhui: new Date(2026, 9, 5) });
-// La trap bar séparée de sa paire : seule, chacun son tour, Max d'abord.
-// L'exercice qui la suit se fait seul aussi, côte à côte.
-const jeudi = delierDansProgramme(programme, 'jeudi', 'trap-bar-deadlift').seances.find((s) => s.id === 'jeudi')!;
+// Le lundi, la trap bar séparée de sa paire : seule, chacun son tour, Max
+// d'abord. L'exercice qui la suit se fait seul aussi, côte à côte.
+const lundiTrapBar = delierDansProgramme(programme, 'lundi-a', 'trap-bar-deadlift').seances.find((s) => s.id === 'lundi-a')!;
 const parametres = { ...PARAMETRES_PAR_DEFAUT, tempo: { monteeSec: 3, descenteSec: 3, pauseSec: 2 } };
-const seanceSeb = seancePourPersonne(jeudi, parametres, { personne: 'sebastien', aDeux: true });
-const seanceMax = seancePourPersonne(jeudi, parametres, { personne: 'max', aDeux: true });
+const seanceSeb = seancePourPersonne(lundiTrapBar, parametres, { personne: 'sebastien', aDeux: true });
+const seanceMax = seancePourPersonne(lundiTrapBar, parametres, { personne: 'max', aDeux: true });
 const etapesSeb = construireEtapes(seanceSeb);
 const etapesMax = construireEtapes(seanceMax);
 
@@ -151,7 +151,7 @@ describe('la position sur l’horloge commune', () => {
     const autre = construireEtapes(perspectiveAutre(seanceSeb)!);
     expect(autre.map((e) => [e.type, e.dureeSec, e.exerciceId])).toEqual(etapesMax.map((e) => [e.type, e.dureeSec, e.exerciceId]));
     expect(dureeTotaleSec(autre)).toBe(dureeTotaleSec(etapesSeb));
-    expect(perspectiveAutre(seancePourPersonne(jeudi, parametres, { personne: 'sebastien' }))).toBeNull();
+    expect(perspectiveAutre(seancePourPersonne(lundiTrapBar, parametres, { personne: 'sebastien' }))).toBeNull();
   });
 });
 
@@ -306,11 +306,12 @@ describe('le temps passé sur les étapes', () => {
   it('écran éteint, les étapes franchies comptent ; un exercice passé, non', () => {
     // Max : sa série 1 à 5 s, puis l'écran s'éteint trois minutes. La série de
     // la trap bar dure 60 s (10 répétitions sans arrêt en bas), l'attente de
-    // Sébastien — changement de machine compris — 83 s, la préparation 5 s.
+    // Sébastien — ses 10 répétitions du lundi, changement de machine compris —
+    // 95 s, la préparation 5 s.
     expect(etapesMax[serie1].dureeSec).toBe(60);
     expect(tempsDesEtapesQuittees(etapesMax, { index: serie1, ecouleSec: 5 }, { index: serie1 + 3, ecouleSec: 1 }, 180)).toEqual([
       [serie1, 60],
-      [serie1 + 1, 83],
+      [serie1 + 1, 95],
       [serie1 + 2, 5],
     ]);
     // « Passer l'exercice » en pleine série : les séries suivantes ne comptent pas.
@@ -325,8 +326,8 @@ describe('le temps passé sur les étapes', () => {
   });
 });
 
-describe('on se croise, aussi le lundi et le mardi', () => {
-  for (const id of ['lundi-a', 'mardi-a']) {
+describe('on se croise, aussi le mardi et le jeudi', () => {
+  for (const id of ['mardi-a', 'jeudi-a']) {
     it(`${id} : une machine dans la paire, Max la prend, Sébastien fait l’autre exercice, puis on échange`, () => {
       const [premier, second] = programme.seances.find((s) => s.id === id)!.liens![0];
       const seanceMois = basculerTour(programme, id, premier).seances.find((s) => s.id === id)!;
@@ -353,13 +354,13 @@ describe('on se croise, aussi le lundi et le mardi', () => {
     });
   }
 
-  it('lundi : la paire des deux machines des cuisses — chacun sur la sienne, puis on échange', () => {
-    const lundi = programme.seances.find((s) => s.id === 'lundi-a')!;
-    const g = lundi.liens!.findIndex((l) => l.includes('leg-extension-machine'));
-    expect(lundi.liens![g]).toEqual(['leg-extension-machine', 'leg-curl-machine']);
-    const pourSeb = seancePourPersonne(lundi, parametres, { personne: 'sebastien', aDeux: true });
+  it('jeudi : la paire des deux machines des cuisses — chacun sur la sienne, puis on échange', () => {
+    const jeudi = programme.seances.find((s) => s.id === 'jeudi-a')!;
+    const g = jeudi.liens!.findIndex((l) => l.includes('leg-extension-machine'));
+    expect(jeudi.liens![g]).toEqual(['leg-extension-machine', 'leg-curl-machine']);
+    const pourSeb = seancePourPersonne(jeudi, parametres, { personne: 'sebastien', aDeux: true });
     const seb = construireEtapes(pourSeb);
-    const max = construireEtapes(seancePourPersonne(lundi, parametres, { personne: 'max', aDeux: true }));
+    const max = construireEtapes(seancePourPersonne(jeudi, parametres, { personne: 'max', aDeux: true }));
     // Le téléphone de Speedy voit les étapes de Big Max telles que Big Max les voit.
     const vuesParSeb = construireEtapes(perspectiveAutre(pourSeb)!);
     expect(vuesParSeb.map((e) => [e.type, e.dureeSec, e.exerciceId])).toEqual(max.map((e) => [e.type, e.dureeSec, e.exerciceId]));

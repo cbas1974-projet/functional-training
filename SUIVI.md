@@ -21,14 +21,36 @@ Claude, de son côté :
 
 ## Séance du 11 octobre 2026
 
-- **EN PAUSE — à reprendre en premier.** La nouvelle semaine (lundi tout le
-  corps 8 exercices, toi 10 / Big Max 10 ; mardi le haut ; jeudi les jambes en
-  modéré avec le swing ; sans semaine dure ni demi-charge ; fentes revenues ;
-  « léger » 4 fois pour Speedy, 2 pour Big Max) est sur la branche `semaine`,
-  code et tests faits, README et vérifications à finir, puis à fusionner dans
-  `main`. L'audit de la logique est dans `docs/audit-logique.md` (branche
-  `semaine`) : à présenter en liste courte, avec un avis par point, avant
-  d'en coder quoi que ce soit. L'audit dans le navigateur est à relancer.
+- **À présenter à Sébastien, en liste courte avec un avis par point, avant
+  d'en coder quoi que ce soit** : l'audit de la logique
+  (`docs/audit-logique.md`) et l'audit dans le navigateur (`docs/audit-ux.md`).
+- **La nouvelle semaine** (version 6 du programme, recomposé avec la même
+  graine : pareil sur les deux téléphones ; les anciens liens s'ouvrent
+  toujours). **Lundi, tout le corps** : 8 exercices (4 paires), 10
+  répétitions chacun, la trap bar en tête avec le haut du corps, le Superman
+  avec le ventre, développés et tirages, la presse ou le hack squat pour finir
+  (≈ 1 h 20). **Mardi, le haut** : 6 exercices, Speedy 8 / Big Max 10, la
+  marche du fermier (≈ 1 h 10 mesuré). **Jeudi, les jambes, modéré** : 6
+  exercices, Speedy 8 / Big Max 10, le **swing à deux mains** en tête (30 s,
+  léger, « Ce sont les fesses qui lancent, pas le dos… ») avec un tirage léger
+  du haut du corps, l'intérieur avec l'extérieur de cuisse (une fente
+  latérale), les deux machines des cuisses ensemble, le traîneau ; ni trap
+  bar, ni presse, ni hack squat (≈ 1 h). Les trois jours en semaines A et B ;
+  la trap bar, le Superman, le swing et les machines reviennent chaque semaine.
+  - **Nouvelle règle des paires** : jamais deux exercices qui coupent le
+    souffle ; un explosif (le swing) ne va qu'avec un tirage léger, sinon seul.
+  - **Retirés** : la semaine dure, la dernière série à la moitié de la charge
+    le mardi. **Liste des mis de côté vidée** (fentes, une jambe, good
+    morning, rowings sans appui) ; le mécanisme reste. Le rowing alterné buste
+    penché compte désormais comme chargeant le bas du dos, comme les autres.
+  - **Ressenti, seule progression** : léger 4 fois de suite pour Speedy, 2
+    pour Big Max ; lourd 2 fois pour les deux (`src/utils/ressenti.ts`).
+  - **Réglages** : « Exercices par séance » 4, 6 ou 8 pour mardi et jeudi, le
+    lundi deux de plus ; répétitions en trois lignes (Speedy · lundi, Speedy ·
+    mardi et jeudi, Big Max). **Séance libre** : discipline, format, niveau,
+    matériel et explosifs derrière « Plus de réglages ».
+  - Le lien « Envoyer à Big Max » est plus compact (six séances, moins de
+    3 000 caractères).
 
 - **La routine du soir**, demandée par Sébastien (« des étirements ou de la
   mobilité à faire tous les soirs, pas mon entraînement ») — **dix minutes au
@@ -363,7 +385,7 @@ d'installation du README.
   (`cbas1974-projet`). GitHub la suspend après 60 jours sans commit sur un
   dépôt public ; on la relance dans l'onglet *Actions*.
 - **Vérifications** :
-  - `npx vitest run` (857 tests) ;
+  - `npx vitest run` (930 tests) ;
   - `npx tsc -b --noEmit` ;
   - `npx eslint .` ;
   - `npm run build`.

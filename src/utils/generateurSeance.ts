@@ -215,8 +215,9 @@ export function sontOpposes(a: Exercice, b: Exercice): boolean {
 const PATTERNS_EXIGEANTS: PatternMoteur[] = ['squat', 'charniere', 'fente', 'portage'];
 
 /** Deux mouvements exigeants dans le même enchaînement et c'est la cage
- *  thoracique qui lâche avant le muscle. */
-function estExigeant(exercice: Exercice): boolean {
+ *  thoracique qui lâche avant le muscle. Les paires du programme du mois
+ *  suivent la même règle (`accordPaire`). */
+export function estExigeant(exercice: Exercice): boolean {
   return PATTERNS_EXIGEANTS.includes(exercice.pattern) || exercice.groupe === 'corps-entier';
 }
 
