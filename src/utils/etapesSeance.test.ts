@@ -26,6 +26,7 @@ import {
   indexApresExercice,
   indexEtapePrecedente,
   indexReprise,
+  lireMouvement,
   lirePhase,
   pauseAEtirement,
   phasesDeRep,
@@ -1090,5 +1091,62 @@ describe('l’horloge des séances du programme', () => {
     const apres = etapes[indexApresExercice(etapes, premiereSerie)];
     expect(apres).toMatchObject({ type: 'repos', manuel: true, motif: 'installation' });
     expect(apres.exerciceId).toBe(lundiMois.exercices[2]);
+  });
+});
+
+describe('les mouvements de l’échauffement et des étirements', () => {
+  // Mollet côté droit 30 s, changement de côté 5 s, côté gauche 30 s.
+  const ETIREMENT = [
+    { nom: 'Mollet · côté droit', consigne: '', dureeSec: 30 },
+    { nom: 'Change de côté', consigne: '', dureeSec: 5, changementDeCote: true },
+    { nom: 'Mollet · côté gauche', consigne: '', dureeSec: 30 },
+  ];
+
+  it('chacun sa durée, le changement de côté compris', () => {
+    expect(lireMouvement(ETIREMENT, 65, 0)).toEqual({ index: 0, resteSec: 30 });
+    expect(lireMouvement(ETIREMENT, 65, 29)).toEqual({ index: 0, resteSec: 1 });
+    expect(lireMouvement(ETIREMENT, 65, 30)).toEqual({ index: 1, resteSec: 5 });
+    expect(lireMouvement(ETIREMENT, 65, 33)).toEqual({ index: 1, resteSec: 2 });
+    expect(lireMouvement(ETIREMENT, 65, 35)).toEqual({ index: 2, resteSec: 30 });
+    expect(lireMouvement(ETIREMENT, 65, 70)).toEqual({ index: 2, resteSec: 0 });
+  });
+
+  it('« +5 s » allonge le changement de côté en cours, et repousse le côté gauche', () => {
+    expect(lireMouvement(ETIREMENT, 65, 36, { 1: 5 }, 5)).toEqual({ index: 1, resteSec: 4 });
+    expect(lireMouvement(ETIREMENT, 65, 40, { 1: 5 }, 5)).toEqual({ index: 2, resteSec: 30 });
+    // Une prolongation qu'aucune rallonge n'explique va au dernier mouvement.
+    expect(lireMouvement(ETIREMENT, 65, 36, {}, 5)).toEqual({ index: 2, resteSec: 34 });
+  });
+
+  it('sans durées propres, ils se partagent l’étape', () => {
+    const libres = [{ nom: 'a', consigne: '' }, { nom: 'b', consigne: '' }];
+    expect(lireMouvement(libres, 60, 10)).toEqual({ index: 0, resteSec: 20 });
+    expect(lireMouvement(libres, 60, 31)).toEqual({ index: 1, resteSec: 29 });
+    expect(lireMouvement([], 60, 10)).toEqual({ index: 0, resteSec: 0 });
+  });
+
+  it('annoncé = déroulé : chaque séance du programme, ses changements de côté de 5 s compris', () => {
+    const programme = genererProgramme({ graine: 7, aujourdhui: new Date(2026, 9, 5) });
+    for (const s of programme.seances) {
+      const seance = seancePourPersonne(s, PARAMETRES_PAR_DEFAUT, { personne: 'max', aDeux: false });
+      const etapes = construireEtapes(seance);
+      for (const [type, mouvements] of [
+        ['echauffement', seance.echauffement ?? []],
+        ['retourCalme', seance.retourCalme ?? []],
+      ] as const) {
+        const etape = etapes.find((e) => e.type === type)!;
+        const somme = mouvements.reduce((t, m) => t + (m.dureeSec ?? 0), 0);
+        expect(etape.dureeSec, `${s.id} ${type}`).toBe(somme);
+        // Chaque changement de côté dure ses 5 s, pile, dans le déroulé.
+        let debut = 0;
+        mouvements.forEach((mouvement, i) => {
+          expect(lireMouvement(mouvements, etape.dureeSec, debut + 0.01).index).toBe(i);
+          if (mouvement.changementDeCote) expect(mouvement.dureeSec).toBe(5);
+          debut += mouvement.dureeSec ?? 0;
+        });
+      }
+      // Les étirements de fin : cinq changements de côté, un par étirement.
+      expect((seance.retourCalme ?? []).filter((m) => m.changementDeCote)).toHaveLength(5);
+    }
   });
 });

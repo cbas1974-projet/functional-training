@@ -792,23 +792,43 @@ describe('la séance de chacun', () => {
     for (const s of programmes[0].seances) {
       const seance = seancePourPersonne(s, PARAMETRES, SEUL_SEB, LUNDI);
       expect(seance.echauffement?.[0]).toMatchObject({ nom: 'Tapis ou rameur', dureeSec: 300 });
-      expect(seance.echauffement).toHaveLength(5);
+      // Cinq mouvements : un mouvement d'un seul côté compte une fois.
+      const noms = (seance.echauffement ?? [])
+        .filter((m) => !m.changementDeCote)
+        .map((m) => m.nom.replace(/ · côté (droit|gauche)$/, ''));
+      expect(new Set(noms).size).toBe(5);
       expect(seance.echauffementSec).toBe(300 + 4 * 45);
+      // Annoncé = déroulé : la durée de l'étape est la somme de ses mouvements.
+      expect(seance.echauffementSec).toBe((seance.echauffement ?? []).reduce((t, m) => t + (m.dureeSec ?? 0), 0));
     }
   });
 
-  it('finit par cinq minutes d’étirements du poster, trente secondes de chaque côté', () => {
+  it('finit par cinq étirements du poster, trente secondes de chaque côté et cinq pour changer de côté', () => {
     for (const s of programmes[0].seances) {
       const seance = seancePourPersonne(s, PARAMETRES, SEUL_SEB, LUNDI);
-      expect(seance.retourCalmeSec).toBe(300);
-      for (const etirement of seance.retourCalme ?? []) {
+      const etirements = seance.retourCalme ?? [];
+      // Cinq minutes, plus cinq changements de côté de cinq secondes.
+      expect(seance.retourCalmeSec).toBe(300 + 5 * 5);
+      expect(seance.retourCalmeSec).toBe(etirements.reduce((t, m) => t + (m.dureeSec ?? 0), 0));
+      for (const etirement of etirements) {
         expect(EXERCICES_PAR_ID[etirement.exerciceId!].famille).toBe('etirement');
+        if (etirement.changementDeCote) {
+          expect(etirement.dureeSec).toBe(5);
+          continue;
+        }
         // Tous se font d'un côté : droit puis gauche, trente secondes chacun.
         expect(etirement.dureeSec).toBe(30);
         expect(etirement.nom).toMatch(/· côté (droit|gauche)$/);
       }
-      expect(new Set(seance.retourCalme?.map((e) => e.exerciceId)).size).toBe(5);
-      expect(seance.retourCalme).toHaveLength(10);
+      // Droit, changement, gauche — du même étirement.
+      etirements.forEach((etirement, i) => {
+        if (!etirement.changementDeCote) return;
+        expect(etirements[i - 1].nom).toMatch(/côté droit$/);
+        expect(etirements[i + 1].nom).toMatch(/côté gauche$/);
+        expect(etirements[i - 1].exerciceId).toBe(etirements[i + 1].exerciceId);
+      });
+      expect(new Set(etirements.map((e) => e.exerciceId)).size).toBe(5);
+      expect(etirements).toHaveLength(15);
     }
   });
 
@@ -841,7 +861,21 @@ describe('la séance de chacun', () => {
     const noms = (seance: Pick<SeanceDuMois, 'type' | 'jour' | 'partie'>) => echauffementDe(seance).map((m) => m.nom);
     expect(noms(lundi)).toEqual(['Tapis ou rameur', 'Cercles de bras', 'Rotations du bassin', 'Squats à vide', 'Good morning à vide']);
     expect(noms(mardi)).toEqual(['Tapis ou rameur', 'Cercles de bras', 'Rotations du buste', 'Chat-vache', 'Pompes contre le mur']);
-    expect(noms(jeudi)).toEqual(['Tapis ou rameur', 'Rotations du bassin', 'Balancements de jambe', 'Squats à vide', 'Pont fessier']);
+    expect(noms(jeudi)).toEqual([
+      'Tapis ou rameur',
+      'Rotations du bassin',
+      // Une jambe, cinq secondes pour changer, l'autre : les 45 s d'un mouvement.
+      'Balancements de jambe · côté droit',
+      'Change de côté',
+      'Balancements de jambe · côté gauche',
+      'Squats à vide',
+      'Pont fessier',
+    ]);
+    expect(echauffementDe(jeudi).slice(2, 5).map((m) => [m.dureeSec, m.changementDeCote === true])).toEqual([
+      [20, false],
+      [5, true],
+      [20, false],
+    ]);
     // Le même pour les deux, à la même durée.
     expect(seancePourPersonne(jeudi, PARAMETRES, DUO_SEB, LUNDI).echauffement).toEqual(
       seancePourPersonne(jeudi, PARAMETRES, DUO_MAX, LUNDI).echauffement,

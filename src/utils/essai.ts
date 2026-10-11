@@ -5,6 +5,7 @@
 // direct.
 import type { BlocSeries, MouvementGuide, ParametresSeance, Seance, SeanceDuMois } from '../types';
 import { construireEtapes, dureeTotaleSec } from './etapesSeance';
+import { CHANGER_DE_COTE_SEC } from './generateurSeance';
 import type { Etape } from './etapesSeance';
 import { lireEtat } from './etatCommun';
 import type { EtatCommun, Instant } from './etatCommun';
@@ -26,8 +27,22 @@ export const MOUVEMENTS_ESSAI_SEC = 30;
 /** Ces deux phases ne gardent que leurs premiers mouvements. */
 const MOUVEMENTS_GARDES = 2;
 
+/** Les premiers mouvements d'une phase, et le changement de côté qui sépare
+ *  les deux côtés d'un même étirement : il fait partie de ce qu'on essaie. */
+function premiersMouvements(mouvements: MouvementGuide[]): MouvementGuide[] {
+  const gardes: MouvementGuide[] = [];
+  let comptes = 0;
+  for (const mouvement of mouvements) {
+    if (comptes >= MOUVEMENTS_GARDES) break;
+    gardes.push(mouvement);
+    if (!mouvement.changementDeCote) comptes += 1;
+  }
+  return gardes;
+}
+
 /** Une phase — l'échauffement, les étirements — ramenée à une demi-minute :
- *  ses premiers mouvements, à parts égales. */
+ *  ses premiers mouvements, à parts égales ; un changement de côté garde ses
+ *  cinq secondes. */
 function raccourcirPhase(
   mouvements: MouvementGuide[] | undefined,
   dureeSec: number,
@@ -36,9 +51,14 @@ function raccourcirPhase(
   if (dureeSec <= 0) return { ...(mouvements ? { mouvements } : {}), dureeSec: 0 };
   // Sans le détail des mouvements, c'est la durée seule qu'on ramène.
   if (!mouvements) return { dureeSec: Math.min(dureeSec, MOUVEMENTS_ESSAI_SEC) };
-  const gardes = mouvements.slice(0, MOUVEMENTS_GARDES);
+  const gardes = premiersMouvements(mouvements);
+  const changements = gardes.filter((mouvement) => mouvement.changementDeCote);
+  const partage = (MOUVEMENTS_ESSAI_SEC - changements.length * CHANGER_DE_COTE_SEC) / (gardes.length - changements.length);
   return {
-    mouvements: gardes.map((mouvement) => ({ ...mouvement, dureeSec: MOUVEMENTS_ESSAI_SEC / gardes.length })),
+    mouvements: gardes.map((mouvement) => ({
+      ...mouvement,
+      dureeSec: mouvement.changementDeCote ? CHANGER_DE_COTE_SEC : partage,
+    })),
     dureeSec: gardes.length > 0 ? MOUVEMENTS_ESSAI_SEC : 0,
   };
 }

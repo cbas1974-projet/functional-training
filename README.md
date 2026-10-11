@@ -41,7 +41,8 @@ du dos, épaules, extérieur et intérieur de cuisse. Rien à taper.
   avec leur image — **les mêmes à chaque séance et pour les deux, et toujours
   ceux des jambes** : le mollet contre le mur, l'avant de la cuisse sur le
   côté, l'arrière de la cuisse et le fessier sur le dos, puis une torsion
-  allongée. Trente secondes de chaque côté. Juste avant, **le dernier
+  allongée. Trente secondes de chaque côté, et 5 s pour changer de côté
+  (5 min 25 s en tout). Juste avant, **le dernier
   exercice**, seul, en séries : la presse ou le hack squat le lundi, la
   marche du fermier le mardi, le traîneau le jeudi.
 - **Par paires, tous les jours** : les exercices vont deux par deux, deux
@@ -604,19 +605,51 @@ exercice par un autre de la même zone.
   changer de côté entre les deux (« +5 s » si besoin).
 - Bips de montée, de descente et de pause, cloche de fin de série.
 - Repos chronométré avec aperçu de l'exercice suivant et bouton « +15 s ».
-- Pause, précédent, suivant, « Passer l'exercice ».
+- **Une barre fixe en bas**, toujours visible, sous le pouce : le gros bouton
+  de l'étape (« Démarrer », « Série terminée », « Go » ou « Passer » avec
+  « +15 s », « Étirements finis ») et « Pause » à côté. « Précédent » et
+  « Suivant » sont petits, en haut ; pendant une série, « Suivant » demande
+  avant de la sauter. « Passer l'exercice » est petit, loin du gros bouton,
+  et demande aussi.
 - **Poids saisi série par série**, en livres : le champ est pré-rempli avec la
   charge de la série précédente, sinon celle de la dernière fois ; il n'y a
-  qu'à la corriger quand elle change.
+  qu'à la corriger quand elle change. Dessous, deux raccourcis :
+  « 70 % · 95 lb » et « 100 % · 135 lb » (la charge de travail : la plus
+  lourde de la dernière fois), pour noter d'un toucher ce qu'on a fait.
+- **Le bas du dos** (trap bar, swing, soulevés de terre…) : la première série
+  est pré-remplie à **70 %**, arrondie au 5 lb (2,5 kg) ; les suivantes à
+  100 %.
+- **De chaque côté** : à la trap bar, à la presse et au hack squat, le poids
+  noté est celui des **disques seulement, sans la barre** (ni le chariot), et
+  l'écran dit « soit 35 lb de chaque côté ».
+- **« J'ai mal à cet exercice »** : sur la fiche de l'exercice à l'accueil, et
+  dans la séance (sous les consignes). Tant qu'il est allumé : un repère
+  « Douleur · 70 % », aucune charge en plus proposée (« léger » ne fait plus
+  monter, « lourd » fait toujours redescendre), et chaque série pré-remplie à
+  70 % de la charge de travail du moment où on l'a signalé. On l'éteint :
+  tout redevient comme avant. Il reste sur le téléphone de chacun.
+- Pas de saisie de poids, ni de raccourcis, ni de « Comment était la
+  charge ? » pour un exercice sans charge (poids du corps, tenues,
+  étirements).
 - **Lourd, correct ou léger ?** Après la dernière série de chaque exercice,
   trois gros boutons, pour dire comment la charge a été. C'est facultatif :
   voir plus bas.
+- **Changer de côté** : à l'échauffement (balancements de jambe) et aux
+  étirements de fin, un mouvement d'un seul côté se fait à droite, puis
+  « CHANGE DE CÔTÉ » 5 s (« +5 s » si besoin), puis à gauche — comme aux
+  séries. Les étirements durent donc 5 min 25 s.
 - Retour au calme guidé, puis écran de fin récapitulatif, avec la **charge
   totale soulevée** : poids × répétitions de chaque série faite, les deux
   côtés pour un exercice unilatéral. À côté, l'écart avec la dernière fois
   qu'on a fait cette séance (« +600 lb par rapport à la dernière fois
   (+10 %) »).
 - L'écran reste allumé pendant la séance, si le navigateur le permet.
+- À la fin, **« Enregistrer la séance » en haut**, au-dessus du tableau ;
+  « Ne pas enregistrer » est petit, tout en bas, et demande avant d'effacer.
+- **Quitter** pose une seule question, dans l'application : « Reprendre plus
+  tard » (l'accueil propose « Reprendre »), « Enregistrer ce qui est fait »,
+  « Tout jeter » (redemandé), ou « Continuer la séance ». La journée n'est
+  cochée « faite » qu'à partir de la **moitié des séries**.
 - La séance reprend où elle en était si la page est rechargée : l'accueil
   propose de la reprendre.
 
@@ -628,8 +661,10 @@ programme.
 
 - **Où.** Après la dernière série d'un exercice, pendant la pause qui suit :
   « Comment était la charge ? » et trois gros boutons, **Lourd**, **Correct**,
-  **Léger**. À deux exercices en paire, les deux sont là pendant la pause de la
-  paire. Pour le tout dernier exercice, c'est pendant les étirements. Un seul
+  **Léger**, expliqués dessous en une ligne chacun : **Léger**, « j'en avais
+  encore 4 » ; **Correct**, « 2 ou 3 en réserve » ; **Lourd**, « 0 ou 1, ou la
+  forme lâche (dos rond, genou qui fait mal) ». À deux exercices en paire, les
+  deux sont là pendant la pause de la paire. Pour le tout dernier exercice, c'est pendant les étirements. Un seul
   toucher ; en toucher un autre plus tard, avant la fin de la pause, change la
   réponse. On peut aussi ne rien toucher : c'est facultatif.
 - **Qui.** Chacun répond pour lui, sur son téléphone, pour chaque exercice.
@@ -637,12 +672,13 @@ programme.
   enregistrée, et elle part avec l'historique vers le serveur. L'historique
   l'écrit en petit à côté de la charge (« léger »). Les séances d'avant se lisent
   comme avant, sans réponse.
-- **Léger plusieurs fois de suite**, avec la même charge — **quatre fois pour
-  Speedy**, qui doit rester léger longtemps à cause du jiu-jitsu, **deux fois
-  pour Big Max** : la fois d'après, la charge proposée monte d'un cran,
-  **5 lb (2,5 kg)**, et l'écran le dit : « Léger les 4 dernières fois : on monte
+- **Léger plusieurs fois de suite**, avec la même charge — **trois fois pour
+  Speedy**, qui doit rester léger plus longtemps à cause du jiu-jitsu, **deux
+  fois pour Big Max** : la fois d'après, la charge proposée monte d'un cran,
+  **5 lb (2,5 kg)**, et l'écran le dit : « Léger les 3 dernières fois : on monte
   de 5 lb » (« les 2 » pour Big Max). Sur l'accueil, l'exercice porte
-  « ↑ +5 lb proposé · léger 4 fois de suite ».
+  « ↑ +5 lb proposé · léger 3 fois de suite ». Pas de montée sur un exercice
+  marqué « J'ai mal à cet exercice ».
 - **Lourd deux fois de suite**, pour les deux : la charge proposée descend d'un cran, avec
   « Lourd les 2 dernières fois : on redescend de 5 lb » et « ↓ −5 lb proposé »
   sur l'accueil. On ne descend pas sous un cran (un haltère de 5 lb reste à
@@ -650,15 +686,15 @@ programme.
 - **Sinon**, on garde la charge de la dernière fois, comme avant. « Correct »,
   ou une réponse différente entre les deux, remet le compte à zéro.
 - **Une montée ne se propose qu'une fois.** Dès que la charge change, le compte
-  repart de zéro : c'est la réponse à la nouvelle charge qui décide, et quatre
+  repart de zéro : c'est la réponse à la nouvelle charge qui décide, et trois
   (ou deux) « léger » de plus sont nécessaires pour proposer un autre cran. Tant qu'on
   garde la même charge, la proposition reste. Une séance où on n'a rien dit ne
   coupe rien.
 - **Semaines A et B** : un exercice qui alterne revient une semaine sur deux ;
-  les quatre « léger » de Speedy y prennent donc plus longtemps. Ceux qui
+  les trois « léger » de Speedy y prennent donc plus longtemps. Ceux qui
   reviennent chaque semaine — la trap bar, le Superman, le swing, les deux
   machines — montent au rythme de chaque séance.
-- Les seuils de chacun (`RESSENTIS_POUR_MONTER` : Speedy 4, Big Max 2 ;
+- Les seuils de chacun (`RESSENTIS_POUR_MONTER` : Speedy 3, Big Max 2 ;
   `RESSENTIS_POUR_DESCENDRE` : 2 et 2) et le cran sont des constantes de
   `src/utils/ressenti.ts` et `src/utils/statistiques.ts`. La proposition ne
   concerne que les séances du programme ; en séance libre, on peut répondre

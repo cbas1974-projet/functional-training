@@ -82,6 +82,9 @@ import {
 } from '../utils/essai';
 import type { Essai } from '../utils/essai';
 import FicheExercice from './FicheExercice';
+import BoutonDouleur, { ReperDouleur } from './BoutonDouleur';
+import { basculerDouleur, douleurDe } from '../utils/douleurs';
+import { seCharge } from '../utils/charges';
 import ImageEnGrand from './ImageEnGrand';
 import SeanceGuidee from './SeanceGuidee';
 import CarteRoutineSoir from './CarteRoutineSoir';
@@ -249,8 +252,10 @@ function LigneExercice({
   passees,
   unite,
   lien,
+  douleur,
   onChanger,
   onBasculerTour,
+  onBasculerDouleur,
   onImage,
 }: {
   bloc: BlocSeries;
@@ -262,8 +267,11 @@ function LigneExercice({
   passees: number[] | undefined;
   unite: UnitePoids;
   lien: EtatLien;
+  /** « J'ai mal à cet exercice » est signalé. */
+  douleur: boolean;
   onChanger: () => void;
   onBasculerTour: () => void;
+  onBasculerDouleur: () => void;
   onImage: () => void;
 }) {
   const tour = bloc.tour === true;
@@ -302,6 +310,7 @@ function LigneExercice({
               {NOM_ROLE[autre]}
             </span>
           ))}
+          {douleur && <ReperDouleur avecCharge={seCharge(exercice)} />}
         </p>
         <div className="flex items-center justify-between gap-2">
           <p className="chiffres text-base font-bold" style={{ color: 'var(--texte)' }}>
@@ -336,6 +345,8 @@ function LigneExercice({
             · {raisonProposition(ajustement.motif, personne)}
           </p>
         )}
+        {/* Une douleur : charges à 70 %, pas de montée, jusqu'à ce qu'on l'enlève. */}
+        <BoutonDouleur actif={douleur} avecCharge={seCharge(exercice)} onBasculer={onBasculerDouleur} className="mt-1" />
         {/* À deux : côte à côte, ou chacun son tour sur la machine. */}
         <div role="group" aria-label="À deux" className="mt-1">
           <ChoixTour actif={!tour} onClick={onBasculerTour}>
@@ -802,6 +813,10 @@ export default function Accueil({
 }: AccueilProps) {
   const { parametres, historique, enCours } = etat;
   const personne = etat.personne ?? null;
+  const douleurs = useMemo(() => etat.douleurs ?? {}, [etat.douleurs]);
+  /** « J'ai mal à cet exercice » : signalé, ou enlevé ; sur ce téléphone. */
+  const basculerDouleurIci = (exerciceId: string, charge: number, uniteCharge: UnitePoids) =>
+    onChange((prec) => ({ ...prec, douleurs: basculerDouleur(prec.douleurs, exerciceId, charge, uniteCharge) }));
   const unite = uniteDeSeance(parametres);
 
   /** Séance choisie dans la semaine ; null = celle que propose le calendrier. */
@@ -837,16 +852,18 @@ export default function Accueil({
       reps: repsDuJour(programme, seanceMois.jour),
       // Le tempo du programme, le même sur les deux téléphones.
       tempo: tempoDuProgramme(programme),
-      // Léger assez de fois de suite (quatre pour Speedy, deux pour Big Max) :
+      // Léger assez de fois de suite (trois pour Speedy, deux pour Big Max) :
       // un cran de plus ; lourd deux fois : un cran de moins.
+      // Une douleur signalée : pas de montée, seulement la descente.
       ressentis: ressentisQuiChangent(
         historique,
         [...seanceMois.exercices, ...(seanceMois.finale ? [seanceMois.finale] : [])],
         unite,
         personne,
+        Object.keys(douleurs),
       ),
     }),
-    [personne, aDeux, programme, historique, seanceMois, unite],
+    [personne, aDeux, programme, historique, seanceMois, unite, douleurs],
   );
   const seance = useMemo(() => seancePourPersonne(seanceMois, parametres, contexte), [seanceMois, parametres, contexte]);
   const passees = useMemo(
@@ -942,8 +959,17 @@ export default function Accueil({
         passees={passees[bloc.exerciceId]}
         unite={unite}
         lien={etatLien(bloc)}
+        douleur={douleurDe(etat.douleurs, bloc.exerciceId) !== null}
         onChanger={() => setFeuille({ type: 'changer', seanceId: seanceMois.id, exerciceId: bloc.exerciceId })}
         onBasculerTour={() => modifierProgramme((prec) => basculerTour(prec, seanceMois.id, bloc.exerciceId))}
+        onBasculerDouleur={() =>
+          // La charge de travail du moment : la plus lourde de la dernière fois.
+          basculerDouleurIci(
+            bloc.exerciceId,
+            (passees[bloc.exerciceId] ?? []).reduce((max, charge) => Math.max(max, charge), 0),
+            unite,
+          )
+        }
         onImage={() => setEnGrand(bloc.exerciceId)}
       />
     );
@@ -1602,6 +1628,9 @@ export default function Accueil({
           essai={active.essai}
           chargeDerniereFois={chargeDerniereFois}
           chargesPassees={chargesActives}
+          // L'aperçu est l'écran de l'autre : nos douleurs n'y sont pas.
+          douleurs={active.essai?.genre === 'apercu' ? undefined : douleurs}
+          onBasculerDouleur={active.essai?.genre === 'apercu' ? undefined : basculerDouleurIci}
           onProgression={(progression) => {
             // Un essai ne laisse aucune trace : ni reprise, ni séance interrompue effacée.
             if (!active.essai) onChange((prec) => ({ ...prec, enCours: progression }));

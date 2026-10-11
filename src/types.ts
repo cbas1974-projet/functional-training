@@ -222,6 +222,10 @@ export interface Exercice {
    *  jusqu'où le genou ne fait pas mal. Ajoute une consigne aux points
    *  d'attention (`consignesDe`). */
   genouAMenager?: boolean;
+  /** Chargé de disques des deux côtés (trap bar, presse, hack squat) : le
+   *  poids noté est celui des disques seulement, sans la barre ni le
+   *  chariot, et l'écran dit combien en mettre de chaque côté. */
+  chargeParCote?: boolean;
   position: string;
   /** Phase par laquelle commence chaque répétition : 'descend' pour les
    *  mouvements qui partent de la position haute (squat, fente, développé
@@ -349,6 +353,10 @@ export interface MouvementGuide {
   dureeSec?: number;
   /** Exercice de la bibliothèque à montrer (un étirement du poster). */
   exerciceId?: string;
+  /** Les quelques secondes pour changer de côté, entre le côté droit et le
+   *  côté gauche d'un mouvement d'un seul côté : « CHANGE DE CÔTÉ », et
+   *  « +5 s » si besoin. */
+  changementDeCote?: boolean;
 }
 
 export interface Circuit {
@@ -487,6 +495,22 @@ export interface EntrainementState {
    *  où elle a été faite. Reste ici, hors de l'historique d'entraînement, et ne
    *  part jamais vers le serveur. Absente des sauvegardes d'avant son arrivée. */
   routineSoir?: RoutineSoirLocale;
+  /** « J'ai mal à cet exercice », par exercice : sur ce téléphone seulement,
+   *  pour celui qui s'entraîne ici. Absent des sauvegardes d'avant. */
+  douleurs?: Record<string, Douleur>;
+}
+
+/** Une douleur signalée sur un exercice : pas de charge en plus proposée, et
+ *  chaque série pré-remplie à 70 % de la charge de travail. */
+export interface Douleur {
+  /** Quand elle a été signalée (ISO). */
+  depuis: string;
+  /** La charge de travail à ce moment-là — 100 % —, si on la connaissait :
+   *  les 70 % se calculent toujours sur elle, ils ne fondent pas d'une
+   *  séance à l'autre. */
+  charge?: number;
+  /** L'unité de `charge`. */
+  unite?: UnitePoids;
 }
 
 /** Les quatre parties de la routine du soir, dans l'ordre : le gainage, la

@@ -171,6 +171,17 @@ describe('raccourcirPourEssai', () => {
     }
   });
 
+  it('le changement de côté des étirements fait partie de l’essai, et garde ses cinq secondes', () => {
+    const courte = essai(JEUDI, SEUL_SEB);
+    expect(courte.retourCalme?.map((m) => [m.dureeSec, m.changementDeCote === true])).toEqual([
+      [12.5, false],
+      [5, true],
+      [12.5, false],
+    ]);
+    expect(courte.retourCalme?.[0].nom).toMatch(/côté droit$/);
+    expect(courte.retourCalme?.[2].nom).toMatch(/côté gauche$/);
+  });
+
   it('une phase d’un seul mouvement le tient une demi-minute ; sans phase, rien n’est inventé', () => {
     const seule = reelle(JEUDI, SEUL_SEB);
     const unSeul = raccourcirPourEssai({

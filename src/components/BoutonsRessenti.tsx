@@ -3,7 +3,7 @@
 // on peut en toucher un autre plus tard pour changer. Habillage : les jetons
 // de couleur de `index.css`, comme le reste de la séance.
 import type { Ressenti } from '../types';
-import { NOM_RESSENTI, RESSENTIS } from '../utils/ressenti';
+import { NOM_RESSENTI, RESSENTIS, SENS_RESSENTI } from '../utils/ressenti';
 
 export interface ExerciceARessentir {
   id: string;
@@ -29,6 +29,14 @@ export default function BoutonsRessenti({ exercices, ressentis, onChoisir }: Bou
       <div className="text-xs font-bold uppercase tracking-[0.14em]" style={{ color: 'var(--texte-discret)' }}>
         Comment était la charge ? <span className="font-normal normal-case tracking-normal">(facultatif)</span>
       </div>
+      {/* Ce que veut dire chaque bouton, une fois pour toutes, dans leur ordre. */}
+      <ul className="space-y-0.5 text-xs" style={{ color: 'var(--texte-discret)' }}>
+        {RESSENTIS.map((ressenti) => (
+          <li key={ressenti}>
+            <strong style={{ color: 'var(--texte)' }}>{NOM_RESSENTI[ressenti]}</strong> : {SENS_RESSENTI[ressenti]}
+          </li>
+        ))}
+      </ul>
       {exercices.map(({ id, nom }) => (
         <div key={id} role="group" aria-label={`Ressenti : ${nom}`}>
           <div className="font-bold">{nom}</div>

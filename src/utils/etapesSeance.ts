@@ -6,6 +6,7 @@ import type {
   Exercice,
   ExerciceRealise,
   FormeMouvement,
+  MouvementGuide,
   Seance,
   SeanceRealisee,
   Tempo,
@@ -726,6 +727,52 @@ export function indexApresExercice(etapes: Etape[], index: number): number {
     i += 1;
   }
   return i;
+}
+
+// ------------------------------------------------------------- Échauffement et étirements
+
+/** Le mouvement en cours d'un échauffement ou d'un retour au calme. */
+export interface EtatMouvement {
+  index: number;
+  /** Ce qu'il lui reste, en secondes. */
+  resteSec: number;
+}
+
+/** Le mouvement en cours d'un échauffement ou d'un retour au calme, et ce
+ *  qu'il lui reste. Chaque mouvement a sa durée (cinq minutes de tapis, trente
+ *  secondes d'étirement, cinq pour changer de côté) ; sans durée, ils se
+ *  partagent l'étape.
+ *
+ *  `rallonges` : les secondes ajoutées à un mouvement (« +5 s » au changement
+ *  de côté), par index ; elles repoussent les suivants d'autant. Une
+ *  prolongation de l'étape qu'aucune rallonge n'explique va au dernier. */
+export function lireMouvement(
+  mouvements: readonly MouvementGuide[],
+  dureeEtapeSec: number,
+  ecouleSec: number,
+  rallonges: Readonly<Record<number, number>> = {},
+  prolongationSec = 0,
+): EtatMouvement {
+  if (mouvements.length === 0 || dureeEtapeSec <= 0) return { index: 0, resteSec: 0 };
+  const propres = mouvements.map((m) => m.dureeSec ?? 0);
+  const total = propres.reduce((somme, d) => somme + d, 0);
+  const durees =
+    total > 0 && propres.every((d) => d > 0)
+      ? propres.map((d) => (d * dureeEtapeSec) / total)
+      : mouvements.map(() => dureeEtapeSec / mouvements.length);
+  let expliquees = 0;
+  for (let i = 0; i < durees.length; i += 1) {
+    const rallonge = Math.max(0, rallonges[i] ?? 0);
+    durees[i] += rallonge;
+    expliquees += rallonge;
+  }
+  durees[durees.length - 1] += Math.max(0, prolongationSec - expliquees);
+  let fin = 0;
+  for (let i = 0; i < durees.length; i += 1) {
+    fin += durees[i];
+    if (ecouleSec < fin || i === durees.length - 1) return { index: i, resteSec: Math.max(0, fin - ecouleSec) };
+  }
+  return { index: durees.length - 1, resteSec: 0 };
 }
 
 // ------------------------------------------------------------- Maintien
