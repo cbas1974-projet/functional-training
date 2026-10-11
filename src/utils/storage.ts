@@ -15,6 +15,7 @@ import { estRessenti, lireRessentis } from './ressenti';
 import { IDENTIFIANT_MESURE, lireMesures } from './mesures';
 import { validerProgramme } from './programmeMois';
 import { lireRoutineSoir } from './routineSoir';
+import { lireDouleurs } from './douleurs';
 
 const CLE_STOCKAGE = 'functional-training';
 
@@ -158,7 +159,16 @@ const migrer = (sauvegarde: Partial<EntrainementState>): EntrainementState => ({
   // La routine du soir : une sauvegarde d'avant n'en a pas, une abîmée perd
   // seulement ce qui ne se lit plus. Elle reste sur ce téléphone.
   routineSoir: lireRoutineSoir(sauvegarde.routineSoir),
+  // « J'ai mal à cet exercice » : une sauvegarde d'avant n'en a pas, une
+  // abîmée perd seulement celles qui ne se lisent plus.
+  douleurs: douleursLues(sauvegarde.douleurs),
 });
+
+/** Les douleurs relues ; aucune, pas de champ. */
+function douleursLues(brut: unknown): EntrainementState['douleurs'] {
+  const douleurs = lireDouleurs(brut);
+  return Object.keys(douleurs).length > 0 ? douleurs : undefined;
+}
 
 /** Lit l'état sauvegardé ; reprend celui de l'ancienne application si besoin. */
 export const chargerEtat = (): EntrainementState => {

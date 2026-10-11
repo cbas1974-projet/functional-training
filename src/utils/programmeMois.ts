@@ -30,9 +30,9 @@ import { EXERCICES, EXERCICES_PAR_ID, NOM_MUSCLE } from '../data/exercices';
 import { TEMPOS } from '../data/parametres';
 import { construireEtapes, dureeTotaleSec } from './etapesSeance';
 import { memeTempo } from './formatage';
-import { cleMouvement, estExigeant, familleDe, secondesAuTemps } from './generateurSeance';
+import { CHANGER_DE_COTE_SEC, cleMouvement, estExigeant, familleDe, secondesAuTemps } from './generateurSeance';
 import { exercicesPourMuscles, musclesDe } from './muscles';
-import { CRAN_CHARGE as CRAN, convertirPoids, uniteDeSeance } from './statistiques';
+import { CRAN_CHARGE as CRAN, assezFaite, convertirPoids, uniteDeSeance } from './statistiques';
 import { ajustementDeCharge, avecCran } from './ressenti';
 
 /** L'identifiant désigne bien un exercice de la bibliothèque — et non une
@@ -927,6 +927,18 @@ const CARDIO: MouvementGuide = {
  *  réveille les fesses avant le swing. */
 const MOUVEMENT_SEC = 45;
 const leger = (nom: string, consigne: string): MouvementGuide => ({ nom, consigne, dureeSec: MOUVEMENT_SEC });
+
+/** Un mouvement d'un seul côté : le côté droit, cinq secondes pour changer de
+ *  côté (« CHANGE DE CÔTÉ », « +5 s » si besoin), puis le côté gauche — comme
+ *  aux séries et à la routine du soir. */
+function deuxCotes(nom: string, consigne: string, parCoteSec: number, exerciceId?: string): MouvementGuide[] {
+  const image = exerciceId ? { exerciceId } : {};
+  return [
+    { nom: `${nom} · côté droit`, consigne, dureeSec: parCoteSec, ...image },
+    { nom: 'Change de côté', consigne: 'On se replace pour le côté gauche.', dureeSec: CHANGER_DE_COTE_SEC, changementDeCote: true, ...image },
+    { nom: `${nom} · côté gauche`, consigne, dureeSec: parCoteSec, ...image },
+  ];
+}
 const CERCLES_BRAS = leger('Cercles de bras', 'Petits puis grands, vers l’arrière puis vers l’avant.');
 const BASSIN = leger('Rotations du bassin', 'Mains sur les hanches, grands cercles dans les deux sens.');
 const SQUATS = leger('Squats à vide', 'Lents, aussi bas que le genou le permet, talons au sol, buste droit.');
@@ -934,7 +946,8 @@ const MOUVEMENTS_LEGERS: Record<Gabarit, MouvementGuide[]> = {
   dure: [CERCLES_BRAS, BASSIN, SQUATS, leger('Good morning à vide', 'Mains sur la nuque : on plie aux hanches, dos plat, genoux souples.')],
   bas: [
     BASSIN,
-    leger('Balancements de jambe', 'Une main au mur : d’avant en arrière, puis de côté ; on change de jambe à mi-temps.'),
+    // Une jambe, puis l'autre : 20 s, 5 s pour changer, 20 s — les 45 s d'un mouvement.
+    ...deuxCotes('Balancements de jambe', 'Une main au mur : d’avant en arrière, puis de côté.', (MOUVEMENT_SEC - CHANGER_DE_COTE_SEC) / 2),
     SQUATS,
     leger('Pont fessier', 'Allongé sur le dos, genoux pliés : on monte le bassin en serrant les fessiers, puis on redescend lentement.'),
   ],
@@ -953,8 +966,9 @@ const MOUVEMENTS_LEGERS: Record<Gabarit, MouvementGuide[]> = {
  *  qui change le moins de position : debout, sur le côté, puis sur le dos. */
 const ETIREMENTS_JAMBES = ['etir-mollet-mur', 'etir-quadriceps-cote', 'etir-ischios-allonge', 'etir-fessier-chiffre-4'];
 /** Cinq étirements du poster pour finir, une minute chacun — trente secondes
- *  de chaque côté, ils se font tous d'un côté : cinq minutes. Les quatre des
- *  jambes d'abord, puis la torsion allongée, qui prend la place qui reste. */
+ *  de chaque côté, ils se font tous d'un côté, avec cinq secondes entre les
+ *  deux pour changer de côté : 5 min 25 s. Les quatre des jambes d'abord, puis
+ *  la torsion allongée, qui prend la place qui reste. */
 const ETIREMENTS_DE_FIN = [...ETIREMENTS_JAMBES, 'etir-torsion-allongee'];
 const ETIREMENT_SEC = 60;
 
@@ -966,7 +980,7 @@ export function echauffementDe(seance: SeanceAGabarit): MouvementGuide[] {
 
 /** Les étirements de fin d'une séance du programme, avec leur image : les
  *  mêmes à chaque séance, les jambes toujours. Un étirement d'un côté se fait en
- *  deux temps, droit puis gauche. */
+ *  deux temps, droit puis gauche, avec cinq secondes pour changer de côté. */
 export function etirementsDe(): MouvementGuide[] {
   return ETIREMENTS_DE_FIN.filter(estConnu).flatMap((id) => {
     const etirement = EXERCICES_PAR_ID[id];
@@ -974,12 +988,7 @@ export function etirementsDe(): MouvementGuide[] {
     if (etirement.cotes !== 'unilateral') {
       return [{ nom: etirement.nomFr, consigne, dureeSec: ETIREMENT_SEC, exerciceId: id }];
     }
-    return (['droit', 'gauche'] as const).map((cote) => ({
-      nom: `${etirement.nomFr} · côté ${cote}`,
-      consigne,
-      dureeSec: ETIREMENT_SEC / 2,
-      exerciceId: id,
-    }));
+    return deuxCotes(etirement.nomFr, consigne, ETIREMENT_SEC / 2, id);
   });
 }
 
@@ -1565,13 +1574,14 @@ export function prochaineSeance(programme: ProgrammeMois, date: Date): SeancePre
 const memeJour = (a: Date, b: Date) =>
   a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
 
-/** La séance du programme a été faite (même en partie) ce jour-là. */
+/** La séance du programme a été faite ce jour-là, au moins à moitié
+ *  (`assezFaite`). */
 export function faiteLe(
   historique: SeanceRealisee[],
   seance: Pick<SeanceDuMois, 'nom'>,
   date: Date,
 ): boolean {
-  return historique.some((h) => h.titre === seance.nom && memeJour(new Date(h.date), date));
+  return historique.some((h) => h.titre === seance.nom && memeJour(new Date(h.date), date) && assezFaite(h));
 }
 
 /** La séance du programme a été faite pendant la semaine de cette date, du
@@ -1586,7 +1596,7 @@ export function faiteCetteSemaine(
   const fin = new Date(lundi.getFullYear(), lundi.getMonth(), lundi.getDate() + 7).getTime();
   return historique.some((h) => {
     const quand = new Date(h.date).getTime();
-    return h.titre === seance.nom && quand >= debut && quand < fin;
+    return h.titre === seance.nom && quand >= debut && quand < fin && assezFaite(h);
   });
 }
 

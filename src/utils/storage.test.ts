@@ -341,3 +341,31 @@ describe('chargerEtat', () => {
     expect(chargerEtat().parametres).toEqual(PARAMETRES_PAR_DEFAUT);
   });
 });
+
+describe('« J’ai mal à cet exercice », dans la sauvegarde', () => {
+  beforeEach(() => localStorage.clear());
+
+  it('une sauvegarde d’avant n’en a pas, et se lit comme avant', () => {
+    localStorage.setItem(CLE, JSON.stringify(ANCIENNE_SAUVEGARDE));
+    const etat = chargerEtat();
+    expect(etat.douleurs).toBeUndefined();
+    expect(etat.enCours?.indexEtape).toBe(3);
+  });
+
+  it('garde les douleurs de ce téléphone après un aller-retour, et écarte celles qui ne se lisent plus', () => {
+    const douleurs = {
+      'leg-press': { depuis: '2026-10-11T12:00:00.000Z', charge: 200, unite: 'lb' as const },
+      'trap-bar-deadlift': { depuis: '2026-10-11T12:00:00.000Z' },
+    };
+    const etat: EntrainementState = { ...chargerEtat(), personne: 'max', douleurs };
+    enregistrerEtat(etat);
+    expect(chargerEtat().douleurs).toEqual(douleurs);
+    localStorage.setItem(
+      CLE,
+      JSON.stringify({ ...ANCIENNE_SAUVEGARDE, douleurs: { ...douleurs, abime: 'oui', autre: { charge: 3 } } }),
+    );
+    expect(chargerEtat().douleurs).toEqual(douleurs);
+    localStorage.setItem(CLE, JSON.stringify({ ...ANCIENNE_SAUVEGARDE, douleurs: ['leg-press'] }));
+    expect(chargerEtat().douleurs).toBeUndefined();
+  });
+});

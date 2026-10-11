@@ -43,8 +43,9 @@ Claude, de son côté :
     le mardi. **Liste des mis de côté vidée** (fentes, une jambe, good
     morning, rowings sans appui) ; le mécanisme reste. Le rowing alterné buste
     penché compte désormais comme chargeant le bas du dos, comme les autres.
-  - **Ressenti, seule progression** : léger 4 fois de suite pour Speedy, 2
-    pour Big Max ; lourd 2 fois pour les deux (`src/utils/ressenti.ts`).
+  - **Ressenti, seule progression** : léger 3 fois de suite pour Speedy (4
+    avant le lot « séance »), 2 pour Big Max ; lourd 2 fois pour les deux
+    (`src/utils/ressenti.ts`).
   - **Réglages** : « Exercices par séance » 4, 6 ou 8 pour mardi et jeudi, le
     lundi deux de plus ; répétitions en trois lignes (Speedy · lundi, Speedy ·
     mardi et jeudi, Big Max). **Séance libre** : discipline, format, niveau,
@@ -69,9 +70,28 @@ Claude, de son côté :
   15 s de chaque côté) chaque jeudi, avec l'extérieur de cuisse ; à six
   exercices, le jeudi n'a donc plus de fente (elles reviennent à huit). Durées
   à deux, graine 1 : lundi 1 h 13 / 1 h 20, mardi 1 h 07 / 1 h 04, jeudi
-  56 / 54 min (semaines A / B). **Reste à faire, côté séance guidée** : la
-  case du poids s'affiche encore au Superman sans poids (`chargeReglable` le
-  dit sans charge).
+  56 / 54 min (semaines A / B). Le Superman sans poids et la Copenhague
+  n'ont pas de case de poids (`seCharge`).
+- **Lot « séance » (décidé par Sébastien après l'audit UX)** : une barre
+  fixe en bas de la séance guidée avec le gros bouton de l'étape (Démarrer,
+  Série terminée, Go, Passer + « +15 s », Étirements finis) et Pause ;
+  Précédent / Suivant petits en haut, « Suivant » demande avant de sauter une
+  série, « Passer l'exercice » petit et confirmé. Fin : « Enregistrer » en
+  haut, « Ne pas enregistrer » petit en bas et confirmé. Quitter : une seule
+  question dans l'application (Reprendre plus tard, Enregistrer ce qui est
+  fait, Tout jeter — redemandé —, Continuer) ; la journée n'est cochée qu'à
+  partir de la moitié des séries (`assezFaite`). « CHANGE DE CÔTÉ » 5 s
+  (+5 s) aussi aux étirements de fin (5 min 25 s) et aux balancements de
+  jambe de l'échauffement. Lourd / Correct / Léger expliqués. Léger 3 fois
+  pour Speedy. **« J'ai mal à cet exercice »** (accueil et séance, sur ce
+  téléphone) : repère, pas de montée, chaque série à 70 % de la charge de
+  travail retenue au signalement (`src/utils/douleurs.ts`). **70 %** : la
+  première série des exercices qui chargent le bas du dos, et deux
+  raccourcis « 70 % · X » / « 100 % · Y » sous chaque saisie
+  (`src/utils/charges.ts`). Trap bar, presse, hack squat :
+  `chargeParCote`, « disques seulement, sans la barre », « soit 35 lb de
+  chaque côté ». Pas de saisie de poids ni de ressenti pour un exercice sans
+  charge (`seCharge`, qui s'appuie sur `chargeReglable`).
 
 - **La routine du soir**, demandée par Sébastien (« des étirements ou de la
   mobilité à faire tous les soirs, pas mon entraînement ») — **dix minutes au
@@ -406,7 +426,7 @@ d'installation du README.
   (`cbas1974-projet`). GitHub la suspend après 60 jours sans commit sur un
   dépôt public ; on la relance dans l'onglet *Actions*.
 - **Vérifications** :
-  - `npx vitest run` (937 tests) ;
+  - `npx vitest run` (968 tests) ;
   - `npx tsc -b --noEmit` ;
   - `npx eslint .` ;
   - `npm run build`.

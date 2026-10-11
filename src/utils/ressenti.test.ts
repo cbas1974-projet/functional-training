@@ -83,30 +83,41 @@ describe('les trois ressentis', () => {
 });
 
 describe('quand le ressenti propose un changement de charge', () => {
-  it('les seuils sont ceux de chacun : léger quatre fois pour Speedy, deux pour Big Max ; lourd deux fois pour les deux', () => {
-    expect(RESSENTIS_POUR_MONTER).toEqual({ sebastien: 4, max: 2 });
+  it('les seuils sont ceux de chacun : léger trois fois pour Speedy, deux pour Big Max ; lourd deux fois pour les deux', () => {
+    expect(RESSENTIS_POUR_MONTER).toEqual({ sebastien: 3, max: 2 });
     expect(RESSENTIS_POUR_DESCENDRE).toEqual({ sebastien: 2, max: 2 });
-    expect(seuilsRessenti('sebastien')).toEqual({ monter: 4, descendre: 2 });
+    expect(seuilsRessenti('sebastien')).toEqual({ monter: 3, descendre: 2 });
     expect(seuilsRessenti('max')).toEqual({ monter: 2, descendre: 2 });
     // Sans personne connue : les plus prudents — on monte le plus tard.
-    expect(seuilsRessenti(null)).toEqual({ monter: 4, descendre: 2 });
-    expect(seuilsRessenti(undefined)).toEqual({ monter: 4, descendre: 2 });
+    expect(seuilsRessenti(null)).toEqual({ monter: 3, descendre: 2 });
+    expect(seuilsRessenti(undefined)).toEqual({ monter: 3, descendre: 2 });
   });
 
-  it('Speedy reste léger plus longtemps : il faut quatre « léger » de suite pour qu’il monte', () => {
+  it('Speedy reste léger plus longtemps : il faut trois « léger » de suite pour qu’il monte', () => {
     const legers = (n: number): Fait[] => Array.from({ length: n }, (_, i) => ({ jour: 1 + 2 * i, ressenti: 'leger' as const, poids: 25 }));
-    for (const n of [2, 3]) {
-      expect(proposition(legers(n), 'lb', 'sebastien'), `${n}`).toBeNull();
-      expect(proposition(legers(n), 'lb', 'max'), `${n}`).toMatchObject({ ajout: 5, fois: n });
-    }
+    expect(proposition(legers(2), 'lb', 'sebastien')).toBeNull();
+    for (const n of [2, 3]) expect(proposition(legers(n), 'lb', 'max'), `${n}`).toMatchObject({ ajout: 5, fois: n });
+    expect(proposition(legers(3), 'lb', 'sebastien')).toEqual({ ressenti: 'leger', ajout: 5, fois: 3 });
     expect(proposition(legers(4), 'lb', 'sebastien')).toEqual({ ressenti: 'leger', ajout: 5, fois: 4 });
-    expect(proposition(legers(5), 'lb', 'sebastien')).toEqual({ ressenti: 'leger', ajout: 5, fois: 5 });
     // Un « correct » au milieu coupe la série, pour lui aussi.
-    const coupee = [...legers(2), { jour: 5, ressenti: 'correct' as const, poids: 25 }, { jour: 7, ressenti: 'leger' as const, poids: 25 }, { jour: 9, ressenti: 'leger' as const, poids: 25 }, { jour: 11, ressenti: 'leger' as const, poids: 25 }];
+    const coupee = [...legers(2), { jour: 5, ressenti: 'correct' as const, poids: 25 }, { jour: 7, ressenti: 'leger' as const, poids: 25 }, { jour: 9, ressenti: 'leger' as const, poids: 25 }];
     expect(proposition(coupee, 'lb', 'sebastien')).toBeNull();
-    // Sans personne : quatre, comme Speedy.
-    expect(proposition(legers(3), 'lb', null)).toBeNull();
-    expect(proposition(legers(4), 'lb', null)).toMatchObject({ ajout: 5 });
+    // Sans personne : trois, comme Speedy.
+    expect(proposition(legers(2), 'lb', null)).toBeNull();
+    expect(proposition(legers(3), 'lb', null)).toMatchObject({ ajout: 5 });
+  });
+
+  it('une douleur signalée coupe la montée, jamais la descente', () => {
+    const historique = [
+      seance({ jour: 1, ressenti: 'leger', poids: 25, exerciceId: 'goblet-squat' }),
+      seance({ jour: 3, ressenti: 'leger', poids: 25, exerciceId: 'goblet-squat' }),
+      seance({ jour: 1, ressenti: 'lourd', poids: 30, exerciceId: 'curl' }),
+      seance({ jour: 3, ressenti: 'lourd', poids: 30, exerciceId: 'curl' }),
+    ];
+    const ids = ['goblet-squat', 'curl'];
+    expect(ressentisQuiChangent(historique, ids, 'lb', 'max')).toEqual({ 'goblet-squat': 'leger', curl: 'lourd' });
+    expect(ressentisQuiChangent(historique, ids, 'lb', 'max', ['goblet-squat', 'curl'])).toEqual({ curl: 'lourd' });
+    expect(ressentisQuiChangent(historique, ids, 'lb', 'max', ['curl'])).toEqual({ 'goblet-squat': 'leger', curl: 'lourd' });
   });
 
   it('lourd deux fois de suite : un cran de moins, pour Speedy comme pour Big Max', () => {
@@ -284,7 +295,7 @@ describe('quand le ressenti propose un changement de charge', () => {
       'goblet-squat': 'leger',
       curl: 'lourd',
     });
-    // Pour Speedy, deux « léger » ne suffisent pas ; deux « lourd », si.
+    // Pour Speedy, deux « léger » ne suffisent pas (il en faut trois) ; deux « lourd », si.
     expect(ressentisQuiChangent(historique, ['goblet-squat', 'curl', 'bench-press'], 'lb', 'sebastien')).toEqual({ curl: 'lourd' });
     expect(ressentisQuiChangent([], ['goblet-squat'], 'lb', 'max')).toEqual({});
   });
@@ -348,7 +359,7 @@ describe('les phrases', () => {
   });
 
   it('explique la proposition dans la séance guidée, avec le seuil de chacun', () => {
-    expect(phraseRessenti('leger', 5, 'lb', 'sebastien')).toBe('Léger les 4 dernières fois : on monte de 5 lb');
+    expect(phraseRessenti('leger', 5, 'lb', 'sebastien')).toBe('Léger les 3 dernières fois : on monte de 5 lb');
     expect(phraseRessenti('leger', 5, 'lb', 'max')).toBe('Léger les 2 dernières fois : on monte de 5 lb');
     expect(phraseRessenti('lourd', -5, 'lb', 'sebastien')).toBe('Lourd les 2 dernières fois : on redescend de 5 lb');
     expect(phraseRessenti('lourd', -5, 'lb', 'max')).toBe('Lourd les 2 dernières fois : on redescend de 5 lb');
@@ -359,7 +370,7 @@ describe('les phrases', () => {
   it('résume la proposition sur l’accueil', () => {
     expect(ligneProposition('leger', 5, 'lb')).toBe('↑ +5 lb proposé');
     expect(ligneProposition('lourd', -5, 'lb')).toBe('↓ −5 lb proposé');
-    expect(raisonProposition('leger', 'sebastien')).toBe('léger 4 fois de suite');
+    expect(raisonProposition('leger', 'sebastien')).toBe('léger 3 fois de suite');
     expect(raisonProposition('leger', 'max')).toBe('léger 2 fois de suite');
     expect(raisonProposition('lourd', 'sebastien')).toBe('lourd 2 fois de suite');
     expect(raisonProposition('lourd', 'max')).toBe('lourd 2 fois de suite');
@@ -419,9 +430,9 @@ describe('dans la séance du programme', () => {
     const ressentis = ressentisQuiChangent([...montee].reverse(), ['seesaw-row'], 'lb', 'max');
     expect(ressentis).toEqual({});
     expect(proposer(faits(20, 'lourd', 'lourd'))).toBe(15);
-    // Speedy : quatre « léger » avant de monter ; deux « lourd » pour descendre.
-    expect(proposer(faits(20, 'leger', 'leger', 'leger'), 'sebastien')).toBe(20);
-    expect(proposer(faits(20, 'leger', 'leger', 'leger', 'leger'), 'sebastien')).toBe(25);
+    // Speedy : trois « léger » avant de monter ; deux « lourd » pour descendre.
+    expect(proposer(faits(20, 'leger', 'leger'), 'sebastien')).toBe(20);
+    expect(proposer(faits(20, 'leger', 'leger', 'leger'), 'sebastien')).toBe(25);
     expect(proposer(faits(20, 'lourd', 'lourd'), 'sebastien')).toBe(15);
   });
 

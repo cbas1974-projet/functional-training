@@ -35,6 +35,16 @@ describe('les boutons de ressenti', () => {
     expect(html.match(/min-h-14/g)).toHaveLength(3);
   });
 
+  it('explique les trois boutons, une fois, en répétitions qu’il restait', () => {
+    const html = renderToStaticMarkup(<BoutonsRessenti exercices={EXERCICES} ressentis={{}} onChoisir={() => {}} />);
+    const texte = html.replace(/<[^>]+>/g, '');
+    expect(texte).toContain('Léger : j’en avais encore 4');
+    expect(texte).toContain('Correct : 2 ou 3 en réserve');
+    expect(texte).toContain('Lourd : 0 ou 1, ou la forme lâche (dos rond, genou qui fait mal)');
+    // Une seule fois, même pour une paire.
+    expect(texte.match(/en réserve/g)).toHaveLength(1);
+  });
+
   it('une paire : les deux exercices, chacun ses trois boutons', () => {
     const html = renderToStaticMarkup(<BoutonsRessenti exercices={EXERCICES} ressentis={{}} onChoisir={() => {}} />);
     expect([...html.matchAll(/<button[^>]*>([^<]*)<\/button>/g)].map((m) => m[1])).toEqual([

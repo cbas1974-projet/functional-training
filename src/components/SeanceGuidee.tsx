@@ -10,6 +10,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ChangeEvent, CSSProperties, ReactNode } from 'react';
 import type {
   BlocSeries,
+  Douleur,
   Exercice,
   GuideVisuel,
   MouvementGuide,
@@ -36,6 +37,7 @@ import {
   indexApresExercice,
   indexEtapePrecedente,
   indexReprise,
+  lireMouvement,
   motDePhase,
   pauseAEtirement,
   premierePhase,
@@ -52,17 +54,23 @@ import type {
 import { CHANGER_DE_COTE_SEC, estCercleAuTemps, estMobilite, tempoPourExercice } from '../utils/generateurSeance';
 import { libelleTempo } from '../utils/formatage';
 import type { Essai } from '../utils/essai';
-import { autrePersonne, chargeDeSerie, chargeLeBasDuDos, etirementsPauseDe } from '../utils/programmeMois';
+import { autrePersonne, chargeLeBasDuDos, etirementsPauseDe } from '../utils/programmeMois';
+import { chargesDeLaSerie, libelleDisques, libelleParCote, seCharge } from '../utils/charges';
+import type { ChargesSerie } from '../utils/charges';
+import { douleurDe } from '../utils/douleurs';
+import { choixDeSortie, compteSeries, phraseEnregistrementPartiel } from '../utils/sortieSeance';
+import type { ChoixSortie } from '../utils/sortieSeance';
 import { decisionPasserExercice, decisionProlonger, decisionSuivant, perspectiveAutre } from '../utils/horlogeCommune';
 import { tempsActifMs } from '../utils/etatCommun';
 import type { Contexte, Decision } from '../utils/horlogeCommune';
-import { SUFFIXE_UNITE, chargeTotale, libellePoidsParSerie, uniteDeSeance } from '../utils/statistiques';
+import { SUFFIXE_UNITE, assezFaite, chargeTotale, libellePoidsParSerie, uniteDeSeance } from '../utils/statistiques';
 import { ajustementDeCharge, avecRessentis, exercicesAEvaluer, motRessenti, phraseRessenti } from '../utils/ressenti';
 import { ajouterTemps, useMoteurEtapes } from '../hooks/useMoteurEtapes';
 import { useMoteurCommun } from '../hooks/useMoteurCommun';
 import { useSeanceCommune } from '../hooks/useSeanceCommune';
 import type { ConfigSynchro } from '../hooks/useSeanceCommune';
 import { useVerrouEcran } from '../hooks/useVerrouEcran';
+import BoutonDouleur, { ReperDouleur } from './BoutonDouleur';
 import BoutonsRessenti from './BoutonsRessenti';
 import PaceurTempo from './PaceurTempo';
 import type { LectureTempo } from './PaceurTempo';
@@ -94,6 +102,12 @@ export interface SeanceGuideeProps {
   /** Un essai ou un aperçu : rien n'est enregistré — ni la progression, ni la
    *  séance faite. Son bandeau reste affiché du début à la fin. */
   essai?: Essai;
+  /** « J'ai mal à cet exercice », par exercice : charges à 70 %, pas de
+   *  montée. */
+  douleurs?: Record<string, Douleur>;
+  /** Signale la douleur d'un exercice, ou l'enlève ; `charge` : la charge de
+   *  travail du moment (100 %), 0 si on ne la connaît pas. */
+  onBasculerDouleur?: (exerciceId: string, charge: number, unite: UnitePoids) => void;
 }
 
 // ------------------------------------------------------------- Réglages
@@ -103,15 +117,16 @@ const INTERVALLE_SAUVEGARDE_MS = 10_000;
 const PROLONGATION_REPOS_SEC = 15;
 /** « +5 s » au changement de côté : autant que le changement lui-même. */
 const PROLONGATION_CHANGEMENT_SEC = CHANGER_DE_COTE_SEC;
+/** Pas de « +5 s » donné dans cette étape. */
+const AUCUNE_RALLONGE: Record<number, number> = {};
 /** Une fin d'étape détectée avec au plus ce retard est datée à l'instant
  *  prévu (pas de dérive) ; au-delà (onglet en arrière-plan), l'étape suivante
  *  démarre à l'instant présent. */
 const TOLERANCE_FIN_MS = 1000;
 /** Les dernières secondes d'un compte à rebours passent en rouge. */
 const SECONDES_ALERTE = 3;
-/** Hauteur du rail de la bille. Mesurée pour que « Série terminée » reste
- *  au-dessus de la barre du bas sur un écran de 390 × 844 : la vignette, le
- *  compteur, les points d'attention et la saisie du poids passent avant. */
+/** Hauteur du rail de la bille : sur un écran de 390 × 844, la vignette, le
+ *  compteur et la bille tiennent au-dessus de la barre d'actions du bas. */
 const HAUTEUR_BILLE_PX = 176;
 
 // ------------------------------------------------------------- Habillage
@@ -342,29 +357,6 @@ function decrireEtape(etape: Etape): string {
 }
 
 /** Les dernières secondes d'un décompte passent en rouge. */
-/** Le mouvement en cours d'un échauffement ou d'un retour au calme, et ce
- *  qu'il lui reste. Chaque mouvement a sa durée (cinq minutes de tapis, trente
- *  secondes d'étirement) ; sans durée, ils se partagent l'étape. */
-function lireMouvement(
-  mouvements: MouvementGuide[],
-  dureeEtapeSec: number,
-  ecouleSec: number,
-): { index: number; resteSec: number } {
-  if (mouvements.length === 0 || dureeEtapeSec <= 0) return { index: 0, resteSec: 0 };
-  const propres = mouvements.map((m) => m.dureeSec ?? 0);
-  const total = propres.reduce((somme, d) => somme + d, 0);
-  const durees =
-    total > 0 && propres.every((d) => d > 0)
-      ? propres.map((d) => (d * dureeEtapeSec) / total)
-      : mouvements.map(() => dureeEtapeSec / mouvements.length);
-  let fin = 0;
-  for (let i = 0; i < durees.length; i += 1) {
-    fin += durees[i];
-    if (ecouleSec < fin || i === durees.length - 1) return { index: i, resteSec: Math.max(0, fin - ecouleSec) };
-  }
-  return { index: durees.length - 1, resteSec: 0 };
-}
-
 function couleurCompte(resteSec: number, normale: string): string {
   return resteSec <= SECONDES_ALERTE ? 'var(--alerte)' : normale;
 }
@@ -383,6 +375,8 @@ export default function SeanceGuidee({
   synchro,
   chargeDerniereFois,
   essai,
+  douleurs = {},
+  onBasculerDouleur,
 }: SeanceGuideeProps) {
   // La progression proposée à la reprise est figée à l'ouverture : les
   // sauvegardes que nous envoyons ensuite reviennent dans cette même prop.
@@ -394,6 +388,15 @@ export default function SeanceGuidee({
   // Le ressenti de chaque exercice, dit après sa dernière série (facultatif).
   const [ressentis, setRessentis] = useState<Record<string, Ressenti>>({});
   const [demarreeLe, setDemarreeLe] = useState<string | null>(null);
+  // « +5 s » au changement de côté d'un étirement, seul : l'étape s'allonge,
+  // et la rallonge va au mouvement en cours — les suivants sont repoussés
+  // d'autant. À deux, l'horloge commune s'arrête : rien à ranger.
+  const [rallonges, setRallonges] = useState<{ visite: number; parMouvement: Record<number, number> }>({
+    visite: -1,
+    parMouvement: {},
+  });
+  /** La question en cours (quitter, passer l'exercice…), dans l'application. */
+  const [dialogue, setDialogue] = useState<DialogueOuvert | null>(null);
 
   const etapes = useMemo(() => construireEtapes(seanceActive), [seanceActive]);
   const dureeTotale = useMemo(() => dureeTotaleSec(etapes), [etapes]);
@@ -496,7 +499,15 @@ export default function SeanceGuidee({
       : etape.type === 'retourCalme'
         ? (seanceActive.retourCalme ?? RETOUR_CALME)
         : null;
-  const { index: indexMouvement, resteSec: resteMouvement } = lireMouvement(mouvements ?? [], dureeEff, ecoule);
+  const rallongesEtape = rallonges.visite === visite ? rallonges.parMouvement : AUCUNE_RALLONGE;
+  const { index: indexMouvement, resteSec: resteMouvement } = lireMouvement(
+    mouvements ?? [],
+    etape.dureeSec,
+    ecoule,
+    rallongesEtape,
+    prolongation,
+  );
+  const changeDeCoteMouvement = mouvements?.[indexMouvement]?.changementDeCote === true;
 
   const verrou = useVerrouEcran(enCours && !estFin);
 
@@ -593,6 +604,18 @@ export default function SeanceGuidee({
         ev.mouvement = cle;
         if (memeEtape) bellSound.playTick('pret');
       }
+      // Le changement de côté d'un étirement : les trois derniers bips, comme
+      // aux séries — « +5 s » les fait rejouer.
+      if (changeDeCoteMouvement) {
+        const secondes = Math.ceil(resteMouvement);
+        if (secondes >= 1 && secondes <= 3) {
+          const cleBip = `${prefixe}${prolongation}:m${indexMouvement}:${secondes}`;
+          if (ev.compteARebours !== cleBip) {
+            ev.compteARebours = cleBip;
+            bellSound.playTick('pret');
+          }
+        }
+      }
     }
 
     // Fin de l'étape : passage automatique à la suivante — sauf quand la
@@ -606,7 +629,7 @@ export default function SeanceGuidee({
       const depart = maintenant - finPrevueMs <= TOLERANCE_FIN_MS ? finPrevueMs : maintenant;
       naviguer(index + 1, depart);
     }
-  }, [etat, estFin, etape, reste, prolongation, metro, changement, maintien, mouvements, indexMouvement, ecoule, dureeEff, maintenant, index, naviguer, enCommun]);
+  }, [etat, estFin, etape, reste, prolongation, metro, changement, maintien, mouvements, indexMouvement, changeDeCoteMouvement, resteMouvement, ecoule, dureeEff, maintenant, index, naviguer, enCommun]);
 
   // À deux, la cloche sonne quand l'horloge commune entre dans une série, et
   // quand elle en sort.
@@ -640,6 +663,22 @@ export default function SeanceGuidee({
     ressentis: null,
   });
 
+  /** Où en est la séance, pour la reprendre plus tard. */
+  const instantane = (debut: string, quand: number): ProgressionSeance => ({
+    seance: seanceActive,
+    indexEtape: index,
+    tempsCumuleSec: Math.round(tempsTotalEcoule),
+    tempsParEtapeSec: tempsAvecCourante.map((t) => Math.round(t)),
+    poids,
+    ressentis,
+    demarreeLe: debut,
+    sauvegardeeLe: new Date(quand).toISOString(),
+  });
+  const instantaneRef = useRef(instantane);
+  useEffect(() => {
+    instantaneRef.current = instantane;
+  });
+
   useEffect(() => {
     // Un essai ne laisse rien : pas de reprise proposée au rechargement.
     if (!etat || !demarreeLe || clotureeRef.current || essai) return;
@@ -649,17 +688,8 @@ export default function SeanceGuidee({
     const poidsModifie = derniere.poids !== poids || derniere.ressentis !== ressentis;
     if (!nouvelleEtape && !periodique && !poidsModifie) return;
     sauvegardeRef.current = { visite: etat.visite, ms: maintenant, poids, ressentis };
-    onProgressionRef.current({
-      seance: seanceActive,
-      indexEtape: index,
-      tempsCumuleSec: Math.round(tempsTotalEcoule),
-      tempsParEtapeSec: tempsAvecCourante.map((t) => Math.round(t)),
-      poids,
-      ressentis,
-      demarreeLe,
-      sauvegardeeLe: new Date(maintenant).toISOString(),
-    });
-  }, [etat, demarreeLe, maintenant, poids, ressentis, seanceActive, index, tempsTotalEcoule, tempsAvecCourante, essai]);
+    onProgressionRef.current(instantaneRef.current(demarreeLe, maintenant));
+  }, [etat, demarreeLe, maintenant, poids, ressentis, essai]);
 
   // ------------------------------------------------ Actions
 
@@ -740,8 +770,43 @@ export default function SeanceGuidee({
       moteurCommun.setEcart(decision.ecart);
       return;
     }
-    if (decision.confirmer && !window.confirm(decision.confirmer)) return;
-    commune.envoyer(decision.action);
+    const action = decision.action;
+    if (decision.confirmer) {
+      confirmer({ titre: decision.confirmer, oui: 'Oui, pour les deux', action: () => commune.envoyer(action) });
+      return;
+    }
+    commune.envoyer(action);
+  };
+
+  /** Une question oui / non, dans l'application : « Annuler » en bas, sous le pouce. */
+  const confirmer = ({
+    titre,
+    texte,
+    oui,
+    action,
+    danger = false,
+  }: {
+    titre: string;
+    texte?: string;
+    oui: string;
+    action: () => void;
+    danger?: boolean;
+  }) =>
+    setDialogue({
+      titre,
+      texte,
+      choix: [
+        { libelle: oui, variante: danger ? 'danger' : 'accent', action },
+        { libelle: 'Annuler', variante: 'fantome', action: () => {} },
+      ],
+    });
+
+  /** Ferme la question ; le choix fait, s'il y en a un, est exécuté. */
+  const fermerDialogue = (choix?: ChoixDialogue) => {
+    const ouvert = dialogue;
+    setDialogue(null);
+    if (choix) choix.action();
+    else ouvert?.onFermer?.();
   };
 
   const basculerPause = () => {
@@ -757,6 +822,27 @@ export default function SeanceGuidee({
   const suivant = () => (enCommun ? decider(decisionSuivant) : naviguer(index + 1));
   const passerExercice = () =>
     enCommun ? decider(decisionPasserExercice) : naviguer(indexApresExercice(etapes, index));
+  /** « Suivant », en haut : pendant une série, il ne la saute pas sans le dire. */
+  const suivantEnHaut = () => {
+    if (etape.type !== 'serie' && etape.type !== 'station') {
+      suivant();
+      return;
+    }
+    confirmer({
+      titre: etape.type === 'serie' ? 'Sauter cette série ?' : 'Sauter cette station ?',
+      texte: 'Elle ne compte que si tu en as fait au moins la moitié. Pour la finir, c’est le bouton du bas.',
+      oui: etape.type === 'serie' ? 'Sauter la série' : 'Sauter la station',
+      action: suivant,
+    });
+  };
+  /** « Passer l'exercice » : toutes ses séries qui restent ; on demande. */
+  const demanderPasserExercice = () =>
+    confirmer({
+      titre: 'Passer cet exercice ?',
+      texte: 'Les séries qui restent ne seront pas faites.',
+      oui: 'Passer l’exercice',
+      action: passerExercice,
+    });
   const prolongerRepos = () =>
     enCommun
       ? decider((contexte) => decisionProlonger(contexte, PROLONGATION_REPOS_SEC))
@@ -768,6 +854,56 @@ export default function SeanceGuidee({
     enCommun
       ? decider((contexte) => decisionProlonger(contexte, PROLONGATION_CHANGEMENT_SEC))
       : moteur.prolonger(PROLONGATION_CHANGEMENT_SEC);
+  /** « +5 s » au changement de côté d'un étirement ou de l'échauffement. */
+  const prolongerMouvement = () => {
+    if (enCommun) {
+      decider((contexte) => decisionProlonger(contexte, PROLONGATION_CHANGEMENT_SEC));
+      return;
+    }
+    if (visite === undefined) return;
+    setRallonges({
+      visite,
+      parMouvement: {
+        ...rallongesEtape,
+        [indexMouvement]: (rallongesEtape[indexMouvement] ?? 0) + PROLONGATION_CHANGEMENT_SEC,
+      },
+    });
+    moteur.prolonger(PROLONGATION_CHANGEMENT_SEC);
+  };
+
+  /** Les charges d'une série : pré-remplie, 70 % et 100 %. */
+  const chargesIci = (exerciceId: string, serie: number, saisies = poids[exerciceId] ?? [], douleur = douleurDe(douleurs, exerciceId)): ChargesSerie =>
+    chargesDeLaSerie({
+      exercice: exerciceDeSeance(exerciceId),
+      bloc: blocDe(exerciceId),
+      saisies,
+      passees: chargesPassees[exerciceId] ?? [],
+      serie,
+      unite: unitePoids,
+      douleur,
+    });
+
+  /** « J'ai mal à cet exercice » : on le signale, ou on l'enlève. La série en
+   *  cours suit aussitôt — à 70 %, ou de nouveau comme avant. */
+  const basculerDouleurIci = (exerciceId: string) => {
+    if (!onBasculerDouleur) return;
+    const avait = douleurDe(douleurs, exerciceId) !== null;
+    const enCoursIci =
+      (etape.type === 'serie' || etape.type === 'station') && etape.exerciceId === exerciceId
+        ? etape.type === 'serie'
+          ? etape.serie
+          : etape.tour
+        : null;
+    const sansLaSerie = [...(poids[exerciceId] ?? [])];
+    if (enCoursIci !== null) sansLaSerie[enCoursIci - 1] = 0;
+    // La charge de travail du moment, sans la montée que la douleur coupe.
+    const charge = avait ? 0 : chargesIci(exerciceId, enCoursIci ?? 1, sansLaSerie, { depuis: '' }).pleine;
+    onBasculerDouleur(exerciceId, charge, unitePoids);
+    if (enCoursIci !== null) {
+      const apres: Douleur | null = avait ? null : { depuis: '', ...(charge > 0 ? { charge, unite: unitePoids } : {}) };
+      changerPoids(exerciceId, enCoursIci, chargesIci(exerciceId, enCoursIci, sansLaSerie, apres).proposee);
+    }
+  };
 
   /** Enregistre la charge d'une série précise (numérotée à partir de 1). */
   const changerPoids = (exerciceId: string, serie: number, charge: number | null) =>
@@ -809,37 +945,88 @@ export default function SeanceGuidee({
     onQuitter();
   };
 
+  /** On garde où on en est : l'accueil propose « Reprendre ». */
+  const garderPourPlusTard = () => {
+    clotureeRef.current = true;
+    if (!essai && demarreeLe) onProgression(instantane(demarreeLe, Date.now()));
+    onQuitter();
+  };
+
+  /** « Quitter » : une seule question, dans l'application — reprendre plus
+   *  tard, enregistrer ce qui est fait, tout jeter, ou continuer. */
   const quitter = () => {
     if (!etat) {
       // Rien n'a commencé : on garde une éventuelle progression sauvegardée.
       onQuitter();
       return;
     }
-    // Le dialogue bloque le rendu, pas l'horloge : on met en pause le temps
-    // de la question, puis on reprend si l'utilisateur renonce à quitter.
-    // À deux, la pause arrêterait aussi l'autre : l'horloge continue.
+    // Le temps de la question, le chrono s'arrête ; on reprend si l'on
+    // renonce à quitter. À deux, la pause arrêterait aussi l'autre :
+    // l'horloge continue.
     const etaitEnPause = enPause || enCommun;
     if (!etaitEnPause) moteur.pause();
-    if (!window.confirm('Quitter la séance en cours ?')) {
+    const reprendreSiBesoin = () => {
       if (!etaitEnPause) moteur.reprendre();
-      return;
-    }
+    };
     const partielle = realisation(false);
-    const faites = partielle.exercices.reduce((total, e) => total + e.seriesFaites, 0);
-    if (
-      !essai &&
-      faites > 0 &&
-      window.confirm(
-        `Enregistrer cette séance partielle (${pluriel(faites, 'série')} faite${faites > 1 ? 's' : ''}) dans l’historique ?`,
-      )
-    ) {
-      clotureeRef.current = true;
-      onTerminee(partielle);
-      onProgression(null);
-      return;
-    }
-    abandonner();
+    const { faites, prevues } = compteSeries(partielle);
+    const libelles: Record<ChoixSortie, ChoixDialogue> = {
+      'plus-tard': {
+        libelle: 'Reprendre plus tard',
+        detail: 'On garde où tu en es : « Reprendre » sur l’accueil.',
+        variante: 'accent',
+        action: garderPourPlusTard,
+      },
+      enregistrer: {
+        libelle: 'Enregistrer ce qui est fait',
+        detail: phraseEnregistrementPartiel(partielle),
+        variante: 'neutre',
+        action: () => {
+          clotureeRef.current = true;
+          onTerminee(partielle);
+          onProgression(null);
+        },
+      },
+      jeter: essai
+        ? { libelle: 'Quitter l’essai', detail: 'Rien n’est gardé.', variante: 'neutre', action: abandonner }
+        : {
+            libelle: 'Tout jeter',
+            detail: 'Rien n’est gardé : ni les séries faites, ni la reprise.',
+            variante: 'danger',
+            action: () =>
+              setDialogue({
+                titre: 'Tout jeter ?',
+                texte: `${faites} série${faites > 1 ? 's' : ''} sur ${prevues} : tout est perdu.`,
+                choix: [
+                  { libelle: 'Oui, tout jeter', variante: 'danger', action: abandonner },
+                  { libelle: 'Non, revenir', variante: 'fantome', action: reprendreSiBesoin },
+                ],
+                onFermer: reprendreSiBesoin,
+              }),
+          },
+      continuer: {
+        libelle: essai ? 'Continuer l’essai' : 'Continuer la séance',
+        variante: 'fantome',
+        action: reprendreSiBesoin,
+      },
+    };
+    setDialogue({
+      titre: essai ? 'Quitter l’essai ?' : 'Quitter la séance ?',
+      texte: essai ? undefined : `${faites} série${faites > 1 ? 's' : ''} faite${faites > 1 ? 's' : ''} sur ${prevues}.`,
+      choix: choixDeSortie({ essai: essai !== undefined, seriesFaites: faites }).map((choix) => libelles[choix]),
+      onFermer: reprendreSiBesoin,
+    });
   };
+
+  /** « Ne pas enregistrer », à la fin : on demande d'abord. */
+  const demanderAbandon = () =>
+    confirmer({
+      titre: 'Ne pas enregistrer ?',
+      texte: 'Toute la séance est perdue : séries, charges, ressenti.',
+      oui: 'Oui, ne rien garder',
+      action: abandonner,
+      danger: true,
+    });
 
   // ------------------------------------------------ Rendu
 
@@ -863,13 +1050,15 @@ export default function SeanceGuidee({
 
   const exercice = etape.exerciceId ? exerciceDeSeance(etape.exerciceId) : null;
   const ambiance = ambianceEtape(etape);
+  const douleurIci = (exerciceId: string) => douleurDe(douleurs, exerciceId) !== null;
   // Après la dernière série d'un exercice : lourd, correct ou léger ? Pendant
   // la pause qui suit, ou, pour le dernier exercice, aux étirements.
   const panneauRessenti = (
     <BoutonsRessenti
       exercices={exercicesAEvaluer(etapes, index)
         .map(exerciceDeSeance)
-        .filter((e) => !estPosture(e))
+        // Rien à dire sur la charge d'un exercice qui n'en a pas.
+        .filter(seCharge)
         .map((e) => ({ id: e.id, nom: e.nomFr }))}
       ressentis={ressentis}
       onChoisir={choisirRessenti}
@@ -893,6 +1082,7 @@ export default function SeanceGuidee({
             indexMouvement={indexMouvement}
             resteMouvementSec={resteMouvement}
             resteSec={reste}
+            onProlongerChangement={prolongerMouvement}
           />
           {etape.type === 'retourCalme' && panneauRessenti}
         </div>
@@ -904,16 +1094,19 @@ export default function SeanceGuidee({
           etape={etape}
           exercice={exercice}
           resteSec={reste}
-          onDemarrer={suivant}
-          onPasser={passerExercice}
+          douleur={douleurIci(exercice.id)}
+          onBasculerDouleur={onBasculerDouleur ? () => basculerDouleurIci(exercice.id) : undefined}
+          onPasser={demanderPasserExercice}
         />
       );
       break;
     case 'serie':
-    case 'station':
+    case 'station': {
+      const douleur = douleurIci(etape.exerciceId);
       corps = exercice && (
         <CorpsTravail
-          key={`${etape.exerciceId}-${index}`}
+          // Signaler une douleur refait la saisie de la série : à 70 %.
+          key={`${etape.exerciceId}-${index}${douleur ? '-douleur' : ''}`}
           etape={etape}
           exercice={exercice}
           metro={metro}
@@ -928,27 +1121,26 @@ export default function SeanceGuidee({
           bloc={blocDe(etape.exerciceId)}
           personne={personne}
           poidsSeries={poids[etape.exerciceId] ?? []}
+          charges={chargesIci(etape.exerciceId, etape.type === 'serie' ? etape.serie : etape.tour)}
           chargesPassees={chargesPassees[etape.exerciceId] ?? []}
           unitePoids={unitePoids}
+          douleur={douleur}
+          onBasculerDouleur={onBasculerDouleur ? () => basculerDouleurIci(etape.exerciceId) : undefined}
           onPoids={(serie, charge) => changerPoids(etape.exerciceId, serie, charge)}
-          onTerminee={suivant}
-          onPasser={passerExercice}
+          onPasser={demanderPasserExercice}
         />
       );
       break;
+    }
     case 'repos':
     case 'reposTour': {
       // La charge à installer pour la série qui vient.
       const cible = etape.suivant;
       const charge =
-        cible.type === 'serie'
-          ? chargeDeSerie(
-              blocDe(cible.exerciceId),
-              poids[cible.exerciceId] ?? [],
-              chargesPassees[cible.exerciceId] ?? [],
-              cible.serie,
-            )
+        cible.type === 'serie' && seCharge(exerciceDeSeance(cible.exerciceId))
+          ? chargesIci(cible.exerciceId, cible.serie).proposee
           : 0;
+      const parCote = cible.type === 'serie' && charge > 0 && exerciceDeSeance(cible.exerciceId).chargeParCote === true;
       // Un étirement par longue pause, à tour de rôle.
       const etirement =
         etirementsPause.length > 0 && pauseAEtirement(etape)
@@ -959,11 +1151,13 @@ export default function SeanceGuidee({
           etape={etape}
           resteSec={reste}
           partenaire={partenaire}
-          charge={charge > 0 ? `${charge} ${SUFFIXE_UNITE[unitePoids]}` : undefined}
+          charge={
+            charge > 0
+              ? `${charge} ${SUFFIXE_UNITE[unitePoids]}${parCote ? ` · ${libelleParCote(charge, unitePoids)}` : ''}`
+              : undefined
+          }
           etirement={etirement}
           ressenti={panneauRessenti}
-          onProlonger={prolongerRepos}
-          onPasser={suivant}
         />
       );
       break;
@@ -975,17 +1169,81 @@ export default function SeanceGuidee({
           chargeDerniereFois={chargeDerniereFois}
           essai={essai}
           onEnregistrer={enregistrer}
-          onAbandonner={abandonner}
+          onAbandonner={essai ? abandonner : demanderAbandon}
         />
       );
       break;
   }
 
+  // La barre du bas : le gros bouton de l'étape, toujours au même endroit,
+  // sous le pouce — et la pause à côté. Rien à l'écran de fin : « Enregistrer »
+  // y est en haut, au-dessus du tableau.
+  const boutonPause = (
+    <Bouton variante="pause" taille="etroit" onClick={basculerPause} className="flex-1">
+      {enPause ? 'Reprendre' : 'Pause'}
+    </Bouton>
+  );
+  const posture = exercice !== null && estPosture(exercice);
+  let actions: ReactNode = null;
+  switch (etape.type) {
+    case 'echauffement':
+      actions = (
+        <Bouton variante="accent" onClick={suivant} className="flex-[2]">
+          Passer l’échauffement
+        </Bouton>
+      );
+      break;
+    case 'pret':
+      actions = (
+        <Bouton variante="accent" taille="vedette" onClick={suivant} className="flex-[2]">
+          Démarrer
+        </Bouton>
+      );
+      break;
+    case 'serie':
+    case 'station':
+      actions = (
+        <Bouton variante="accent" taille="vedette" onClick={suivant} className="flex-[2]">
+          {etape.type === 'station' ? 'Station terminée' : posture ? 'Position terminée' : 'Série terminée'}
+        </Bouton>
+      );
+      break;
+    case 'repos':
+    case 'reposTour':
+      actions =
+        etape.type === 'repos' && etape.manuel ? (
+          <Bouton variante="montee" taille="vedette" onClick={suivant} className="flex-[2]">
+            Go
+          </Bouton>
+        ) : (
+          <>
+            <Bouton variante="neutre" taille="etroit" onClick={prolongerRepos} className="flex-1">
+              +{PROLONGATION_REPOS_SEC} s
+            </Bouton>
+            <Bouton variante="accent" taille="vedette" onClick={suivant} className="flex-[1.6]">
+              Passer
+            </Bouton>
+          </>
+        );
+      break;
+    case 'retourCalme':
+      actions = (
+        <Bouton variante="accent" onClick={suivant} className="flex-[2]">
+          Étirements finis
+        </Bouton>
+      );
+      break;
+    case 'fin':
+      actions = null;
+      break;
+  }
+
   return (
     <div
-      ref={conteneurRef}
-      className="fixed inset-0 z-50 flex flex-col overflow-y-auto transition-colors duration-500"
-      style={{ background: ambiance.fond, color: 'var(--texte)' }}
+      className="fixed inset-0 z-50 flex flex-col transition-colors duration-500"
+      // La hauteur visible, barre du navigateur ôtée : la barre d'actions
+      // reste au-dessus d'elle.
+      style={{ background: ambiance.fond, color: 'var(--texte)', height: '100dvh' }}
     >
       <EnTete
         phase={libellePhase(etape, mobilite)}
@@ -999,6 +1257,9 @@ export default function SeanceGuidee({
         resteSec={tempsRestant}
         bandeau={essai?.bandeau}
         onQuitter={quitter}
+        onPrecedent={precedent}
+        precedentPossible={index > 0 && !enCommun}
+        onSuivant={estFin ? undefined : suivantEnHaut}
       />
       {enCommun && (
         <div
@@ -1029,31 +1290,26 @@ export default function SeanceGuidee({
           {message}
         </div>
       )}
-      <main className="mx-auto w-full max-w-md flex-1 px-4 py-4">{corps}</main>
-      <footer
-        className="sticky bottom-0 px-4 pt-3"
-        style={{
-          background: 'var(--surface)',
-          borderTop: '1px solid var(--bordure)',
-          paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom))',
-        }}
-      >
-        <div className="mx-auto flex max-w-md gap-2">
-          <Bouton variante="neutre" taille="etroit" onClick={precedent} disabled={index === 0 || enCommun} className="flex-1">
-            Précédent
-          </Bouton>
-          {!estFin && (
-            <Bouton variante="pause" onClick={basculerPause} className="flex-[1.5]">
-              {enPause ? 'Reprendre' : 'Pause'}
-            </Bouton>
-          )}
-          {!estFin && (
-            <Bouton variante="neutre" taille="etroit" onClick={suivant} className="flex-1">
-              Suivant
-            </Bouton>
-          )}
-        </div>
-      </footer>
+      <div ref={conteneurRef} className="min-h-0 flex-1 overflow-y-auto">
+        <main className="mx-auto w-full max-w-md px-4 py-4">{corps}</main>
+      </div>
+      {actions && (
+        <footer
+          aria-label="Actions"
+          className="shrink-0 px-4 pt-3"
+          style={{
+            background: 'var(--surface)',
+            borderTop: '1px solid var(--bordure)',
+            paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom))',
+          }}
+        >
+          <div className="mx-auto flex max-w-md gap-2">
+            {boutonPause}
+            {actions}
+          </div>
+        </footer>
+      )}
+      {dialogue && <Dialogue dialogue={dialogue} onFermer={fermerDialogue} />}
     </div>
   );
 }
@@ -1207,7 +1463,15 @@ interface EnTeteProps {
   /** Essai ou aperçu : une ligne tout en haut, qui ne quitte pas l'écran. */
   bandeau?: string;
   onQuitter: () => void;
+  /** « Précédent » et « Suivant », en petit, en haut : loin du pouce. */
+  onPrecedent: () => void;
+  precedentPossible: boolean;
+  /** Absent à l'écran de fin. */
+  onSuivant?: () => void;
 }
+
+/** Les petits boutons de l'en-tête : la cible tactile minimale, sans plus. */
+const PETIT_BOUTON_HAUT = 'min-h-11 shrink-0 rounded-xl px-3 text-sm';
 
 function EnTete({
   phase,
@@ -1219,13 +1483,13 @@ function EnTete({
   resteSec,
   bandeau,
   onQuitter,
+  onPrecedent,
+  precedentPossible,
+  onSuivant,
 }: EnTeteProps) {
   const rempli = Math.min(100, Math.max(0, avancement * 100));
   return (
-    <header
-      className="sticky top-0 z-10"
-      style={{ background: 'var(--surface)', borderBottom: '1px solid var(--bordure)' }}
-    >
+    <header className="shrink-0" style={{ background: 'var(--surface)', borderBottom: '1px solid var(--bordure)' }}>
       {bandeau && (
         <div
           className="px-4 pb-1 text-center text-xs font-bold"
@@ -1266,9 +1530,29 @@ function EnTete({
             Quitter
           </Bouton>
         </div>
-        <div className="chiffres mt-1 flex justify-between text-sm" style={{ color: 'var(--texte-discret)' }}>
-          <span>Écoulé {formaterMmSs(ecouleSec)}</span>
-          <span>Reste ~ {formaterMmSs(resteSec)}</span>
+        <div className="mt-1 flex items-center justify-between gap-2">
+          <button
+            type="button"
+            onClick={onPrecedent}
+            disabled={!precedentPossible}
+            className={`${BOUTON_COMMUN} ${PETIT_BOUTON_HAUT}`}
+            style={STYLES_BOUTON.neutre}
+          >
+            ‹ Précédent
+          </button>
+          <div className="chiffres min-w-0 text-center text-xs leading-tight" style={{ color: 'var(--texte-discret)' }}>
+            <div>Écoulé {formaterMmSs(ecouleSec)}</div>
+            <div>Reste ~ {formaterMmSs(resteSec)}</div>
+          </div>
+          <button
+            type="button"
+            onClick={onSuivant}
+            disabled={!onSuivant}
+            className={`${BOUTON_COMMUN} ${PETIT_BOUTON_HAUT}`}
+            style={STYLES_BOUTON.neutre}
+          >
+            Suivant ›
+          </button>
         </div>
       </div>
     </header>
@@ -1281,12 +1565,48 @@ interface CorpsMouvementsProps {
   indexMouvement: number;
   resteMouvementSec: number;
   resteSec: number;
+  /** « +5 s » au changement de côté. */
+  onProlongerChangement: () => void;
 }
 
-/** Échauffement et retour au calme : les mouvements défilent automatiquement. */
-function CorpsMouvements({ titre, mouvements, indexMouvement, resteMouvementSec, resteSec }: CorpsMouvementsProps) {
+/** Échauffement et retour au calme : les mouvements défilent automatiquement.
+ *  Entre les deux côtés d'un mouvement d'un seul côté, cinq secondes pour
+ *  changer de côté, comme aux séries. */
+function CorpsMouvements({
+  titre,
+  mouvements,
+  indexMouvement,
+  resteMouvementSec,
+  resteSec,
+  onProlongerChangement,
+}: CorpsMouvementsProps) {
   const courant = mouvements[indexMouvement];
   const prochain = mouvements[indexMouvement + 1];
+  if (courant?.changementDeCote) {
+    const secondes = Math.ceil(resteMouvementSec);
+    return (
+      <div className="space-y-4 text-center">
+        <p style={{ color: 'var(--texte-discret)' }}>
+          {titre} · reste <span className="chiffres">{formaterMmSs(Math.ceil(resteSec))}</span>
+        </p>
+        <div className="select-none space-y-3 rounded-2xl p-4" style={{ background: 'var(--surface)' }}>
+          <div className="text-4xl font-extrabold tracking-[0.08em]" style={{ ...ARCHIVO, color: 'var(--accent)' }}>
+            CHANGE DE CÔTÉ
+          </div>
+          <div
+            className="chiffres text-9xl font-bold leading-none"
+            style={{ color: couleurCompte(resteMouvementSec, 'var(--texte)') }}
+          >
+            {secondes}
+          </div>
+          {prochain && <div className="text-xl font-medium">{prochain.nom}</div>}
+          <Bouton variante="neutre" onClick={onProlongerChangement} className="w-full">
+            +{PROLONGATION_CHANGEMENT_SEC} s
+          </Bouton>
+        </div>
+      </div>
+    );
+  }
   return (
     <div className="space-y-4 text-center">
       <div
@@ -1327,11 +1647,14 @@ interface CorpsPretProps {
   etape: Extract<Etape, { type: 'pret' }>;
   exercice: Exercice;
   resteSec: number;
-  onDemarrer: () => void;
+  /** « J'ai mal à cet exercice » est signalé. */
+  douleur: boolean;
+  /** Absent : on ne peut pas le signaler d'ici (aperçu de l'autre). */
+  onBasculerDouleur?: () => void;
   onPasser: () => void;
 }
 
-function CorpsPret({ etape, exercice, resteSec, onDemarrer, onPasser }: CorpsPretProps) {
+function CorpsPret({ etape, exercice, resteSec, douleur, onBasculerDouleur, onPasser }: CorpsPretProps) {
   const cible = etape.suivant;
   const sousTitre =
     cible.type !== 'serie'
@@ -1363,6 +1686,7 @@ function CorpsPret({ etape, exercice, resteSec, onDemarrer, onPasser }: CorpsPre
       />
       <div className="text-center">
         <h2 className="text-2xl font-bold">{exercice.nomFr}</h2>
+        {douleur && <ReperDouleur avecCharge={seCharge(exercice)} />}
         <p style={{ color: 'var(--texte-discret)' }}>{sousTitre}</p>
         <p className="text-sm" style={{ color: 'var(--texte-discret)' }}>
           {exercice.position}
@@ -1388,10 +1712,11 @@ function CorpsPret({ etape, exercice, resteSec, onDemarrer, onPasser }: CorpsPre
           <li key={point}>{point}</li>
         ))}
       </ul>
-      <Bouton variante="accent" onClick={onDemarrer} className="w-full">
-        Démarrer maintenant
-      </Bouton>
-      <Bouton variante="fantome" onClick={onPasser} className="w-full underline">
+      {onBasculerDouleur && !estPosture(exercice) && (
+        <BoutonDouleur actif={douleur} avecCharge={seCharge(exercice)} onBasculer={onBasculerDouleur} />
+      )}
+      {/* Loin du gros bouton du bas, et on demande avant. */}
+      <Bouton variante="fantome" taille="petit" onClick={onPasser} className="w-full underline">
         Passer cet exercice
       </Bouton>
     </div>
@@ -1421,11 +1746,16 @@ interface CorpsTravailProps {
   personne?: Personne;
   /** Charges déjà saisies pour cet exercice, index 0 = première série. */
   poidsSeries: number[];
+  /** La charge de la série : pré-remplie, 70 % et 100 %. */
+  charges: ChargesSerie;
   /** Charges de la dernière fois, série par série ; vide si aucune. */
   chargesPassees: number[];
   unitePoids: UnitePoids;
+  /** « J'ai mal à cet exercice » est signalé. */
+  douleur: boolean;
+  /** Absent : on ne peut pas le signaler d'ici. */
+  onBasculerDouleur?: () => void;
   onPoids: (serie: number, charge: number | null) => void;
-  onTerminee: () => void;
   onPasser: () => void;
 }
 
@@ -1444,21 +1774,26 @@ function CorpsTravail({
   bloc,
   personne,
   poidsSeries,
+  charges,
   chargesPassees,
   unitePoids,
+  douleur,
+  onBasculerDouleur,
   onPoids,
-  onTerminee,
   onPasser,
 }: CorpsTravailProps) {
   // Numéro de la série en cours : le tour, pour une station de circuit.
   const serieCourante = etape.type === 'serie' ? etape.serie : etape.tour;
   const dejaSaisi = poidsSeries[serieCourante - 1] ?? 0;
-  // Sans saisie pour cette série, on propose la charge de la série d'avant,
-  // sinon celle de la dernière fois — un cran plus loin si le ressenti le
-  // demande.
-  const valeurDepart = chargeDeSerie(bloc, poidsSeries, chargesPassees, serieCourante);
-  // Le cran proposé sur la charge de la dernière fois : le ressenti.
-  const ajustement = chargesPassees.some((charge) => charge > 0) ? ajustementDeCharge(bloc) : null;
+  // Sans saisie pour cette série, la charge proposée (`chargesDeLaSerie`) :
+  // celle de la série d'avant, sinon de la dernière fois — un cran plus loin
+  // si le ressenti le demande ; à 70 % pour la première série d'un exercice
+  // qui charge le dos, et pour chaque série d'un exercice où l'on a mal.
+  const { proposee: valeurDepart, pleine, allegee } = charges;
+  // Le cran proposé sur la charge de la dernière fois : le ressenti. Avec une
+  // douleur, jamais de montée.
+  const ajustementBrut = chargesPassees.some((charge) => charge > 0) ? ajustementDeCharge(bloc) : null;
+  const ajustement = douleur && ajustementBrut && ajustementBrut.ajout > 0 ? null : ajustementBrut;
   // Une série longue qui charge le bas du dos : le rappel qui protège.
   const dosAMenager = etape.type === 'serie' && etape.reps >= 10 && chargeLeBasDuDos(exercice);
 
@@ -1471,10 +1806,18 @@ function CorpsTravail({
     const charge = Number.parseFloat(valeur.replace(',', '.'));
     onPoids(serieCourante, Number.isFinite(charge) ? charge : null);
   };
+  /** Un raccourci, 70 % ou 100 % : la charge vraiment faite. */
+  const choisirCharge = (charge: number) => {
+    setTexte(String(charge));
+    onPoids(serieCourante, charge);
+  };
+  const chargeSaisie = Number.parseFloat(texte.replace(',', '.'));
+  const disques = libelleDisques(exercice);
 
   // La charge proposée est enregistrée d'office : sans cela, une série faite
   // avec la même charge ressortirait vide du bilan.
-  const reprise = dejaSaisi === 0 ? valeurDepart : 0;
+  const avecCharge = seCharge(exercice);
+  const reprise = avecCharge && dejaSaisi === 0 ? valeurDepart : 0;
   useEffect(() => {
     if (reprise > 0) onPoids(serieCourante, reprise);
     // Au montage uniquement : le composant est remonté à chaque étape.
@@ -1498,6 +1841,7 @@ function CorpsTravail({
         <div className="min-w-0">
           <h2 className="text-xl font-bold leading-tight">{exercice.nomFr}</h2>
           <p className="text-sm" style={{ color: 'var(--texte-discret)' }}>{sousTitre}</p>
+          {douleur && <ReperDouleur avecCharge={avecCharge} className="mt-1" />}
         </div>
       </div>
 
@@ -1561,77 +1905,100 @@ function CorpsTravail({
       )}
 
       <details className="rounded-2xl px-4" style={{ background: 'var(--surface)' }}>
-        <summary className="cursor-pointer py-3 font-medium">Points d’attention</summary>
+        <summary className="cursor-pointer py-3 font-medium">
+          Points d’attention{onBasculerDouleur && !posture ? ' · douleur' : ''}
+        </summary>
         <ul className="list-disc space-y-1 pb-3 pl-5" style={{ color: 'var(--texte-discret)' }}>
           {consignesDe(exercice).map((point) => (
             <li key={point}>{point}</li>
           ))}
         </ul>
+        {onBasculerDouleur && !posture && (
+          <BoutonDouleur actif={douleur} avecCharge={avecCharge} onBasculer={onBasculerDouleur} className="mb-3" />
+        )}
       </details>
 
-      {/* Une posture de yoga ou un étirement ne se charge pas : la case de
-          saisie n'aurait rien à recevoir. */}
-      {!posture && (
-      <label
-        className="flex items-center justify-between gap-3 rounded-2xl px-4 py-3"
-        style={{ background: 'var(--surface)' }}
-      >
-        <span className="min-w-0">
-          <span className="block font-medium">
-            Poids série <span className="chiffres">{serieCourante}</span> (
-            {SUFFIXE_UNITE[unitePoids]})
-          </span>
-          {poidsSeries.some((charge) => charge > 0) && (
-            <span className="chiffres block text-xs" style={{ color: 'var(--texte-discret)' }}>
-              {poidsSeries
-                .map((charge, i) => `S${i + 1} ${charge > 0 ? charge : '—'}`)
-                .join(' · ')}
+      {/* Une posture, un étirement ou un exercice au poids du corps ne se
+          charge pas : la case de saisie n'aurait rien à recevoir. */}
+      {avecCharge && (
+        <div className="space-y-2 rounded-2xl px-4 py-3" style={{ background: 'var(--surface)' }}>
+          <label className="flex items-center justify-between gap-3">
+            <span className="min-w-0">
+              <span className="block font-medium">
+                Poids série <span className="chiffres">{serieCourante}</span> ({SUFFIXE_UNITE[unitePoids]})
+              </span>
+              {disques && (
+                <span className="block text-xs" style={{ color: 'var(--texte-discret)' }}>
+                  {disques}
+                </span>
+              )}
+              {poidsSeries.some((charge) => charge > 0) && (
+                <span className="chiffres block text-xs" style={{ color: 'var(--texte-discret)' }}>
+                  {poidsSeries.map((charge, i) => `S${i + 1} ${charge > 0 ? charge : '—'}`).join(' · ')}
+                </span>
+              )}
+              {chargesPassees.some((charge) => charge > 0) && (
+                <span className="chiffres block text-xs" style={{ color: 'var(--texte-discret)' }}>
+                  Dernière fois : {chargesPassees.map((charge) => (charge > 0 ? charge : '—')).join(' · ')}
+                </span>
+              )}
+              {ajustement && (
+                <span
+                  className="chiffres block text-xs font-semibold"
+                  style={{ color: ajustement.ajout > 0 ? 'var(--montee)' : 'var(--descente)' }}
+                >
+                  {phraseRessenti(ajustement.motif, ajustement.ajout, unitePoids, personne)}
+                </span>
+              )}
             </span>
+            <input
+              type="number"
+              inputMode="decimal"
+              min="0"
+              step={unitePoids === 'lb' ? '1' : '0.5'}
+              placeholder="—"
+              value={texte}
+              onChange={saisirPoids}
+              className="chiffres h-14 w-28 shrink-0 rounded-xl border-2 text-center text-2xl"
+              style={{
+                background: 'var(--surface-haute)',
+                color: 'var(--texte)',
+                borderColor: 'var(--bordure)',
+              }}
+            />
+          </label>
+          {/* Deux raccourcis : ce qu'on a vraiment fait, d'un toucher. */}
+          {pleine > 0 && (
+            <div role="group" aria-label="Charge faite" className="grid grid-cols-2 gap-2">
+              {(allegee < pleine ? [['70 %', allegee] as const, ['100 %', pleine] as const] : [['100 %', pleine] as const]).map(
+                ([part, charge]) => {
+                  const choisie = chargeSaisie === charge;
+                  return (
+                    <button
+                      key={part}
+                      type="button"
+                      aria-pressed={choisie}
+                      onClick={() => choisirCharge(charge)}
+                      className={`${BOUTON_COMMUN} chiffres min-h-11 rounded-xl px-2 text-base`}
+                      style={choisie ? STYLES_BOUTON.accent : STYLES_BOUTON.neutre}
+                    >
+                      {part} · {charge} {SUFFIXE_UNITE[unitePoids]}
+                    </button>
+                  );
+                },
+              )}
+            </div>
           )}
-          {chargesPassees.some((charge) => charge > 0) && (
-            <span className="chiffres block text-xs" style={{ color: 'var(--texte-discret)' }}>
-              Dernière fois : {chargesPassees.map((charge) => (charge > 0 ? charge : '—')).join(' · ')}
-            </span>
+          {exercice.chargeParCote && chargeSaisie > 0 && (
+            <p className="chiffres text-sm font-semibold">{libelleParCote(chargeSaisie, unitePoids)}</p>
           )}
-          {ajustement && (
-            <span
-              className="chiffres block text-xs font-semibold"
-              style={{ color: ajustement.ajout > 0 ? 'var(--montee)' : 'var(--descente)' }}
-            >
-              {phraseRessenti(ajustement.motif, ajustement.ajout, unitePoids, personne)}
-            </span>
-          )}
-        </span>
-        <input
-          type="number"
-          inputMode="decimal"
-          min="0"
-          step={unitePoids === 'lb' ? '1' : '0.5'}
-          placeholder="—"
-          value={texte}
-          onChange={saisirPoids}
-          className="chiffres h-14 w-28 rounded-xl border-2 text-center text-2xl"
-          style={{
-            background: 'var(--surface-haute)',
-            color: 'var(--texte)',
-            borderColor: 'var(--bordure)',
-          }}
-        />
-      </label>
+        </div>
       )}
 
-      <div className="grid grid-cols-2 gap-3">
-        <Bouton variante="accent" taille="etroit" onClick={onTerminee}>
-          {etape.type !== 'serie'
-            ? 'Station terminée'
-            : posture
-              ? 'Position terminée'
-              : 'Série terminée'}
-        </Bouton>
-        <Bouton variante="neutre" taille="etroit" onClick={onPasser}>
-          Passer l’exercice
-        </Bouton>
-      </div>
+      {/* Loin du gros bouton du bas, et on demande avant. */}
+      <Bouton variante="fantome" taille="petit" onClick={onPasser} className="w-full underline">
+        Passer l’exercice
+      </Bouton>
     </div>
   );
 }
@@ -1867,8 +2234,6 @@ interface CorpsReposProps {
   etirement?: string;
   /** Le ressenti à dire sur l'exercice qui vient de finir, s'il y en a un. */
   ressenti?: ReactNode;
-  onProlonger: () => void;
-  onPasser: () => void;
 }
 
 /** Ce qui retient pendant la pause, en tête de l'écran. */
@@ -1889,7 +2254,7 @@ function titreRepos(etape: CorpsReposProps['etape'], partenaire: string | undefi
   }
 }
 
-function CorpsRepos({ etape, resteSec, partenaire, charge, etirement, ressenti, onProlonger, onPasser }: CorpsReposProps) {
+function CorpsRepos({ etape, resteSec, partenaire, charge, etirement, ressenti }: CorpsReposProps) {
   const { suivant } = etape;
   const exerciceSuivant = suivant.type === 'retourCalme' ? null : exerciceDeSeance(suivant.exerciceId);
   // Nouvel exercice : on repart ensemble sur « Go », quand tout est prêt.
@@ -1906,8 +2271,14 @@ function CorpsRepos({ etape, resteSec, partenaire, charge, etirement, ressenti, 
       >
         {formaterMmSs(Math.ceil(resteSec))}
       </div>
-      {attendGo && resteSec <= 0 && (
-        <p className="text-lg font-bold" style={{ color: 'var(--montee)' }}>
+      {/* La place est gardée d'avance : rien ne bouge quand le décompte
+          tombe à zéro. */}
+      {attendGo && (
+        <p
+          className="text-lg font-bold"
+          style={{ color: 'var(--montee)', visibility: resteSec <= 0 ? 'visible' : 'hidden' }}
+          aria-hidden={resteSec > 0}
+        >
           Prêts ? On repart sur « Go ».
         </p>
       )}
@@ -1971,20 +2342,6 @@ function CorpsRepos({ etape, resteSec, partenaire, charge, etirement, ressenti, 
           )}
         </div>
       )}
-      {attendGo ? (
-        <Bouton variante="montee" taille="vedette" onClick={onPasser} className="w-full">
-          Go
-        </Bouton>
-      ) : (
-        <div className="grid grid-cols-2 gap-3">
-          <Bouton variante="neutre" onClick={onProlonger}>
-            +{PROLONGATION_REPOS_SEC} s
-          </Bouton>
-          <Bouton variante="accent" onClick={onPasser}>
-            Passer
-          </Bouton>
-        </div>
-      )}
     </div>
   );
 }
@@ -2040,7 +2397,17 @@ function CorpsFin({ realisee, chargeDerniereFois, essai, onEnregistrer, onAbando
         <p className="chiffres" style={{ color: 'var(--texte-discret)' }}>
           {seriesFaites} / {seriesPrevues} séries faites
         </p>
+        {!essai && !assezFaite(realisee) && (
+          <p className="text-sm" style={{ color: 'var(--texte-discret)' }}>
+            Moins de la moitié des séries : la journée ne sera pas cochée.
+          </p>
+        )}
       </div>
+
+      {/* En haut, au-dessus du tableau : visible sans défiler. */}
+      <Bouton variante="montee" taille="vedette" onClick={essai ? onAbandonner : onEnregistrer} className="w-full">
+        {essai ? essai.boutonFin : 'Enregistrer la séance'}
+      </Bouton>
 
       {/* Un essai n'est pas comparé à la dernière fois : il ne sera pas gardé. */}
       {total > 0 && !essai && (
@@ -2099,20 +2466,81 @@ function CorpsFin({ realisee, chargeDerniereFois, essai, onEnregistrer, onAbando
         </table>
       </div>
 
-      {essai ? (
-        <Bouton variante="montee" onClick={onAbandonner} className="w-full">
-          {essai.boutonFin}
-        </Bouton>
-      ) : (
-        <>
-          <Bouton variante="montee" onClick={onEnregistrer} className="w-full">
-            Enregistrer la séance
-          </Bouton>
-          <Bouton variante="neutre" onClick={onAbandonner} className="w-full">
+      {/* Tout en bas, loin d'« Enregistrer », en petit ; on demande avant. */}
+      {!essai && (
+        <div className="pt-8 text-center">
+          <Bouton variante="fantome" taille="petit" onClick={onAbandonner} className="underline">
             Ne pas enregistrer
           </Bouton>
-        </>
+        </div>
       )}
+    </div>
+  );
+}
+
+// ------------------------------------------------------------- Questions
+
+/** Un choix d'une question. 'danger' : ce qui efface. */
+interface ChoixDialogue {
+  libelle: string;
+  /** Une ligne d'explication, sous le libellé. */
+  detail?: string;
+  variante: VarianteBouton | 'danger';
+  action: () => void;
+}
+
+interface DialogueOuvert {
+  titre: string;
+  texte?: string;
+  choix: ChoixDialogue[];
+  /** Fermée sans choisir (toucher à côté). */
+  onFermer?: () => void;
+}
+
+const STYLE_DANGER: CSSProperties = {
+  background: 'transparent',
+  color: 'var(--alerte)',
+  border: '2px solid var(--alerte)',
+};
+
+/** Une question dans l'application, posée en bas de l'écran, sous le pouce :
+ *  pas de boîte du navigateur. Toucher à côté revient à renoncer. */
+function Dialogue({ dialogue, onFermer }: { dialogue: DialogueOuvert; onFermer: (choix?: ChoixDialogue) => void }) {
+  return (
+    <div
+      className="fixed inset-0 z-[60] flex items-end justify-center"
+      style={{ background: 'rgba(0, 0, 0, 0.55)' }}
+      onClick={() => onFermer()}
+    >
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="dialogue-titre"
+        className="w-full max-w-md space-y-3 rounded-t-3xl px-4 pt-5"
+        style={{
+          background: 'var(--surface)',
+          color: 'var(--texte)',
+          paddingBottom: 'max(1rem, env(safe-area-inset-bottom))',
+        }}
+        onClick={(evenement) => evenement.stopPropagation()}
+      >
+        <h2 id="dialogue-titre" className="text-xl font-bold">
+          {dialogue.titre}
+        </h2>
+        {dialogue.texte && <p style={{ color: 'var(--texte-discret)' }}>{dialogue.texte}</p>}
+        {dialogue.choix.map((choix) => (
+          <button
+            key={choix.libelle}
+            type="button"
+            onClick={() => onFermer(choix)}
+            className={`${BOUTON_COMMUN} block min-h-14 w-full rounded-2xl px-4 py-2 text-left`}
+            style={choix.variante === 'danger' ? STYLE_DANGER : STYLES_BOUTON[choix.variante]}
+          >
+            <span className="block text-lg">{choix.libelle}</span>
+            {choix.detail && <span className="block text-sm font-normal opacity-80">{choix.detail}</span>}
+          </button>
+        ))}
+      </div>
     </div>
   );
 }

@@ -80,6 +80,20 @@ const vide = (unite: UnitePoids): FrequenceExercice => ({
   unite,
 });
 
+/** Une séance enregistrée coche sa journée quand au moins la moitié des
+ *  séries prévues ont été faites. Une séance quittée après une série sur
+ *  vingt et une est gardée dans l'historique, mais la journée reste à faire.
+ *  Sans série prévue (séances d'avant, ou sans compte), elle coche. */
+export function assezFaite(realisee: Pick<SeanceRealisee, 'exercices'>): boolean {
+  let prevues = 0;
+  let faites = 0;
+  for (const exo of realisee.exercices) {
+    prevues += exo.seriesPrevues > 0 ? exo.seriesPrevues : 0;
+    faites += exo.seriesFaites > 0 ? exo.seriesFaites : 0;
+  }
+  return prevues === 0 || faites * 2 >= prevues;
+}
+
 /** Un exercice compte comme « fait » dès qu'au moins une série a été bouclée.
  *  Les séances abandonnées avant la première série ne comptent donc pas. */
 function aEteFait(exo: ExerciceRealise): boolean {

@@ -24,6 +24,7 @@ export const EXERCICES_SALLE: Exercice[] = [
     cotes: 'bilateral',
     unite: 'reps',
     sansPauseEnBas: true,
+    chargeParCote: true,
     position: 'Debout au centre de la barre hexagonale, une poignée dans chaque main',
     pointsAttention: [
       'Pieds sous les hanches, au milieu de la barre.',
@@ -50,6 +51,7 @@ export const EXERCICES_SALLE: Exercice[] = [
     premierePhase: 'descend',
     sansPauseEnBas: true,
     genouAMenager: true,
+    chargeParCote: true,
     position: 'Assis, dos et bassin collés au dossier, pieds à plat sur la plaque',
     pointsAttention: [
       'Pieds largeur de hanches, genoux dans l’axe des orteils.',
@@ -75,6 +77,7 @@ export const EXERCICES_SALLE: Exercice[] = [
     premierePhase: 'descend',
     sansPauseEnBas: true,
     genouAMenager: true,
+    chargeParCote: true,
     position: 'Dos contre le dossier incliné, épaules sous les appuis',
     pointsAttention: [
       'Pieds au milieu de la plaque, largeur de hanches.',
