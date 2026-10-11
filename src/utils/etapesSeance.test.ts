@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { Seance } from '../types';
+import type { Exercice, Seance } from '../types';
 import { EXERCICES_PAR_ID } from '../data/exercices';
 import { DUREES_MINUTES, FORMATS, NIVEAUX, PARAMETRES_PAR_DEFAUT } from '../data/parametres';
 import { dureeSerieSec, estimerDureeSec, genererSeance, groupesDeBlocs, secondesParRep } from './generateurSeance';
@@ -21,6 +21,7 @@ import {
   lirePhase,
   pauseAEtirement,
   phasesDeRep,
+  positionBille,
   premierePhase,
 } from './etapesSeance';
 import type { Etape } from './etapesSeance';
@@ -369,6 +370,143 @@ describe('etatMetronome', () => {
       ecouleDansPhaseSec: 1,
       dureePhaseSec: 4,
     });
+  });
+
+  it('tient en haut, muscles serrés, quand la position basse est un repos : la Superman, la bouche d’incendie', () => {
+    const tempo = { monteeSec: 3, descenteSec: 3, pauseSec: 2 };
+    // Superman : on monte, on tient poitrine et jambes décollées, on redescend se poser.
+    const superman = EXERCICES_PAR_ID['kb-superman'];
+    expect([superman.pauseEnHaut, premierePhase(superman)]).toEqual([true, 'monte']);
+    const serie: Etape = {
+      type: 'serie',
+      exerciceId: 'kb-superman',
+      serie: 1,
+      series: 1,
+      reps: 8,
+      dureeSec: dureeSerieSec(superman, 8, tempo),
+    };
+    // La même durée qu'avec l'arrêt en bas : 8 s par répétition.
+    expect(serie.dureeSec).toBe(64);
+    expect(etatMetronome(serie, 1, tempo)).toMatchObject({ rep: 1, phase: 'monte', resteDansPhaseSec: 2 });
+    expect(etatMetronome(serie, 3.5, tempo)).toMatchObject({ rep: 1, phase: 'pause', resteDansPhaseSec: 1.5 });
+    expect(etatMetronome(serie, 5, tempo)).toMatchObject({ rep: 1, phase: 'descend', resteDansPhaseSec: 3 });
+    expect(etatMetronome(serie, 7.5, tempo)).toMatchObject({ rep: 1, phase: 'descend', resteDansPhaseSec: 0.5 });
+    expect(etatMetronome(serie, 8, tempo)).toMatchObject({ rep: 2, phase: 'monte', cycle: 1 });
+    // La série finit posée, sur la dernière descente : jamais « TIENS » à plat.
+    expect(etatMetronome(serie, 63.9, tempo)).toMatchObject({ rep: 8, phase: 'descend' });
+    for (let t = 0; t < serie.dureeSec; t += 0.25) {
+      const { phase } = etatMetronome(serie, t, tempo)!;
+      const dansRep = t % 8;
+      expect(phase === 'pause', `${t} s`).toBe(dansRep >= 3 && dansRep < 5);
+    }
+
+    // Bouche d'incendie, d'un côté puis de l'autre : la pause tient le genou
+    // levé, des deux côtés.
+    const hydrant = EXERCICES_PAR_ID['fire-hydrant'];
+    expect([hydrant.pauseEnHaut, hydrant.cotes]).toEqual([true, 'unilateral']);
+    const cotes: Etape = {
+      type: 'serie',
+      exerciceId: 'fire-hydrant',
+      serie: 1,
+      series: 1,
+      reps: 4,
+      dureeSec: dureeSerieSec(hydrant, 4, tempo),
+    };
+    expect(cotes.dureeSec).toBe(64);
+    expect(etatMetronome(cotes, 4, tempo)).toMatchObject({ rep: 1, cote: 'droit', phase: 'pause' });
+    expect(etatMetronome(cotes, 7, tempo)).toMatchObject({ rep: 1, cote: 'droit', phase: 'descend' });
+    expect(etatMetronome(cotes, 36, tempo)).toMatchObject({ rep: 1, cote: 'gauche', phase: 'pause' });
+    expect(etatMetronome(cotes, 38, tempo)).toMatchObject({ rep: 1, cote: 'gauche', phase: 'descend' });
+  });
+
+  it('découpe la répétition d’un exercice qui tient en haut : la pause suit la montée, quel que soit le départ', () => {
+    const tempo = { monteeSec: 3, descenteSec: 3, pauseSec: 2, pauseEnHaut: true };
+    // Départ d'en bas : on monte, on tient, on redescend.
+    expect(phasesDeRep(tempo, 'monte')).toEqual([
+      { phase: 'monte', dureeSec: 3 },
+      { phase: 'pause', dureeSec: 2 },
+      { phase: 'descend', dureeSec: 3 },
+    ]);
+    // Départ d'en haut : on descend, on remonte, puis on tient en haut avant la suivante.
+    expect(phasesDeRep(tempo, 'descend')).toEqual([
+      { phase: 'descend', dureeSec: 3 },
+      { phase: 'monte', dureeSec: 3 },
+      { phase: 'pause', dureeSec: 2 },
+    ]);
+    expect(lirePhase(tempo, 'monte', 4)).toEqual({ phase: 'pause', ecouleDansPhaseSec: 1, dureePhaseSec: 2 });
+    expect(lirePhase(tempo, 'descend', 7)).toEqual({ phase: 'pause', ecouleDansPhaseSec: 1, dureePhaseSec: 2 });
+    // Sans arrêt dans le tempo, l'ordre reste celui de toujours.
+    expect(phasesDeRep({ monteeSec: 4, descenteSec: 4, pauseEnHaut: true }, 'descend').map((p) => p.phase)).toEqual([
+      'descend',
+      'monte',
+    ]);
+  });
+
+  it('suit toute la chaîne pour un exercice qui part d’en haut et tient en haut : durée, étapes, métronome', () => {
+    // Aucun exercice de la bibliothèque ne part d'en haut en tenant en haut : on
+    // en prête un, le temps du test.
+    const prete: Exercice = { ...EXERCICES_PAR_ID['leg-extension'], id: 'essai-depart-en-haut', premierePhase: 'descend' };
+    expect(prete.pauseEnHaut).toBe(true);
+    const tempo = { monteeSec: 3, descenteSec: 3, pauseSec: 2 };
+    EXERCICES_PAR_ID[prete.id] = prete;
+    try {
+      const seance: Seance = {
+        ...SEANCE,
+        parametres: { ...SEANCE.parametres, format: 'series', tempo },
+        blocs: [{ exerciceId: prete.id, series: 2, reps: 8, reposSec: 30 }],
+        circuit: null,
+      };
+      const etapes = construireEtapes(seance);
+      // La durée annoncée est celle des étapes, et l'arrêt garde sa durée.
+      expect(dureeTotaleSec(etapes)).toBe(estimerDureeSec(seance));
+      const serie = etapes.find((e) => e.type === 'serie')!;
+      expect(serie.dureeSec).toBe(64);
+      expect(etatMetronome(serie, 1, tempo)).toMatchObject({ rep: 1, phase: 'descend' });
+      expect(etatMetronome(serie, 4, tempo)).toMatchObject({ rep: 1, phase: 'monte' });
+      expect(etatMetronome(serie, 7, tempo)).toMatchObject({ rep: 1, phase: 'pause', resteDansPhaseSec: 1 });
+      expect(etatMetronome(serie, 8, tempo)).toMatchObject({ rep: 2, phase: 'descend', cycle: 1 });
+      // La série finit en haut, sur le dernier arrêt.
+      expect(etatMetronome(serie, 63.5, tempo)).toMatchObject({ rep: 8, phase: 'pause' });
+    } finally {
+      delete EXERCICES_PAR_ID[prete.id];
+    }
+  });
+
+  it('pose la bille au pied du rail pour une pause en bas, la garde en haut pour une pause en haut', () => {
+    // Montée : du pied (1) vers le haut (0) ; descente : l'inverse.
+    expect(positionBille('monte', 0)).toBe(1);
+    expect(positionBille('monte', 1)).toBe(0);
+    expect(positionBille('monte', 0.25)).toBe(0.75);
+    expect(positionBille('descend', 0)).toBe(0);
+    expect(positionBille('descend', 1)).toBe(1);
+    expect(positionBille('descend', 0.25)).toBe(0.25);
+    // La pause en bas : au pied du rail, d'un bout à l'autre de la pause.
+    expect(positionBille('pause', 0)).toBe(1);
+    expect(positionBille('pause', 0.5)).toBe(1);
+    // La pause en haut : en haut du rail, là où la montée l'a laissée.
+    expect(positionBille('pause', 0, true)).toBe(0);
+    expect(positionBille('pause', 1, true)).toBe(0);
+    // La montée et la descente ne dépendent pas de l'endroit de la pause.
+    expect(positionBille('monte', 0.25, true)).toBe(0.75);
+    expect(positionBille('descend', 0.25, true)).toBe(0.25);
+    // Hors bornes (arrondi de l'horloge) : la bille reste sur le rail.
+    expect(positionBille('monte', 1.2)).toBe(0);
+    expect(positionBille('descend', -0.1)).toBe(0);
+
+    // La bille d'une Superman, image après image, ne quitte jamais le haut du
+    // rail pendant la pause, et ne s'y pose jamais au pied.
+    const tempo = { monteeSec: 3, descenteSec: 3, pauseSec: 1, pauseEnHaut: true };
+    for (const premiere of ['monte', 'descend'] as const) {
+      let avant: number | null = null;
+      for (let t = 0; t < 7; t += 0.1) {
+        const lecture = lirePhase(tempo, premiere, t);
+        const position = positionBille(lecture.phase, lecture.ecouleDansPhaseSec / lecture.dureePhaseSec, true);
+        if (lecture.phase === 'pause') expect(position, `${premiere} · ${t} s`).toBe(0);
+        // Pas de saut : la bille glisse d'une image à l'autre.
+        if (avant !== null) expect(Math.abs(position - avant), `${premiere} · ${t} s`).toBeLessThan(0.05);
+        avant = position;
+      }
+    }
   });
 
   it('compte les répétitions d’une station au temps et reste muet pour un exercice au temps', () => {
@@ -876,9 +1014,14 @@ describe('l’horloge des séances du programme', () => {
         // Big Max, plus de répétitions, ne trouve jamais sa machine occupée ;
         // Speedy attend au plus qu'il la quitte : la différence de leurs séries.
         expect(max.filter((e) => e.type === 'repos' && e.motif === 'tour' && e.groupe === g), id).toEqual([]);
-        const attente = DUREE_PRET_SEC + serieDe(premier, 10) - (DUREE_PRET_SEC + serieDe(second, 8)) - TRANSITION_LIEN_SEC;
+        // Au tempo du jour : le passage d'une machine à l'autre, ou plus si
+        // Big Max n'a pas fini — l'extension tient jambes tendues à chaque
+        // répétition, et il en fait deux de plus.
+        const serieDuJour = (exerciceId: string, reps: number) =>
+          dureeSerieSec(EXERCICES_PAR_ID[exerciceId], reps, tempoDuJour);
+        const attente = Math.max(TRANSITION_LIEN_SEC, serieDuJour(premier, 10) - serieDuJour(second, 8));
         for (const e of seb.filter((x) => x.type === 'repos' && x.motif === 'tour' && x.groupe === g)) {
-          expect(e.dureeSec, id).toBeLessThanOrEqual(Math.max(0, attente));
+          expect(e.dureeSec, id).toBeLessThanOrEqual(attente);
         }
         // La même horloge, et la durée annoncée est celle des étapes.
         expect(instantsGo(seb)).toEqual(instantsGo(max));

@@ -119,15 +119,17 @@ export const EXERCICES_SALLE: Exercice[] = [
     niveauMin: 1,
     cotes: 'bilateral',
     unite: 'reps',
-    // Les genoux de Big Max : pas d'arrêt genoux pliés sous la charge.
+    // Les genoux de Big Max : pas d'arrêt genoux pliés sous la charge. L'arrêt
+    // se tient jambes tendues, comme le dit l'affiche de la machine.
     sansPauseEnBas: true,
+    pauseEnHaut: true,
     genouAMenager: true,
     position: 'Assis, le dos contre le dossier, le coussin sur le bas des tibias',
     pointsAttention: [
       'Régler le dossier pour que le genou soit dans l’axe de la machine.',
       'Le coussin sur le bas du tibia, juste au-dessus du pied.',
       'Tenir les poignées : les hanches restent collées au siège.',
-      'Monter jusqu’aux jambes tendues sans donner de coup ; on peut tenir une seconde jambes tendues, puis redescendre lentement.',
+      'Monter jusqu’aux jambes tendues sans donner de coup, tenir jambes tendues, puis redescendre lentement.',
       'À cause des genoux : partir pas plus bas que l’angle droit, avec une charge modérée. Si le genou fait mal, réduire l’amplitude.',
     ],
     interetJjb: 'Un genou solide pour la garde et pour se relever.',
@@ -146,6 +148,8 @@ export const EXERCICES_SALLE: Exercice[] = [
     niveauMin: 1,
     cotes: 'bilateral',
     unite: 'reps',
+    // Jambes tendues, la charge se pose : on tient genoux pliés.
+    pauseEnHaut: true,
     position: 'Allongé sur le ventre, les genoux juste au bord du banc, le coussin au-dessus des talons, les mains sur les poignées',
     pointsAttention: [
       'Le genou aligné sur l’axe de la machine, juste au bord du banc.',

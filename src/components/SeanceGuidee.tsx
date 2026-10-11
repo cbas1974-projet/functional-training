@@ -1055,7 +1055,7 @@ function EcranAccueil({
           La bonne charge : les deux dernières répétitions sont dures, la forme reste intacte, et il
           vous en resterait deux. Jamais jusqu’à l’échec.
           {tempo.pauseSec
-            ? ' Pendant la pause en bas, les muscles restent engagés. Les exercices qui fatiguent le dos ou le genou se font sans arrêt en bas.'
+            ? ' Pendant la pause en bas, les muscles restent engagés. Les exercices dont la position basse est un repos — Superman, pont fessier, élévations… — tiennent en haut, muscles serrés. Ceux qui fatiguent le dos ou le genou se font sans arrêt en bas.'
             : ''}
         </p>
 
@@ -1523,12 +1523,15 @@ function Metronome({ metro, exercice, tempo, guideVisuel, lireEcouleSec }: Metro
 
   // Sans arrêt en bas pour certains exercices : la bille ne s'arrête pas au pied
   // du rail, et la répétition est plus courte — comme dans la durée annoncée.
+  // D'autres tiennent en haut : la bille s'arrête en haut du rail, après la
+  // montée, et « TIENS » vient muscles serrés, jamais à plat.
   const tempoExercice = tempoPourExercice(exercice, tempo);
   // Les valeurs dont dépend le placement de la bille, réduites à des nombres :
   // `lire` garde ainsi la même identité d'un rendu à l'autre et la boucle
   // d'animation du paceur n'est pas relancée cinq fois par seconde.
   const { monteeSec, descenteSec } = tempoExercice;
   const pauseSec = tempoExercice.pauseSec ?? 0;
+  const pauseEnHaut = tempoExercice.pauseEnHaut === true;
   const parRep = secondesParRep(tempoExercice);
   const premiere = premierePhase(exercice);
 
@@ -1542,12 +1545,12 @@ function Metronome({ metro, exercice, tempo, guideVisuel, lireEcouleSec }: Metro
     if (parRep <= 0) return null;
     const ecoule = Math.max(0, lireEcouleSec());
     const dansCycle = ecoule - Math.floor(ecoule / parRep) * parRep;
-    const lecture = lirePhase({ monteeSec, descenteSec, pauseSec }, premiere, dansCycle);
+    const lecture = lirePhase({ monteeSec, descenteSec, pauseSec, pauseEnHaut }, premiere, dansCycle);
     return {
       phase: lecture.phase,
       progression: lecture.dureePhaseSec > 0 ? lecture.ecouleDansPhaseSec / lecture.dureePhaseSec : 0,
     };
-  }, [lireEcouleSec, parRep, premiere, monteeSec, descenteSec, pauseSec]);
+  }, [lireEcouleSec, parRep, premiere, monteeSec, descenteSec, pauseSec, pauseEnHaut]);
 
   return (
     <div className="select-none py-2 text-center">
@@ -1562,6 +1565,7 @@ function Metronome({ metro, exercice, tempo, guideVisuel, lireEcouleSec }: Metro
             resteSec={metro.resteDansPhaseSec}
             phase={metro.phase}
             avecChiffre={guideVisuel === 'les-deux'}
+            pauseEnHaut={pauseEnHaut}
             hauteurPx={HAUTEUR_BILLE_PX}
           />
         </div>

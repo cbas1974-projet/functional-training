@@ -366,7 +366,8 @@ export default function Entrainement({ etat, onChange }: EntrainementProps) {
     const exercice = EXERCICES_PAR_ID[bloc.exerciceId];
     const duree = formaterDuree(dureeSerieDuBloc(bloc, tempo));
     const cotes = exercice.cotes === 'unilateral' ? ', droite puis gauche' : '';
-    // Sans arrêt en bas pour certains exercices : le tempo annoncé est le leur.
+    // Sans arrêt en bas, ou arrêt en haut, pour certains exercices : le tempo
+    // annoncé est le leur.
     return `Une série de ${bloc.reps} répétitions à ${libelleTempo(tempoPourExercice(exercice, tempo))}${cotes} dure ${duree}.`;
   }, [seanceCourante]);
 
@@ -544,7 +545,7 @@ export default function Entrainement({ etat, onChange }: EntrainementProps) {
             <>
               <Groupe
                 titre="Tempo"
-                aide="Les exercices qui fatiguent le dos ou le genou se font toujours sans arrêt en bas, quel que soit le tempo."
+                aide="Les exercices qui fatiguent le dos ou le genou se font toujours sans arrêt en bas, quel que soit le tempo ; ceux dont la position basse est un repos (Superman, pont fessier, élévations…) tiennent en haut."
               >
                 <div className="space-y-2">
                   {TEMPOS.map((t) => (

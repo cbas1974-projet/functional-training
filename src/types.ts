@@ -162,6 +162,24 @@ export interface Exercice {
    *  durée annoncée de la séance en tiennent compte : voir
    *  `tempoPourExercice`. */
   sansPauseEnBas?: boolean;
+  /** L'arrêt du tempo se tient en haut, juste après la montée, muscles
+   *  serrés, puis on redescend — au lieu d'en bas, après la descente.
+   *
+   *  La règle : on tient là où le muscle travaille. En bas quand la position
+   *  basse est étirée sous la charge (curl, développé, écarté, rowing,
+   *  mollet sur une marche…) : c'est le cas par défaut. En haut quand la
+   *  position basse est un repos — allongé à plat, jambe posée, haltères qui
+   *  pendent sans rien demander au muscle visé : Superman, bouche d'incendie,
+   *  pont fessier, élévations latérales et frontales, haussements d'épaules,
+   *  crunchs, machines des cuisses… ou quand le mouvement consiste à serrer
+   *  la contraction. Tenir en bas, à plat ou jambe posée, ne travaillerait
+   *  rien.
+   *
+   *  Même durée que l'arrêt en bas : la répétition et la séance gardent leur
+   *  durée. Sur un exercice `sansPauseEnBas`, il redonne un arrêt, en haut
+   *  seulement — l'extension des jambes à la machine se tient jambes tendues,
+   *  jamais genoux pliés. Voir `tempoPourExercice`. */
+  pauseEnHaut?: boolean;
   /** Plie le genou sous charge (squats, fentes, presse…) : on ne descend que
    *  jusqu'où le genou ne fait pas mal. Ajoute une consigne aux points
    *  d'attention (`consignesDe`). */
@@ -180,9 +198,20 @@ export interface Tempo {
   monteeSec: number;
   descenteSec: number;
   /** Arrêt en bas, juste après la descente : la position étirée, d'où l'on
-   *  repart sans élan. Absent ou 0 = pas de pause (c'est le cas de toutes
-   *  les séances enregistrées avant son arrivée). */
+   *  repart sans élan — sauf aux exercices qui tiennent en haut
+   *  (`Exercice.pauseEnHaut`). Absent ou 0 = pas de pause (c'est le cas de
+   *  toutes les séances enregistrées avant son arrivée). */
   pauseSec?: number;
+}
+
+/** Le tempo d'un exercice, tel que le lisent la durée d'une série, les
+ *  étapes, le métronome et la bille (`tempoPourExercice`) : celui de la
+ *  séance, plus l'endroit où se tient l'arrêt. Jamais enregistré : les
+ *  réglages ne portent qu'un `Tempo`. */
+export interface TempoExercice extends Tempo {
+  /** L'arrêt se tient en haut, après la montée ; absent, en bas, après la
+   *  descente. */
+  pauseEnHaut?: boolean;
 }
 
 export interface ParametresSeance {

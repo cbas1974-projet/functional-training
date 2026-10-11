@@ -1,14 +1,15 @@
 // Petits utilitaires de formatage pour l'onglet Entraînement.
 // Ce fichier ne contient volontairement aucun composant (voir la règle
 // ESLint react-refresh/only-export-components sur les fichiers .tsx).
-import type { ParametresSeance, SeanceRealisee, Tempo } from '../types';
+import type { ParametresSeance, SeanceRealisee, Tempo, TempoExercice } from '../types';
 import { OBJECTIFS, ZONES } from '../data/exercices';
 
 /** « 4 s / 4 s », ou « 3 s / 3 s + 2 s en bas » avec une pause : la montée,
- *  la descente, puis l'arrêt en position étirée. */
-export const libelleTempo = (tempo: Tempo): string => {
+ *  la descente, puis l'arrêt en position étirée. Le tempo d'un exercice qui
+ *  tient en haut (`tempoPourExercice`) dit « + 2 s en haut ». */
+export const libelleTempo = (tempo: TempoExercice): string => {
   const base = `${tempo.monteeSec} s / ${tempo.descenteSec} s`;
-  return tempo.pauseSec ? `${base} + ${tempo.pauseSec} s en bas` : base;
+  return tempo.pauseSec ? `${base} + ${tempo.pauseSec} s ${tempo.pauseEnHaut ? 'en haut' : 'en bas'}` : base;
 };
 
 /** Deux tempos identiques, pause comprise. */

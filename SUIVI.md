@@ -19,6 +19,32 @@ Claude, de son côté :
 4. Résume en quelques lignes simples ce qui attend, propose par quoi
    commencer, et attend le feu vert de Sébastien avant les gros changements.
 
+## Séance du 11 octobre 2026
+
+- **Corrigé : « TIENS » au mauvais endroit.** L'arrêt du tempo se tenait
+  toujours en bas, après la descente. Juste pour un curl ou un développé,
+  absurde à la Superman ou à la bouche d'incendie : l'application disait
+  « TIENS » allongé à plat, la jambe posée. Maintenant, **on tient là où le
+  muscle travaille** : en bas quand la position basse est étirée sous la
+  charge, **en haut quand la position basse est un repos**. 37 exercices
+  tiennent désormais en haut, muscles serrés : les Superman, la bouche
+  d'incendie, l'élévation latérale de jambe, la ruade, les ponts fessiers, les
+  élévations latérales et frontales, les haussements d'épaules, les extensions
+  triceps buste penché, les crunchs et relevés, le mollet au sol, les deux
+  machines des cuisses… Le métronome dit MONTE, TIENS, DESCENDS, la bille
+  s'arrête en haut du rail, et la consigne « On tient en haut, muscles
+  serrés » s'affiche avec les autres. L'arrêt change de place, pas de durée :
+  les séances durent autant.
+- **L'extension des jambes à la machine** retrouve un arrêt, jambes tendues,
+  comme le dit l'affiche de la salle — jamais genoux pliés, pour les genoux
+  de Big Max. Sa répétition dure une seconde de plus au tempo par défaut.
+- Trois exercices commencent maintenant par la descente, comme leur position
+  de départ, bras ou cloche en l'air : l'extension triceps à un bras, le
+  moulin à vent et le bûcheron au kettlebell.
+- Restent en bas, exprès : le mollet sur une marche (le talon sous la marche
+  étire le mollet sous la charge), les curls, les rowings, et le rowing
+  vertical (tenu en haut, il pincerait l'épaule).
+
 ## Séance du 10 octobre 2026
 
 - **Deux machines ajoutées**, à la demande de Sébastien : l'**extension des

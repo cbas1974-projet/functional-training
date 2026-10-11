@@ -473,7 +473,7 @@ function FeuilleReglages({
 
       <Groupe
         titre="Tempo des séances"
-        aide="Le nombre d’exercices et le tempo sont les mêmes sur les deux téléphones : ils partent avec le programme. La séance libre garde son tempo à elle. Les exercices qui fatiguent le dos ou le genou se font toujours sans arrêt en bas."
+        aide="Le nombre d’exercices et le tempo sont les mêmes sur les deux téléphones : ils partent avec le programme. La séance libre garde son tempo à elle. Les exercices qui fatiguent le dos ou le genou se font toujours sans arrêt en bas ; ceux dont la position basse est un repos (Superman, pont fessier, élévations…) tiennent en haut."
       >
         <div className="space-y-2">
           {TEMPOS.map((t) => (

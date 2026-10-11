@@ -1294,6 +1294,14 @@ describe('les précautions : arrêt en bas', () => {
   it('n’a plus d’arrêt en bas pour ces exercices, quel que soit le tempo ; les autres gardent le leur', () => {
     for (const id of [...POUR_LE_DOS, ...POUR_LES_GENOUX]) {
       const e = EXERCICES_PAR_ID[id];
+      // L'extension des jambes à la machine tient jambes tendues : son arrêt
+      // passe en haut, jamais genoux pliés.
+      if (id === 'leg-extension-machine') {
+        expect(e.pauseEnHaut, id).toBe(true);
+        expect(tempoPourExercice(e, tempoAvecPause), id).toEqual({ ...tempoAvecPause, pauseEnHaut: true });
+        expect(secondesParRep(tempoAvecPause, e), id).toBe(8);
+        continue;
+      }
       expect(tempoPourExercice(e, tempoAvecPause), id).toEqual({ monteeSec: 3, descenteSec: 3, pauseSec: 0 });
       expect(secondesParRep(tempoAvecPause, e), id).toBe(6);
     }
@@ -1325,9 +1333,19 @@ describe('les précautions : arrêt en bas', () => {
               const fin = etatMetronome(etape, etape.dureeSec - 0.001, seance.parametres.tempo)!;
               expect(fin.cycle, cas).toBe(cycles - 1);
               // … et sans arrêt en bas, la bille ne se pose jamais : pas de phase de pause.
-              if (exercice.sansPauseEnBas) {
+              if (exercice.sansPauseEnBas && !exercice.pauseEnHaut) {
                 for (let t = 0; t < etape.dureeSec; t += 0.5) {
                   expect(etatMetronome(etape, t, seance.parametres.tempo)!.phase, `${cas} · ${t} s`).not.toBe('pause');
+                }
+              }
+              // Un exercice qui tient en haut ne tient jamais en bas : la pause
+              // suit toujours la montée, jamais la descente.
+              if (exercice.pauseEnHaut) {
+                let avant = '';
+                for (let t = 0; t < etape.dureeSec; t += 0.5) {
+                  const phase = etatMetronome(etape, t, seance.parametres.tempo)!.phase;
+                  if (phase === 'pause') expect(avant, `${cas} · ${t} s`).not.toBe('descend');
+                  avant = phase;
                 }
               }
             }
@@ -1351,7 +1369,7 @@ describe('les précautions : arrêt en bas', () => {
     const etapes = construireEtapes(seancePourPersonne(lundiAvecSquat, PARAMETRES, SEUL_SEB, LUNDI));
     const series = etapes.filter((e) => e.type === 'serie');
     // Au tempo du programme (3 s / 3 s + 1 s en bas) : 8 répétitions de 6 s au squat,
-    // de 7 s à la flexion des jambes, qui garde son arrêt.
+    // de 7 s à la flexion des jambes, qui garde son arrêt — en haut, genoux pliés.
     expect(series.filter((e) => e.exerciceId === 'squat').every((e) => e.dureeSec === 48)).toBe(true);
     expect(series.filter((e) => e.exerciceId === 'hamstring-curl').every((e) => e.dureeSec === 56)).toBe(true);
   });

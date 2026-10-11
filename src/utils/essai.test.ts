@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { ParametresSeance, Seance, SeanceDuMois } from '../types';
 import { PARAMETRES_PAR_DEFAUT } from '../data/parametres';
-import { INSTALLATION_SEC, construireEtapes, dureeTotaleSec } from './etapesSeance';
+import { INSTALLATION_SEC, construireEtapes, dureeTotaleSec, etatMetronome } from './etapesSeance';
 import type { Etape } from './etapesSeance';
 import { appliquer } from './etatCommun';
 import type { EtatCommun } from './etatCommun';
@@ -237,6 +237,24 @@ describe('raccourcirPourEssai', () => {
         const courte = essai(s, contexte);
         expect(courte.dureeEstimeeSec).toBe(duree(courte));
       }
+    }
+  });
+
+  it('garde l’arrêt là où l’exercice le tient : en haut pour la Superman, de la même durée', () => {
+    for (const contexte of CONTEXTES) {
+      const courte = essai(LUNDI_PAIRES, contexte);
+      const tempo = courte.parametres.tempo;
+      const { monteeSec, descenteSec } = tempo;
+      const pauseSec = tempo.pauseSec ?? 0;
+      expect(pauseSec).toBeGreaterThan(0);
+      const serie = construireEtapes(courte).find(
+        (e): e is Extract<Etape, { type: 'serie' }> => e.type === 'serie' && e.exerciceId === 'kb-superman',
+      )!;
+      expect(serie.dureeSec).toBe(serie.reps * (monteeSec + descenteSec + pauseSec));
+      // On monte, on tient poitrine et jambes décollées, on redescend se poser.
+      expect(etatMetronome(serie, monteeSec / 2, tempo)?.phase).toBe('monte');
+      expect(etatMetronome(serie, monteeSec + pauseSec / 2, tempo)?.phase).toBe('pause');
+      expect(etatMetronome(serie, monteeSec + pauseSec + descenteSec / 2, tempo)?.phase).toBe('descend');
     }
   });
 

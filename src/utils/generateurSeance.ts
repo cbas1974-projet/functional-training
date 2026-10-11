@@ -20,6 +20,7 @@ import type {
   ParametresSeance,
   Seance,
   Tempo,
+  TempoExercice,
   Zone,
 } from '../types';
 
@@ -420,21 +421,35 @@ function retourCalmeAllonge(
   return Math.max(retourCalmeInitialSec, Math.min(plafond, vise));
 }
 
-/** Le tempo d'un exercice : celui de la séance, sauf que les exercices marqués
- *  « sans arrêt en bas » (`sansPauseEnBas`) n'ont jamais de pause en bas, quel
- *  que soit le tempo choisi. C'est ce tempo-là que lisent la durée d'une série,
- *  les étapes de la séance guidée, le métronome et la bille : ils comptent la
- *  même répétition, donc la durée annoncée reste exactement celle de la
- *  séance. La règle ne dépend pas de la personne — les deux téléphones font les
- *  mêmes répétitions, à la même horloge. */
-export function tempoPourExercice(exercice: Pick<Exercice, 'sansPauseEnBas'>, tempo: Tempo): Tempo {
-  if (!exercice.sansPauseEnBas || !tempo.pauseSec) return tempo;
-  return { ...tempo, pauseSec: 0 };
+/** Le tempo d'un exercice : celui de la séance, avec deux exceptions, quel que
+ *  soit le tempo choisi.
+ *  - Les exercices qui tiennent en haut (`pauseEnHaut` : Superman, bouche
+ *    d'incendie, pont fessier, élévations…) gardent l'arrêt, de la même durée,
+ *    mais après la montée, muscles serrés : la position basse est un repos.
+ *  - Les exercices marqués « sans arrêt en bas » (`sansPauseEnBas`) n'ont pas
+ *    d'arrêt du tout — sauf s'ils tiennent aussi en haut, comme l'extension des
+ *    jambes à la machine, jambes tendues.
+ *  C'est ce tempo-là que lisent la durée d'une série, les étapes de la séance
+ *  guidée, le métronome et la bille : ils comptent la même répétition, dans le
+ *  même ordre, donc la durée annoncée reste exactement celle de la séance. La
+ *  règle ne dépend pas de la personne — les deux téléphones font les mêmes
+ *  répétitions, à la même horloge. */
+export function tempoPourExercice(
+  exercice: Pick<Exercice, 'sansPauseEnBas' | 'pauseEnHaut'>,
+  tempo: Tempo,
+): TempoExercice {
+  if (!tempo.pauseSec) return tempo;
+  if (exercice.pauseEnHaut) return { ...tempo, pauseEnHaut: true };
+  if (exercice.sansPauseEnBas) return { ...tempo, pauseSec: 0 };
+  return tempo;
 }
 
-/** Secondes par répétition au tempo donné (montée + descente + pause en bas).
- *  Avec l'exercice, l'arrêt en bas vaut 0 s'il n'en a pas. */
-export function secondesParRep(tempo: Tempo, exercice?: Pick<Exercice, 'sansPauseEnBas'>): number {
+/** Secondes par répétition au tempo donné (montée + descente + arrêt, en bas
+ *  ou en haut). Avec l'exercice, l'arrêt vaut 0 s'il n'en a pas. */
+export function secondesParRep(
+  tempo: Tempo,
+  exercice?: Pick<Exercice, 'sansPauseEnBas' | 'pauseEnHaut'>,
+): number {
   const { monteeSec, descenteSec, pauseSec } = exercice ? tempoPourExercice(exercice, tempo) : tempo;
   return monteeSec + descenteSec + (pauseSec ?? 0);
 }

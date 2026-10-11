@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react';
+import { positionBille } from '../utils/etapesSeance';
 import type { PhaseTempo } from '../utils/etapesSeance';
 
 /** Ce que le paceur lit à chaque image pour placer la bille. `progression`
@@ -20,6 +21,9 @@ export interface PaceurTempoProps {
   phase: PhaseTempo;
   /** Inscrire le décompte dans la bille. */
   avecChiffre: boolean;
+  /** L'exercice tient en haut (`pauseEnHaut`) : pendant la pause, la bille
+   *  reste en haut du rail au lieu de se poser au pied. */
+  pauseEnHaut?: boolean;
   hauteurPx?: number;
 }
 
@@ -34,6 +38,7 @@ export default function PaceurTempo({
   resteSec,
   phase,
   avecChiffre,
+  pauseEnHaut = false,
   hauteurPx = 300,
 }: PaceurTempoProps) {
   const billeRef = useRef<HTMLDivElement>(null);
@@ -55,17 +60,18 @@ export default function PaceurTempo({
         if (crans > 0) p = Math.round(p * crans) / crans;
         // Le haut du rail est la fin de la montée : on descend l'objet
         // d'autant plus que la montée commence. La pause se tient en bas,
-        // là où la descente a laissé la bille. Un exercice sans arrêt en bas
+        // là où la descente a laissé la bille — en haut, là où la montée l'a
+        // laissée, aux exercices qui tiennent en haut. Un exercice sans arrêt
         // n'a pas de phase de pause (`tempoPourExercice`) : la bille repart
         // aussitôt, sans se poser au pied du rail.
-        const fraction = lecture.phase === 'monte' ? 1 - p : lecture.phase === 'pause' ? 1 : p;
+        const fraction = positionBille(lecture.phase, p, pauseEnHaut);
         bille.style.transform = `translateY(${(fraction * course).toFixed(2)}px)`;
       }
       image = requestAnimationFrame(placer);
     };
     image = requestAnimationFrame(placer);
     return () => cancelAnimationFrame(image);
-  }, [lire, course]);
+  }, [lire, course, pauseEnHaut]);
 
   const couleur =
     phase === 'monte' ? 'var(--montee)' : phase === 'pause' ? 'var(--tenue)' : 'var(--descente)';

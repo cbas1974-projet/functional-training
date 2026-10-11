@@ -91,6 +91,8 @@ export const EXERCICES: Exercice[] = [
     niveauMin: 1,
     cotes: 'bilateral',
     unite: 'reps',
+    // Avant-bras pendant, le triceps ne porte rien : on tient bras tendu.
+    pauseEnHaut: true,
     position: 'Debout, buste penché',
     pointsAttention: [
       'Dos plat, genoux légèrement fléchis, regard vers le sol.',
@@ -136,6 +138,8 @@ export const EXERCICES: Exercice[] = [
     niveauMin: 1,
     cotes: 'alterne',
     unite: 'reps',
+    // Bras le long du corps, l'épaule ne porte rien : on tient bras levé.
+    pauseEnHaut: true,
     position: 'Debout',
     pointsAttention: [
       'Bras presque tendu, monter jusqu’à hauteur d’épaule, pas plus haut.',
@@ -158,6 +162,8 @@ export const EXERCICES: Exercice[] = [
     niveauMin: 1,
     cotes: 'bilateral',
     unite: 'reps',
+    // Bras le long du corps, l'épaule ne porte rien : on tient bras à l'horizontale.
+    pauseEnHaut: true,
     position: 'Debout',
     pointsAttention: [
       'Coudes légèrement fléchis et fixes pendant tout le mouvement.',
@@ -203,6 +209,8 @@ export const EXERCICES: Exercice[] = [
     niveauMin: 1,
     cotes: 'bilateral',
     unite: 'reps',
+    // Le mouvement consiste à serrer les trapèzes : on tient épaules hautes.
+    pauseEnHaut: true,
     position: 'Debout',
     pointsAttention: [
       'Bras tendus le long du corps, haltères lourds.',
@@ -435,6 +443,8 @@ export const EXERCICES: Exercice[] = [
     niveauMin: 2,
     cotes: 'bilateral',
     unite: 'reps',
+    // Allongé à plat, le ventre se repose : on tient le V.
+    pauseEnHaut: true,
     position: 'Allongé sur le dos',
     pointsAttention: [
       'Haltère tenu à deux mains, bras tendus derrière la tête au départ.',
@@ -526,6 +536,8 @@ export const EXERCICES: Exercice[] = [
     niveauMin: 1,
     cotes: 'bilateral',
     unite: 'reps',
+    // Allongé sur le ventre, haltères au sol : on tient bras levés.
+    pauseEnHaut: true,
     position: 'Allongé sur le ventre',
     pointsAttention: [
       'Bras en croix, pouces vers le plafond, front proche du sol.',
@@ -549,6 +561,8 @@ export const EXERCICES: Exercice[] = [
     niveauMin: 3,
     cotes: 'alterne',
     unite: 'reps',
+    // En bas, l'haltère est posé au sol : on tient le tirage.
+    pauseEnHaut: true,
     position: 'Planche haute, mains sur les haltères',
     pointsAttention: [
       'Pieds écartés pour la stabilité, haltères bien stables au sol.',
@@ -723,6 +737,8 @@ export const EXERCICES: Exercice[] = [
     niveauMin: 1,
     cotes: 'bilateral',
     unite: 'reps',
+    // En bas, les fesses sont posées au sol : on tient hanches hautes.
+    pauseEnHaut: true,
     position: 'Allongé sur le dos',
     pointsAttention: [
       'Haltère posé sur les hanches, tenu à deux mains.',
@@ -820,6 +836,8 @@ export const EXERCICES: Exercice[] = [
     niveauMin: 1,
     cotes: 'bilateral',
     unite: 'reps',
+    // Au sol, les talons sont posés en bas : on tient sur la pointe des pieds.
+    pauseEnHaut: true,
     position: 'Debout',
     pointsAttention: [
       'Monter le plus haut possible sur la pointe des pieds.',
@@ -845,6 +863,8 @@ export const EXERCICES: Exercice[] = [
     niveauMin: 3,
     cotes: 'alterne',
     unite: 'reps',
+    // En bas, l'haltère est posé au sol : on tient le T, bras vers le plafond.
+    pauseEnHaut: true,
     position: 'Planche haute, mains sur les haltères',
     pointsAttention: [
       'Départ en planche haute, corps aligné, hanches hautes.',
@@ -1035,6 +1055,8 @@ export const EXERCICES: Exercice[] = [
     niveauMin: 1,
     cotes: 'bilateral',
     unite: 'reps',
+    // Avant-bras devant soi, rien ne travaille : on tient ouvert, omoplates serrées.
+    pauseEnHaut: true,
     position: 'Debout',
     pointsAttention: [
       'Coudes serrés contre les côtes, pliés à angle droit, et ils y restent.',
@@ -1126,6 +1148,8 @@ export const EXERCICES: Exercice[] = [
     niveauMin: 2,
     cotes: 'bilateral',
     unite: 'reps',
+    // Bras le long du corps, l'épaule ne porte rien : on tient le L.
+    pauseEnHaut: true,
     position: 'Debout',
     pointsAttention: [
       'Un bras monte devant, l’autre sur le côté, en même temps : les deux dessinent un L.',
@@ -1147,6 +1171,8 @@ export const EXERCICES: Exercice[] = [
     niveauMin: 1,
     cotes: 'unilateral',
     unite: 'reps',
+    // Part bras tendu au-dessus de la tête : la répétition commence en descendant.
+    premierePhase: 'descend',
     position: 'Debout, bras tendu au-dessus de la tête',
     pointsAttention: [
       'Le coude reste haut et pointé vers le plafond, immobile.',
@@ -1169,6 +1195,8 @@ export const EXERCICES: Exercice[] = [
     niveauMin: 1,
     cotes: 'unilateral',
     unite: 'reps',
+    // Bras le long du corps, l'épaule ne porte rien : on tient bras à l'horizontale.
+    pauseEnHaut: true,
     position: 'Debout, main libre en appui sur un montant',
     pointsAttention: [
       'Se tenir à un support et s’incliner légèrement à l’opposé : l’amplitude augmente.',
@@ -1284,6 +1312,8 @@ export const EXERCICES: Exercice[] = [
     niveauMin: 3,
     cotes: 'bilateral',
     unite: 'reps',
+    // Jambes pendantes, le ventre ne porte rien : on tient jambes levées.
+    pauseEnHaut: true,
     position: 'Suspendu à une barre',
     pointsAttention: [
       'Haltère tenu entre les pieds : commencer sans charge avant d’en ajouter.',
@@ -1422,6 +1452,8 @@ export const EXERCICES: Exercice[] = [
     niveauMin: 2,
     cotes: 'unilateral',
     unite: 'reps',
+    // L'arrêt reste en bas : tenu en haut, coude à hauteur d'épaule, il
+    // pincerait l'épaule.
     position: 'Debout',
     pointsAttention: [
       'Le coude mène le mouvement et reste plus haut que la main.',
@@ -1466,6 +1498,8 @@ export const EXERCICES: Exercice[] = [
     niveauMin: 2,
     cotes: 'bilateral',
     unite: 'reps',
+    // L'arrêt reste en bas : tenu en haut, coudes à hauteur d'épaule, il
+    // pincerait l'épaule.
     position: 'Debout',
     pointsAttention: [
       'Haltères proches du corps, coudes qui montent en premier.',
@@ -1565,6 +1599,8 @@ export const EXERCICES: Exercice[] = [
     niveauMin: 1,
     cotes: 'unilateral',
     unite: 'reps',
+    // En bas, le genou est sous la hanche, au repos : on tient le talon haut.
+    pauseEnHaut: true,
     position: 'À quatre pattes',
     pointsAttention: [
       'Haltère coincé au creux du genou plié, jambe à angle droit.',
@@ -1610,6 +1646,8 @@ export const EXERCICES: Exercice[] = [
     niveauMin: 1,
     cotes: 'unilateral',
     unite: 'reps',
+    // En bas, le genou est posé : on tient la hanche ouverte, genou levé.
+    pauseEnHaut: true,
     position: 'À quatre pattes',
     pointsAttention: [
       'Ouvrir la hanche sur le côté, genou plié, haltère au creux du genou.',
@@ -1633,6 +1671,8 @@ export const EXERCICES: Exercice[] = [
     niveauMin: 1,
     cotes: 'bilateral',
     unite: 'reps',
+    // En bas, les fesses sont posées au sol : on tient hanches hautes.
+    pauseEnHaut: true,
     position: 'Allongé sur le dos, plantes de pieds jointes',
     pointsAttention: [
       'Plantes de pieds collées l’une à l’autre, genoux ouverts : le fessier travaille seul.',
@@ -1654,6 +1694,8 @@ export const EXERCICES: Exercice[] = [
     niveauMin: 2,
     cotes: 'bilateral',
     unite: 'reps',
+    // En bas, les jambes sont posées sur le banc : on tient genoux pliés.
+    pauseEnHaut: true,
     position: 'Allongé sur le ventre sur un banc',
     pointsAttention: [
       'Haltère tenu entre les pieds : vérifier qu’il est bien coincé avant de commencer.',
@@ -1675,6 +1717,8 @@ export const EXERCICES: Exercice[] = [
     niveauMin: 2,
     cotes: 'bilateral',
     unite: 'reps',
+    // Tibias à la verticale, l'haltère pend sans peser : on tient jambes tendues.
+    pauseEnHaut: true,
     position: 'Assis au bord d’un banc',
     pointsAttention: [
       'Haltère tenu entre les pieds, mains en appui sur le banc.',
@@ -1896,15 +1940,20 @@ export const OBJECTIFS: { id: Objectif; nom: string; description: string }[] = [
 export const CONSIGNE_SANS_PAUSE = 'Sans arrêt en bas : on descend contrôlé, on remonte sans rebond';
 /** Celle des exercices marqués `genouAMenager`, en plus de la précédente. */
 export const CONSIGNE_GENOU = 'On descend seulement jusqu’où le genou ne fait pas mal';
+/** Celle des exercices marqués `pauseEnHaut` : l'arrêt du tempo se tient après
+ *  la montée, là où le muscle travaille, jamais à plat ou jambe posée. */
+export const CONSIGNE_PAUSE_EN_HAUT = 'On tient en haut, muscles serrés';
 
 /** Les consignes d'un exercice, telles qu'on les affiche partout (séance
- *  guidée, image en grand, bibliothèque, séance libre) : celles de précaution
- *  d'abord — pas d'arrêt en bas, le genou —, puis ses points d'attention. */
+ *  guidée, image en grand, bibliothèque, séance libre) : celles du tempo et
+ *  de précaution d'abord — pas d'arrêt en bas, l'arrêt en haut, le genou —,
+ *  puis ses points d'attention. */
 export function consignesDe(
-  exercice: Pick<Exercice, 'pointsAttention' | 'sansPauseEnBas' | 'genouAMenager'>,
+  exercice: Pick<Exercice, 'pointsAttention' | 'sansPauseEnBas' | 'pauseEnHaut' | 'genouAMenager'>,
 ): string[] {
   return [
     ...(exercice.sansPauseEnBas ? [CONSIGNE_SANS_PAUSE] : []),
+    ...(exercice.pauseEnHaut ? [CONSIGNE_PAUSE_EN_HAUT] : []),
     ...(exercice.genouAMenager ? [CONSIGNE_GENOU] : []),
     ...exercice.pointsAttention,
   ];

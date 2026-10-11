@@ -17,9 +17,9 @@ export class BellSound {
     }
   }
 
-  // Bip court pour guider le tempo (montée / descente / pause en bas) ou
-  // annoncer le départ. La pause sonne plus grave que la descente : on est
-  // au plus bas du mouvement.
+  // Bip court pour guider le tempo (montée / descente / pause) ou annoncer le
+  // départ. La pause sonne plus grave que la descente : c'est l'arrêt, le même
+  // son qu'on tienne en bas ou en haut (`pauseEnHaut`).
   playTick(type: 'monte' | 'descend' | 'pause' | 'pret' = 'pret'): void {
     const now = this.audioContext.currentTime;
     const frequence =

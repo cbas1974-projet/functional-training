@@ -8,6 +8,7 @@ import type {
   Seance,
   SeanceRealisee,
   Tempo,
+  TempoExercice,
 } from '../types';
 import { EXERCICES_PAR_ID } from '../data/exercices';
 import {
@@ -27,7 +28,9 @@ export { DUREE_PRET_SEC };
 export type SensTempo = 'monte' | 'descend';
 
 /** Phase d'une répétition. La pause se tient en bas, juste après la
- *  descente : c'est la position étirée, d'où l'on repart sans élan. */
+ *  descente : c'est la position étirée, d'où l'on repart sans élan — sauf
+ *  aux exercices qui tiennent en haut (`pauseEnHaut`), où elle suit la
+ *  montée, muscles serrés. */
 export type PhaseTempo = SensTempo | 'pause';
 
 /** Travail annoncé après une préparation ou un repos. */
@@ -173,24 +176,33 @@ export function premierePhase(exercice: Pick<Exercice, 'premierePhase'>): SensTe
 }
 
 /** Les phases d'une répétition, dans l'ordre, avec leur durée. La pause suit
- *  toujours la descente : un squat descend, tient, puis remonte ; un curl
- *  monte, redescend, puis tient bras tendus avant la répétition suivante.
- *  Une phase de durée nulle n'existe pas. */
+ *  la descente — un développé couché descend, tient, puis remonte ; un curl
+ *  monte, redescend, puis tient bras tendus avant la répétition suivante —,
+ *  sauf quand l'arrêt se tient en haut (`pauseEnHaut`) : alors elle suit la
+ *  montée. Une Superman monte, tient, puis redescend se poser ; un exercice
+ *  qui part d'en haut descend, remonte, puis tient en haut avant la
+ *  répétition suivante. Une phase de durée nulle n'existe pas. */
 export function phasesDeRep(
-  tempo: Tempo,
+  tempo: TempoExercice,
   premiere: SensTempo,
 ): { phase: PhaseTempo; dureeSec: number }[] {
   const descente = { phase: 'descend' as const, dureeSec: tempo.descenteSec };
   const pause = { phase: 'pause' as const, dureeSec: tempo.pauseSec ?? 0 };
   const montee = { phase: 'monte' as const, dureeSec: tempo.monteeSec };
-  const ordre = premiere === 'descend' ? [descente, pause, montee] : [montee, descente, pause];
+  const ordre = tempo.pauseEnHaut
+    ? premiere === 'descend'
+      ? [descente, montee, pause]
+      : [montee, pause, descente]
+    : premiere === 'descend'
+      ? [descente, pause, montee]
+      : [montee, descente, pause];
   return ordre.filter((p) => p.dureeSec > 0);
 }
 
 /** Phase en cours `dansRepSec` secondes après le début d'une répétition.
  *  Le métronome, les bips et la bille lisent tous ce même découpage : ils
  *  basculent donc au même instant. */
-export function lirePhase(tempo: Tempo, premiere: SensTempo, dansRepSec: number): LecturePhase {
+export function lirePhase(tempo: TempoExercice, premiere: SensTempo, dansRepSec: number): LecturePhase {
   const phases = phasesDeRep(tempo, premiere);
   let debut = 0;
   for (const { phase, dureeSec } of phases) {
@@ -203,6 +215,18 @@ export function lirePhase(tempo: Tempo, premiere: SensTempo, dansRepSec: number)
   const derniere = phases[phases.length - 1];
   if (!derniere) return { phase: premiere, ecouleDansPhaseSec: 0, dureePhaseSec: 0 };
   return { phase: derniere.phase, ecouleDansPhaseSec: derniere.dureeSec, dureePhaseSec: derniere.dureeSec };
+}
+
+/** Où se trouve la bille sur son rail, de 0 (en haut) à 1 (au pied), à
+ *  `progression` (de 0 à 1) de la phase. Elle monte pendant la montée,
+ *  descend pendant la descente, et pendant la pause elle reste là où la phase
+ *  d'avant l'a laissée : au pied du rail après la descente, en haut après la
+ *  montée quand l'exercice tient en haut (`pauseEnHaut`). */
+export function positionBille(phase: PhaseTempo, progression: number, pauseEnHaut = false): number {
+  const p = Math.min(1, Math.max(0, progression));
+  if (phase === 'monte') return 1 - p;
+  if (phase === 'descend') return p;
+  return pauseEnHaut ? 0 : 1;
 }
 
 // ------------------------------------------------------------- Étapes
@@ -677,9 +701,10 @@ export function etatMetronome(etape: Etape, ecouleSec: number, tempo: Tempo): Et
   const exercice = exerciceDeSeance(etape.exerciceId);
   if (exercice.unite === 'secondes') return null;
 
-  // Un exercice sans arrêt en bas compte une répétition plus courte : c'est le
-  // même tempo que celui des durées (`dureeSerieSec`), pour que la bille, les
-  // bips et la durée de l'étape ne se contredisent jamais.
+  // Un exercice sans arrêt en bas compte une répétition plus courte, un
+  // exercice qui tient en haut place l'arrêt après la montée : c'est le même
+  // tempo que celui des durées (`dureeSerieSec`), pour que la bille, les bips
+  // et la durée de l'étape ne se contredisent jamais.
   const tempoExercice = tempoPourExercice(exercice, tempo);
   const parRep = secondesParRep(tempoExercice);
   if (parRep <= 0) return null;

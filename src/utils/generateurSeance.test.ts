@@ -732,6 +732,34 @@ describe('durée d’une série', () => {
     expect(tempoPourExercice(EXERCICES_PAR_ID['hammer-curl'], avecPause)).toBe(avecPause);
   });
 
+  it('tient en haut les exercices dont la position basse est un repos, sans changer leur durée', () => {
+    const avecPause = { monteeSec: 3, descenteSec: 3, pauseSec: 2 };
+    // La Superman, la bouche d'incendie, le pont fessier, l'élévation latérale :
+    // le même arrêt, de la même durée, mais après la montée.
+    for (const id of ['kb-superman', 'fire-hydrant', 'glute-bridge', 'side-raise']) {
+      const exercice = EXERCICES_PAR_ID[id];
+      expect(exercice.pauseEnHaut, id).toBe(true);
+      expect(tempoPourExercice(exercice, avecPause), id).toEqual({ ...avecPause, pauseEnHaut: true });
+      expect(secondesParRep(avecPause, exercice), id).toBe(8);
+    }
+    // Les durées ne bougent pas : 8 s par répétition, de chaque côté pour un unilatéral.
+    expect(dureeSerieSec(EXERCICES_PAR_ID['kb-superman'], 8, avecPause)).toBe(64);
+    expect(dureeSerieSec(EXERCICES_PAR_ID['fire-hydrant'], 8, avecPause)).toBe(128);
+    for (const exercice of Object.values(EXERCICES_PAR_ID).filter((e) => e.pauseEnHaut && !e.sansPauseEnBas)) {
+      for (const tempo of [avecPause, PARAMETRES_PAR_DEFAUT.tempo, { monteeSec: 4, descenteSec: 4 }]) {
+        expect(secondesParRep(tempo, exercice), exercice.id).toBe(secondesParRep(tempo));
+      }
+    }
+    // Sans arrêt dans le tempo, il n'y a rien à tenir, ni en bas ni en haut.
+    const sansArret = { monteeSec: 4, descenteSec: 4 };
+    expect(tempoPourExercice(EXERCICES_PAR_ID['kb-superman'], sansArret)).toBe(sansArret);
+    // L'extension des jambes à la machine, sans arrêt genoux pliés, tient
+    // jambes tendues : son arrêt revient, en haut.
+    const extension = EXERCICES_PAR_ID['leg-extension-machine'];
+    expect(tempoPourExercice(extension, avecPause)).toEqual({ ...avecPause, pauseEnHaut: true });
+    expect(dureeSerieSec(extension, 8, avecPause)).toBe(64);
+  });
+
   it('annonce, dans la séance libre, la durée d’une série sans arrêt en bas', () => {
     // Un bloc de squats, un bloc de curls : la durée de la séance les compte chacun à leur tempo.
     const seance: Seance = {

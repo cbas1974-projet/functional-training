@@ -51,7 +51,8 @@ du dos, épaules, extérieur et intérieur de cuisse. Rien à taper.
   chaque paire s'installe avant « Go »). Quatre exercices, environ 50 minutes ;
   huit, 1 h 20 ; dix, 1 h 35 et jusqu'à 1 h 45. Les exercices du dos et des
   genoux, sans arrêt en bas, comptent une répétition plus courte (une seconde
-  de moins au tempo par défaut).
+  de moins au tempo par défaut) — sauf l'extension des jambes à la machine,
+  qui tient jambes tendues.
   L'application ne retire plus d'exercice pour tenir dans l'heure : elle prend
   le nombre choisi, les objectifs d'abord. Seul garde-fou : une séance qui
   passerait deux heures et demie perdrait ses dernières paires.
@@ -110,7 +111,27 @@ du dos, épaules, extérieur et intérieur de cuisse. Rien à taper.
   seulement jusqu'où le genou ne fait pas mal ». Elles s'affichent avec les
   autres consignes de l'exercice, dans la séance guidée, l'image en grand, la
   bibliothèque et la séance libre. La liste est dans les données des exercices
-  (`sansPauseEnBas`, `genouAMenager`).
+  (`sansPauseEnBas`, `genouAMenager`). L'extension des jambes à la machine
+  garde un arrêt, mais en haut, jambes tendues, comme le dit l'affiche de la
+  salle : jamais genoux pliés.
+- **Tenu en haut** quand la position basse est un repos. La règle : **on
+  tient là où le muscle travaille** — en bas quand la position basse est
+  étirée sous la charge (curls, développés, écartés, rowings, mollet sur une
+  marche), en haut quand la position basse est un repos : allongé à plat,
+  jambe posée, bras qui pendent sans rien demander au muscle visé. Tenir
+  « TIENS » allongé à plat à la Superman, ou la jambe posée à la bouche
+  d'incendie, ne travaillerait rien. Tiennent en haut, muscles serrés : les
+  Superman et l'élévation en T au sol ; la bouche d'incendie, la ruade,
+  l'élévation latérale de jambe et les ponts fessiers ; les élévations
+  latérales et frontales, la rotation externe et le haussement d'épaules ; les
+  extensions triceps buste penché ; les deux machines des cuisses et leurs
+  versions à l'haltère ; le mollet au sol ; les tirages en planche ; les
+  exercices du ventre allongé, pendu ou debout bras en l'air (V-up, crunchs,
+  relevés, relevé turc). Le métronome dit MONTE, TIENS, DESCENDS ; la bille
+  s'arrête en haut du rail ; le tempo affiché pendant la série dit « + 1 s en
+  haut » ; la consigne « On tient en haut, muscles serrés » s'affiche avec les
+  autres. L'arrêt change de place, pas de durée : la répétition et la séance
+  durent autant. La liste est dans les données des exercices (`pauseEnHaut`).
 - **Mis de côté, pour les deux**, tant que la jambe de Speedy n'a pas été
   examinée par un professionnel : elle lui donne parfois l'impression de
   « lâcher », ses bandelettes ilio-tibiales sont fragiles et son bas du dos
@@ -322,9 +343,11 @@ enregistré » — reste affiché du début à la fin.
   tenable.
 - **Tempo** : 3 s / 3 s **+ 1 s en bas** recommandé — la seconde en bas casse
   le rebond, et l'on repart sans élan (sauf aux exercices du dos et des genoux,
-  qui n'ont jamais d'arrêt en bas). 3 s / 3 s + 2 s en bas, 4 s / 4 s,
-  4 s / 4 s + 2 s en bas, 3 s / 3 s, 5 s / 5 s et 2 s / 4 s restent
-  disponibles.
+  qui n'ont jamais d'arrêt en bas, et à ceux dont la position basse est un
+  repos, qui tiennent cette seconde en haut). 3 s / 3 s + 2 s en bas,
+  4 s / 4 s, 4 s / 4 s + 2 s en bas, 3 s / 3 s, 5 s / 5 s et 2 s / 4 s restent
+  disponibles. Les libellés disent « en bas », le cas général ; pendant la
+  série, un exercice qui tient en haut affiche « + 1 s en haut ».
 - **Séries par exercice** (3 par défaut) et **répétitions par série**
   (8 par défaut). L'application ajuste le nombre d'exercices pour tenir dans
   la durée demandée, et revient au calcul automatique si le réglage ne tient
@@ -426,6 +449,15 @@ position basse fatigue le dos ou le genou — soulevés de terre, rowings
 penchés, squats, fentes —, on la supprime d'office : ces exercices se font
 sans arrêt en bas.
 
+**On tient là où le muscle travaille.** En bas, c'est la position étirée sous
+la charge — mais seulement quand la position basse en est une. Allongé à plat
+à la Superman, genou posé à la bouche d'incendie, bras qui pendent à
+l'élévation latérale, fesses au sol au pont fessier, la position basse est un
+repos : y tenir ne chargerait rien. Ces exercices tiennent donc **en haut**,
+muscles serrés, la même seconde, puis redescendent : l'arrêt supprime toujours
+l'élan, et charge cette fois la contraction. L'extension des jambes à la
+machine tient aussi en haut, jambes tendues, et jamais genoux pliés.
+
 **Une seconde suffit.** Plus lent n'est pas mieux pour le tendon : à 4 s / 4 s
 + 2 s, il faut nettement alléger pour finir la série, et c'est la charge, plus
 que la lenteur, qui le fait progresser. Les études sur la durée des répétitions
@@ -460,7 +492,8 @@ exercice par un autre de la même zone.
 - **Métronome de tempo** : affichage MONTE / DESCENDS / TIENS avec les
   secondes, et comptage automatique des répétitions. Pendant la pause en bas,
   la bille s'arrête au pied du rail — sauf aux exercices sans arrêt en bas, où
-  elle repart aussitôt. Les exercices unilatéraux annoncent le côté droit puis
+  elle repart aussitôt, et à ceux qui tiennent en haut, où elle s'arrête en
+  haut du rail, après la montée (MONTE, TIENS, DESCENDS). Les exercices unilatéraux annoncent le côté droit puis
   le côté gauche.
 - Bips de montée, de descente et de pause, cloche de fin de série.
 - Repos chronométré avec aperçu de l'exercice suivant et bouton « +15 s ».
@@ -875,9 +908,12 @@ la durée annoncée sur la séance proposée est **exactement** la somme des
 pour toutes les durées, tous les formats et tous les niveaux.
 
 Une répétition compte la montée, la descente et l'arrêt en bas, sauf pour les
-exercices sans arrêt en bas, dont l'arrêt vaut 0 : le générateur, les étapes de
-la séance guidée, le métronome et la bille lisent tous le même tempo
-(`tempoPourExercice`), si bien que la durée annoncée reste celle de la séance.
+exercices sans arrêt en bas, dont l'arrêt vaut 0. Aux exercices qui tiennent en
+haut (`pauseEnHaut`), l'arrêt garde sa durée et vient juste après la montée :
+l'ordre des phases change, pas la durée — un exercice qui part d'en haut
+descend, remonte, puis tient. Le générateur, les étapes de la séance guidée,
+le métronome et la bille lisent tous le même tempo (`tempoPourExercice`), si
+bien que la durée annoncée reste celle de la séance.
 
 Le générateur respecte d'abord le nombre de séries demandé, puis les
 répétitions demandées. Il ne descend les répétitions que dans un cas : quand

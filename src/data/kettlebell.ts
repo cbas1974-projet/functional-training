@@ -165,6 +165,8 @@ export const EXERCICES_KETTLEBELL: Exercice[] = [
     niveauMin: 1,
     cotes: 'bilateral',
     unite: 'reps',
+    // Bras le long du corps, l'épaule ne porte rien : on tient bras à l'horizontale.
+    pauseEnHaut: true,
     position: 'Debout, un kettlebell dans chaque main',
     pointsAttention: [
       'Léger : la cloche en bout de bras pèse bien plus qu’elle n’en a l’air.',
@@ -184,6 +186,8 @@ export const EXERCICES_KETTLEBELL: Exercice[] = [
     niveauMin: 1,
     cotes: 'unilateral',
     unite: 'reps',
+    // Bras le long du corps, l'épaule ne porte rien : on tient bras levé.
+    pauseEnHaut: true,
     position: 'Debout, kettlebell dans une main',
     pointsAttention: [
       'Bras presque tendu, monter jusqu’à hauteur d’épaule.',
@@ -266,6 +270,8 @@ export const EXERCICES_KETTLEBELL: Exercice[] = [
     niveauMin: 2,
     cotes: 'unilateral',
     unite: 'reps',
+    // Allongé à plat, le ventre se repose : on tient assis.
+    pauseEnHaut: true,
     position: 'Allongé, kettlebell tenu bras tendu vers le plafond',
     pointsAttention: [
       'Le bras reste vertical, poignet droit, du début à la fin.',
@@ -307,6 +313,8 @@ export const EXERCICES_KETTLEBELL: Exercice[] = [
     niveauMin: 2,
     cotes: 'bilateral',
     unite: 'reps',
+    // Allongé à plat, la cloche au sol : on tient genoux et cloche rassemblés.
+    pauseEnHaut: true,
     position: 'Allongé, kettlebell derrière la tête, bras tendus',
     pointsAttention: [
       'Ramener la cloche au-dessus de la poitrine en même temps que les genoux.',
@@ -327,6 +335,8 @@ export const EXERCICES_KETTLEBELL: Exercice[] = [
     niveauMin: 2,
     cotes: 'unilateral',
     unite: 'reps',
+    // Allongé, on se repose : on tient en haut, bras chargé vertical.
+    pauseEnHaut: true,
     position: 'Allongé, kettlebell bras tendu, genou du même côté plié',
     pointsAttention: [
       'Les yeux sur la cloche du début à la fin.',
@@ -372,6 +382,8 @@ export const EXERCICES_KETTLEBELL: Exercice[] = [
     niveauMin: 3,
     cotes: 'alterne',
     unite: 'reps',
+    // En bas, la cloche est posée au sol : on tient le tirage.
+    pauseEnHaut: true,
     position: 'Planche mains sur les poignées, pieds écartés',
     pointsAttention: [
       'Pieds larges pour stabiliser : le bassin ne tourne pas quand une main monte.',
@@ -577,6 +589,8 @@ export const EXERCICES_KETTLEBELL: Exercice[] = [
     niveauMin: 3,
     cotes: 'unilateral',
     unite: 'reps',
+    // Allongé, on se repose : on tient debout, bras chargé vertical.
+    pauseEnHaut: true,
     position: 'Allongé, kettlebell bras tendu vers le plafond',
     pointsAttention: [
       'Huit temps, chacun marqué : coude, main, pont, jambe, genou, debout — et retour.',
@@ -642,6 +656,8 @@ export const EXERCICES_KETTLEBELL: Exercice[] = [
     niveauMin: 3,
     cotes: 'unilateral',
     unite: 'reps',
+    // Part debout, cloche au-dessus de la tête : la répétition commence en descendant.
+    premierePhase: 'descend',
     position: 'Debout, kettlebell bras tendu au-dessus de la tête',
     pointsAttention: [
       'Les yeux sur la cloche, bras chargé vertical tout du long.',
@@ -662,6 +678,8 @@ export const EXERCICES_KETTLEBELL: Exercice[] = [
     niveauMin: 2,
     cotes: 'unilateral',
     unite: 'reps',
+    // Part cloche au-dessus de l'épaule : la répétition commence en descendant.
+    premierePhase: 'descend',
     position: 'Debout, kettlebell à deux mains au-dessus d’une épaule',
     pointsAttention: [
       'Diagonale de l’épaule à la hanche opposée.',
@@ -850,6 +868,8 @@ export const EXERCICES_KETTLEBELL: Exercice[] = [
     niveauMin: 1,
     cotes: 'unilateral',
     unite: 'reps',
+    // Avant-bras pendant, le triceps ne porte rien : on tient bras tendu.
+    pauseEnHaut: true,
     position: 'En fente, buste penché, main libre sur la cuisse',
     pointsAttention: [
       'Bras collé au corps, parallèle au sol.',
@@ -893,6 +913,8 @@ export const EXERCICES_KETTLEBELL: Exercice[] = [
     niveauMin: 3,
     cotes: 'bilateral',
     unite: 'reps',
+    // Allongé à plat, le ventre se repose : on tient le V.
+    pauseEnHaut: true,
     position: 'Allongé, kettlebell bras tendus derrière la tête',
     pointsAttention: [
       'Buste et jambes montent ensemble, la cloche va vers les pieds.',
@@ -913,6 +935,8 @@ export const EXERCICES_KETTLEBELL: Exercice[] = [
     niveauMin: 2,
     cotes: 'alterne',
     unite: 'reps',
+    // Allongé à plat, le ventre se repose : on tient jambe et cloche réunies.
+    pauseEnHaut: true,
     position: 'Allongé, kettlebell bras tendus derrière la tête',
     pointsAttention: [
       'Une jambe à la fois monte à la rencontre de la cloche.',
@@ -952,6 +976,8 @@ export const EXERCICES_KETTLEBELL: Exercice[] = [
     niveauMin: 1,
     cotes: 'unilateral',
     unite: 'reps',
+    // Allongé à plat, le ventre se repose : on tient la contraction.
+    pauseEnHaut: true,
     position: 'Allongé, genoux pliés tombés sur le côté',
     pointsAttention: [
       'Monter l’épaule vers la hanche opposée.',
@@ -972,6 +998,8 @@ export const EXERCICES_KETTLEBELL: Exercice[] = [
     niveauMin: 1,
     cotes: 'alterne',
     unite: 'reps',
+    // Debout bras en l'air, le ventre ne travaille pas : on tient genou contre la cloche.
+    pauseEnHaut: true,
     position: 'Debout, kettlebell tenu au-dessus de la tête',
     pointsAttention: [
       'Descendre la cloche à la rencontre du genou qui monte.',
@@ -992,6 +1020,8 @@ export const EXERCICES_KETTLEBELL: Exercice[] = [
     niveauMin: 2,
     cotes: 'bilateral',
     unite: 'reps',
+    // Allongé en étoile, le ventre se repose : on tient bras et jambes réunis.
+    pauseEnHaut: true,
     position: 'Allongé en étoile, kettlebell dans les mains',
     pointsAttention: [
       'Bras et jambes se rejoignent au-dessus du ventre.',
@@ -1081,6 +1111,8 @@ export const EXERCICES_KETTLEBELL: Exercice[] = [
     niveauMin: 1,
     cotes: 'bilateral',
     unite: 'reps',
+    // Allongé à plat sur le ventre, le dos se repose : on tient poitrine et jambes décollées.
+    pauseEnHaut: true,
     position: 'Allongé sur le ventre, kettlebell bras tendus devant',
     pointsAttention: [
       'Décoller poitrine et jambes en même temps, sans élan.',
@@ -1215,6 +1247,8 @@ export const EXERCICES_KETTLEBELL: Exercice[] = [
     niveauMin: 2,
     cotes: 'unilateral',
     unite: 'reps',
+    // En bas, les fesses sont posées au sol : on tient hanches hautes.
+    pauseEnHaut: true,
     position: 'Allongé, un pied au sol, l’autre jambe tendue, kettlebell bras tendus',
     pointsAttention: [
       'Pousser dans le talon, hanches de niveau en haut.',
@@ -1235,6 +1269,8 @@ export const EXERCICES_KETTLEBELL: Exercice[] = [
     niveauMin: 1,
     cotes: 'unilateral',
     unite: 'reps',
+    // En bas, la jambe est posée sur l'autre : on tient jambe levée.
+    pauseEnHaut: true,
     position: 'Allongé sur le côté, kettlebell posé sur la cuisse du dessus',
     pointsAttention: [
       'Monter la jambe tendue, pointe de pied vers l’avant.',
@@ -1258,6 +1294,8 @@ export const EXERCICES_KETTLEBELL: Exercice[] = [
     niveauMin: 1,
     cotes: 'unilateral',
     unite: 'reps',
+    // L'arrêt reste en bas : sur la marche, le talon sous la marche étire le
+    // mollet sous la charge — tout le contraire d'un repos.
     position: 'Debout sur une marche, une main sur un appui',
     pointsAttention: [
       'Talon sous le niveau de la marche en bas, sur la pointe en haut.',

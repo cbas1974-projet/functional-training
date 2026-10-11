@@ -1,5 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import { CONSIGNE_GENOU, CONSIGNE_SANS_PAUSE, EXERCICES, EXERCICES_PAR_ID, POSTERS, consignesDe } from './exercices';
+import {
+  CONSIGNE_GENOU,
+  CONSIGNE_PAUSE_EN_HAUT,
+  CONSIGNE_SANS_PAUSE,
+  EXERCICES,
+  EXERCICES_PAR_ID,
+  POSTERS,
+  consignesDe,
+} from './exercices';
 import { EXERCICES_ETIREMENTS } from './etirements';
 import { EXERCICES_KETTLEBELL } from './kettlebell';
 import { EXERCICES_YOGA } from './yoga';
@@ -100,6 +108,107 @@ describe('consignes de précaution', () => {
   });
 });
 
+describe('où se tient l’arrêt du tempo', () => {
+  /** Ceux qui tiennent en haut : la position basse est un repos — allongé à
+   *  plat, jambe posée, bras qui pendent sans charge sur le muscle visé — ou le
+   *  mouvement consiste à serrer la contraction. Tous les autres exercices en
+   *  répétitions tiennent en bas, en position étirée sous la charge, ou n'ont
+   *  pas d'arrêt du tout (`sansPauseEnBas`). */
+  const EN_HAUT = [
+    // Le dos et l'arrière des épaules, allongé sur le ventre.
+    'kb-superman', 'floor-t-raise',
+    // Les fessiers et l'extérieur de la hanche : à quatre pattes, sur le côté, sur le dos.
+    'fire-hydrant', 'donkey-kick', 'kb-side-leg-raise', 'glute-bridge', 'frog-pump', 'kb-single-leg-glute-bridge',
+    // Les épaules, bras qui pendent en bas.
+    'side-raise', 'single-arm-lateral-raise', 'kb-side-raise', 'alternating-front-raise', 'kb-front-raise', 'l-raise',
+    'no-money-curl', 'shoulder-shrug',
+    // Les triceps, avant-bras qui pend en bas.
+    'tricep-kickback', 'kb-tricep-kickback',
+    // Les cuisses, aux machines et à l'haltère, et le mollet au sol.
+    'leg-extension-machine', 'leg-curl-machine', 'leg-extension', 'hamstring-curl', 'calf-raise',
+    // Le tirage en planche : l'haltère posé au sol en bas.
+    'renegade-row', 'kb-renegade-row', 'plank-t',
+    // Le ventre : allongé à plat, pendu, debout bras en l'air.
+    'v-up', 'kb-v-up', 'kb-alternating-v-up', 'kb-x-crunch', 'kb-oblique-crunch', 'kb-straight-arm-sit', 'kb-pullover',
+    'hanging-leg-raise', 'kb-high-knee-crunch', 'kb-half-turkish-get-up', 'kb-turkish-get-up',
+  ];
+  const tiennentEnHaut = () => EXERCICES.filter((e) => e.pauseEnHaut).map((e) => e.id);
+  const musculationEnReps = EXERCICES.filter((e) => (e.famille ?? 'musculation') === 'musculation' && e.unite === 'reps');
+
+  it('tient en haut ces exercices-là, et eux seuls', () => {
+    expect(new Set(EN_HAUT).size).toBe(EN_HAUT.length);
+    expect(tiennentEnHaut().sort()).toEqual([...EN_HAUT].sort());
+  });
+
+  it('tient en haut toutes les Superman et extensions du dos allongé, et toutes les abductions de hanche', () => {
+    // Allongé sur le ventre, sur le côté ou à quatre pattes : en bas, on est posé.
+    const poses = musculationEnReps.filter(
+      (e) => !e.explosif && /^(allongé sur le ventre|allongé sur le côté|à quatre pattes)/i.test(e.position),
+    );
+    expect(poses.map((e) => e.id)).toEqual(expect.arrayContaining(['kb-superman', 'floor-t-raise', 'fire-hydrant', 'kb-side-leg-raise']));
+    expect(poses.filter((e) => !e.pauseEnHaut).map((e) => e.id)).toEqual([]);
+    // Toutes les Superman, quel que soit le matériel.
+    const supermans = musculationEnReps.filter((e) => /superman/i.test(`${e.id} ${e.nomFr}`));
+    expect(supermans.length).toBeGreaterThan(0);
+    expect(supermans.filter((e) => !e.pauseEnHaut).map((e) => e.id)).toEqual([]);
+    // Les abductions de hanche isolées : la jambe s'écarte, puis se repose.
+    const abductions = musculationEnReps.filter((e) => e.pattern === 'isolation' && e.musclesPrincipaux?.includes('abducteurs'));
+    expect(abductions.map((e) => e.id).sort()).toEqual(['fire-hydrant', 'kb-side-leg-raise']);
+    expect(abductions.every((e) => e.pauseEnHaut)).toBe(true);
+  });
+
+  it('ne tient en haut que des exercices en répétitions au tempo lent', () => {
+    for (const exercice of EXERCICES.filter((e) => e.pauseEnHaut)) {
+      expect(exercice.famille ?? 'musculation', exercice.id).toBe('musculation');
+      expect(exercice.unite, exercice.id).toBe('reps');
+      expect(exercice.explosif, exercice.id).toBeUndefined();
+    }
+    // Seule l'extension des jambes à la machine, sans arrêt genoux pliés,
+    // retrouve un arrêt — jambes tendues.
+    expect(EXERCICES.filter((e) => e.pauseEnHaut && e.sansPauseEnBas).map((e) => e.id)).toEqual(['leg-extension-machine']);
+  });
+
+  it('dit « On tient en haut, muscles serrés » à ceux qui tiennent en haut, et rien ne leur demande de tenir en bas', () => {
+    expect(CONSIGNE_PAUSE_EN_HAUT).toBe('On tient en haut, muscles serrés');
+    for (const exercice of EXERCICES.filter((e) => e.pauseEnHaut)) {
+      const consignes = consignesDe(exercice);
+      expect(consignes, exercice.id).toContain(CONSIGNE_PAUSE_EN_HAUT);
+      const enBas = consignes.filter((p) => /temps (d.arrêt )?en bas|tenir en bas|tient en bas|tenir une seconde en bas|pause en bas/i.test(p));
+      expect(enBas, exercice.id).toEqual([]);
+    }
+    // Elle vient avant les points d'attention ; les autres ne l'ont pas.
+    const glute = EXERCICES_PAR_ID['glute-bridge'];
+    expect(consignesDe(glute)).toEqual([CONSIGNE_PAUSE_EN_HAUT, ...glute.pointsAttention]);
+    expect(consignesDe(EXERCICES_PAR_ID['hammer-curl'])).not.toContain(CONSIGNE_PAUSE_EN_HAUT);
+  });
+
+  it('tient en haut tout exercice dont les points d’attention disent de tenir en haut', () => {
+    const disentEnHaut = musculationEnReps.filter((e) =>
+      e.pointsAttention.some((p) => /tenir [^.;]*en haut|temps d.arrêt en haut|marquer un temps bras tendu|tenir [^.;]*jambes tendues/i.test(p)),
+    );
+    expect(disentEnHaut.length).toBeGreaterThan(5);
+    expect(disentEnHaut.filter((e) => !e.pauseEnHaut).map((e) => e.id)).toEqual([]);
+  });
+
+  it('garde l’arrêt en bas là où la position basse est étirée sous la charge', () => {
+    // Le curl, le développé, l'écarté, le rowing, le mollet sur une marche, le
+    // rowing vertical (tenu en haut, il pincerait l'épaule).
+    for (const id of [
+      'hammer-curl', 'bench-press', 'chest-fly', 'single-arm-row', 'kb-single-leg-calf-raise', 'upright-row',
+      'tricep-extension', 'wrist-curl',
+    ]) {
+      const exercice = EXERCICES_PAR_ID[id];
+      expect([exercice.pauseEnHaut, exercice.sansPauseEnBas], id).toEqual([undefined, undefined]);
+    }
+  });
+
+  it('fait partir d’en haut les exercices qui commencent bras ou cloche au-dessus de la tête', () => {
+    for (const id of ['single-arm-tricep-extension', 'kb-windmill', 'kb-wood-chop', 'tricep-extension', 'kb-tricep-extension']) {
+      expect(EXERCICES_PAR_ID[id].premierePhase, id).toBe('descend');
+    }
+  });
+});
+
 describe('machines de la salle', () => {
   it('compte six machines, chacune avec son dessin', () => {
     const machines = EXERCICES.filter((e) => e.materiel === 'salle').map((e) => e.id);
@@ -112,7 +221,10 @@ describe('machines de la salle', () => {
   it('ménage les genoux à l’extension des jambes ; garde l’extension et le leg curl aux haltères', () => {
     const extension = EXERCICES_PAR_ID['leg-extension-machine'];
     expect([extension.sansPauseEnBas, extension.genouAMenager]).toEqual([true, true]);
-    expect(consignesDe(extension).slice(0, 2)).toEqual([CONSIGNE_SANS_PAUSE, CONSIGNE_GENOU]);
+    // Jamais d'arrêt genoux pliés ; l'arrêt se tient jambes tendues, comme le
+    // dit l'affiche de la machine.
+    expect(extension.pauseEnHaut).toBe(true);
+    expect(consignesDe(extension).slice(0, 3)).toEqual([CONSIGNE_SANS_PAUSE, CONSIGNE_PAUSE_EN_HAUT, CONSIGNE_GENOU]);
     const flexion = EXERCICES_PAR_ID['leg-curl-machine'];
     expect([flexion.pattern, flexion.musclesPrincipaux, flexion.cotes]).toEqual(['isolation', ['ischios'], 'bilateral']);
     expect(EXERCICES_PAR_ID['leg-extension'].materiel).toBe('banc');
