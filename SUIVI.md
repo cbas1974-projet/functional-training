@@ -21,6 +21,10 @@ Claude, de son côté :
 
 ## Séance du 11 octobre 2026
 
+- **Analyse 80/20** : [docs/maturite-80-20.md](docs/maturite-80-20.md). Il
+  reste une séance test à deux en salle, un lot de corrections, et un bouton
+  d'export hors du VPS ; puis on gèle 4 semaines (corrections seulement).
+
 - **Corrigé : « TIENS » au mauvais endroit.** L'arrêt du tempo se tenait
   toujours en bas, après la descente. Juste pour un curl ou un développé,
   absurde à la Superman ou à la bouche d'incendie : l'application disait
@@ -279,7 +283,7 @@ d'installation du README.
   (`cbas1974-projet`). GitHub la suspend après 60 jours sans commit sur un
   dépôt public ; on la relance dans l'onglet *Actions*.
 - **Vérifications** :
-  - `npx vitest run` (814 tests) ;
+  - `npx vitest run` (834 tests) ;
   - `npx tsc -b --noEmit` ;
   - `npx eslint .` ;
   - `npm run build`.
