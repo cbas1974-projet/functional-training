@@ -487,6 +487,26 @@ export interface EntrainementState {
   /** Le serveur et l'équipe (« adresse|code ») qui ont déjà reçu les mesures
    *  notées avant d'être branchés. */
   mesuresEnvoyeesA?: string;
+  /** La routine du soir de ce téléphone : sa liste d'étirements et les soirs
+   *  où elle a été faite. Reste ici, hors de l'historique d'entraînement, et ne
+   *  part jamais vers le serveur. Absente des sauvegardes d'avant son arrivée. */
+  routineSoir?: RoutineSoirLocale;
+}
+
+/** Les quatre parties de la routine du soir, dans l'ordre : le gainage, la
+ *  mobilité pour le jiu-jitsu, le cou, les étirements. */
+export type PartieRoutine = 'gainage' | 'mobilite' | 'cou' | 'etirements';
+
+/** Ce que ce téléphone garde de la routine du soir (`src/utils/routineSoir.ts`). */
+export interface RoutineSoirLocale {
+  /** La liste d'étirements choisie à la main, par personne ; absente, la liste
+   *  de départ. Des identifiants de la bibliothèque (étirements et yoga). */
+  listes?: Partial<Record<Personne, string[]>>;
+  /** Les soirs où elle a été faite (AAAA-MM-JJ), du plus ancien au plus récent. */
+  soirs?: string[];
+  /** Les parties éteintes ; absente, les quatre font partie de la routine. Au
+   *  moins une reste allumée. */
+  eteintes?: PartieRoutine[];
 }
 
 // ------------------------------------------------------------- Mensurations

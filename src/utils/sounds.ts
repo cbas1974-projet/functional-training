@@ -74,6 +74,31 @@ export class BellSound {
     }
   }
 
+  // Cloche douce, pour la routine du soir : une note pure, qui s'éteint
+  // lentement, bien plus discrète que la cloche de boxe. `fois` coups, espacés
+  // de moins d'une seconde (trois pour la fin).
+  playSoftBell(fois = 1): void {
+    const debut = this.audioContext.currentTime;
+    for (let i = 0; i < fois; i += 1) {
+      const t = debut + i * 0.9;
+      const oscillator = this.audioContext.createOscillator();
+      const gainNode = this.audioContext.createGain();
+
+      oscillator.connect(gainNode);
+      gainNode.connect(this.audioContext.destination);
+
+      oscillator.type = 'sine';
+      oscillator.frequency.setValueAtTime(528, t);
+
+      gainNode.gain.setValueAtTime(0, t);
+      gainNode.gain.linearRampToValueAtTime(0.12, t + 0.03);
+      gainNode.gain.exponentialRampToValueAtTime(0.001, t + 1.6);
+
+      oscillator.start(t);
+      oscillator.stop(t + 1.7);
+    }
+  }
+
   // Son simple de cloche
   private playSingleBell(): void {
     const now = this.audioContext.currentTime;

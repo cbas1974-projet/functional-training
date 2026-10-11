@@ -20,6 +20,7 @@ import type { VueSecondaire } from './components/Accueil';
 import Entrainement from './components/Entrainement';
 import HistoriqueEntrainement from './components/HistoriqueEntrainement';
 import BibliothequeExercices from './components/BibliothequeExercices';
+import RoutineSoir from './components/RoutineSoir';
 
 const CLE_LIEN = 'programme=';
 
@@ -233,6 +234,7 @@ export default function App() {
               <BibliothequeExercices historique={etat.historique} unitePoids={uniteDeSeance(etat.parametres)} />
             )}
             {vue === 'libre' && <Entrainement etat={etat} onChange={onChange} />}
+            {vue === 'soir' && <RoutineSoir etat={etat} onChange={onChange} />}
           </main>
         </>
       )}
