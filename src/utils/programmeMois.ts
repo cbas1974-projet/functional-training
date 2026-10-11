@@ -157,7 +157,8 @@ export const REPOS_TRAP_BAR_SEC = 120;
 /** Les deux exercices d'une paire : le temps de passer de l'un à l'autre. */
 export const TRANSITION_LIEN_SEC = 15;
 /** Tenue des exercices au temps : planche, marche du fermier. Un cercle au
- *  kettlebell tourne `SENS_CERCLE_SEC` dans chaque sens (`secondesAuTemps`). */
+ *  kettlebell tourne `SENS_CERCLE_SEC` dans chaque sens, un explosif dure
+ *  `BALISTIQUE_SEC` ou `SAUT_SEC` (`secondesAuTemps`). */
 const TENUE_SEC = 30;
 /** On tire parmi les meilleurs candidats d'un emplacement : deux programmes
  *  ne se ressemblent pas tous, sans jamais prendre un exercice hors sujet. */
@@ -1196,11 +1197,12 @@ export const reposDePaire = (paire: string[], seance: Pick<SeanceDuMois, 'type'>
 
 /** La charge s'y règle d'une fois sur l'autre : le cran de la semaine dure,
  *  celui du ressenti, la dernière série légère du mardi. Les exercices en
- *  répétitions, et les cercles au kettlebell — faits au temps, mais la cloche
- *  reste une charge qu'on monte ou qu'on baisse, comme avant. Pas les
- *  portages, le traîneau ni les tenues : là, c'est le temps qui compte. */
+ *  répétitions, les cercles au kettlebell et les mouvements explosifs — faits
+ *  au temps, mais la cloche ou l'haltère reste une charge qu'on monte ou qu'on
+ *  baisse, comme avant. Pas les portages, le traîneau ni les tenues : là,
+ *  c'est le temps qui compte. */
 export const chargeReglable = (exercice: Exercice): boolean =>
-  exercice.unite === 'reps' || exercice.mouvement === 'circulaire';
+  exercice.unite === 'reps' || exercice.mouvement === 'circulaire' || exercice.explosif === true;
 
 /** La séance du programme, mise aux réglages de la personne : c'est elle que
  *  déroule la séance guidée — tapis ou rameur, bille, répétitions comptées,

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { EXERCICES, EXERCICES_PAR_ID } from '../data/exercices';
+import { BALISTIQUE_SEC, SAUT_SEC } from './generateurSeance';
 import {
   AU_TEMPS_OU_AU_TEMPO,
   REPS_TABLEAU,
@@ -75,6 +76,36 @@ describe('le tableau des mouvements (docs/mouvements.md)', () => {
     // Une série de cercle dure une minute dans le tableau.
     expect(tableauDesMouvements()).toMatch(/^\| `kb-halo` \| Halo \| .* \| 1 min \| /m);
   });
+
+  it('déroule un explosif au temps avec le vrai décompte : 30 s, 20 s pour un saut, un côté puis l’autre d’un bras', () => {
+    const exercice = (id: string) => EXERCICES_PAR_ID[id];
+    expect(uneRepetition(exercice('swing'))).toBe('— au temps : 30 s à son rythme, sans métronome');
+    expect(uneRepetition(exercice('kb-jump-squat'))).toBe('— au temps : 20 s à son rythme, sans métronome');
+    expect(uneRepetition(exercice('kb-snatch'))).toBe(
+      '— au temps : 30 s côté droit → CHANGE DE CÔTÉ 5 s → 30 s côté gauche, sans métronome',
+    );
+    expect(deroulementDesCotes(exercice('kb-snatch'))).toBe(
+      'côté droit → CHANGE DE CÔTÉ 5 s (« +5 s » si besoin) → côté gauche',
+    );
+    expect(deroulementDesCotes(exercice('swing'))).toBe('les deux ensemble');
+    expect(deroulementDesCotes(exercice('kb-speed-skater'))).toBe('en alternant, un côté après l’autre');
+    expect(derouleSerieAuTemps(exercice('swing'))).toEqual([{ mot: 'à son rythme', dureeSec: 30 }]);
+    expect(derouleSerieAuTemps(exercice('kb-log-jump'))).toEqual([{ mot: 'à son rythme', dureeSec: 20 }]);
+    expect(derouleSerieAuTemps(exercice('kb-clean'))).toEqual([
+      { mot: 'côté droit', dureeSec: 30 },
+      { mot: 'CHANGE DE CÔTÉ', dureeSec: 5 },
+      { mot: 'côté gauche', dureeSec: 30 },
+    ]);
+    // La durée d'une série dans le tableau : 30 s, 1 min 5 s d'un bras, 20 s.
+    const tableau = tableauDesMouvements();
+    expect(tableau).toMatch(/^\| `swing` \| .* \| 30 s \| /m);
+    expect(tableau).toMatch(/^\| `kb-snatch` \| .* \| 1 min 5 s \| /m);
+    expect(tableau).toMatch(/^\| `kb-jump-squat` \| .* \| 20 s \| /m);
+    // Plus aucun explosif ne passe par le métronome dans le tableau.
+    for (const { id } of EXERCICES.filter((e) => e.explosif)) {
+      expect(tableau.match(new RegExp(`^\\| \`${id}\` \\| .* \\| — au temps : `, 'm')), id).not.toBeNull();
+    }
+  });
 });
 
 describe('au temps ou au tempo ? (en tête de docs/mouvements.md)', () => {
@@ -104,14 +135,27 @@ describe('au temps ou au tempo ? (en tête de docs/mouvements.md)', () => {
     expect(explosifs.every((id) => ids.includes(id))).toBe(true);
   });
 
-  it('passe au temps les trois cercles et le relevé turc, et laisse à Sébastien les coups croisés et les explosifs', () => {
+  it('passe au temps les trois cercles, le relevé turc et les 16 explosifs, et laisse à Sébastien les coups croisés', () => {
     const decision = (id: string) => AU_TEMPS_OU_AU_TEMPO.find((avis) => avis.ids.includes(id))?.decision;
     for (const id of ['kb-halo', 'kb-around-the-body', 'kb-around-the-world', 'kb-turkish-get-up']) {
       expect(decision(id), id).toBe('fait');
     }
-    for (const id of ['v-sit-cross-jab', 'swing', 'kb-double-arm-swing']) expect(decision(id), id).toBe('a-decider');
+    const explosifs = EXERCICES.filter((e) => e.explosif).map((e) => e.id);
+    expect(explosifs).toHaveLength(16);
+    for (const id of explosifs) expect(decision(id), id).toBe('fait');
+    expect(decision('v-sit-cross-jab')).toBe('a-decider');
     for (const id of ['russian-twist', 'kb-russian-twist', 'kb-commando', 'plank-t', 'renegade-row', 'bird-dog-row']) {
       expect(decision(id), id).toBe('garde');
     }
+  });
+
+  it('donne la raison de Sébastien pour les explosifs, avec les deux durées', () => {
+    const avis = AU_TEMPS_OU_AU_TEMPO.find((a) => a.ids.includes('swing'))!;
+    expect(avis.pourquoi).toContain('pas fuir un exercice, pouvoir un jour le faire sans douleur — donc mettre moins de poids');
+    expect(avis.recommandation).toContain(`${BALISTIQUE_SEC} s par série (${SAUT_SEC} s pour les sauts et le burpee)`);
+    // Dans le fichier : « Au temps : fait » sur la ligne des explosifs, et plus « À décider ».
+    const ligne = tableauDesMouvements().split('\n').find((l) => l.includes('(`swing`)'))!;
+    expect(ligne).toContain('**Au temps : fait**');
+    expect(ligne).not.toContain('À décider');
   });
 });

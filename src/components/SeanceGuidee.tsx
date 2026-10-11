@@ -1344,7 +1344,7 @@ function CorpsPret({ etape, exercice, resteSec, onDemarrer, onPasser }: CorpsPre
   const forme = formeDe(exercice);
   const depart =
     exercice.unite !== 'reps'
-      ? estCercleAuTemps(exercice)
+      ? estCercleAuTemps(exercice) || exercice.explosif
         ? ' · à son rythme, sans métronome'
         : ''
       : forme === 'circulaire'
@@ -1538,7 +1538,9 @@ function CorpsTravail({
                 ? 'À fond jusqu’au signal'
                 : posture
                   ? 'Tenez la position'
-                  : 'Maintenez l’effort'}
+                  : exercice.explosif
+                    ? 'À ton rythme, léger'
+                    : 'Maintenez l’effort'}
           </div>
           <div
             className="chiffres text-9xl font-bold leading-none"

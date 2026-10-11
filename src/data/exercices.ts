@@ -689,12 +689,13 @@ export const EXERCICES: Exercice[] = [
     pattern: 'squat',
     niveauMin: 3,
     cotes: 'bilateral',
-    unite: 'reps',
+    // Au temps, à son rythme, léger : 20 s par série (`SAUT_SEC`).
+    unite: 'secondes',
     premierePhase: 'descend',
     explosif: true,
+    saut: true,
     position: 'Debout',
     pointsAttention: [
-      'Mouvement explosif : incompatible avec le tempo lent, réservé aux séances dédiées.',
       'Réception souple, genoux fléchis, sans bruit.',
       'Charge très légère, voire sans haltères.',
       'À éviter en cas de douleur aux genoux ou aux tendons.',
@@ -889,11 +890,11 @@ export const EXERCICES: Exercice[] = [
     pattern: 'charniere',
     niveauMin: 3,
     cotes: 'bilateral',
-    unite: 'reps',
+    // Au temps, à son rythme, léger : 30 s par série (`BALISTIQUE_SEC`).
+    unite: 'secondes',
     explosif: true,
     position: 'Debout, pieds écartés',
     pointsAttention: [
-      'Mouvement balistique : incompatible avec le tempo lent, réservé aux séances dédiées.',
       'Le mouvement vient des hanches, pas des bras.',
       'Dos plat, l’haltère monte à hauteur d’épaule grâce à la poussée des hanches.',
       'Serrer les fessiers en haut, ne pas cambrer.',
@@ -1779,15 +1780,16 @@ export const EXERCICES: Exercice[] = [
     pattern: 'squat',
     niveauMin: 3,
     cotes: 'bilateral',
-    unite: 'reps',
+    // Au temps, à son rythme, léger : 20 s par série (`SAUT_SEC`).
+    unite: 'secondes',
     premierePhase: 'descend',
     explosif: true,
+    saut: true,
     position: 'Debout',
     pointsAttention: [
       'Poser les haltères, sauter en planche, pompe, revenir, se relever.',
       'Haltères hexagonaux impérativement : un rond roule sous la main.',
       'Le dos ne se creuse pas au moment de la planche.',
-      'Mouvement explosif : incompatible avec le tempo lent.',
     ],
   },
   {
@@ -1803,14 +1805,14 @@ export const EXERCICES: Exercice[] = [
     pattern: 'tirage-vertical',
     niveauMin: 3,
     cotes: 'bilateral',
-    unite: 'reps',
+    // Au temps, à son rythme, léger : 30 s par série (`BALISTIQUE_SEC`).
+    unite: 'secondes',
     explosif: true,
     position: 'Debout, buste penché',
     pointsAttention: [
       'L’impulsion vient des hanches, les bras ne font que suivre.',
       'Coudes hauts en fin de tirage.',
       'Dos plat pendant toute la phase basse.',
-      'Mouvement explosif : incompatible avec le tempo lent.',
     ],
   },
   {
@@ -1851,14 +1853,14 @@ export const EXERCICES: Exercice[] = [
     pattern: 'tirage-vertical',
     niveauMin: 3,
     cotes: 'unilateral',
-    unite: 'reps',
+    // Au temps, à son rythme, léger : 30 s par série (`BALISTIQUE_SEC`), de chaque côté.
+    unite: 'secondes',
     explosif: true,
     position: 'Debout, haltère au sol entre les pieds',
     pointsAttention: [
       'Un seul mouvement continu du sol jusqu’au-dessus de la tête.',
       'Tout vient de l’extension de hanche, le bras ne tire pas.',
       'Passer sous l’haltère en fin de course, bras verrouillé.',
-      'Mouvement explosif et technique : incompatible avec le tempo lent.',
     ],
   },
   // Les 68 exercices des deux posters « Kettlebell Workouts ».
@@ -1968,19 +1970,24 @@ export const CONSIGNE_CERCLE_AU_TEMPS =
   'Au temps, à son rythme : la moitié dans un sens, puis « Change de sens ! » et l’autre moitié dans l’autre sens, sans s’arrêter';
 /** Celle des mouvements d'un côté à l'autre (`mouvement: 'rotation'`). */
 export const CONSIGNE_ROTATION = 'D’un côté à l’autre, sans arrêt : une répétition, à droite puis à gauche';
+/** Celle des explosifs faits au temps (`explosif`, `unite: 'secondes'`) : pas
+ *  de métronome, un décompte ; on garde le geste, et on met moins de poids. */
+export const CONSIGNE_EXPLOSIF_AU_TEMPS = 'À ton rythme, léger : la qualité avant la vitesse';
 
 /** Les consignes d'un exercice, telles qu'on les affiche partout (séance
  *  guidée, image en grand, bibliothèque, séance libre) : celles du tempo et
- *  de précaution d'abord — la forme du mouvement, pas d'arrêt en bas, l'arrêt
- *  en haut, le genou —, puis ses points d'attention. Un cercle ou un
- *  va-et-vient ne s'arrête jamais : rien ne lui parle d'arrêt. */
+ *  de précaution d'abord — un explosif au temps, la forme du mouvement, pas
+ *  d'arrêt en bas, l'arrêt en haut, le genou —, puis ses points d'attention.
+ *  Un cercle ou un va-et-vient ne s'arrête jamais : rien ne lui parle
+ *  d'arrêt. */
 export function consignesDe(
   exercice: Pick<Exercice, 'pointsAttention' | 'sansPauseEnBas' | 'pauseEnHaut' | 'genouAMenager' | 'mouvement'> &
-    Partial<Pick<Exercice, 'unite'>>,
+    Partial<Pick<Exercice, 'unite' | 'explosif'>>,
 ): string[] {
   const forme = exercice.mouvement;
   const cercle = exercice.unite === 'secondes' ? CONSIGNE_CERCLE_AU_TEMPS : CONSIGNE_CIRCULAIRE;
   return [
+    ...(exercice.explosif && exercice.unite === 'secondes' ? [CONSIGNE_EXPLOSIF_AU_TEMPS] : []),
     ...(forme === 'circulaire' ? [cercle] : forme === 'rotation' ? [CONSIGNE_ROTATION] : []),
     ...(exercice.sansPauseEnBas && !forme ? [CONSIGNE_SANS_PAUSE] : []),
     ...(exercice.pauseEnHaut && !forme ? [CONSIGNE_PAUSE_EN_HAUT] : []),

@@ -294,7 +294,8 @@ export const EXERCICES_KETTLEBELL: Exercice[] = [
     pattern: 'rotation',
     niveauMin: 3,
     cotes: 'unilateral',
-    unite: 'reps',
+    // Au temps, à son rythme, léger : 30 s par série (`BALISTIQUE_SEC`), de chaque côté.
+    unite: 'secondes',
     explosif: true,
     position: 'Debout, buste penché, kettlebell entre les pieds',
     pointsAttention: [
@@ -572,7 +573,8 @@ export const EXERCICES_KETTLEBELL: Exercice[] = [
     pattern: 'charniere',
     niveauMin: 2,
     cotes: 'bilateral',
-    unite: 'reps',
+    // Au temps, à son rythme, léger : 30 s par série (`BALISTIQUE_SEC`).
+    unite: 'secondes',
     explosif: true,
     position: 'Debout, pieds larges, kettlebell entre les pieds',
     pointsAttention: [
@@ -618,7 +620,8 @@ export const EXERCICES_KETTLEBELL: Exercice[] = [
     pattern: 'charniere',
     niveauMin: 3,
     cotes: 'unilateral',
-    unite: 'reps',
+    // Au temps, à son rythme, léger : 30 s par série (`BALISTIQUE_SEC`), de chaque côté.
+    unite: 'secondes',
     explosif: true,
     position: 'Debout, pieds larges, kettlebell dans une main',
     pointsAttention: [
@@ -774,7 +777,8 @@ export const EXERCICES_KETTLEBELL: Exercice[] = [
     pattern: 'charniere',
     niveauMin: 3,
     cotes: 'unilateral',
-    unite: 'reps',
+    // Au temps, à son rythme, léger : 30 s par série (`BALISTIQUE_SEC`), de chaque côté.
+    unite: 'secondes',
     explosif: true,
     position: 'Debout, pieds larges, kettlebell au sol',
     pointsAttention: [
@@ -795,7 +799,8 @@ export const EXERCICES_KETTLEBELL: Exercice[] = [
     pattern: 'charniere',
     niveauMin: 3,
     cotes: 'unilateral',
-    unite: 'reps',
+    // Au temps, à son rythme, léger : 30 s par série (`BALISTIQUE_SEC`), de chaque côté.
+    unite: 'secondes',
     explosif: true,
     position: 'Debout, pieds larges, kettlebell au sol',
     pointsAttention: [
@@ -1145,7 +1150,8 @@ export const EXERCICES_KETTLEBELL: Exercice[] = [
     pattern: 'rotation',
     niveauMin: 3,
     cotes: 'unilateral',
-    unite: 'reps',
+    // Au temps, à son rythme, léger : 30 s par série (`BALISTIQUE_SEC`), de chaque côté.
+    unite: 'secondes',
     explosif: true,
     position: 'Debout, kettlebell à deux mains près d’une hanche',
     pointsAttention: [
@@ -1353,13 +1359,15 @@ export const EXERCICES_KETTLEBELL: Exercice[] = [
     pattern: 'squat',
     niveauMin: 3,
     cotes: 'bilateral',
-    unite: 'reps',
+    // Au temps, à son rythme, léger : 20 s par série (`SAUT_SEC`).
+    unite: 'secondes',
     explosif: true,
+    saut: true,
     premierePhase: 'descend',
     position: 'Debout, kettlebell contre la poitrine',
     pointsAttention: [
       'Réception souple, genoux fléchis, sans bruit.',
-      'Mouvement explosif : incompatible avec le tempo lent.',
+      'Peu de poids, voire aucun : on saute, on ne soulève pas.',
     ],
   }),
   kb({
@@ -1422,13 +1430,14 @@ export const EXERCICES_KETTLEBELL: Exercice[] = [
     pattern: 'squat',
     niveauMin: 3,
     cotes: 'bilateral',
-    unite: 'reps',
+    // Au temps, à son rythme, léger : 20 s par série (`SAUT_SEC`).
+    unite: 'secondes',
     explosif: true,
+    saut: true,
     position: 'Squat large, kettlebell tenu à deux mains',
     pointsAttention: [
       'Sauter depuis le squat large, se réceptionner dans le squat.',
       'Réception souple, genoux qui suivent les orteils.',
-      'Mouvement explosif : incompatible avec le tempo lent.',
     ],
   }),
   kb({
@@ -1466,12 +1475,14 @@ export const EXERCICES_KETTLEBELL: Exercice[] = [
     pattern: 'squat',
     niveauMin: 3,
     cotes: 'bilateral',
-    unite: 'reps',
+    // Au temps, à son rythme, léger : 20 s par série (`SAUT_SEC`).
+    unite: 'secondes',
     explosif: true,
+    saut: true,
     position: 'Allongé sur le dos, kettlebell contre la poitrine',
     pointsAttention: [
       'Se relever d’un roulé jusqu’au squat, puis sauter.',
-      'Mouvement explosif : incompatible avec le tempo lent.',
+      'Peu de poids, voire aucun : se relever proprement compte plus que sauter haut.',
     ],
     interetJjb: 'La relève explosive depuis le dos.',
   }),
@@ -1511,13 +1522,14 @@ export const EXERCICES_KETTLEBELL: Exercice[] = [
     pattern: 'fente',
     niveauMin: 3,
     cotes: 'alterne',
-    unite: 'reps',
+    // Au temps, à son rythme, léger : 20 s par série (`SAUT_SEC`).
+    unite: 'secondes',
     explosif: true,
+    saut: true,
     position: 'Debout, kettlebell contre la poitrine',
     pointsAttention: [
       'Bond latéral d’une jambe sur l’autre, réception sur un pied.',
       'Genou de réception stable, sans rentrer vers l’intérieur.',
-      'Mouvement explosif : incompatible avec le tempo lent.',
     ],
   }),
   kb({
@@ -1533,13 +1545,14 @@ export const EXERCICES_KETTLEBELL: Exercice[] = [
     pattern: 'fente',
     niveauMin: 3,
     cotes: 'alterne',
-    unite: 'reps',
+    // Au temps, à son rythme, léger : 20 s par série (`SAUT_SEC`).
+    unite: 'secondes',
     explosif: true,
+    saut: true,
     position: 'Debout, kettlebell contre la poitrine, cloches au sol en rangée',
     pointsAttention: [
       'Sauts latéraux par-dessus les obstacles posés au sol.',
       'Réception souple sur l’avant du pied.',
-      'Mouvement explosif : incompatible avec le tempo lent.',
     ],
   }),
 ];

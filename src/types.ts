@@ -179,13 +179,20 @@ export interface Exercice {
   cotes: Cotes;
   /** reps : au tempo, le métronome dicte et compte les répétitions.
    *  secondes : au temps, un décompte et pas de métronome — les tenues, les
-   *  portages, le traîneau, les cercles du kettlebell et le relevé turc. Le
-   *  `reps` du bloc est alors une durée en secondes : par côté pour un
-   *  exercice unilatéral, dans chaque sens pour un cercle (`partiesAuTemps`). */
+   *  portages, le traîneau, les cercles du kettlebell, le relevé turc et les
+   *  mouvements explosifs. Le `reps` du bloc est alors une durée en
+   *  secondes : par côté pour un exercice unilatéral, dans chaque sens pour
+   *  un cercle (`partiesAuTemps`). */
   unite: Unite;
   /** Mouvement balistique (saut, swing) : incompatible avec le tempo lent,
-   *  exclu tant que l'option « explosifs » n'est pas activée. */
+   *  il se fait au temps (`unite: 'secondes'`), à son rythme, avec une
+   *  charge légère (`BALISTIQUE_SEC`, `SAUT_SEC`). Exclu tant que l'option
+   *  « explosifs » n'est pas activée, et toujours hors du programme. */
   explosif?: boolean;
+  /** Un explosif où l'on quitte le sol — squat sauté, saut de grenouille,
+   *  patineur, saut de bûche, burpee : une série plus courte, 20 s au lieu
+   *  de 30 (`SAUT_SEC`). */
+  saut?: boolean;
   /** Pas d'arrêt en bas, quel que soit le tempo : on descend contrôlé et on
    *  remonte sans rebond. Pour les exercices où la position basse tenue
    *  fatigue le bas du dos ou le genou (soulevés de terre, rowings penchés,
@@ -280,7 +287,7 @@ export interface ParametresSeance {
   /** Ancien réglage, conservé pour lire les séances enregistrées avant
    *  l'arrivée de la liste de matériel. */
   banc?: boolean;
-  /** Inclure les mouvements explosifs (squat sauté, swing). */
+  /** Inclure les mouvements explosifs (squat sauté, swing), faits au temps. */
   explosifs: boolean;
   /** Nombre de séries souhaité par exercice ; null = automatique selon la
    *  durée. Si ce nombre ne tient pas dans la durée, l'automatique reprend. */

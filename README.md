@@ -116,8 +116,8 @@ du dos, épaules, extérieur et intérieur de cuisse. Rien à taper.
   (`sansPauseEnBas`, `genouAMenager`). L'extension des jambes à la machine
   garde un arrêt, mais en haut, jambes tendues, comme le dit l'affiche de la
   salle : jamais genoux pliés. Les mouvements explosifs (swings, sauts,
-  arrachés), eux, ne s'arrêtent jamais : un geste balistique ne marque pas
-  d'arrêt.
+  arrachés), eux, ne passent plus par le tempo : ils se font au temps (voir
+  plus bas).
 - **Tenu en haut** quand la position basse est un repos. La règle : **on
   tient là où le muscle travaille** — en bas quand la position basse est
   étirée sous la charge (curls, développés, écartés, rowings, mollet sur une
@@ -154,13 +154,25 @@ du dos, épaules, extérieur et intérieur de cuisse. Rien à taper.
   l'autre, sans arrêt : une répétition, à droite puis à gauche ». La forme
   est dans les données des exercices (`mouvement`) ; elle n'a rien à voir
   avec le schéma de mouvement, qui sert à équilibrer la séance.
+- **Les mouvements explosifs, au temps.** Un swing ou un saut en 3 s / 3 s
+  n'est plus un swing ni un saut. Sébastien a décidé : « pas fuir un
+  exercice, pouvoir un jour le faire sans douleur — donc mettre moins de
+  poids ». Les 16 explosifs se font **au temps**, à son rythme, **léger** :
+  un décompte, pas de métronome, et la consigne « À ton rythme, léger : la
+  qualité avant la vitesse ». **30 s** par série (swings, arrachés, épaulé,
+  tirage haut, balanciers), **20 s** pour les sauts et le burpee. D'un seul
+  bras : 30 s de chaque côté, avec « CHANGE DE CÔTÉ » 5 s et « +5 s ». Le
+  poids se note, et « lourd, correct, léger » le règle comme avant. Ils ne
+  sortent toujours qu'avec l'option « mouvements explosifs », jamais dans le
+  programme du mois.
 - **Au temps ou au tempo ?** Le relevé turc complet (avancé, hors
   programme) passe au temps lui aussi : un relevé lent de chaque côté, avec
   le changement de côté entre les deux. Pour les autres exercices qui
-  pourraient se faire au temps — rotations russes, planches, coups croisés,
-  mouvements explosifs… —, la réponse et sa raison sont en tête du
+  pourraient se faire au temps — rotations russes, planches, coups croisés…
+  —, la réponse et sa raison sont en tête du
   [tableau des mouvements](docs/mouvements.md#au-temps-ou-au-tempo-) :
-  certains gardent le tempo, d'autres attendent la décision de Sébastien.
+  la plupart gardent le tempo, les coups croisés assis en V attendent la
+  décision de Sébastien.
 - **Changer de côté.** Un exercice unilatéral fait toutes ses répétitions du
   côté droit, puis du côté gauche. Entre les deux, l'écran dit **« CHANGE DE
   CÔTÉ »** et compte **5 secondes** — « Côté gauche dans 5 s » —, avec les
@@ -526,7 +538,7 @@ nombre de répétitions est celui qu'on tiendra des années.
 
 Ce que le tempo lent ne travaille pas, c'est la **vitesse**, la qualité qui
 décline le plus tôt avec l'âge. Le 2 s / 4 s, avec une montée décidée, et les
-mouvements explosifs du kettlebell sont là pour ça. Les autres tempos et
+mouvements explosifs (au temps, légers) sont là pour ça. Les autres tempos et
 nombres de répétitions restent disponibles.
 
 C'est aussi le tempo du programme du mois. Celui-ci se règle à part, dans
@@ -741,7 +753,7 @@ latérale » côte à côte.
 
 Les onze mouvements balistiques — swings, arraché, épaulé, balanciers en
 rotation, sauts — sont marqués **explosifs** : la séance les écarte tant que
-l'option n'est pas cochée.
+l'option n'est pas cochée, et ils se font au temps, à son rythme, légers.
 
 Pour les voir dans les séances, cocher **Kettlebell** dans *Réglages avancés →
 Mon matériel*.
@@ -1016,14 +1028,16 @@ Une répétition compte la montée, la descente et l'arrêt en bas, sauf pour le
 exercices sans arrêt en bas, dont l'arrêt vaut 0. Aux exercices qui tiennent en
 haut (`pauseEnHaut`), l'arrêt garde sa durée et vient juste après la montée :
 l'ordre des phases change, pas la durée — un exercice qui part d'en haut
-descend, remonte, puis tient. Une rotation ou un mouvement explosif n'ont
-pas d'arrêt du tout : leur répétition dure la montée plus la descente. Une
+descend, remonte, puis tient. Une rotation n'a pas d'arrêt du tout : sa
+répétition dure la montée plus la descente. Une
 série unilatérale compte ses répétitions des deux côtés, plus les 5 s du
 changement de côté (`changementDeCoteSec`), qui font partie de la série : la
 séance d'essai et l'horloge commune les comptent de la même façon. Un
 exercice au temps dure ses secondes, par côté ou dans chaque sens : un
 cercle, deux fois 30 s (`SENS_CERCLE_SEC`) ; le relevé turc, ses deux côtés
-et les 5 s entre les deux.
+et les 5 s entre les deux ; un explosif, 30 s (`BALISTIQUE_SEC`) ou 20 s pour
+un saut (`SAUT_SEC`), de chaque côté, plus les 5 s, s'il se fait d'un bras
+(`secondesImposees` : le temps vient de la fiche, pas du niveau).
 « +5 s » allonge la série en cours, comme « +15 s » allonge un repos, sans
 changer la durée annoncée. Le générateur, les étapes de la séance guidée,
 le métronome et la bille lisent tous le même tempo (`tempoPourExercice`), si

@@ -88,7 +88,8 @@ describe('la forme du mouvement', () => {
     // Et un schéma « rotation » peut rester vertical : le bûcheron monte et
     // descend en diagonale, la planche en T lève le bras vers le plafond.
     const verticauxEnRotation = musculationEnReps.filter((e) => e.pattern === 'rotation' && !e.mouvement).map((e) => e.id);
-    expect(verticauxEnRotation.sort()).toEqual(['kb-golfer-swing', 'kb-side-swing', 'kb-wood-chop', 'plank-t', 'woodchop'].sort());
+    // (Le swing du golfeur et le balancier latéral, eux, se font au temps.)
+    expect(verticauxEnRotation.sort()).toEqual(['kb-wood-chop', 'plank-t', 'woodchop'].sort());
   });
 
   it('ne donne une forme qu’à des exercices de musculation lents, sans arrêt ni départ propre : les cercles au temps, les rotations au tempo', () => {
@@ -236,10 +237,13 @@ describe('le changement de côté', () => {
       const attendu = exercice.cotes === 'unilateral' && musculation ? 5 : 0;
       expect(changementDeCoteSec(exercice), exercice.id).toBe(attendu);
     }
-    // En répétitions, et une fois au temps : le relevé turc.
-    expect(EXERCICES.filter((e) => changementDeCoteSec(e) > 0 && e.unite === 'secondes').map((e) => e.id)).toEqual([
-      'kb-turkish-get-up',
-    ]);
+    // En répétitions, et au temps : le relevé turc et les explosifs d'un seul bras.
+    expect(EXERCICES.filter((e) => changementDeCoteSec(e) > 0 && e.unite === 'secondes').map((e) => e.id).sort()).toEqual(
+      [
+        'kb-turkish-get-up', 'dumbbell-snatch', 'kb-side-swing', 'kb-single-arm-swing', 'kb-snatch', 'kb-clean',
+        'kb-golfer-swing',
+      ].sort(),
+    );
     // Les positions tenues d'un côté puis de l'autre enchaînent, comme avant.
     expect(dureeSerieSec(EXERCICES_PAR_ID['yoga-guerrier-2'], 30, TEMPO)).toBe(60);
     // Une série unilatérale : ses répétitions des deux côtés, et les 5 s.

@@ -490,16 +490,46 @@ export const SENS_CERCLE_SEC = 30;
 export const estCercleAuTemps = (exercice: Pick<Exercice, 'unite' | 'mouvement'>): boolean =>
   exercice.unite === 'secondes' && exercice.mouvement === 'circulaire';
 
+/** Les mouvements explosifs se font au temps, pas au tempo : un swing ou un
+ *  saut en 3 s / 3 s n'est plus un swing ni un saut. Chacun à son rythme, avec
+ *  une charge légère — la qualité avant la vitesse —, sans métronome : un
+ *  décompte. Un kettlebell ou un haltère balistique (swing, arraché, épaulé,
+ *  tirage haut, balanciers) : 30 s la série, de chaque côté pour un exercice
+ *  d'un seul bras, avec les 5 s pour changer de côté. L'essai la raccourcit
+ *  comme les autres exercices au temps. */
+export const BALISTIQUE_SEC = 30;
+/** Les sauts et le burpee (`saut`) fatiguent plus vite : 20 s la série. */
+export const SAUT_SEC = 20;
+
+/** Un explosif fait au temps (`explosif`, `unite: 'secondes'`). */
+export const estExplosifAuTemps = (exercice: Pick<Exercice, 'unite' | 'explosif'>): boolean =>
+  exercice.unite === 'secondes' && exercice.explosif === true;
+
+/** Le temps que la fiche impose à une partie de série au temps — un sens de
+ *  cercle (`SENS_CERCLE_SEC`), une série d'explosif (`BALISTIQUE_SEC`,
+ *  `SAUT_SEC`) — ; null pour une tenue, qui suit le niveau (`tenueSec`). */
+export function secondesImposees(
+  exercice: Pick<Exercice, 'unite' | 'mouvement' | 'explosif' | 'saut'>,
+): number | null {
+  if (estCercleAuTemps(exercice)) return SENS_CERCLE_SEC;
+  if (estExplosifAuTemps(exercice)) return exercice.saut ? SAUT_SEC : BALISTIQUE_SEC;
+  return null;
+}
+
 /** Les parties d'une série au temps, de `reps` secondes chacune : deux côtés
  *  pour un exercice unilatéral, deux sens pour un cercle, une sinon. */
 export function partiesAuTemps(exercice: Pick<Exercice, 'cotes' | 'unite' | 'mouvement'>): 1 | 2 {
   return exercice.cotes === 'unilateral' || estCercleAuTemps(exercice) ? 2 : 1;
 }
 
-/** Les secondes d'une partie de série au temps : celles d'un sens pour un
- *  cercle (`SENS_CERCLE_SEC`), la tenue demandée (`tenueSec`) sinon. */
-export function secondesAuTemps(exercice: Pick<Exercice, 'unite' | 'mouvement'>, tenueSec: number): number {
-  return estCercleAuTemps(exercice) ? SENS_CERCLE_SEC : tenueSec;
+/** Les secondes d'une partie de série au temps : celles que la fiche impose
+ *  (`secondesImposees`) — un sens de cercle, une série d'explosif —, la tenue
+ *  demandée (`tenueSec`) sinon. */
+export function secondesAuTemps(
+  exercice: Pick<Exercice, 'unite' | 'mouvement' | 'explosif' | 'saut'>,
+  tenueSec: number,
+): number {
+  return secondesImposees(exercice) ?? tenueSec;
 }
 
 /** Ce que compte le temps d'une série au temps : « par côté », « dans chaque
@@ -1168,16 +1198,20 @@ export function genererSeance(parametres: ParametresSeance, graine?: number): Se
   return seance;
 }
 
-/** Adapte les répétitions quand l'unité change (répétitions ↔ secondes). */
+/** Adapte les répétitions quand l'unité change (répétitions ↔ secondes), ou
+ *  que le temps vient d'une fiche (cercle, explosif) plutôt que du niveau. */
 function adapterReps(
   remplacant: Exercice,
   repsActuelles: number,
-  uniteActuelle: Exercice['unite'],
+  actuel: Exercice,
   reglages: ReglagesNiveau,
 ): number {
-  // Un cercle tourne toujours le même temps dans chaque sens.
-  if (estCercleAuTemps(remplacant)) return SENS_CERCLE_SEC;
-  if (remplacant.unite === uniteActuelle) return repsActuelles;
+  // Un cercle tourne toujours le même temps dans chaque sens, un explosif se
+  // fait toujours le même temps : celui de sa fiche, pas la tenue du niveau.
+  const imposees = secondesImposees(remplacant);
+  if (imposees !== null) return imposees;
+  // Et ce temps-là n'est pas celui d'une tenue : on repart de celle du niveau.
+  if (remplacant.unite === actuel.unite && secondesImposees(actuel) === null) return repsActuelles;
   return remplacant.unite === 'secondes' ? reglages.tenueSec : (reglages.repsPreferees ?? reglages.reps[0]);
 }
 
@@ -1214,7 +1248,7 @@ export function remplacerExercice(seance: Seance, exerciceId: string, graine?: n
       ? {
           ...bloc,
           exerciceId: remplacant.id,
-          reps: adapterReps(remplacant, bloc.reps, actuel.unite, reglages),
+          reps: adapterReps(remplacant, bloc.reps, actuel, reglages),
         }
       : { ...bloc },
   );

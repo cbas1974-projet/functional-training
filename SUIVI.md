@@ -115,9 +115,25 @@ Claude, de son côté :
   lui aussi, un côté puis l'autre avec les 5 s pour changer de côté. Les
   autres candidats sont passés en revue en tête de `docs/mouvements.md`
   (« Au temps ou au tempo ? ») : **à décider par Sébastien**, les coups
-  croisés assis en V et les mouvements explosifs ; les rotations russes, les
-  planches et les rowings en planche gardent le tempo. Le programme n'est pas
-  recomposé : seules les séries de cercles passent de 48 s à 1 min.
+  croisés assis en V (les explosifs ont été décidés ensuite, juste
+  dessous) ; les rotations russes, les planches et les rowings en planche
+  gardent le tempo. Le programme n'est pas recomposé : seules les séries de
+  cercles passent de 48 s à 1 min.
+- **Les 16 explosifs au temps**, décidé par Sébastien : « pas fuir un
+  exercice, pouvoir un jour le faire sans douleur — donc mettre moins de
+  poids ». Swings, arrachés, épaulé, tirage haut, balanciers, sauts, burpee :
+  plus de tempo, un décompte, à son rythme, **léger** (« À ton rythme, léger :
+  la qualité avant la vitesse »). **30 s** par série (`BALISTIQUE_SEC`) pour
+  les neuf qui lancent une charge, de chaque côté avec « CHANGE DE CÔTÉ » 5 s
+  et « +5 s » pour les six à un bras ; **20 s** (`SAUT_SEC`) pour les sept
+  sauts et le burpee (`saut: true` dans la fiche). Le poids, « lourd, correct,
+  léger » et les crans de charge restent (`chargeReglable`). L'essai les
+  raccourcit d'un tiers, la durée annoncée est celle des étapes, seul, à deux
+  et en séance libre, où ils prennent leur temps et non la tenue du niveau.
+  Une station de circuit d'un seul bras prend aussi ses 5 s. Toujours
+  option seulement (« mouvements explosifs »), jamais dans le programme, qui
+  est identique octet pour octet (vérifié sur 11 956 empreintes de programmes,
+  de séances et de séances libres sans l'option).
 
 ## Séance du 10 octobre 2026
 
@@ -283,7 +299,7 @@ d'installation du README.
   (`cbas1974-projet`). GitHub la suspend après 60 jours sans commit sur un
   dépôt public ; on la relance dans l'onglet *Actions*.
 - **Vérifications** :
-  - `npx vitest run` (834 tests) ;
+  - `npx vitest run` (857 tests) ;
   - `npx tsc -b --noEmit` ;
   - `npx eslint .` ;
   - `npm run build`.

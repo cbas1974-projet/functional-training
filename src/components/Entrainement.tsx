@@ -27,6 +27,8 @@ import {
 } from '../data/parametres';
 import { EXERCICES_PAR_ID, NOM_PATTERN, NOM_ZONE, ZONES, consignesDe } from '../data/exercices';
 import {
+  BALISTIQUE_SEC,
+  SAUT_SEC,
   analyserSeance,
   disciplineDe,
   dureeSerieDuBloc,
@@ -686,7 +688,7 @@ export default function Entrainement({ etat, onChange }: EntrainementProps) {
                     actif={parametres.explosifs}
                     onClick={() => mettreAJourParametres({ explosifs: !parametres.explosifs })}
                     nom="Mouvements explosifs"
-                    precision="Squat sauté, swing : incompatibles avec le tempo lent."
+                    precision={`Swings, arrachés, sauts : au temps, à ton rythme, légers (${BALISTIQUE_SEC} s, ${SAUT_SEC} s pour les sauts).`}
                   />
                 </Groupe>
               )}

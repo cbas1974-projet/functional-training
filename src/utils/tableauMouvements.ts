@@ -18,13 +18,17 @@ import { PARAMETRES_PAR_DEFAUT } from '../data/parametres';
 import { etatChangementCote, etatMaintien, etatMetronome, formeDe, motDePhase } from './etapesSeance';
 import type { Etape } from './etapesSeance';
 import {
+  BALISTIQUE_SEC,
   CHANGER_DE_COTE_SEC,
+  SAUT_SEC,
   SENS_CERCLE_SEC,
   changementDeCoteSec,
   dureeSerieSec,
   estCercleAuTemps,
+  estExplosifAuTemps,
   formaterDuree,
   secondesAuTemps,
+  secondesImposees,
 } from './generateurSeance';
 
 /** Le tempo du tableau : celui des séances, 3 s / 3 s + 1 s. */
@@ -34,7 +38,8 @@ export const REPS_TABLEAU = 8;
 /** Le pas de lecture de l'horloge : les tempos sont en secondes entières. */
 const PAS_SEC = 0.25;
 /** Une série au temps déroulée pour le tableau : la tenue du programme,
- *  30 s — par côté, ou dans chaque sens pour un cercle (`SENS_CERCLE_SEC`). */
+ *  30 s — par côté, dans chaque sens pour un cercle (`SENS_CERCLE_SEC`), ou
+ *  le temps d'un explosif (`BALISTIQUE_SEC`, `SAUT_SEC`). */
 const TENUE_TABLEAU_SEC = 30;
 
 /** Un morceau de la série : ce que montre l'écran, pendant combien de temps. */
@@ -124,7 +129,9 @@ export function derouleSerieAuTemps(
           : 'dans l’autre'
         : maintien?.cote
           ? `côté ${maintien.cote}`
-          : 'tenu';
+          : exercice.explosif
+            ? 'à son rythme'
+            : 'tenu';
     const derniere = parties[parties.length - 1];
     if (derniere && derniere.mot === mot) derniere.dureeSec += PAS_SEC;
     else parties.push({ mot, dureeSec: PAS_SEC });
@@ -133,12 +140,20 @@ export function derouleSerieAuTemps(
 }
 
 /** « MONTE 3 s → DESCENDS 3 s → TIENS 1 s » : la première répétition. Au
- *  temps, pas de répétition : le décompte, et pour un cercle ses deux sens. */
+ *  temps, pas de répétition : le décompte, pour un cercle ses deux sens, pour
+ *  un explosif son temps à son rythme. */
 export function uneRepetition(exercice: Exercice, tempo: Tempo = TEMPO_TABLEAU): string {
   if (exercice.unite !== 'reps') {
     if (estCercleAuTemps(exercice)) {
       const [premier, second] = derouleSerieAuTemps(exercice);
       return `— au temps : ${secondes(premier.dureeSec)} ${premier.mot} → « Change de sens ! » → ${secondes(second.dureeSec)} ${second.mot}`;
+    }
+    if (estExplosifAuTemps(exercice)) {
+      // 30 s à son rythme ; d'un seul bras, un côté, le changement, l'autre.
+      const parties = derouleSerieAuTemps(exercice).map((partie) =>
+        partie.mot === 'CHANGE DE CÔTÉ' ? `${partie.mot} ${secondes(partie.dureeSec)}` : `${secondes(partie.dureeSec)} ${partie.mot}`,
+      );
+      return `— au temps : ${parties.join(' → ')}, sans métronome`;
     }
     return exercice.cotes === 'unilateral'
       ? '— (au temps, de chaque côté : un décompte, pas de métronome)'
@@ -159,7 +174,8 @@ export function deroulementDesCotes(exercice: Exercice, tempo: Tempo = TEMPO_TAB
     if (changement) {
       return `côté droit → CHANGE DE CÔTÉ ${secondes(changement.dureeSec)} (« +${CHANGER_DE_COTE_SEC} s » si besoin) → côté gauche`;
     }
-    return exercice.cotes === 'unilateral' ? 'un côté puis l’autre' : 'les deux ensemble';
+    if (exercice.cotes === 'unilateral') return 'un côté puis l’autre';
+    return exercice.cotes === 'alterne' ? 'en alternant, un côté après l’autre' : 'les deux ensemble';
   }
   const morceaux = derouleSerie(exercice, tempo);
   const cycles = (filtre: (m: Morceau) => boolean) =>
@@ -178,11 +194,13 @@ export function deroulementDesCotes(exercice: Exercice, tempo: Tempo = TEMPO_TAB
   return `${total} rép.`;
 }
 
-/** La durée d'une série dans le tableau : huit répétitions, ou, au temps, une
- *  minute de cercle — la tenue des autres dépend de la séance. */
+/** La durée d'une série dans le tableau : huit répétitions, ou, au temps, le
+ *  temps que la fiche impose — une minute de cercle, 30 s ou 20 s d'explosif
+ *  (`secondesImposees`) ; la tenue des autres dépend de la séance. */
 function dureeDuTableau(exercice: Exercice, tempo: Tempo): string {
   if (exercice.unite === 'reps') return formaterDuree(dureeSerieSec(exercice, REPS_TABLEAU, tempo));
-  return estCercleAuTemps(exercice) ? formaterDuree(dureeSerieSec(exercice, SENS_CERCLE_SEC, tempo)) : 'au temps';
+  const imposees = secondesImposees(exercice);
+  return imposees === null ? 'au temps' : formaterDuree(dureeSerieSec(exercice, imposees, tempo));
 }
 
 /** Ce qui n'est pas le cas par défaut, dit simplement. */
@@ -194,6 +212,11 @@ function raisonsDe(exercice: Exercice): string[] {
       raisons.push('Cercle au temps : un décompte, pas de métronome ; chacun tourne à son rythme, jamais d’arrêt.');
       if (exercice.genouAMenager) raisons.push('Genou plié tout du long : on descend jusqu’où il ne fait pas mal.');
       return raisons;
+    }
+    if (estExplosifAuTemps(exercice)) {
+      return [
+        'Explosif, au temps (seulement avec l’option) : à son rythme, léger, la qualité avant la vitesse.',
+      ];
     }
     return [
       exercice.cotes === 'unilateral'
@@ -240,12 +263,10 @@ const NOTES: Record<string, string> = {
   'hollow-pullover': 'Comme le pull-over, les bras passent derrière la tête (avant : MONTE d’abord).',
   'kb-single-leg-deadlift': 'Part debout, comme aux haltères (avant : MONTE d’abord).',
   'kb-good-morning': 'Part debout : on se penche d’abord (avant : MONTE d’abord).',
-  'dumbbell-burpee': 'Part debout : on descend en planche d’abord (avant : MONTE d’abord).',
   woodchop: 'En bas, le buste est penché et tourné, la charge au pied (avant : TIENS en bas).',
   'kb-wood-chop': 'En bas, le buste est penché et tourné, la charge au pied (avant : TIENS en bas).',
   'no-money-curl': 'Les avant-bras s’ouvrent vers l’extérieur, coudes au corps.',
   'kb-low-side-step-row': 'Part bras tendus, en demi-squat : le rowing monte d’abord (avant : DESCENDS d’abord, TIENS en bas).',
-  'kb-frog-jump': 'Part dans le squat large : on saute d’abord (avant : DESCENDS d’abord).',
   'cossack-squat': 'Avant : TIENS en bas, genou plié au maximum.',
   'kb-bob-and-weave': 'Avant : TIENS en bas du squat.',
   'kb-overhead-squat': 'Avant : TIENS en bas du squat.',
@@ -391,10 +412,9 @@ export const AU_TEMPS_OU_AU_TEMPO: AvisAuTemps[] = [
   },
   {
     ids: EXERCICES.filter((e) => e.explosif).map((e) => e.id),
-    recommandation: 'Au temps, 20 s à son rythme, ou des répétitions sans métronome.',
-    decision: 'a-decider',
-    pourquoi:
-      'Un swing ou un saut en 3 s / 3 s n’est plus un swing ni un saut : le tempo lent ne leur va pas. Mais ils ne sortent qu’avec l’option « explosifs », jamais dans le programme, et ils sont déconseillés au dos de Speedy et aux genoux de Big Max. Pas fait : il faudrait choisir la durée, le nombre de séries, et garder ou non les sauts.',
+    recommandation: `Au temps, sans métronome : ${BALISTIQUE_SEC} s par série (${SAUT_SEC} s pour les sauts et le burpee), à son rythme, léger — la qualité avant la vitesse.`,
+    decision: 'fait',
+    pourquoi: `Décidé par Sébastien : « pas fuir un exercice, pouvoir un jour le faire sans douleur — donc mettre moins de poids ». Un swing ou un saut en 3 s / 3 s n’est plus un swing ni un saut : on les fait au temps, chacun à son rythme, avec une charge légère, un décompte et pas de métronome. ${BALISTIQUE_SEC} s par série pour les swings, les arrachés, l’épaulé, le tirage haut et les balanciers — ${BALISTIQUE_SEC} s de chaque côté, avec CHANGE DE CÔTÉ ${CHANGER_DE_COTE_SEC} s (« +${CHANGER_DE_COTE_SEC} s » si besoin), pour les versions à un bras ; ${SAUT_SEC} s pour les sauts et le burpee. Le poids se note et se règle comme avant (lourd, correct, léger). Ils ne sortent toujours qu’avec l’option « explosifs », jamais dans le programme, et restent déconseillés au dos de Speedy et aux genoux de Big Max : raison de plus d’y aller léger. Avant : DESCENDS 3 s → MONTE 3 s, ou MONTE 3 s → DESCENDS 3 s, sans arrêt.`,
   },
   {
     ids: ['kb-isometric-crunch', 'farmers-walk', 'kb-farmers-walk', 'traineau'],
@@ -411,6 +431,12 @@ function aujourdHui(ids: string[], tempo: Tempo): string {
     const exercice = EXERCICES_PAR_ID[id];
     if (exercice.unite === 'reps') return uneRepetition(exercice, tempo);
     if (estCercleAuTemps(exercice)) return uneRepetition(exercice, tempo).replace(/^— /, '');
+    const imposees = secondesImposees(exercice);
+    if (imposees !== null) {
+      return changementDeCoteSec(exercice) > 0
+        ? `au temps : ${imposees} s de chaque côté, CHANGE DE CÔTÉ ${CHANGER_DE_COTE_SEC} s`
+        : `au temps : ${imposees} s`;
+    }
     return changementDeCoteSec(exercice) > 0 ? 'au temps, de chaque côté, CHANGE DE CÔTÉ 5 s' : 'au temps : un décompte';
   });
   return [...new Set(lignes)].join(' ; ou ');
@@ -451,7 +477,8 @@ export function tableauDesMouvements(tempo: Tempo = TEMPO_TABLEAU): string {
   const formes = (forme: string) => exercices.filter((e) => formeDe(e) === forme);
   const liste = (es: Exercice[]) => es.map((e) => `\`${e.id}\``).join(', ');
   const unilateraux = exercices.filter((e) => changementDeCoteSec(e) > 0);
-  const auTemps = exercices.filter((e) => e.unite === 'secondes');
+  const explosifs = exercices.filter((e) => e.explosif);
+  const auTemps = exercices.filter((e) => e.unite === 'secondes' && !e.explosif);
   const lignes: string[] = [
     '# Les mouvements, un par un',
     '',
@@ -475,7 +502,9 @@ export function tableauDesMouvements(tempo: Tempo = TEMPO_TABLEAU): string {
     `- **Unilatéral** (${unilateraux.length}) : tout le côté droit, CHANGE DE CÔTÉ ${CHANGER_DE_COTE_SEC} s (« +${CHANGER_DE_COTE_SEC} s »`,
     '  en donne cinq de plus), puis le côté gauche — au tempo comme au temps. La durée annoncée compte les 5 s.',
     `- **Au temps** (${auTemps.length}) : un décompte, pas de métronome. ${liste(auTemps)}.`,
-    '- **Explosifs** : seulement quand l’option est cochée ; jamais d’arrêt.',
+    `- **Explosifs** (${explosifs.length}), **au temps** : seulement quand l’option est cochée ; ${BALISTIQUE_SEC} s par série (${SAUT_SEC} s pour les`,
+    `  sauts et le burpee), de chaque côté avec CHANGE DE CÔTÉ ${CHANGER_DE_COTE_SEC} s pour un seul bras ; à son rythme, léger, un décompte`,
+    `  et pas de métronome. ${liste(explosifs)}.`,
     '',
   ];
   for (const zone of ZONES) {
