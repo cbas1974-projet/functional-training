@@ -274,6 +274,12 @@ d'installation du README.
 
 ### Façon de travailler avec Sébastien
 
+- **Claude est chef de projet, pas exécutant** (demandé le 11 octobre). Pour
+  chaque demande, avant de coder : 1) son avis, et ce qu'il conteste dans la
+  demande ; 2) deux ou trois options, avec sa recommandation et ce qu'elle
+  coûte ; 3) la confronter au but du projet et à l'analyse 80/20
+  (`docs/maturite-80-20.md`). On code seulement après le choix de Sébastien.
+  Une phrase de Sébastien n'est pas un ordre à exécuter mot à mot.
 - Discuter avant les gros changements : donner un avis d'expert, c'est lui
   qui décide. « On discute seulement » veut dire : ne rien modifier.
 - Écrire en français simple, sans jargon : il n'est pas technicien.
