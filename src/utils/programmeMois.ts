@@ -5,10 +5,10 @@
 // soir), la trap bar en tête ; le mardi, le haut du corps ; le jeudi, les
 // jambes, modéré, le swing en tête. Les trois jours alternent d'une semaine à
 // l'autre : mêmes muscles, autres exercices. Tous les jours, les exercices vont
-// par paires d'exercices opposés : les deux à la suite, puis une pause — la
-// plus longue des pauses de ses deux exercices. Chacun suit la séance sur son
-// téléphone, avec ses répétitions et ses charges ; à deux, les deux téléphones
-// déroulent la même horloge.
+// par paires d'exercices opposés : les deux à la suite, puis une minute de
+// pause — une minute trente après la paire de la trap bar. Chacun suit la
+// séance sur son téléphone, avec ses répétitions et ses charges ; à deux, les
+// deux téléphones déroulent la même horloge.
 import type {
   BlocSeries,
   Exercice,
@@ -53,7 +53,17 @@ export interface ProfilPersonne {
   jiuJitsu: boolean;
   /** Étirements proposés pendant les longues pauses. */
   etirementsPause: string[];
+  /** Le bas du dos à ménager : pas plus de répétitions que ça aux soulevés
+   *  de terre lourds (`estSouleveLourd`), même le lundi. */
+  repsMaxSouleve?: number;
 }
+
+/** Le bas du dos de Speedy fatigue vite : 8 répétitions au plus aux soulevés
+ *  de terre lourds — la trap bar d'abord —, même le lundi, où il en fait 10
+ *  ailleurs. Dix répétitions lentes, c'est une minute de dos sous charge : il
+ *  lâcherait avant les jambes, vers la huitième (audit du 11 octobre 2026,
+ *  point 1.4). Big Max fait les siennes. */
+export const REPS_MAX_SOULEVE = 8;
 
 export const PERSONNES: ProfilPersonne[] = [
   // Le dos à ménager : il s'étire pendant que Max fait sa série, sans flexion
@@ -63,6 +73,7 @@ export const PERSONNES: ProfilPersonne[] = [
     seriePlusPoussee: false,
     jiuJitsu: true,
     etirementsPause: ['etir-rachis-debout', 'etir-mollet-mur', 'etir-inclinaison-tronc'],
+    repsMaxSouleve: REPS_MAX_SOULEVE,
   },
   // Des jambes très fortes, le haut du corps moins ; les genoux demandent
   // d'étirer les cuisses, les mollets et l'arrière des cuisses — pas de fente,
@@ -167,8 +178,9 @@ export const tempoDuProgramme = (programme: Pick<ProgrammeMois, 'duo'>): Tempo =
  *  des cuisses (extension et flexion des jambes) ; 6 = la nouvelle semaine :
  *  le lundi tout le corps avec la trap bar, le mardi le haut, le jeudi les
  *  jambes avec le swing et les deux machines, les trois jours en semaines A
- *  et B, et les fentes de retour. */
-export const VERSION_PROGRAMME = 6;
+ *  et B, et les fentes de retour ; 7 = le ventre sans plier le dos, le
+ *  Superman sans poids, la planche de Copenhague le jeudi (l'audit). */
+export const VERSION_PROGRAMME = 7;
 
 /** La durée inscrite dans les réglages d'une séance du programme ; la vraie
  *  est celle de ses étapes. */
@@ -178,14 +190,21 @@ const DUREE_REFERENCE_MIN = 60;
 export const DUREE_MAXI_SEC = 150 * 60;
 /** Trois séries par exercice ; Max en fait une de plus aux poussées. */
 export const SERIES_PROGRAMME = 3;
-/** Repos après une série d'un gros exercice, fait seul ; après une paire, c'est
- *  la pause de la paire quand elle en compte un (`reposDePaire`). */
+/** Repos après une série d'un gros exercice, fait seul ; après une paire,
+ *  c'est la pause de la paire (`reposDePaire`). */
 export const REPOS_SEC = 90;
-/** Repos après une série d'un petit muscle : bras, épaules en isolation,
- *  abdominaux, mollets, intérieur et extérieur de cuisse. */
+/** Repos après une série d'un petit muscle, fait seul : bras, épaules en
+ *  isolation, abdominaux, mollets, intérieur et extérieur de cuisse. */
 export const REPOS_PETITS_SEC = 60;
-/** La trap bar : la plus lourde, deux minutes — seule, ou après sa paire. */
+/** La trap bar faite seule : la plus lourde, deux minutes. */
 export const REPOS_TRAP_BAR_SEC = 120;
+/** La pause après une paire : une minute partout. Chaque muscle se repose
+ *  quand même plus de deux minutes, puisque l'autre exercice de la paire lui
+ *  sert de repos ; plus de cardio, et un lundi plus court (audit du 11
+ *  octobre 2026, pépite 7). */
+export const REPOS_PAIRE_SEC = 60;
+/** Sauf après la paire de la trap bar : une minute trente. */
+export const REPOS_PAIRE_TRAP_BAR_SEC = 90;
 /** Les deux exercices d'une paire : le temps de passer de l'un à l'autre. */
 export const TRANSITION_LIEN_SEC = 15;
 /** Tenue des exercices au temps : planche, marche du fermier. Un cercle au
@@ -263,6 +282,11 @@ const gabaritDe = (seance: SeanceAGabarit): Gabarit => {
 };
 
 const TRONC: PatternMoteur[] = ['anti-rotation', 'flexion-tronc', 'rotation', 'flexion-laterale'];
+/** Le ventre, au programme : d'abord du gainage où le dos ne bouge pas — la
+ *  planche avec passage de la cloche, le demi-relevé turc, la planche
+ *  latérale, le tour de taille. Sinon, un bûcheron ou une flexion latérale,
+ *  debout ; jamais un exercice qui plie le dos (`plieLeDos`). */
+const DOS_IMMOBILE: PatternMoteur[] = ['anti-rotation'];
 
 const principauxDe = (exercice: Exercice): Muscle[] => exercice.musclesPrincipaux ?? [];
 
@@ -275,6 +299,13 @@ const CHARNIERE_TRAP_BAR: Emplacement = { cle: 'charniere', muscles: ['ischios',
 const CHARNIERE_LIBRE: Emplacement = { cle: 'charniere', muscles: ['ischios', 'fessiers'], principal: ['ischios'], patterns: ['charniere'], preferer: (e) => !principauxDe(e).includes('lombaires'), avec: ['tirage', 'epaules', 'poussee'] };
 /** Sans les machines, le lundi garde aussi un squat, à deux jambes. */
 const SQUAT_LOURD: Emplacement = { cle: 'jambes', muscles: ['quadriceps', 'fessiers'], principal: ['quadriceps', 'fessiers'], patterns: ['squat'], preferer: (e) => e.cotes === 'bilateral', avec: ['epaules', 'poussee', 'tirage', 'oiseau'] };
+
+/** Le Superman du lundi, sans poids : au programme, il remplace celui au
+ *  kettlebell (`HORS_PROGRAMME`). */
+export const SUPERMAN = 'superman';
+/** L'intérieur de cuisse du jeudi, chaque semaine : la planche de Copenhague
+ *  courte, le genou sur le banc, 15 s de chaque côté. */
+export const COPENHAGUE = 'copenhagen-plank';
 
 /** Le swing à deux mains : le seul mouvement explosif du programme. Il ouvre
  *  le jeudi, au temps, léger — ce sont les fesses qui lancent, pas le dos. */
@@ -293,8 +324,8 @@ const BASE: Record<Gabarit, Emplacement[]> = {
     // On tire, sans charger le bas du dos — la trap bar l'a déjà fait : un
     // rowing poitrine contre le banc plutôt que buste penché.
     { cle: 'tirage', muscles: ['dorsaux', 'trapezes', 'biceps'], principal: ['dorsaux'], patterns: ['tirage-horizontal', 'tirage-vertical'], preferer: (e) => !chargeLeBasDuDos(e), avec: ['charniere', 'bas-du-dos', 'poussee'] },
-    // Le ventre, face au bas du dos : les deux côtés du tronc.
-    { cle: 'tronc', muscles: ['abdominaux', 'obliques'], principal: ['abdominaux', 'obliques'], patterns: TRONC, avec: ['bas-du-dos'] },
+    // Le ventre, face au bas du dos : les deux côtés du tronc — le dos immobile.
+    { cle: 'tronc', muscles: ['abdominaux', 'obliques'], principal: ['abdominaux', 'obliques'], patterns: DOS_IMMOBILE, avec: ['bas-du-dos'] },
     // On pousse une charge : un développé sur banc avant les pompes.
     { cle: 'poussee', muscles: ['pectoraux', 'triceps', 'epaules'], principal: ['pectoraux'], patterns: ['poussee-horizontale'], preferer: (e) => e.materiel === 'banc', avec: ['oiseau', 'dorsaux', 'tirage', 'bas-du-dos'] },
     // Un second tirage, pour le dos : face aux épaules.
@@ -321,12 +352,12 @@ const BASE: Record<Gabarit, Emplacement[]> = {
     { cle: 'cuisse-arriere', muscles: ['ischios'], principal: ['ischios'], patterns: ['isolation'], favoris: ['leg-curl-machine'], avec: ['cuisse-avant'] },
     // Les fentes, de retour : elles travaillent les stabilisateurs.
     { cle: 'fente', muscles: ['quadriceps', 'fessiers'], principal: ['quadriceps', 'fessiers'], patterns: ['fente'], avec: ['cuisse-arriere', 'tirage-leger'] },
-    { cle: 'tronc', muscles: ['abdominaux', 'obliques'], principal: ['abdominaux', 'obliques'], patterns: TRONC, avec: ['bas-du-dos'] },
+    { cle: 'tronc', muscles: ['abdominaux', 'obliques'], principal: ['abdominaux', 'obliques'], patterns: DOS_IMMOBILE, avec: ['bas-du-dos'] },
     { cle: 'bas-du-dos', muscles: ['lombaires', 'fessiers', 'ischios'], principal: ['lombaires'], avec: ['tronc', 'cuisse-avant', 'squat'] },
     { cle: 'squat', muscles: ['quadriceps', 'fessiers'], principal: ['quadriceps'], patterns: ['squat'], avec: ['cuisse-arriere', 'fessiers'] },
     { cle: 'fessiers', muscles: ['fessiers'], principal: ['fessiers'], avec: ['squat', 'cuisse-avant'] },
     { cle: 'abducteurs', muscles: ['abducteurs'], principal: ['abducteurs'], avec: ['adducteurs'] },
-    { cle: 'adducteurs', muscles: ['adducteurs'], principal: ['adducteurs'], avec: ['abducteurs'] },
+    { cle: 'adducteurs', muscles: ['adducteurs'], principal: ['adducteurs'], favoris: [COPENHAGUE], avec: ['abducteurs'] },
     // Le partenaire du swing : un tirage léger du haut du corps, l'arrière des
     // épaules ou un rowing appuyé — rien qui charge le bas du dos ni qui coupe
     // le souffle. La dernière place : elle sert au swing, pas aux autres.
@@ -361,10 +392,11 @@ const PAR_OBJECTIF: Record<
     // Avec le ventre : les deux côtés du tronc. Le lundi, la trap bar a déjà
     // chargé l'arrière des cuisses et le dos : pour le bas du dos, le Superman,
     // allongé, plutôt qu'une deuxième charnière debout (le good morning) — et
-    // chaque semaine, le dos de Speedy fatigue vite.
+    // chaque semaine, le dos de Speedy fatigue vite. Sans poids : une charge
+    // au bout des bras écrase le bas du dos (McGill).
     emplacement: { cle: 'bas-du-dos', muscles: ['lombaires', 'fessiers', 'ischios'], principal: ['lombaires'], reprise: true, avec: ['tronc', 'cuisse-avant', 'squat'] },
     gabarits: ['dure'],
-    surcharge: { dure: { favoris: ['kb-superman'], preferer: (e) => !principauxDe(e).includes('ischios'), avec: ['tronc', 'epaules', 'poussee', 'tirage'] } },
+    surcharge: { dure: { favoris: [SUPERMAN], preferer: (e) => !principauxDe(e).includes('ischios'), avec: ['tronc', 'epaules', 'poussee', 'tirage'] } },
   },
   epaules: {
     emplacement: { cle: 'epaules', muscles: ['epaules', 'coiffe-rotateurs'], principal: ['epaules'], avec: ['tirage', 'dorsaux', 'trapezes'] },
@@ -380,8 +412,10 @@ const PAR_OBJECTIF: Record<
     gabarits: ['bas'],
   },
   'interieur-cuisse': {
-    // Une fente latérale d'abord : les fentes sont de retour.
-    emplacement: { cle: 'adducteurs', muscles: ['adducteurs'], principal: ['adducteurs'], reprise: true, preferer: (e) => e.pattern === 'fente', avec: ['abducteurs'] },
+    // La planche de Copenhague courte, chaque jeudi : la meilleure protection
+    // de l'aine pour le hockey de Big Max (Harøy 2019), et la garde de Speedy.
+    // Sans banc, une fente latérale.
+    emplacement: { cle: 'adducteurs', muscles: ['adducteurs'], principal: ['adducteurs'], reprise: true, favoris: [COPENHAGUE], preferer: (e) => e.pattern === 'fente', avec: ['abducteurs'] },
     gabarits: ['bas'],
   },
   bras: {
@@ -391,7 +425,7 @@ const PAR_OBJECTIF: Record<
   // Le ventre s'oppose au bas du dos : il a sa place les jours qui le
   // travaillent, pas le mardi.
   tronc: {
-    emplacement: { cle: 'tronc', muscles: ['abdominaux', 'obliques'], principal: ['abdominaux', 'obliques'], patterns: TRONC, avec: ['bas-du-dos'] },
+    emplacement: { cle: 'tronc', muscles: ['abdominaux', 'obliques'], principal: ['abdominaux', 'obliques'], patterns: DOS_IMMOBILE, avec: ['bas-du-dos'] },
     gabarits: ['bas', 'dure'],
   },
   jambes: {
@@ -434,9 +468,26 @@ function emplacementsDe(gabarit: Gabarit, objectifs: string[], materiels: Materi
 
 // ------------------------------------------------------------- Le choix
 
+/** Hors du programme, mais dans la bibliothèque et la séance libre : le
+ *  Superman au kettlebell. Au programme, le Superman se fait sans poids
+ *  (`SUPERMAN`) : une charge au bout des bras écrase le bas du dos, cambré
+ *  (audit du 11 octobre 2026, point 1.5). */
+export const HORS_PROGRAMME = ['kb-superman'];
+
+/** Plie le dos : les crunchs, les V-ups, les relevés de buste (la flexion du
+ *  tronc), et les rotations faites assis ou allongé — la rotation russe, les
+ *  coups croisés en V. McGill les déconseille à un dos qui fatigue vite,
+ *  surtout le matin (audit, point 1.5) : au programme, le ventre travaille
+ *  le dos immobile (`DOS_IMMOBILE`). Ils restent dans la bibliothèque et la
+ *  séance libre. */
+export const plieLeDos = (exercice: Exercice): boolean =>
+  exercice.pattern === 'flexion-tronc' ||
+  (exercice.pattern === 'rotation' && /^(assis|allongé)/i.test(exercice.position));
+
 /** Les exercices dont on peut composer un programme : musculation, avec le
- *  matériel de la salle, sans mouvement explosif ni niveau avancé, et sans ceux
- *  qu'on a mis de côté (`EXERCICES_MIS_DE_COTE`). */
+ *  matériel de la salle, sans mouvement explosif ni niveau avancé, rien qui
+ *  plie le dos (`plieLeDos`), et sans ceux qu'on a mis de côté
+ *  (`EXERCICES_MIS_DE_COTE`, `HORS_PROGRAMME`). */
 export function candidatsProgramme(materiels: Materiel[]): Exercice[] {
   const possedes = new Set<Materiel>(['aucun', ...materiels]);
   return EXERCICES.filter(
@@ -445,6 +496,8 @@ export function candidatsProgramme(materiels: Materiel[]): Exercice[] {
       possedes.has(e.materiel) &&
       e.niveauMin <= 2 &&
       !e.explosif &&
+      !plieLeDos(e) &&
+      !HORS_PROGRAMME.includes(e.id) &&
       !EXERCICES_MIS_DE_COTE.includes(e.id),
   );
 }
@@ -876,7 +929,7 @@ const MOUVEMENT_SEC = 45;
 const leger = (nom: string, consigne: string): MouvementGuide => ({ nom, consigne, dureeSec: MOUVEMENT_SEC });
 const CERCLES_BRAS = leger('Cercles de bras', 'Petits puis grands, vers l’arrière puis vers l’avant.');
 const BASSIN = leger('Rotations du bassin', 'Mains sur les hanches, grands cercles dans les deux sens.');
-const SQUATS = leger('Squats à vide', 'Lents et profonds, talons au sol, buste droit.');
+const SQUATS = leger('Squats à vide', 'Lents, aussi bas que le genou le permet, talons au sol, buste droit.');
 const MOUVEMENTS_LEGERS: Record<Gabarit, MouvementGuide[]> = {
   dure: [CERCLES_BRAS, BASSIN, SQUATS, leger('Good morning à vide', 'Mains sur la nuque : on plie aux hanches, dos plat, genoux souples.')],
   bas: [
@@ -1065,8 +1118,8 @@ export function genererProgramme(options: OptionsProgramme = {}): ProgrammeMois 
     // La semaine B prend d'autres exercices que la semaine A — sauf ceux qui
     // visent un muscle à peine servi (`reprise`), quand elle n'en trouve pas
     // d'autre, et les favoris du duo (`favoris` : la trap bar et le Superman
-    // du lundi, le swing et les deux machines des cuisses du jeudi), qui
-    // reviennent chaque semaine.
+    // du lundi, le swing, la planche de Copenhague et les deux machines des
+    // cuisses du jeudi), qui reviennent chaque semaine.
     const reprenable = (e: Exercice) =>
       places.some((p) => (p.reprise && p.principal && viseLePrincipal(e, p.principal)) || p.favoris?.includes(e.id));
     remplir([...places], new Set(interdits.filter((e) => !reprenable(e)).map(cleMouvement)));
@@ -1278,19 +1331,63 @@ export function reposDe(exercice: Exercice, seance: Pick<SeanceDuMois, 'type'>):
   return estPetitMuscle(exercice) ? REPOS_PETITS_SEC : REPOS_SEC;
 }
 
-/** La pause après une paire : la plus longue des pauses de ses deux exercices
- *  (`reposDe`) — une minute si elle ne compte que des petits muscles, une
- *  minute trente avec un gros exercice, deux minutes avec la trap bar. */
-export const reposDePaire = (paire: string[], seance: Pick<SeanceDuMois, 'type'>): number =>
-  Math.max(REPOS_PETITS_SEC, ...paire.filter(estConnu).map((id) => reposDe(EXERCICES_PAR_ID[id], seance)));
+/** La pause après une paire : une minute, et une minute trente après la
+ *  paire de la trap bar. */
+export const reposDePaire = (paire: string[]): number =>
+  paire.includes('trap-bar-deadlift') ? REPOS_PAIRE_TRAP_BAR_SEC : REPOS_PAIRE_SEC;
+
+/** Un soulevé de terre lourd : debout, à deux mains, une charnière qui charge
+ *  le bas du dos — la trap bar, le soulevé de terre roumain ou au
+ *  kettlebell, le good morning. Pas le pont fessier ni le Superman,
+ *  allongés, ni un soulevé sur une jambe, plus léger. */
+export const estSouleveLourd = (exercice: Exercice): boolean =>
+  exercice.pattern === 'charniere' &&
+  exercice.cotes === 'bilateral' &&
+  !exercice.explosif &&
+  chargeLeBasDuDos(exercice) &&
+  /^debout/i.test(exercice.position);
+
+/** Les répétitions d'une personne à un exercice : celles du jour, sauf aux
+ *  soulevés de terre lourds pour qui a le dos à ménager — Speedy, 8 au plus
+ *  (`REPS_MAX_SOULEVE`). */
+export function repsA(personne: Personne, exercice: Exercice, reps: number): number {
+  const plafond = PROFILS[personne].repsMaxSouleve;
+  return plafond !== undefined && estSouleveLourd(exercice) ? Math.min(reps, plafond) : reps;
+}
+
+/** Ce que l'accueil écrit quand un soulevé lourd plafonne les répétitions de
+ *  quelqu'un ce jour-là : « Speedy : 8 à la trap bar, 10 ailleurs — pour le
+ *  bas du dos. » Rien quand personne n'est plafonné (le mardi, le jeudi :
+ *  Speedy en fait déjà 8). */
+export function notePlafond(
+  seance: Pick<SeanceDuMois, 'exercices' | 'finale'>,
+  reps: Record<Personne, number>,
+): string | null {
+  const souleve = [...seance.exercices, ...(seance.finale ? [seance.finale] : [])]
+    .filter(estConnu)
+    .map((id) => EXERCICES_PAR_ID[id])
+    .find(estSouleveLourd);
+  if (!souleve) return null;
+  const ou =
+    souleve.id === 'trap-bar-deadlift'
+      ? 'à la trap bar'
+      : `au ${souleve.nomFr.charAt(0).toLowerCase()}${souleve.nomFr.slice(1)}`;
+  const notes = PERSONNES.filter((p) => repsA(p.id, souleve, reps[p.id]) < reps[p.id]).map(
+    (p) => `${NOM_PERSONNE[p.id]} : ${repsA(p.id, souleve, reps[p.id])} ${ou}, ${reps[p.id]} ailleurs — pour le bas du dos.`,
+  );
+  return notes.length > 0 ? notes.join(' ') : null;
+}
 
 /** La charge s'y règle d'une fois sur l'autre, au ressenti. Les exercices en
  *  répétitions, les cercles au kettlebell et les mouvements explosifs — faits
  *  au temps, mais la cloche ou l'haltère reste une charge qu'on monte ou qu'on
  *  baisse, comme avant. Pas les portages, le traîneau ni les tenues : là,
- *  c'est le temps qui compte. */
+ *  c'est le temps qui compte ; ni le poids du corps, sur le tapis ou sans
+ *  matériel (le Superman sans poids) : rien à charger. */
 export const chargeReglable = (exercice: Exercice): boolean =>
-  exercice.unite === 'reps' || exercice.mouvement === 'circulaire' || exercice.explosif === true;
+  exercice.materiel !== 'tapis' &&
+  exercice.materiel !== 'aucun' &&
+  (exercice.unite === 'reps' || exercice.mouvement === 'circulaire' || exercice.explosif === true);
 
 /** La séance du programme, mise aux réglages de la personne : c'est elle que
  *  déroule la séance guidée — tapis ou rameur, bille, répétitions comptées,
@@ -1313,7 +1410,10 @@ export function seancePourPersonne(
   /** Séries et répétitions d'une personne sur un exercice. */
   const volumeDe = (qui: Personne | null, exercice: Exercice, finale: boolean) => {
     const series = SERIES_PROGRAMME + (qui && PROFILS[qui].seriePlusPoussee && estPoussee(exercice) ? 1 : 0);
-    const habituelles = qui ? repsDeChacun[qui] : (parametres.repsParSerie ?? REPS_PAR_DEFAUT.sebastien);
+    // Speedy : 8 au plus aux soulevés de terre lourds, même le lundi.
+    const habituelles = qui
+      ? repsA(qui, exercice, repsDeChacun[qui])
+      : (parametres.repsParSerie ?? REPS_PAR_DEFAUT.sebastien);
     // Au temps, le même temps pour les deux : les répétitions de chacun ne
     // valent qu'en répétitions.
     const reps = exercice.unite === 'secondes' ? secondesAuTemps(exercice, TENUE_SEC) : habituelles;
@@ -1337,7 +1437,8 @@ export function seancePourPersonne(
   };
 
   // Les deux exercices d'une paire s'enchaînent sans pause ; la pause vient
-  // après la paire. Un exercice hors paire se fait seul, avec ses pauses.
+  // après la paire : une minute, une minute trente avec la trap bar. Un
+  // exercice hors paire se fait seul, avec ses pauses.
   const paires = seanceMois.liens ?? [];
   const blocs: BlocSeries[] = seanceMois.exercices.filter(estConnu).map((id) => {
     const bloc = blocDe(EXERCICES_PAR_ID[id], false);
@@ -1347,7 +1448,7 @@ export function seancePourPersonne(
       ...bloc,
       superset: paire,
       transitionSec: TRANSITION_LIEN_SEC,
-      reposSec: reposDePaire(paires[paire], seanceMois),
+      reposSec: reposDePaire(paires[paire]),
     };
   });
   // Pour finir, seul, en séries.

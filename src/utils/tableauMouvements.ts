@@ -228,9 +228,7 @@ function raisonsDe(exercice: Exercice): string[] {
   if (forme === 'rotation') raisons.push('D’un côté à l’autre : ni haut ni bas, jamais d’arrêt ; une rép. = à droite puis à gauche.');
   if (exercice.explosif) raisons.push('Explosif (seulement avec l’option) : un geste balistique ne s’arrête pas.');
   if (forme === 'vertical') {
-    if (exercice.sansPauseEnBas && exercice.pauseEnHaut) {
-      raisons.push('Jamais d’arrêt genoux pliés : on tient jambes tendues.');
-    } else if (exercice.sansPauseEnBas) {
+    if (exercice.sansPauseEnBas) {
       raisons.push(exercice.genouAMenager ? 'Sans arrêt en bas : le genou.' : 'Sans arrêt en bas : le dos.');
     } else if (exercice.pauseEnHaut) {
       raisons.push('Tenu en haut : la position basse est un repos.');
@@ -276,7 +274,9 @@ const NOTES: Record<string, string> = {
   'single-leg-deadlift-db': 'Comme au kettlebell (avant : TIENS en bas).',
   'kb-turkish-get-up':
     'Un relevé complet prend bien plus de 3 s : un relevé lent par côté (avant : MONTE 3 s → TIENS 1 s → DESCENDS 3 s, 8 par côté). Avancé, hors programme.',
-  'leg-extension-machine': 'Comme l’affiche de la salle.',
+  'leg-extension-machine':
+    'Ni tenu jambes tendues : sur une machine assise, la rotule y est la plus chargée — les genoux de Big Max (avant : TIENS 1 s jambes tendues).',
+  'leg-extension': 'Ni tenu jambes tendues non plus, comme à la machine : les genoux de Big Max (avant : TIENS 1 s jambes tendues).',
   'upright-row': 'Tenu en haut, il pincerait l’épaule.',
   'kb-single-leg-calf-raise': 'Le talon sous la marche étire le mollet sous la charge.',
 };
@@ -417,10 +417,10 @@ export const AU_TEMPS_OU_AU_TEMPO: AvisAuTemps[] = [
     pourquoi: `Décidé par Sébastien : « pas fuir un exercice, pouvoir un jour le faire sans douleur — donc mettre moins de poids ». Un swing ou un saut en 3 s / 3 s n’est plus un swing ni un saut : on les fait au temps, chacun à son rythme, avec une charge légère, un décompte et pas de métronome. ${BALISTIQUE_SEC} s par série pour les swings, les arrachés, l’épaulé, le tirage haut et les balanciers — ${BALISTIQUE_SEC} s de chaque côté, avec CHANGE DE CÔTÉ ${CHANGER_DE_COTE_SEC} s (« +${CHANGER_DE_COTE_SEC} s » si besoin), pour les versions à un bras ; ${SAUT_SEC} s pour les sauts et le burpee. Le poids se note et se règle comme avant (lourd, correct, léger). Ils ne sortent qu’avec l’option « explosifs », jamais dans le programme — sauf le swing à deux mains, qui ouvre le jeudi, léger (« Ce sont les fesses qui lancent, pas le dos »), avec un tirage léger du haut du corps pour partenaire. Ils restent déconseillés au dos de Speedy et aux genoux de Big Max : raison de plus d’y aller léger. Avant : DESCENDS 3 s → MONTE 3 s, ou MONTE 3 s → DESCENDS 3 s, sans arrêt.`,
   },
   {
-    ids: ['kb-isometric-crunch', 'farmers-walk', 'kb-farmers-walk', 'traineau'],
+    ids: ['kb-isometric-crunch', 'copenhagen-plank', 'farmers-walk', 'kb-farmers-walk', 'traineau'],
     recommandation: 'Rien à changer.',
     decision: 'deja',
-    pourquoi: 'Une tenue, un portage, un aller-retour de traîneau : c’est le temps qui compte, pas les répétitions.',
+    pourquoi: 'Une tenue, un portage, un aller-retour de traîneau : c’est le temps qui compte, pas les répétitions. La planche de Copenhague, courte, se tient 15 s de chaque côté.',
   },
 ];
 

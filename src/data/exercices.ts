@@ -1,6 +1,7 @@
 import type { Exercice, Materiel, Muscle, Objectif, PatternMoteur, Zone } from '../types';
 import { EXERCICES_ETIREMENTS } from './etirements';
 import { EXERCICES_KETTLEBELL } from './kettlebell';
+import { EXERCICES_POIDS_DU_CORPS } from './poidsDuCorps';
 import { EXERCICES_SALLE } from './salle';
 import { EXERCICES_YOGA } from './yoga';
 
@@ -1731,12 +1732,15 @@ export const EXERCICES: Exercice[] = [
     niveauMin: 2,
     cotes: 'bilateral',
     unite: 'reps',
-    // Tibias à la verticale, l'haltère pend sans peser : on tient jambes tendues.
-    pauseEnHaut: true,
+    // Les genoux de Big Max : aucun arrêt, ni genoux pliés sous la charge, ni
+    // jambes tendues — c'est là que la rotule est la plus chargée (audit, 11
+    // octobre 2026).
+    sansPauseEnBas: true,
+    genouAMenager: true,
     position: 'Assis au bord d’un banc',
     pointsAttention: [
+      'Genoux sensibles : de 90° jusqu’à presque tendu, sans verrouiller ni tenir en haut.',
       'Haltère tenu entre les pieds, mains en appui sur le banc.',
-      'Tendre les genoux sans les verrouiller d’un coup.',
       'Dos droit, ne pas se rejeter en arrière pour aider.',
       'Descente lente : c’est elle qui protège le tendon rotulien.',
     ],
@@ -1870,6 +1874,9 @@ export const EXERCICES: Exercice[] = [
   // Les machines de la salle, dessinées : trap bar, presse, hack squat, traîneau,
   // extension et flexion des jambes.
   ...EXERCICES_SALLE,
+  // Au poids du corps, dessinés aussi : le Superman sans poids et la planche
+  // de Copenhague courte.
+  ...EXERCICES_POIDS_DU_CORPS,
   // Les 57 postures du poster « Yoga Poses » et les 52 étirements du poster
   // « Stretching Exercises ». Famille « mobilité » : tenues au temps, sans
   // charge, et écartées des séances de musculation.
@@ -2068,7 +2075,7 @@ export const ECHAUFFEMENT: MouvementLibre[] = [
   { nom: 'Rotations des poignets et des chevilles', consigne: 'Dans les deux sens, mains jointes puis pied levé.' },
   { nom: 'Rotations du bassin', consigne: 'Mains sur les hanches, grands cercles.' },
   { nom: 'Chat-vache', consigne: 'À quatre pattes, arrondir puis creuser le dos en respirant.' },
-  { nom: 'Squats à vide', consigne: 'Lents et profonds, talons au sol.' },
+  { nom: 'Squats à vide', consigne: 'Lents, aussi bas que le genou le permet, talons au sol.' },
   { nom: 'Fentes dynamiques', consigne: 'En alternant, buste droit, sans charge.' },
 ];
 

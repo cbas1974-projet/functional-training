@@ -28,10 +28,10 @@ du dos, épaules, extérieur et intérieur de cuisse. Rien à taper.
   | | Lundi — tout le corps | Mardi — le haut | Jeudi — les jambes, modéré |
   | --- | --- | --- | --- |
   | Le soir | pas de jiu-jitsu | jiu-jitsu | jiu-jitsu (souvent un cours privé le vendredi matin) |
-  | Exercices | **8** (4 paires) et le dernier, ≈ 1 h 20 | **6** (3 paires) et le dernier, ≈ 1 h 10 | **6** (3 paires) et le dernier, ≈ 1 h |
-  | Répétitions | Speedy **10**, Big Max **10** | Speedy 8, Big Max 10 | Speedy 8, Big Max 10 |
+  | Exercices | **8** (4 paires) et le dernier, ≈ 1 h 15 | **6** (3 paires) et le dernier, ≈ 1 h 05 | **6** (3 paires) et le dernier, ≈ 55 min |
+  | Répétitions | Speedy **10** (**8 à la trap bar**), Big Max **10** | Speedy 8, Big Max 10 | Speedy 8, Big Max 10 |
   | En tête | la **trap bar**, le dos frais, avec le haut du corps | les épaules (objectif) | le **swing à deux mains**, avec un tirage léger du haut du corps |
-  | Ensuite | le bas du dos (Superman) avec le ventre ; un développé au-dessus de la tête ; tirer et pousser | tirer avec pousser ; les bras | l'intérieur avec l'extérieur de cuisse (une fente latérale, un exercice d'une jambe) ; l'extension avec la flexion des jambes, aux machines |
+  | Ensuite | le bas du dos (le **Superman, sans poids**) avec le ventre (du gainage, le dos immobile) ; un développé au-dessus de la tête ; tirer et pousser | tirer avec pousser ; les bras | l'intérieur avec l'extérieur de cuisse (la **planche de Copenhague courte**, un exercice d'une jambe) ; l'extension avec la flexion des jambes, aux machines |
   | Pour finir | la **presse** ou le **hack squat** | la **marche du fermier** (un bon cardio ; un sac de sable sur l'épaule, au choix) | le **traîneau** |
 
 - **Chaque séance** commence par **5 minutes de tapis ou de rameur** et
@@ -46,11 +46,11 @@ du dos, épaules, extérieur et intérieur de cuisse. Rien à taper.
   marche du fermier le mardi, le traîneau le jeudi.
 - **Par paires, tous les jours** : les exercices vont deux par deux, deux
   exercices qui s'opposent. On fait les deux à la suite — 15 secondes pour
-  passer de l'un à l'autre —, puis **une seule pause après la paire : la plus
-  longue des pauses de ses deux exercices** — **1 minute** si la paire ne
-  compte que des petits muscles, **1 minute 30** si elle compte un gros
-  exercice, **2 minutes** avec la trap bar. Trois tours. La façon dont les
-  paires sont formées est expliquée plus bas.
+  passer de l'un à l'autre —, puis **une seule pause après la paire :
+  1 minute**, et **1 minute 30 après la paire de la trap bar**. Chaque muscle
+  se repose quand même plus de deux minutes : l'autre exercice de la paire
+  lui sert de repos. Plus de cardio, et un lundi plus court. Trois tours. La
+  façon dont les paires sont formées est expliquée plus bas.
 - **Le nombre d'exercices** : dans *Réglages*, on choisit 4, 6 ou 8 exercices
   pour le mardi et le jeudi ; **le lundi, la grosse séance, en a deux de
   plus** (6, 8 ou 10). Par défaut : 6, donc 8 le lundi. Le tempo par défaut
@@ -60,14 +60,14 @@ du dos, épaules, extérieur et intérieur de cuisse. Rien à taper.
   Max », et les changer rappelle que l'autre téléphone n'a pas encore le
   programme. La séance libre garde son propre tempo. Un ancien lien qui
   demandait dix exercices s'ouvre avec six.
-- **Combien de temps**, à deux : le lundi environ **1 h 20** (de 1 h 20 à
-  1 h 30), le mardi environ **1 h 10** (de 1 h 05 à 1 h 15 : Big Max fait une
-  série de plus aux poussées), le jeudi environ **1 h**. Avec 4 exercices :
-  1 h 05, 55 min et 50 min ; avec 8 : 1 h 40, 1 h 25 et 1 h 15. Les pauses de
-  paire vont de 1 minute à 2 minutes, et chaque paire s'installe avant « Go ».
-  Les exercices du dos et des genoux, sans arrêt en bas, comptent une
-  répétition plus courte (une seconde de moins au tempo par défaut) — sauf
-  l'extension des jambes à la machine, qui tient jambes tendues.
+- **Combien de temps**, à deux : le lundi environ **1 h 15** (de 1 h 13 à
+  1 h 25), le mardi environ **1 h 05** (de 1 h à 1 h 08 : Big Max fait une
+  série de plus aux poussées), le jeudi environ **55 min**. Avec 4 exercices :
+  1 h, 50 min et 45 min ; avec 8 : 1 h 30, 1 h 20 et 1 h 10. Après chaque
+  paire, 1 minute de pause (1 min 30 après la trap bar), et chaque paire
+  s'installe avant « Go ». Les exercices du dos et des genoux, sans arrêt en
+  bas, comptent une répétition plus courte (une seconde de moins au tempo par
+  défaut) — l'extension des jambes aussi, qui ne tient plus jambes tendues.
   L'application ne retire pas d'exercice pour tenir dans l'heure : elle prend
   le nombre du jour, les objectifs d'abord. Seul garde-fou : une séance qui
   passerait deux heures et demie perdrait ses dernières paires.
@@ -76,12 +76,26 @@ du dos, épaules, extérieur et intérieur de cuisse. Rien à taper.
   le lundi), l'extérieur et l'intérieur de cuisse le jeudi.
 - **Lundi, tout le corps, la grosse séance** : pas de jiu-jitsu le soir. Le
   **soulevé de terre à la trap bar en premier**, quand le dos est frais, en
-  paire avec le haut du corps ; puis le **Superman** (le bas du dos) avec le
-  ventre, un développé au-dessus de la tête avec un tirage, un développé avec
-  un tirage — rien en haut du corps qui charge le bas du dos, la trap bar l'a
-  déjà fait ; enfin la presse ou le hack squat. Le Superman revient chaque
-  lundi : allongé, il ménage le dos de Speedy mieux qu'un good morning après
-  la trap bar.
+  paire avec le haut du corps — **Speedy y fait 8 répétitions** (10
+  ailleurs) : dix répétitions lentes, c'est une minute de dos sous charge, et
+  son dos lâcherait avant ses jambes ; Big Max fait les siennes. Le même
+  plafond vaut pour les autres soulevés de terre lourds, debout à deux mains
+  (roumain, au kettlebell, good morning), et l'accueil le dit : « Speedy : 8
+  à la trap bar, 10 ailleurs — pour le bas du dos. » Puis le **Superman, sans
+  poids** (le bas du dos) avec le ventre, un développé au-dessus de la tête
+  avec un tirage, un développé avec un tirage — rien en haut du corps qui
+  charge le bas du dos, la trap bar l'a déjà fait ; enfin la presse ou le
+  hack squat. Le Superman revient chaque lundi : allongé, il ménage le dos de
+  Speedy mieux qu'un good morning après la trap bar, et **sans poids** — une
+  charge au bout des bras écrase le bas du dos, cambré (McGill). Le Superman
+  au kettlebell reste dans la bibliothèque et la séance libre.
+- **Le ventre, le dos immobile** : au programme, le ventre fait du
+  **gainage** — la planche avec passage de la cloche, le tour de taille, le
+  demi-relevé turc, la planche latérale —, jamais un exercice qui plie le dos
+  (crunchs, V-ups, relevés de buste, rotations russes, coups croisés assis en
+  V), que McGill déconseille à un dos qui fatigue vite, surtout le matin. Ces
+  exercices restent dans la bibliothèque et la séance libre ; « Changer » ne
+  les propose pas au programme.
 - **Mardi, le haut** : jiu-jitsu le soir, rien qui charge le bas du dos. Les
   épaules d'abord, tirer avec pousser, les bras ; la marche du fermier pour
   finir.
@@ -92,18 +106,30 @@ du dos, épaules, extérieur et intérieur de cuisse. Rien à taper.
   oiseau ou un rowing appuyé —, jamais une fente, un squat ou un autre
   exercice des jambes : deux exercices qui coupent le souffle ne vont pas
   ensemble. S'il n'y en a pas, le swing se fait seul. Puis l'intérieur avec
-  l'extérieur de cuisse — une **fente latérale** et un exercice d'une jambe
-  qui tient le bassin (la bouche d'incendie, l'élévation latérale de jambe) —,
-  et **les deux machines des cuisses ensemble** : l'extension des jambes
-  (l'avant de la cuisse) avec la flexion des jambes couché (l'arrière). Ce
-  sont les préférées du duo : elles reviennent chaque jeudi, dès six
-  exercices. À quatre, les objectifs prennent toute la place. Pour les genoux
-  de Big Max, à l'extension : pas d'arrêt genoux pliés, pas plus bas que
-  l'angle droit, une charge modérée. Le traîneau pour finir.
+  l'extérieur de cuisse — la **planche de Copenhague courte** et un exercice
+  d'une jambe qui tient le bassin (la bouche d'incendie, l'élévation latérale
+  de jambe) —, et **les deux machines des cuisses ensemble** : l'extension des
+  jambes (l'avant de la cuisse) avec la flexion des jambes couché
+  (l'arrière). Ce sont les préférées du duo : elles reviennent chaque jeudi,
+  dès six exercices. À quatre, les objectifs prennent toute la place. Pour
+  les genoux de Big Max, à l'extension : « Genoux sensibles : de 90° jusqu'à
+  presque tendu, sans verrouiller ni tenir en haut » — aucun arrêt, ni genoux
+  pliés, ni jambes tendues, là où la rotule est la plus chargée ; une charge
+  modérée. Le traîneau pour finir.
+- **La planche de Copenhague courte**, chaque jeudi, semaines A et B : une
+  planche sur le côté, sur l'avant-bras, **le genou du dessus posé sur le
+  banc**, la jambe du dessous libre ; on monte les hanches et on tient
+  **15 s de chaque côté** (5 s pour changer de côté), au temps, sans poids.
+  Elle travaille l'intérieur de la cuisse : la meilleure protection de l'aine
+  pour le hockey de Big Max, et la garde de Speedy. La version longue (le
+  pied sur le banc) viendra plus tard. Sans banc, une fente latérale prend
+  sa place. À six exercices, elle prend la place de la fente latérale : les
+  fentes reviennent à huit exercices.
 - **Semaines A et B, les trois jours** : chaque jour alterne d'une semaine à
   l'autre — mêmes muscles, autres exercices : Big Max aime changer. Ce qui
   compte revient chaque semaine, pour suivre ses charges : la trap bar et le
-  Superman le lundi, le swing et les deux machines le jeudi. La presse et le
+  Superman le lundi, le swing, la planche de Copenhague et les deux machines
+  le jeudi. La presse et le
   hack squat alternent le lundi ; la marche du fermier se fait aux haltères
   ou au kettlebell. Le programme dure quatre semaines, puis l'application
   propose d'en refaire un. Commencé un vendredi ou un week-end, il part du
@@ -112,11 +138,10 @@ du dos, épaules, extérieur et intérieur de cuisse. Rien à taper.
   dernière série à la moitié de la charge le mardi** : la seule règle pour
   monter les charges est le ressenti, voir
   [Lourd, correct ou léger ?](#lourd-correct-ou-léger-).
-- **Les pauses** : après une paire, la plus longue des pauses de ses deux
-  exercices — 1 min si ce sont deux petits muscles (bras, épaules en isolation,
-  ventre, mollets, intérieur et extérieur de cuisse), 1 min 30 avec un gros
-  exercice, 2 min avec la trap bar. Un exercice fait seul garde les siennes :
-  2 min à la trap bar, 1 min 30 aux gros exercices, 1 min aux petits muscles.
+- **Les pauses** : après une paire, **1 min**, et **1 min 30 après la paire
+  de la trap bar**. Un exercice fait seul garde les siennes : 2 min à la trap
+  bar, 1 min 30 aux gros exercices, 1 min aux petits muscles (bras, épaules en
+  isolation, ventre, mollets, intérieur et extérieur de cuisse).
   Dans une paire, le chrono ne s'arrête pas. L'accueil écrit sous chaque paire
   la pause qui la suit. À chaque nouvelle paire, l'écran montre la suivante et
   **la charge à installer**, et la séance repart seulement sur **« Go »**.
@@ -126,7 +151,7 @@ du dos, épaules, extérieur et intérieur de cuisse. Rien à taper.
   oiseaux, la tondeuse et les bûcherons. Pour les genoux : les squats
   (haltères, gobelet, sumo, kettlebell, cosaque, bras tendu, sur une jambe
   vers un banc), la chaise au mur, les thrusters, la presse à cuisses, le
-  hack squat et l'extension des jambes à la machine, les fentes (bulgare
+  hack squat et l'extension des jambes (à la machine et à l'haltère), les fentes (bulgare
   comprise), l'esquive latérale, le pas chassé bas et la montée sur marche.
   Quel que soit le tempo, ces exercices se font en descendant contrôlé et
   en remontant sans rebond : l'arrêt en bas vaut 0 seconde, pour les deux. La répétition est plus courte,
@@ -136,9 +161,10 @@ du dos, épaules, extérieur et intérieur de cuisse. Rien à taper.
   seulement jusqu'où le genou ne fait pas mal ». Elles s'affichent avec les
   autres consignes de l'exercice, dans la séance guidée, l'image en grand, la
   bibliothèque et la séance libre. La liste est dans les données des exercices
-  (`sansPauseEnBas`, `genouAMenager`). L'extension des jambes à la machine
-  garde un arrêt, mais en haut, jambes tendues, comme le dit l'affiche de la
-  salle : jamais genoux pliés. Les mouvements explosifs (swings, sauts,
+  (`sansPauseEnBas`, `genouAMenager`). L'extension des jambes, à la machine
+  comme à l'haltère, ne tient pas non plus en haut : jambes tendues, c'est là
+  que la rotule est la plus chargée sur une machine assise — les genoux de
+  Big Max. Les mouvements explosifs (swings, sauts,
   arrachés), eux, ne passent plus par le tempo : ils se font au temps (voir
   plus bas).
 - **Tenu en haut** quand la position basse est un repos. La règle : **on
@@ -151,8 +177,8 @@ du dos, épaules, extérieur et intérieur de cuisse. Rien à taper.
   Superman et l'élévation en T au sol ; la bouche d'incendie, la ruade,
   l'élévation latérale de jambe et les ponts fessiers ; les élévations
   latérales et frontales, la rotation externe et le haussement d'épaules ; les
-  extensions triceps buste penché ; les deux machines des cuisses et leurs
-  versions à l'haltère ; le mollet au sol ; les tirages en planche ; les
+  extensions triceps buste penché ; la flexion des jambes, à la machine et à
+  l'haltère ; le mollet au sol ; les tirages en planche ; les
   exercices du ventre allongé, pendu ou debout bras en l'air (V-up, crunchs,
   relevés, demi-relevé turc). Le métronome dit MONTE, TIENS, DESCENDS ; la
   bille s'arrête en haut du rail ; le tempo affiché pendant la série dit « + 1 s en
@@ -557,8 +583,9 @@ la charge — mais seulement quand la position basse en est une. Allongé à pla
 l'élévation latérale, fesses au sol au pont fessier, la position basse est un
 repos : y tenir ne chargerait rien. Ces exercices tiennent donc **en haut**,
 muscles serrés, la même seconde, puis redescendent : l'arrêt supprime toujours
-l'élan, et charge cette fois la contraction. L'extension des jambes à la
-machine tient aussi en haut, jambes tendues, et jamais genoux pliés.
+l'élan, et charge cette fois la contraction. L'extension des jambes, elle, ne
+tient nulle part : ni genoux pliés, ni jambes tendues, où la rotule est la plus
+chargée (les genoux de Big Max).
 
 **Une seconde suffit.** Plus lent n'est pas mieux pour le tendon : à 4 s / 4 s
 + 2 s, il faut nettement alléger pour finir la série, et c'est la charge, plus
@@ -657,7 +684,8 @@ programme.
 - **Semaines A et B** : un exercice qui alterne revient une semaine sur deux ;
   les quatre « léger » de Speedy y prennent donc plus longtemps. Ceux qui
   reviennent chaque semaine — la trap bar, le Superman, le swing, les deux
-  machines — montent au rythme de chaque séance.
+  machines — montent au rythme de chaque séance. Le Superman, sans poids, et
+  la planche de Copenhague, au temps, n'ont pas de charge à monter.
 - Les seuils de chacun (`RESSENTIS_POUR_MONTER` : Speedy 4, Big Max 2 ;
   `RESSENTIS_POUR_DESCENDRE` : 2 et 2) et le cran sont des constantes de
   `src/utils/ressenti.ts` et `src/utils/statistiques.ts`. La proposition ne
@@ -758,7 +786,7 @@ travail. Lus à pleine résolution, ils montrent les fessiers et les ischios en
 noir, le bas du dos en gris clair. C'est une convention de l'illustrateur, pas
 de la biomécanique : ces deux fiches sont corrigées, et c'est ce qui les met en
 tête de l'objectif « bas du dos ». Le Good Morning reste dans la bibliothèque,
-mais le programme du mois ne le compose plus : le Superman est le seul exercice
+mais le programme du mois ne le compose plus : le Superman (sans poids, au programme) est le seul exercice
 direct pour le bas du dos qui lui reste.
 
 Deuxième limite : la planche ne sépare pas le moyen fessier du grand fessier —
@@ -1078,6 +1106,7 @@ src/
 ├── data/
 │   ├── exercices.ts              # Les 77 exercices et leurs points d'attention
 │   ├── salle.ts                  # Les machines : trap bar, presse, hack squat, traîneau, extension et flexion des jambes
+│   ├── poidsDuCorps.ts           # Le Superman sans poids et la planche de Copenhague courte, dessinés
 │   └── parametres.ts             # Durées, tempos, niveaux, formats, zones
 ├── utils/
 │   ├── generateurSeance.ts       # Choix des exercices et calcul des volumes

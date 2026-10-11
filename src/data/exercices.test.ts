@@ -119,7 +119,7 @@ describe('où se tient l’arrêt du tempo', () => {
    *  pas d'arrêt du tout (`sansPauseEnBas`). */
   const EN_HAUT = [
     // Le dos et l'arrière des épaules, allongé sur le ventre.
-    'kb-superman', 'floor-t-raise',
+    'kb-superman', 'superman', 'floor-t-raise',
     // Les fessiers et l'extérieur de la hanche : à quatre pattes, sur le côté, sur le dos.
     'fire-hydrant', 'donkey-kick', 'kb-side-leg-raise', 'glute-bridge', 'frog-pump', 'kb-single-leg-glute-bridge',
     // Les épaules, bras qui pendent en bas.
@@ -127,8 +127,10 @@ describe('où se tient l’arrêt du tempo', () => {
     'no-money-curl', 'shoulder-shrug',
     // Les triceps, avant-bras qui pend en bas.
     'tricep-kickback', 'kb-tricep-kickback',
-    // Les cuisses, aux machines et à l'haltère, et le mollet au sol.
-    'leg-extension-machine', 'leg-curl-machine', 'leg-extension', 'hamstring-curl', 'calf-raise',
+    // L'arrière des cuisses, à la machine et à l'haltère, et le mollet au sol.
+    // Pas l'extension des jambes : jambes tendues, la rotule est la plus
+    // chargée (les genoux de Big Max).
+    'leg-curl-machine', 'hamstring-curl', 'calf-raise',
     // Le tirage en planche : l'haltère posé au sol en bas.
     'renegade-row', 'kb-renegade-row', 'plank-t',
     // Le ventre : allongé à plat, pendu, debout bras en l'air — le genou qui
@@ -168,9 +170,9 @@ describe('où se tient l’arrêt du tempo', () => {
       expect(exercice.unite, exercice.id).toBe('reps');
       expect(exercice.explosif, exercice.id).toBeUndefined();
     }
-    // Seule l'extension des jambes à la machine, sans arrêt genoux pliés,
-    // retrouve un arrêt — jambes tendues.
-    expect(EXERCICES.filter((e) => e.pauseEnHaut && e.sansPauseEnBas).map((e) => e.id)).toEqual(['leg-extension-machine']);
+    // Aucun exercice sans arrêt en bas ne retrouve un arrêt en haut : l'extension
+    // des jambes ne tient plus jambes tendues (les genoux de Big Max).
+    expect(EXERCICES.filter((e) => e.pauseEnHaut && e.sansPauseEnBas).map((e) => e.id)).toEqual([]);
   });
 
   it('dit « On tient en haut, muscles serrés » à ceux qui tiennent en haut, et rien ne leur demande de tenir en bas', () => {
@@ -188,8 +190,13 @@ describe('où se tient l’arrêt du tempo', () => {
   });
 
   it('tient en haut tout exercice dont les points d’attention disent de tenir en haut', () => {
+    // « Sans verrouiller ni tenir en haut » (l'extension des jambes) ne compte pas.
     const disentEnHaut = musculationEnReps.filter((e) =>
-      e.pointsAttention.some((p) => /tenir [^.;]*en haut|temps d.arrêt en haut|marquer un temps bras tendu|tenir [^.;]*jambes tendues/i.test(p)),
+      e.pointsAttention.some(
+        (p) =>
+          /tenir [^.;]*en haut|temps d.arrêt en haut|marquer un temps bras tendu|tenir [^.;]*jambes tendues/i.test(p) &&
+          !/(ni|sans|ne pas) tenir/i.test(p),
+      ),
     );
     expect(disentEnHaut.length).toBeGreaterThan(5);
     expect(disentEnHaut.filter((e) => !e.pauseEnHaut).map((e) => e.id)).toEqual([]);
@@ -223,13 +230,21 @@ describe('machines de la salle', () => {
     for (const id of machines) expect(FICHIERS.has(`${id}.png`), id).toBe(true);
   });
 
-  it('ménage les genoux à l’extension des jambes ; garde l’extension et le leg curl aux haltères', () => {
-    const extension = EXERCICES_PAR_ID['leg-extension-machine'];
-    expect([extension.sansPauseEnBas, extension.genouAMenager]).toEqual([true, true]);
-    // Jamais d'arrêt genoux pliés ; l'arrêt se tient jambes tendues, comme le
-    // dit l'affiche de la machine.
-    expect(extension.pauseEnHaut).toBe(true);
-    expect(consignesDe(extension).slice(0, 3)).toEqual([CONSIGNE_SANS_PAUSE, CONSIGNE_PAUSE_EN_HAUT, CONSIGNE_GENOU]);
+  it('ménage les genoux à l’extension des jambes, à la machine comme à l’haltère ; garde le leg curl aux haltères', () => {
+    // Aucun arrêt : ni genoux pliés sous la charge, ni jambes tendues — sur une
+    // machine assise, c'est là que la rotule est la plus chargée (les genoux de
+    // Big Max, audit du 11 octobre 2026).
+    for (const id of ['leg-extension-machine', 'leg-extension']) {
+      const extension = EXERCICES_PAR_ID[id];
+      expect([extension.sansPauseEnBas, extension.genouAMenager, extension.pauseEnHaut], id).toEqual([true, true, undefined]);
+      expect(consignesDe(extension).slice(0, 3), id).toEqual([
+        CONSIGNE_SANS_PAUSE,
+        CONSIGNE_GENOU,
+        'Genoux sensibles : de 90° jusqu’à presque tendu, sans verrouiller ni tenir en haut.',
+      ]);
+      expect(consignesDe(extension), id).not.toContain(CONSIGNE_PAUSE_EN_HAUT);
+      expect(consignesDe(extension).join(' '), id).not.toMatch(/tenir jambes tendues/i);
+    }
     const flexion = EXERCICES_PAR_ID['leg-curl-machine'];
     expect([flexion.pattern, flexion.musclesPrincipaux, flexion.cotes]).toEqual(['isolation', ['ischios'], 'bilateral']);
     expect(EXERCICES_PAR_ID['leg-extension'].materiel).toBe('banc');

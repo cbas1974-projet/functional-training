@@ -467,7 +467,7 @@ describe('etatMetronome', () => {
   it('suit toute la chaîne pour un exercice qui part d’en haut et tient en haut : durée, étapes, métronome', () => {
     // Aucun exercice de la bibliothèque ne part d'en haut en tenant en haut : on
     // en prête un, le temps du test.
-    const prete: Exercice = { ...EXERCICES_PAR_ID['leg-extension'], id: 'essai-depart-en-haut', premierePhase: 'descend' };
+    const prete: Exercice = { ...EXERCICES_PAR_ID['hamstring-curl'], id: 'essai-depart-en-haut', premierePhase: 'descend' };
     expect(prete.pauseEnHaut).toBe(true);
     const tempo = { monteeSec: 3, descenteSec: 3, pauseSec: 2 };
     EXERCICES_PAR_ID[prete.id] = prete;
@@ -1076,12 +1076,12 @@ describe('l’horloge des séances du programme', () => {
     const grossesPauses = avecEtirement(seul).filter((e) => !(e.type === 'repos' && e.manuel));
     expect(grossesPauses.length).toBe(2);
     expect(grossesPauses.every((e) => e.exerciceId === 'trap-bar-deadlift' && e.dureeSec === 120)).toBe(true);
-    // En paire : les deux minutes après la paire de la trap bar, jamais la
-    // minute des autres paires.
+    // En paire : 1 min 30 après la paire de la trap bar, 1 min après les
+    // autres — pas de grosse pause : à deux, on s'étire pendant la série de
+    // l'autre.
     const enPaire = construireEtapes(seancePourPersonne(lundiMois, parametres, { personne: 'sebastien' }));
     const apresPaire = avecEtirement(enPaire).filter((e) => !(e.type === 'repos' && e.manuel));
-    expect(apresPaire.length).toBe(2);
-    expect(apresPaire.every((e) => e.exerciceId === lundiMois.exercices[1] && e.dureeSec === 120)).toBe(true);
+    expect(apresPaire).toEqual([]);
   });
 
   it('« Passer l’exercice » passe la paire et mène à l’installation de la suivante', () => {

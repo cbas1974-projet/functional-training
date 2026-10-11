@@ -119,18 +119,18 @@ export const EXERCICES_SALLE: Exercice[] = [
     niveauMin: 1,
     cotes: 'bilateral',
     unite: 'reps',
-    // Les genoux de Big Max : pas d'arrêt genoux pliés sous la charge. L'arrêt
-    // se tient jambes tendues, comme le dit l'affiche de la machine.
+    // Les genoux de Big Max : aucun arrêt. Ni genoux pliés sous la charge, ni
+    // jambes tendues : sur une machine assise, c'est là que la rotule est la
+    // plus chargée (audit, 11 octobre 2026).
     sansPauseEnBas: true,
-    pauseEnHaut: true,
     genouAMenager: true,
     position: 'Assis, le dos contre le dossier, le coussin sur le bas des tibias',
     pointsAttention: [
+      'Genoux sensibles : de 90° jusqu’à presque tendu, sans verrouiller ni tenir en haut.',
       'Régler le dossier pour que le genou soit dans l’axe de la machine.',
       'Le coussin sur le bas du tibia, juste au-dessus du pied.',
       'Tenir les poignées : les hanches restent collées au siège.',
-      'Monter jusqu’aux jambes tendues sans donner de coup, tenir jambes tendues, puis redescendre lentement.',
-      'À cause des genoux : partir pas plus bas que l’angle droit, avec une charge modérée. Si le genou fait mal, réduire l’amplitude.',
+      'Une charge modérée, monter sans donner de coup, redescendre lentement. Si le genou fait mal, réduire l’amplitude.',
     ],
     interetJjb: 'Un genou solide pour la garde et pour se relever.',
   },

@@ -760,11 +760,14 @@ describe('durée d’une série', () => {
     // Sans arrêt dans le tempo, il n'y a rien à tenir, ni en bas ni en haut.
     const sansArret = { monteeSec: 4, descenteSec: 4 };
     expect(tempoPourExercice(EXERCICES_PAR_ID['kb-superman'], sansArret)).toBe(sansArret);
-    // L'extension des jambes à la machine, sans arrêt genoux pliés, tient
-    // jambes tendues : son arrêt revient, en haut.
-    const extension = EXERCICES_PAR_ID['leg-extension-machine'];
-    expect(tempoPourExercice(extension, avecPause)).toEqual({ ...avecPause, pauseEnHaut: true });
-    expect(dureeSerieSec(extension, 8, avecPause)).toBe(64);
+    // L'extension des jambes, à la machine comme à l'haltère, ne tient nulle
+    // part : ni genoux pliés, ni jambes tendues (les genoux de Big Max). Sa
+    // répétition perd son arrêt : 6 s au lieu de 8.
+    for (const id of ['leg-extension-machine', 'leg-extension']) {
+      const extension = EXERCICES_PAR_ID[id];
+      expect(tempoPourExercice(extension, avecPause), id).toEqual({ ...avecPause, pauseSec: 0 });
+      expect(dureeSerieSec(extension, 8, avecPause), id).toBe(48);
+    }
   });
 
   it('annonce, dans la séance libre, la durée d’une série sans arrêt en bas', () => {

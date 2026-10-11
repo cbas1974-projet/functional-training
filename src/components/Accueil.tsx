@@ -52,11 +52,13 @@ import {
   lienDePartage,
   lierDansProgramme,
   nombreExercicesDe,
+  notePlafond,
   pairesAutomatiques,
   programmeDansLien,
   refairePaires,
   refaireProgramme,
   remplacerDansProgramme,
+  REPS_MAX_SOULEVE,
   repsDuDuo,
   repsDuJour,
   repsLundiDe,
@@ -455,7 +457,12 @@ function FeuilleReglages({
       >
         <div className="space-y-3">
           {[
-            { cle: 'seb-lundi', nom: `${NOM_PERSONNE.sebastien} · lundi`, valeur: repsLundi, choisir: onRepsLundi },
+            {
+              cle: 'seb-lundi',
+              nom: `${NOM_PERSONNE.sebastien} · lundi (${REPS_MAX_SOULEVE} au plus à la trap bar)`,
+              valeur: repsLundi,
+              choisir: onRepsLundi,
+            },
             {
               cle: 'seb-jiu-jitsu',
               nom: `${NOM_PERSONNE.sebastien} · mardi et jeudi (jiu-jitsu le soir)`,
@@ -901,6 +908,8 @@ export default function Accueil({
   const echauffement = seance.echauffement ?? [];
   const etirements = [...new Set((seance.retourCalme ?? []).map((m) => m.exerciceId).filter(estUnExercice))];
   const avecTrapBar = seance.blocs.some((bloc) => bloc.exerciceId === 'trap-bar-deadlift');
+  // Speedy : 8 au plus à la trap bar, même le lundi.
+  const plafond = notePlafond(seanceMois, repsDuJour(programme, seanceMois.jour));
 
   /** Toute retouche du programme : l'autre téléphone devra le recevoir. */
   const modifierProgramme = (modifier: (prec: ProgrammeMois) => ProgrammeMois) => {
@@ -1293,8 +1302,9 @@ export default function Accueil({
             </p>
             <p className="mt-2 text-sm" style={{ color: 'var(--texte-discret)' }}>
               {avecPaires
-                ? `Par paires : les deux exercices à la suite, puis la pause de la paire : 1 min aux petits muscles, 1 min 30 avec un gros exercice${avecTrapBar ? ', 2 min avec la trap bar' : ''}. À chaque nouvelle paire, on installe, puis on repart sur « Go ».`
+                ? `Par paires : les deux exercices à la suite, puis 1 min de pause${avecTrapBar ? ' (1 min 30 après la paire de la trap bar)' : ''}. À chaque nouvelle paire, on installe, puis on repart sur « Go ».`
                 : `Pauses : ${avecTrapBar ? '2 min à la trap bar, ' : ''}1 min 30 aux gros exercices, 1 min aux petits. À chaque nouvel exercice, on installe, puis on repart sur « Go ».`}
+              {plafond ? ` ${plafond}` : ''}
             </p>
             {/* Pour essayer sans rien garder : la séance en version courte, ou
                 l'écran de l'autre. */}
@@ -1362,7 +1372,7 @@ export default function Accueil({
                             {croisee ? ' · à deux, on se croise' : ''}
                           </p>
                         )}
-                        {/* La pause de la paire : la plus longue des pauses de ses deux exercices. */}
+                        {/* La pause de la paire : 1 min, 1 min 30 avec la trap bar. */}
                         <p className="chiffres text-xs" style={{ color: 'var(--texte-discret)' }}>
                           Pause après la paire : {dureeCourte(groupe[0].reposSec)}
                         </p>

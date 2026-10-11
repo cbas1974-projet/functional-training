@@ -437,8 +437,8 @@ export type ReglesTempo = Pick<Exercice, 'sansPauseEnBas' | 'pauseEnHaut' | 'mou
  *    d'incendie, pont fessier, élévations…) gardent l'arrêt, de la même durée,
  *    mais après la montée, muscles serrés : la position basse est un repos.
  *  - Les exercices marqués « sans arrêt en bas » (`sansPauseEnBas`) n'ont pas
- *    d'arrêt du tout — sauf s'ils tiennent aussi en haut, comme l'extension des
- *    jambes à la machine, jambes tendues.
+ *    d'arrêt du tout — sauf s'ils tenaient aussi en haut. L'extension des
+ *    jambes ne tient plus jambes tendues : les genoux de Big Max.
  *  C'est ce tempo-là que lisent la durée d'une série, les étapes de la séance
  *  guidée, le métronome et la bille : ils comptent la même répétition, dans le
  *  même ordre, donc la durée annoncée reste exactement celle de la séance. La
@@ -508,12 +508,15 @@ export const estExplosifAuTemps = (exercice: Pick<Exercice, 'unite' | 'explosif'
 
 /** Le temps que la fiche impose à une partie de série au temps — un sens de
  *  cercle (`SENS_CERCLE_SEC`), une série d'explosif (`BALISTIQUE_SEC`,
- *  `SAUT_SEC`) — ; null pour une tenue, qui suit le niveau (`tenueSec`). */
+ *  `SAUT_SEC`), une tenue courte (`tenueImposeeSec` : la planche de
+ *  Copenhague, 15 s de chaque côté) — ; null pour une autre tenue, qui suit
+ *  le niveau (`tenueSec`). */
 export function secondesImposees(
-  exercice: Pick<Exercice, 'unite' | 'mouvement' | 'explosif' | 'saut'>,
+  exercice: Pick<Exercice, 'unite' | 'mouvement' | 'explosif' | 'saut' | 'tenueImposeeSec'>,
 ): number | null {
   if (estCercleAuTemps(exercice)) return SENS_CERCLE_SEC;
   if (estExplosifAuTemps(exercice)) return exercice.saut ? SAUT_SEC : BALISTIQUE_SEC;
+  if (exercice.unite === 'secondes' && exercice.tenueImposeeSec) return exercice.tenueImposeeSec;
   return null;
 }
 
@@ -527,7 +530,7 @@ export function partiesAuTemps(exercice: Pick<Exercice, 'cotes' | 'unite' | 'mou
  *  (`secondesImposees`) — un sens de cercle, une série d'explosif —, la tenue
  *  demandée (`tenueSec`) sinon. */
 export function secondesAuTemps(
-  exercice: Pick<Exercice, 'unite' | 'mouvement' | 'explosif' | 'saut'>,
+  exercice: Pick<Exercice, 'unite' | 'mouvement' | 'explosif' | 'saut' | 'tenueImposeeSec'>,
   tenueSec: number,
 ): number {
   return secondesImposees(exercice) ?? tenueSec;

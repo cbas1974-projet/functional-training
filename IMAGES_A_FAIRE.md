@@ -1,7 +1,8 @@
 # Images à faire avec Gemini (Nano Banana)
 
-Six machines n'ont qu'un dessin simple dans l'application. On les refait dans le
-style des autres exercices.
+Six machines et deux exercices au poids du corps (le Superman sans poids, la
+planche de Copenhague) n'ont qu'un dessin simple dans l'application. On les
+refait dans le style des autres exercices.
 
 ## Comment faire
 
@@ -66,8 +67,8 @@ Gemini s'en inspire très bien. Joins-la en plus du modèle et ajoute
 > L'exercice : leg extension à la machine. Position 1 : assise sur la
 > machine, dos contre le dossier, mains sur les poignées de côté, genoux
 > pliés à angle droit, le coussin sur le bas des tibias. Position 2 : jambes
-> tendues devant elle, le coussin soulevé. Muscles en noir : cuisses avant
-> (quadriceps).
+> presque tendues devant elle (genoux pas verrouillés), le coussin soulevé.
+> Muscles en noir : cuisses avant (quadriceps).
 
 ### 6. `leg-curl-machine` : flexion des jambes couché, à la machine
 
@@ -77,6 +78,22 @@ Gemini s'en inspire très bien. Joins-la en plus du modèle et ajoute
 > Position 2 : genoux pliés à angle droit, le coussin remonté vers les
 > fesses, hanches toujours collées au banc. Muscles en noir : arrière des
 > cuisses (ischio-jambiers).
+
+### 7. `superman` : Superman, sans poids
+
+> L'exercice : Superman au sol, sans poids. Position 1 : allongée sur le
+> ventre sur un tapis, bras tendus devant, jambes tendues. Position 2 :
+> poitrine, bras et jambes à peine décollés du sol en même temps, regard au
+> sol. Muscles en noir : bas du dos, fessiers.
+
+### 8. `copenhagen-plank` : planche de Copenhague, version courte
+
+> L'exercice : planche de Copenhague courte, avec un banc. Position 1 :
+> allongée sur le côté, en appui sur l'avant-bras (coude sous l'épaule), le
+> genou de la jambe du dessus posé sur le banc, la hanche basse, la jambe du
+> dessous au sol. Position 2 : les hanches montées, épaule, hanche et genou
+> en ligne, la jambe du dessous libre sous le banc. Muscles en noir :
+> intérieur des cuisses (adducteurs).
 
 ## Ce qu'il faut regarder avant de garder une image
 

@@ -306,12 +306,12 @@ describe('le temps passé sur les étapes', () => {
   it('écran éteint, les étapes franchies comptent ; un exercice passé, non', () => {
     // Max : sa série 1 à 5 s, puis l'écran s'éteint trois minutes. La série de
     // la trap bar dure 60 s (10 répétitions sans arrêt en bas), l'attente de
-    // Sébastien — ses 10 répétitions du lundi, changement de machine compris —
-    // 95 s, la préparation 5 s.
+    // Sébastien — ses 8 répétitions à la trap bar (8 au plus, même le lundi),
+    // changement de machine compris — 83 s, la préparation 5 s.
     expect(etapesMax[serie1].dureeSec).toBe(60);
     expect(tempsDesEtapesQuittees(etapesMax, { index: serie1, ecouleSec: 5 }, { index: serie1 + 3, ecouleSec: 1 }, 180)).toEqual([
       [serie1, 60],
-      [serie1 + 1, 95],
+      [serie1 + 1, 83],
       [serie1 + 2, 5],
     ]);
     // « Passer l'exercice » en pleine série : les séries suivantes ne comptent pas.

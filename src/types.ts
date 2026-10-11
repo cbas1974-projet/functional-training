@@ -193,6 +193,10 @@ export interface Exercice {
    *  patineur, saut de bûche, burpee : une série plus courte, 20 s au lieu
    *  de 30 (`SAUT_SEC`). */
   saut?: boolean;
+  /** Une tenue au temps dont la fiche impose la durée, en secondes — par
+   *  côté pour un exercice d'un côté : la planche de Copenhague courte, 15 s
+   *  de chaque côté. Absente, la tenue suit la séance (`secondesAuTemps`). */
+  tenueImposeeSec?: number;
   /** Pas d'arrêt en bas, quel que soit le tempo : on descend contrôlé et on
    *  remonte sans rebond. Pour les exercices où la position basse tenue
    *  fatigue le bas du dos ou le genou (soulevés de terre, rowings penchés,
@@ -209,14 +213,15 @@ export interface Exercice {
    *  position basse est un repos — allongé à plat, jambe posée, haltères qui
    *  pendent sans rien demander au muscle visé : Superman, bouche d'incendie,
    *  pont fessier, élévations latérales et frontales, haussements d'épaules,
-   *  crunchs, machines des cuisses… ou quand le mouvement consiste à serrer
+   *  crunchs, flexion des jambes à la machine… ou quand le mouvement consiste à serrer
    *  la contraction. Tenir en bas, à plat ou jambe posée, ne travaillerait
    *  rien.
    *
    *  Même durée que l'arrêt en bas : la répétition et la séance gardent leur
-   *  durée. Sur un exercice `sansPauseEnBas`, il redonne un arrêt, en haut
-   *  seulement — l'extension des jambes à la machine se tient jambes tendues,
-   *  jamais genoux pliés. Voir `tempoPourExercice`. */
+   *  durée. Sur un exercice `sansPauseEnBas`, il redonnerait un arrêt, en
+   *  haut seulement ; aucun ne le fait plus : l'extension des jambes ne tient
+   *  ni genoux pliés ni jambes tendues (les genoux de Big Max). Voir
+   *  `tempoPourExercice`. */
   pauseEnHaut?: boolean;
   /** Plie le genou sous charge (squats, fentes, presse…) : on ne descend que
    *  jusqu'où le genou ne fait pas mal. Ajoute une consigne aux points

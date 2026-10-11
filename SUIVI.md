@@ -52,6 +52,27 @@ Claude, de son côté :
   - Le lien « Envoyer à Big Max » est plus compact (six séances, moins de
     3 000 caractères).
 
+- **Décisions de Sébastien sur l'audit de la logique** (points 1.4, 1.5,
+  1.8, pépites 5 et 7 ; version 7 du programme, recomposé avec la même
+  graine). **Extension des jambes** (machine et haltère) : plus aucun arrêt,
+  ni genoux pliés ni jambes tendues, et « Genoux sensibles : de 90° jusqu'à
+  presque tendu, sans verrouiller ni tenir en haut » ; à l'échauffement, des
+  squats « aussi bas que le genou le permet ». **Speedy : 8 répétitions à la
+  trap bar**, même le lundi (et aux autres soulevés de terre lourds, debout à
+  deux mains), Big Max 10 ; l'accueil et les Réglages le disent. **Pause
+  après une paire : 1 min**, 1 min 30 après celle de la trap bar ; seul,
+  chacun garde la sienne. **Le ventre, le dos immobile** : plus de crunchs,
+  V-ups, relevés de buste ni rotations russes au programme (ils restent en
+  bibliothèque et en séance libre), du gainage à la place ; **le Superman sans
+  poids** (nouvel exercice `superman`, dessin), celui au kettlebell hors
+  programme. **La planche de Copenhague courte** (`copenhagen-plank`, dessin,
+  15 s de chaque côté) chaque jeudi, avec l'extérieur de cuisse ; à six
+  exercices, le jeudi n'a donc plus de fente (elles reviennent à huit). Durées
+  à deux, graine 1 : lundi 1 h 13 / 1 h 20, mardi 1 h 07 / 1 h 04, jeudi
+  56 / 54 min (semaines A / B). **Reste à faire, côté séance guidée** : la
+  case du poids s'affiche encore au Superman sans poids (`chargeReglable` le
+  dit sans charge).
+
 - **La routine du soir**, demandée par Sébastien (« des étirements ou de la
   mobilité à faire tous les soirs, pas mon entraînement ») — **dix minutes au
   plus**, « pas plus, sinon je ne la ferai pas » : une carte en haut de
@@ -385,7 +406,7 @@ d'installation du README.
   (`cbas1974-projet`). GitHub la suspend après 60 jours sans commit sur un
   dépôt public ; on la relance dans l'onglet *Actions*.
 - **Vérifications** :
-  - `npx vitest run` (930 tests) ;
+  - `npx vitest run` (937 tests) ;
   - `npx tsc -b --noEmit` ;
   - `npx eslint .` ;
   - `npm run build`.
