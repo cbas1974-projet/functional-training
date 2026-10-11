@@ -55,7 +55,7 @@ import { CHANGER_DE_COTE_SEC, estCercleAuTemps, estMobilite, tempoPourExercice }
 import { libelleTempo } from '../utils/formatage';
 import type { Essai } from '../utils/essai';
 import { autrePersonne, chargeLeBasDuDos, etirementsPauseDe } from '../utils/programmeMois';
-import { chargesDeLaSerie, libelleDisques, libelleParCote, seCharge } from '../utils/charges';
+import { chargeAllegee, chargesDeLaSerie, libelleDisques, libelleParCote, seCharge } from '../utils/charges';
 import type { ChargesSerie } from '../utils/charges';
 import { douleurDe } from '../utils/douleurs';
 import { choixDeSortie, compteSeries, phraseEnregistrementPartiel } from '../utils/sortieSeance';
@@ -1800,10 +1800,15 @@ function CorpsTravail({
   // Le texte saisi est gardé tel quel (« 12, » ne doit pas être réécrit en
   // « 12 » à chaque frappe) ; seule la valeur numérique remonte au parent.
   const [texte, setTexte] = useState(valeurDepart > 0 ? String(valeurDepart) : '');
+  // Le 100 % des raccourcis : la charge de travail connue ; à défaut (premier
+  // poids de l'exercice, ou essai), celle qu'on vient de taper. Un raccourci
+  // ne la change pas : 70 % reste 70 % de ce qu'on a tapé.
+  const [tapee, setTapee] = useState(0);
   const saisirPoids = (evenement: ChangeEvent<HTMLInputElement>) => {
     const valeur = evenement.target.value;
     setTexte(valeur);
     const charge = Number.parseFloat(valeur.replace(',', '.'));
+    setTapee(Number.isFinite(charge) && charge > 0 ? charge : 0);
     onPoids(serieCourante, Number.isFinite(charge) ? charge : null);
   };
   /** Un raccourci, 70 % ou 100 % : la charge vraiment faite. */
@@ -1812,6 +1817,8 @@ function CorpsTravail({
     onPoids(serieCourante, charge);
   };
   const chargeSaisie = Number.parseFloat(texte.replace(',', '.'));
+  const base = pleine > 0 ? pleine : tapee;
+  const allegeeBase = pleine > 0 ? allegee : chargeAllegee(tapee, unitePoids);
   const disques = libelleDisques(exercice);
 
   // La charge proposée est enregistrée d'office : sans cela, une série faite
@@ -1968,9 +1975,9 @@ function CorpsTravail({
             />
           </label>
           {/* Deux raccourcis : ce qu'on a vraiment fait, d'un toucher. */}
-          {pleine > 0 && (
+          {base > 0 && (
             <div role="group" aria-label="Charge faite" className="grid grid-cols-2 gap-2">
-              {(allegee < pleine ? [['70 %', allegee] as const, ['100 %', pleine] as const] : [['100 %', pleine] as const]).map(
+              {(allegeeBase < base ? [['70 %', allegeeBase] as const, ['100 %', base] as const] : [['100 %', base] as const]).map(
                 ([part, charge]) => {
                   const choisie = chargeSaisie === charge;
                   return (

@@ -583,8 +583,22 @@ function FeuilleReglages({
       <p className="text-xs" style={{ color: 'var(--texte-discret)' }}>
         Réglages, programme et historique restent sur ce téléphone.
       </p>
+      <p className="chiffres text-xs" style={{ color: 'var(--texte-discret)' }}>
+        Version du {versionDuSite()}
+      </p>
     </Feuille>
   );
+}
+
+/** « 11 octobre, 15 h 42 · c61428a » : l'heure du build, à l'heure du
+ *  Québec, et son commit. */
+function versionDuSite(): string {
+  const date = new Date(__CONSTRUIT_LE__);
+  const jour = date.toLocaleDateString('fr-CA', { day: 'numeric', month: 'long', timeZone: 'America/Toronto' });
+  const heure = date
+    .toLocaleTimeString('fr-CA', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Toronto' })
+    .replace(':', ' h ');
+  return `${jour}, ${heure} · ${__VERSION__}`;
 }
 
 /** L'adresse du serveur du direct à deux : celle du VPS. Elle part avec le
