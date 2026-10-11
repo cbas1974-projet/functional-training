@@ -21,6 +21,54 @@ Claude, de son côté :
 
 ## Séance du 11 octobre 2026
 
+- **La routine du soir**, demandée par Sébastien (« des étirements ou de la
+  mobilité à faire tous les soirs, pas mon entraînement ») — **dix minutes au
+  plus**, « pas plus, sinon je ne la ferai pas » : une carte en haut de
+  l'accueil (« Routine du soir · 10 min », sept points, « 5 soirs sur 7 »), un
+  écran avec les parties et « Commencer » en bas, et une routine guidée plein
+  écran — image, consignes, décompte, côté droit / « Change de côté » 5 s /
+  côté gauche, cloche douce, Pause, Précédent, Suivant, Quitter. Seul sur son
+  téléphone, sans serveur. Détail dans le [README](README.md#routine-du-soir).
+  - **Quatre parties, chacune s'éteint d'un appui** (la dernière allumée reste) :
+    **gainage** ≈ 3 min (planche 30 s ; planche latérale et chien d'arrêt 30 s
+    de chaque côté ; 5 s entre deux), **mobilité jiu-jitsu** ≈ 2 min (deux
+    mouvements), **cou** ≈ 1 min 15 (inclinaison de côté, flexion avant, 20 s de
+    chaque côté, en douceur, sans cercles), **étirements** ≈ 3 min 30 (trois par
+    personne). Toute la routine : **9 min 55 s** pour Speedy comme pour Big Max
+    (`DUREE_MAX_SEC` = 10 min, un test le vérifie). Un cou à 1 min 30 aurait
+    fait dépasser les dix minutes.
+  - **Étirements** — Speedy : bébé heureux, ischio-jambiers allongé, genou
+    ramené en travers. Big Max : mollet contre un mur, quadriceps sur le côté,
+    ischio-jambiers allongé. **La liste du physio de Big Max remplacera la
+    sienne dès qu'on l'aura** (`ROUTINE_PAR_DEFAUT.max`, `src/utils/routineSoir.ts`) ;
+    sa liste de départ n'est pas gardée sur son téléphone tant qu'il n'y touche
+    pas, donc la changer en code suffit.
+  - **Mobilité** — ni le 90/90 ni le « livre ouvert » n'existent dans la
+    bibliothèque : le demi-pigeon (Speedy) ou l'écart des jambes allongé (Big Max,
+    pour ses genoux) tiennent la place du 90/90, la torsion couchée celle du
+    livre ouvert ; l'écran dit ce que chacun remplace. **Un vrai dessin pour
+    chacun reste à faire**, comme pour le chien d'arrêt (il emprunte le dessin du
+    « rowing chien d'arrêt », banc et haltère, avec une note à l'écran). Le cou :
+    la bibliothèque n'a que des étirements, pas d'isométrique ni de mobilité.
+  - Durées (constantes) : 45 s ou 30 s par côté (20 s au cou), 5 s pour changer
+    de côté, 5 s entre deux exercices, 10 s pour s'installer aux étirements.
+  - **Modifiable** : la liste d'étirements — « Changer » (choix dans la
+    bibliothèque, sans ce que la personne doit éviter : flexions avant debout et
+    équilibre sur une jambe pour Speedy, fentes et genoux très pliés pour Big
+    Max, ni ce que les autres parties font déjà), ↑ ↓, « Retirer », « Ajouter »
+    (trois au plus), « Remettre la liste de départ ». Si une liste retouchée
+    dépasse dix minutes, l'écran le dit, sans rien interdire.
+  - **Suivi léger, gardé sur le téléphone seulement** (`routineSoir` dans la
+    sauvegarde locale, relue avec prudence ; les anciennes sauvegardes se
+    chargent comme avant) : les soirs faits et les parties éteintes, hors de
+    l'historique et des statistiques, sans envoi au serveur. Le marquer vient en
+    finissant la routine, ou à la main. Avant 4 h du matin, c'est encore le soir
+    d'hier. **Piste, pas demandée** : envoyer les soirs au serveur pour que
+    chacun voie ceux de l'autre.
+  - Pas de reprise si on quitte en route : dix minutes, on recommence.
+    **À essayer sur un vrai téléphone** : la cloche douce, l'écran qui reste
+    allumé, et si 10 s pour s'installer aux étirements est juste.
+
 - **Analyse 80/20** : [docs/maturite-80-20.md](docs/maturite-80-20.md). Il
   reste une séance test à deux en salle, un lot de corrections, et un bouton
   d'export hors du VPS ; puis on gèle 4 semaines (corrections seulement).
@@ -222,7 +270,8 @@ d'installation du README.
 1. **Faire examiner la jambe de Speedy** (l'impression qu'elle « lâche »).
    Ensuite, rouvrir `EXERCICES_MIS_DE_COTE` dans `programmeMois.ts` selon
    l'avis du professionnel.
-2. **La liste des étirements du physio de Big Max.**
+2. **La liste des étirements du physio de Big Max.** Elle remplacera sa liste
+   de la routine du soir (`ROUTINE_PAR_DEFAUT.max`).
 3. **Les images.** Les 6 dessins des machines (`trap-bar-deadlift`,
    `leg-press`, `hack-squat`, `traineau`, `leg-extension-machine`,
    `leg-curl-machine`) sont à refaire avec Gemini, sur le PC de Sébastien.

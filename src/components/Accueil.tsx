@@ -85,10 +85,11 @@ import type { Essai } from '../utils/essai';
 import FicheExercice from './FicheExercice';
 import ImageEnGrand from './ImageEnGrand';
 import SeanceGuidee from './SeanceGuidee';
+import CarteRoutineSoir from './CarteRoutineSoir';
 import { Bascule, CIBLE, Choix, Feuille, Groupe, Pastille } from './Feuille';
 
 /** Les écrans qu'on ouvre depuis l'accueil. */
-export type VueSecondaire = 'historique' | 'exercices' | 'libre';
+export type VueSecondaire = 'historique' | 'exercices' | 'libre' | 'soir';
 
 interface AccueilProps {
   etat: EntrainementState;
@@ -1193,6 +1194,16 @@ export default function Accueil({
               </BoutonSecondaire>
             </div>
           </Bandeau>
+        )}
+
+        {/* La routine du soir : à part de l'entraînement, d'un appui. */}
+        {personne && (
+          <CarteRoutineSoir
+            personne={personne}
+            routine={etat.routineSoir}
+            maintenant={maintenant}
+            onOuvrir={() => onOuvrir('soir')}
+          />
         )}
 
         {/* Seul : son temps à soi. À deux : une horloge commune. */}

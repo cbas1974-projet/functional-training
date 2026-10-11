@@ -14,6 +14,7 @@ import { uniteDeSeance } from './statistiques';
 import { estRessenti, lireRessentis } from './ressenti';
 import { IDENTIFIANT_MESURE, lireMesures } from './mesures';
 import { validerProgramme } from './programmeMois';
+import { lireRoutineSoir } from './routineSoir';
 
 const CLE_STOCKAGE = 'functional-training';
 
@@ -154,6 +155,9 @@ const migrer = (sauvegarde: Partial<EntrainementState>): EntrainementState => ({
   mesuresAEnvoyer: identifiantsDeMesures(sauvegarde.mesuresAEnvoyer),
   mesuresAEffacer: identifiantsDeMesures(sauvegarde.mesuresAEffacer),
   mesuresEnvoyeesA: typeof sauvegarde.mesuresEnvoyeesA === 'string' ? sauvegarde.mesuresEnvoyeesA : undefined,
+  // La routine du soir : une sauvegarde d'avant n'en a pas, une abîmée perd
+  // seulement ce qui ne se lit plus. Elle reste sur ce téléphone.
+  routineSoir: lireRoutineSoir(sauvegarde.routineSoir),
 });
 
 /** Lit l'état sauvegardé ; reprend celui de l'ancienne application si besoin. */

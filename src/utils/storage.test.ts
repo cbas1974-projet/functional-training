@@ -271,6 +271,71 @@ describe('chargerEtat', () => {
     });
   });
 
+  describe('la routine du soir', () => {
+    it('une sauvegarde d’avant la routine du soir se relit telle quelle, sans routine', () => {
+      localStorage.setItem(CLE, JSON.stringify(ANCIENNE_SAUVEGARDE));
+      const etat = chargerEtat();
+      expect(etat.routineSoir).toBeUndefined();
+      expect(etat.enCours?.indexEtape).toBe(3);
+      // Sans aucune sauvegarde non plus.
+      localStorage.clear();
+      expect(chargerEtat().routineSoir).toBeUndefined();
+    });
+
+    it('garde la liste de chacun et les soirs faits, et les restitue après un aller-retour', () => {
+      const etat: EntrainementState = {
+        ...chargerEtat(),
+        personne: 'sebastien',
+        routineSoir: {
+          listes: { sebastien: ['yoga-bebe-heureux', 'etir-ischios-allonge', 'etir-torsion-allongee'] },
+          soirs: ['2026-10-09', '2026-10-10', '2026-10-11'],
+        },
+      };
+      enregistrerEtat(etat);
+      expect(chargerEtat().routineSoir).toEqual(etat.routineSoir);
+      expect(chargerEtat()).toEqual(etat);
+    });
+
+    it('les parties éteintes sont gardées ; absentes, les trois sont de la partie', () => {
+      localStorage.setItem(CLE, JSON.stringify({ ...ANCIENNE_SAUVEGARDE, routineSoir: { soirs: ['2026-10-11'] } }));
+      expect(chargerEtat().routineSoir?.eteintes).toBeUndefined();
+      const etat: EntrainementState = { ...chargerEtat(), routineSoir: { listes: {}, soirs: [], eteintes: ['gainage', 'mobilite'] } };
+      enregistrerEtat(etat);
+      expect(chargerEtat().routineSoir).toEqual({ listes: {}, soirs: [], eteintes: ['gainage', 'mobilite'] });
+    });
+
+    it('écarte ce qui est abîmé sans rien casser d’autre', () => {
+      localStorage.setItem(
+        CLE,
+        JSON.stringify({
+          ...ANCIENNE_SAUVEGARDE,
+          routineSoir: {
+            listes: { sebastien: ['inconnu', 'etir-mollet-mur'], max: 'oui' },
+            soirs: ['2026-10-11', 'hier', 42, '2026-02-30'],
+          },
+        }),
+      );
+      const etat = chargerEtat();
+      expect(etat.routineSoir).toEqual({ listes: { sebastien: ['etir-mollet-mur'] }, soirs: ['2026-10-11'] });
+      expect(etat.enCours?.indexEtape).toBe(3);
+      for (const routineSoir of ['beaucoup', 12, null, [], { listes: 4, soirs: 'tous' }]) {
+        localStorage.setItem(CLE, JSON.stringify({ ...ANCIENNE_SAUVEGARDE, routineSoir }));
+        expect(chargerEtat().routineSoir).toBeUndefined();
+      }
+    });
+
+    it('reste hors de l’historique d’entraînement et des files d’envoi', () => {
+      localStorage.setItem(
+        CLE,
+        JSON.stringify({ ...ANCIENNE_SAUVEGARDE, routineSoir: { soirs: ['2026-10-11'] } }),
+      );
+      const etat = chargerEtat();
+      expect(etat.historique).toEqual([]);
+      expect(etat.aEnvoyer).toEqual([]);
+      expect(etat.mesuresAEnvoyer).toEqual([]);
+    });
+  });
+
   it('rend l’état par défaut quand la sauvegarde est illisible', () => {
     localStorage.setItem(CLE, '{ pas du json');
     expect(chargerEtat().parametres).toEqual(PARAMETRES_PAR_DEFAUT);

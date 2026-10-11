@@ -13,7 +13,8 @@ sont enregistrés sur l'appareil.
 ## Fonctionnalités
 
 L'application s'ouvre sur le **programme du mois** : la séance du jour, prête à
-commencer. La séance libre, l'historique et les exercices sont à un bouton.
+commencer. La séance libre, l'historique et les exercices sont à un bouton, et
+la [routine du soir](#routine-du-soir) a sa petite carte en haut de l'accueil.
 
 ### Le programme du mois
 
@@ -783,6 +784,78 @@ Deux choses méritent d'être connues :
   dans les deux posters à la fois — le rang est ramené à une fraction, ce qui
   rend les deux comparables.
 
+## Routine du soir
+
+Ce n'est pas l'entraînement : c'est ce qui se fait **tous les soirs**, séance ou
+pas, au calme — et **en dix minutes au plus**, pour qu'on la fasse vraiment.
+Une petite carte en haut de l'accueil — « Routine du soir · 10 min », avec les
+sept derniers soirs en points — ouvre son écran : les quatre parties, les
+points, et « Commencer » toujours en bas, sans défiler.
+
+Quatre courtes parties, dans cet ordre. **Chacune s'éteint d'un appui** (la
+carte et la durée suivent) ; la dernière allumée ne s'éteint pas.
+
+1. **Gainage · ≈ 3 min**, le même pour les deux : la planche 30 s, la planche
+   latérale 30 s d'un côté puis de l'autre, le chien d'arrêt (à quatre pattes,
+   un bras et la jambe opposée tendus) 30 s de chaque côté. Cinq secondes
+   seulement entre deux. « Tenues courtes, dos neutre, on arrête si le dos fait
+   mal. » La bibliothèque n'a pas de chien d'arrêt seul : il prend le dessin du
+   « rowing chien d'arrêt » (banc et haltère), avec une note à l'écran qui le
+   dit, en attendant son propre dessin.
+2. **Mobilité pour le jiu-jitsu · ≈ 2 min**, deux mouvements au sol : les
+   hanches de la garde et la rotation du buste. La bibliothèque n'a ni le 90/90
+   ni le « livre ouvert » : on prend les plus proches, et l'écran dit ce qu'ils
+   remplacent. **Speedy** : le demi-pigeon (à la place du 90/90) et la torsion
+   couchée (à la place du livre ouvert). **Big Max** : l'écart des jambes
+   allongé (rien sur les genoux, que le 90/90 et le pigeon tordent) et la même
+   torsion couchée.
+3. **Cou · ≈ 1 min 15**, le même pour les deux : l'inclinaison latérale de la
+   nuque et la flexion avant, 20 s de chaque côté, en douceur. « Pas de
+   cercles, rien de forcé, la main pose son poids sans tirer. » La bibliothèque
+   n'a que des étirements du cou, ni isométrique ni mobilité.
+4. **Étirements · ≈ 3 min 30 (3 min 45 pour Big Max)**, ceux de chacun, trois,
+   tous au sol (sauf le mollet contre un mur de Big Max).
+   **Speedy** : bébé heureux (les genoux vers la poitrine, le bas du dos),
+   ischio-jambiers allongé, genou ramené en travers (le fessier et l'extérieur
+   de la hanche, où tire la bandelette). Jamais de flexion avant debout, ni
+   d'équilibre sur une jambe.
+   **Big Max** : mollet contre un mur (genou tendu), quadriceps sur le côté,
+   ischio-jambiers allongé. Ni fente, ni genoux à terre.
+   **Liste provisoire : celle de son physio la remplacera dès qu'on l'aura.**
+
+**Les durées** sont des constantes (`src/utils/routineSoir.ts`) : 45 s pour une
+position des deux côtés, **30 s de chaque côté** pour une position d'un seul
+côté (20 s au cou, 30 s au gainage), les mêmes **5 s de « Change de côté »** et
+le même « +5 s » que la séance guidée, 5 s entre deux exercices (10 s pour
+s'installer aux étirements, « Je suis prêt » passe tout de suite). Résultat, les
+quatre parties allumées : **9 min 55 s** pour Speedy comme pour Big Max
+(`DUREE_MAX_SEC` : 10 minutes), et un test vérifie que les deux listes de départ
+y tiennent.
+
+**Comment ça se déroule** : l'image, la consigne, le décompte en grand, le côté
+droit puis « Change de côté » puis le côté gauche, une cloche douce à chaque
+départ (trois pour finir), l'écran qui reste allumé. « Pause », « Précédent »,
+« Suivant », « Quitter ». Seul sur son téléphone, sans serveur, rien à brancher.
+
+**Elle se change** : seule la liste d'étirements, sur l'écran de la routine.
+« Changer » prend un autre étirement de la bibliothèque (on cherche par un mot
+ou par partie du corps ; ce que la personne doit éviter n'est pas proposé, ni ce
+que les autres parties font déjà), ↑ ↓ pour l'ordre, « Retirer », « Ajouter »
+(trois au plus), « Remettre la liste de départ ». Si une liste retouchée fait
+dépasser dix minutes, l'écran le dit : on éteint une partie ou on retire un
+étirement.
+
+**Le suivi est léger** : aller au bout de la routine marque « Faite ce soir ✓ »
+(ou « Je l'ai faite ce soir », et « Annuler » en cas d'erreur). La carte montre
+les sept derniers soirs, « 5 soirs sur 7 », et la série quand elle compte au
+moins deux soirs. Avant 4 h du matin, on est encore dans le soir d'hier.
+
+La liste, les parties éteintes et les soirs faits restent **sur le
+téléphone**, par personne, avec la sauvegarde locale ; les sauvegardes d'avant
+se relisent sans rien changer. Rien n'entre dans l'historique ni dans les
+statistiques, et rien ne part vers le serveur — ce pourrait être une suite, si
+chacun veut voir les soirs de l'autre.
+
 ## Installation et lancement
 
 Node.js 22 ou plus récent est nécessaire (le serveur et ses tests utilisent
@@ -948,6 +1021,9 @@ src/
 │   ├── Feuille.tsx               # Feuille de réglages et ses boutons
 │   ├── Entrainement.tsx          # Séance libre : réglages, plan, historique
 │   ├── SeanceGuidee.tsx          # Séance guidée plein écran et métronome
+│   ├── RoutineSoir.tsx           # La routine du soir : ses quatre parties, la liste d'étirements (changer, ordre, ajouter), les soirs faits
+│   ├── RoutineGuidee.tsx         # La routine du soir guidée plein écran : installation, tenue, changement de côté
+│   ├── CarteRoutineSoir.tsx      # Sa carte sur l'accueil, et les sept derniers soirs en points
 │   ├── FicheExercice.tsx         # Vignette et nom d'un exercice
 │   ├── ImageEnGrand.tsx          # L'image d'un exercice en grand, avec ses consignes
 │   ├── PaceurTempo.tsx           # La bille qui monte et descend au tempo (ou tourne, ou va et vient)
@@ -966,6 +1042,7 @@ src/
 │   ├── etapesSeance.ts           # Machine à étapes de la séance guidée, métronome, changement de côté
 │   ├── tableauMouvements.ts      # Le tableau des mouvements (docs/mouvements.md), lu dans le métronome, et « Au temps ou au tempo ? »
 │   ├── programmeMois.ts          # Composition du programme par paires, calendrier A/B, charges, lien
+│   ├── routineSoir.ts            # La routine du soir : les quatre parties, listes de départ, étapes, durées (dix minutes au plus), soirs faits
 │   ├── essai.ts                  # La séance d'essai : la séance du jour en dix minutes, sans rien garder, et sa séance commune numérotée
 │   ├── statistiques.ts           # Fréquence d'un exercice, charges par série, charge totale
 │   ├── ressenti.ts               # Lourd, correct ou léger : quand proposer un cran de plus ou de moins
@@ -1056,9 +1133,11 @@ mouvement** (squat, charnière, fente, poussée, tirage, rotation, portage…),
 ce qui permet de composer des séances équilibrées quel que soit le matériel
 et de remplacer un exercice par un équivalent d'une autre famille.
 
-Reste à faire : une routine de mobilité guidée de 10 minutes (maintiens au
-temps : 90/90, squat profond, psoas, rotations thoraciques, épaules, nuque),
-et l'export de l'historique dans un fichier de sauvegarde.
+Reste à faire : l'export de l'historique dans un fichier de sauvegarde, la
+liste du physio de Big Max pour sa routine du soir, et de vrais dessins pour le
+90/90, le « livre ouvert » et le chien d'arrêt, qui empruntent ceux d'autres
+exercices. La routine de mobilité guidée existe : c'est la
+[routine du soir](#routine-du-soir).
 
 ## Licence
 
