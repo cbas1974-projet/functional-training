@@ -211,6 +211,66 @@ describe('chargerEtat', () => {
     expect(etat.parametres.unitePoids).toBe('lb');
   });
 
+  describe('le ressenti', () => {
+    const seanceFaite = (exercices: object[]) => ({
+      id: 'h1',
+      date: '2026-10-08T10:00:00.000Z',
+      parametres: { ...PARAMETRES_PAR_DEFAUT, unitePoids: 'lb' },
+      dureePrevueSec: 1200,
+      dureeReelleSec: 1180,
+      terminee: true,
+      exercices,
+    });
+    const exo = (extra: object = {}) => ({
+      exerciceId: 'goblet-squat',
+      seriesPrevues: 3,
+      seriesFaites: 3,
+      reps: 8,
+      dureeSec: 420,
+      poids: 25,
+      poidsParSerie: [25, 25, 25],
+      ...extra,
+    });
+
+    it('une séance d’avant le ressenti se relit telle quelle, sans ressenti', () => {
+      localStorage.setItem(CLE, JSON.stringify({ ...ANCIENNE_SAUVEGARDE, historique: [seanceFaite([exo()])] }));
+      const [passee] = chargerEtat().historique;
+      expect(passee.exercices[0]).toEqual(exo());
+      expect(passee.exercices[0].ressenti).toBeUndefined();
+      expect('ressenti' in passee.exercices[0]).toBe(false);
+    });
+
+    it('garde le ressenti de chaque exercice, et le restitue après un aller-retour', () => {
+      const brut = [exo({ ressenti: 'leger' }), exo({ exerciceId: 'curl', ressenti: 'lourd' }), exo({ exerciceId: 'bench-press', ressenti: 'correct' })];
+      localStorage.setItem(CLE, JSON.stringify({ ...ANCIENNE_SAUVEGARDE, historique: [seanceFaite(brut)] }));
+      const etat = chargerEtat();
+      expect(etat.historique[0].exercices.map((e) => e.ressenti)).toEqual(['leger', 'lourd', 'correct']);
+      enregistrerEtat(etat);
+      expect(chargerEtat().historique[0].exercices.map((e) => e.ressenti)).toEqual(['leger', 'lourd', 'correct']);
+    });
+
+    it('écarte un ressenti qu’on ne connaît pas, sans rien perdre d’autre', () => {
+      const brut = [exo({ ressenti: 'difficile' }), exo({ exerciceId: 'curl', ressenti: 3 }), exo({ exerciceId: 'bench-press', ressenti: null })];
+      localStorage.setItem(CLE, JSON.stringify({ ...ANCIENNE_SAUVEGARDE, historique: [seanceFaite(brut)] }));
+      const exercices = chargerEtat().historique[0].exercices;
+      expect(exercices.map((e) => e.ressenti)).toEqual([undefined, undefined, undefined]);
+      expect(exercices.map((e) => e.poids)).toEqual([25, 25, 25]);
+    });
+
+    it('la séance en cours reprend ses ressentis ; une séance commencée avant eux n’en a pas', () => {
+      const enCours = (ressentis?: unknown) => ({
+        ...ANCIENNE_SAUVEGARDE,
+        enCours: { ...ANCIENNE_SAUVEGARDE.enCours, ...(ressentis === undefined ? {} : { ressentis }) },
+      });
+      localStorage.setItem(CLE, JSON.stringify(enCours({ 'goblet-squat': 'leger', curl: 'trop', 'hammer-curl': 'lourd' })));
+      expect(chargerEtat().enCours?.ressentis).toEqual({ 'goblet-squat': 'leger', 'hammer-curl': 'lourd' });
+      localStorage.setItem(CLE, JSON.stringify(enCours()));
+      expect(chargerEtat().enCours?.ressentis).toEqual({});
+      localStorage.setItem(CLE, JSON.stringify(enCours('léger')));
+      expect(chargerEtat().enCours?.ressentis).toEqual({});
+    });
+  });
+
   it('rend l’état par défaut quand la sauvegarde est illisible', () => {
     localStorage.setItem(CLE, '{ pas du json');
     expect(chargerEtat().parametres).toEqual(PARAMETRES_PAR_DEFAUT);

@@ -350,6 +350,12 @@ describe('seanceApercu', () => {
     expect(seanceApercu(JEUDI, PARAMETRES, contexte)!.blocs.some((b) => b.ajoutCharge !== undefined)).toBe(false);
   });
 
+  it('ni le cran que demandent ses ressentis : léger ou lourd deux fois de suite, c’est pour ce téléphone', () => {
+    const contexte = { ...SEUL_SEB, ressentis: { 'trap-bar-deadlift': 'leger' as const, 'seesaw-row': 'lourd' as const } };
+    expect(essai(JEUDI, contexte).blocs.map((b) => b.ajustementRessenti)).toContain(5);
+    expect(seanceApercu(JEUDI, PARAMETRES, contexte)!.blocs.some((b) => b.ajustementRessenti !== undefined)).toBe(false);
+  });
+
   it('dure aussi une dizaine de minutes', () => {
     for (const s of SEANCES) {
       for (const contexte of CONTEXTES) {

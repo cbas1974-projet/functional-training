@@ -7,6 +7,7 @@ import {
   avecMesure,
   avecMesuresAuBranchement,
   avecSeanceFaite,
+  chargerHistoriquePartage,
   chargerMesuresPartagees,
   effacerMesure,
   effacerRealisation,
@@ -388,5 +389,43 @@ describe('les mesures des deux, lues du serveur', () => {
     }
     vi.stubGlobal('fetch', () => Promise.reject(new TypeError('Failed to fetch')));
     expect(await chargerMesuresPartagees(partage)).toBeNull();
+  });
+});
+
+describe('l’historique des deux, lu du serveur', () => {
+  const partage = { serveur: 'https://srv123.hstgr.cloud', equipe: 'equipe-essai-1234' };
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+  const exo = (extra: object = {}) => ({
+    exerciceId: 'goblet-squat',
+    seriesPrevues: 3,
+    seriesFaites: 3,
+    reps: 8,
+    dureeSec: 300,
+    poids: 25,
+    poidsParSerie: [25, 25, 25],
+    ...extra,
+  });
+  const serveurDonne = (exercices: object[]) =>
+    vi.stubGlobal('fetch', () =>
+      Promise.resolve(
+        new Response(JSON.stringify({ seances: [{ personne: 'max', realisation: { ...seance, exercices } }] }), { status: 200 }),
+      ),
+    );
+
+  it('garde le ressenti de chaque exercice, tel que l’autre l’a donné', async () => {
+    serveurDonne([exo({ ressenti: 'leger' }), exo({ exerciceId: 'curl', ressenti: 'lourd' }), exo({ exerciceId: 'bench-press', ressenti: 'correct' })]);
+    const recues = await chargerHistoriquePartage(partage);
+    expect(recues?.[0].personne).toBe('max');
+    expect(recues?.[0].realisation.exercices.map((e) => e.ressenti)).toEqual(['leger', 'lourd', 'correct']);
+  });
+
+  it('une séance d’avant le ressenti, ou un ressenti inconnu, se lit sans ressenti', async () => {
+    serveurDonne([exo(), exo({ ressenti: 'difficile' }), exo({ ressenti: 4 })]);
+    const [exercices] = (await chargerHistoriquePartage(partage))!.map((s) => s.realisation.exercices);
+    expect(exercices.map((e) => e.ressenti)).toEqual([undefined, undefined, undefined]);
+    expect(exercices.map((e) => 'ressenti' in e)).toEqual([false, false, false]);
+    expect(exercices[0].poidsParSerie).toEqual([25, 25, 25]);
   });
 });

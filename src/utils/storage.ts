@@ -11,6 +11,7 @@ import type {
 } from '../types';
 import { PARAMETRES_PAR_DEFAUT, TOUTES_LES_ZONES } from '../data/parametres';
 import { uniteDeSeance } from './statistiques';
+import { estRessenti, lireRessentis } from './ressenti';
 import { IDENTIFIANT_MESURE, lireMesures } from './mesures';
 import { validerProgramme } from './programmeMois';
 
@@ -90,6 +91,8 @@ const migrerProgression = (enCours: ProgressionSeance | null): ProgressionSeance
     : {
         ...enCours,
         poids: migrerPoids(enCours.poids),
+        // Une séance commencée avant l'arrivée du ressenti n'en a pas.
+        ressentis: lireRessentis(enCours.ressentis),
         // Une séance commencée avant le réglage d'unité l'a été en kilos.
         seance: {
           ...enCours.seance,
@@ -108,6 +111,8 @@ const migrerExercice = (exo: ExerciceRealise): ExerciceRealise => {
   delete migre.poidsKg;
   const poids = exo.poids ?? exo.poidsKg;
   if (typeof poids === 'number' && poids > 0) migre.poids = poids;
+  // Le ressenti est facultatif : une valeur inconnue est écartée, pas gardée.
+  if (!estRessenti(exo.ressenti)) delete migre.ressenti;
   return migre;
 };
 

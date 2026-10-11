@@ -71,6 +71,7 @@ import {
 import type { AccordPaire, ContexteSeance } from '../utils/programmeMois';
 import type { ConfigSynchro } from '../hooks/useSeanceCommune';
 import { avecSeanceFaite, serveurDe } from '../utils/enLigne';
+import { ajustementDeCharge, ligneProposition, raisonProposition, ressentisQuiChangent } from '../utils/ressenti';
 import {
   ESSAI,
   apercuDe,
@@ -263,6 +264,8 @@ function LigneExercice({
   onImage: () => void;
 }) {
   const tour = bloc.tour === true;
+  // Le cran proposé sur la dernière charge : semaine dure réussie, ou ressenti.
+  const ajustement = ajustementDeCharge(bloc);
   const rouge = lien.mode === 'candidat' && lien.accord.accord !== 'bon';
   const cadre =
     lien.mode === 'choisi'
@@ -324,12 +327,21 @@ function LigneExercice({
           <p className="chiffres text-xs" style={{ color: 'var(--texte-discret)' }}>
             Dernière fois : {passees.map((charge) => (charge > 0 ? charge : '—')).join(' · ')}{' '}
             {SUFFIXE_UNITE[unite]}
-            {bloc.ajoutCharge !== undefined && (
+            {ajustement?.motif === 'semaine-dure' && (
               <strong style={{ color: 'var(--montee)' }}>
                 {' '}
-                · +{bloc.ajoutCharge} {SUFFIXE_UNITE[unite]} proposés
+                · +{ajustement.ajout} {SUFFIXE_UNITE[unite]} proposés
               </strong>
             )}
+          </p>
+        )}
+        {/* Le ressenti des dernières fois : léger, on monte ; lourd, on redescend. */}
+        {passees && passees.some((charge) => charge > 0) && ajustement && ajustement.motif !== 'semaine-dure' && (
+          <p className="chiffres text-xs" style={{ color: 'var(--texte-discret)' }}>
+            <strong style={{ color: ajustement.motif === 'leger' ? 'var(--montee)' : 'var(--descente)' }}>
+              {ligneProposition(ajustement.motif, ajustement.ajout, unite)}
+            </strong>{' '}
+            · {raisonProposition(ajustement.motif)}
           </p>
         )}
         {/* À deux : côte à côte, ou chacun son tour sur la machine. */}
@@ -819,8 +831,14 @@ export default function Accueil({
       // Le tempo du programme, le même sur les deux téléphones.
       tempo: tempoDuProgramme(programme),
       augmenter: exercicesAAugmenter(historique, programme, seanceMois, depuisIso(jourSeance)),
+      // Léger deux fois de suite : un cran de plus ; lourd : un cran de moins.
+      ressentis: ressentisQuiChangent(
+        historique,
+        [...seanceMois.exercices, ...(seanceMois.finale ? [seanceMois.finale] : [])],
+        unite,
+      ),
     }),
-    [personne, aDeux, semaineDure, programme, historique, seanceMois, jourSeance],
+    [personne, aDeux, semaineDure, programme, historique, seanceMois, jourSeance, unite],
   );
   const seance = useMemo(() => seancePourPersonne(seanceMois, parametres, contexte), [seanceMois, parametres, contexte]);
   const passees = useMemo(
@@ -875,7 +893,7 @@ export default function Accueil({
   const echauffement = seance.echauffement ?? [];
   const etirements = [...new Set((seance.retourCalme ?? []).map((m) => m.exerciceId).filter(estUnExercice))];
   const avecTrapBar = seance.blocs.some((bloc) => bloc.exerciceId === 'trap-bar-deadlift');
-  const aAugmenter = seance.blocs.filter((bloc) => bloc.ajoutCharge !== undefined).length;
+  const aAugmenter = seance.blocs.filter((bloc) => ajustementDeCharge(bloc)?.motif === 'semaine-dure').length;
 
   /** Toute retouche du programme : l'autre téléphone devra le recevoir. */
   const modifierProgramme = (modifier: (prec: ProgrammeMois) => ProgrammeMois) => {

@@ -288,6 +288,10 @@ export interface BlocSeries {
   derniereLegere?: boolean;
   /** Semaine dure réussie : la charge de la dernière fois, plus ce cran. */
   ajoutCharge?: number;
+  /** Le ressenti des dernières fois : la charge de la dernière fois, plus ce
+   *  cran (léger deux fois de suite) ou moins ce cran (lourd deux fois de
+   *  suite) ; négatif = on redescend. Voir `ajustementDeCharge`. */
+  ajustementRessenti?: number;
 }
 
 /** Un temps de l'échauffement ou du retour au calme. */
@@ -347,6 +351,10 @@ export interface Seance {
   dureeEstimeeSec: number;
 }
 
+/** Comment la charge d'un exercice a été trouvée, dite après sa dernière
+ *  série : lourde, correcte ou légère. Facultatif : on peut ne rien dire. */
+export type Ressenti = 'lourd' | 'correct' | 'leger';
+
 export interface ExerciceRealise {
   exerciceId: string;
   seriesPrevues: number;
@@ -362,6 +370,9 @@ export interface ExerciceRealise {
   poidsKg?: number;
   /** Charge de chaque série, dans l'ordre ; 0 = non saisie. */
   poidsParSerie?: number[];
+  /** Le ressenti de la personne sur la charge, après la dernière série ;
+   *  absent = rien dit (et toutes les séances d'avant son arrivée). */
+  ressenti?: Ressenti;
 }
 
 export interface SeanceRealisee {
@@ -386,6 +397,8 @@ export interface ProgressionSeance {
   /** Charges saisies, par exercice puis par série (index 0 = série 1).
    *  0 = série non renseignée. */
   poids: Record<string, number[]>;
+  /** Ressentis donnés jusque-là, par exercice ; absent avant leur arrivée. */
+  ressentis?: Record<string, Ressenti>;
   demarreeLe: string;
   /** Dernière sauvegarde (ISO), pour le bandeau de reprise. */
   sauvegardeeLe?: string;

@@ -183,6 +183,28 @@ describe('le serveur', () => {
     expect(reste.seances.map((s: { realisation: { id: string } }) => s.realisation.id)).toEqual(['seance-2']);
   });
 
+  it('garde le ressenti de chaque exercice, tel que le téléphone l’a envoyé', async () => {
+    const exercices = ['leger', 'lourd', 'correct', undefined].map((ressenti, i) => ({
+      exerciceId: `exercice-${i}`,
+      seriesPrevues: 3,
+      seriesFaites: 3,
+      reps: 8,
+      dureeSec: 300,
+      poids: 25,
+      ...(ressenti ? { ressenti } : {}),
+    }));
+    const realisation = { id: 'seance-ressenti', date: '2026-10-11T14:00:00.000Z', exercices, terminee: true };
+    const reponse = await fetch(`${adresse}/api/equipes/${EQUIPE}/historique/seance-ressenti`, {
+      method: 'PUT',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ personne: 'max', realisation }),
+    });
+    expect(reponse.status).toBe(200);
+    const [recue] = (await (await fetch(`${adresse}/api/equipes/${EQUIPE}/historique`)).json()).seances;
+    expect(recue.realisation).toEqual(realisation);
+    expect(recue.realisation.exercices.map((e: { ressenti?: string }) => e.ressenti)).toEqual(['leger', 'lourd', 'correct', undefined]);
+  });
+
   it('renvoie tout l’historique depuis le premier jour, compressé en route', async () => {
     // Six cents séances en parallèle : bien plus vite que le débit permis à un téléphone.
     await redemarrer({ ecrituresParMinute: 100_000 });
