@@ -2,7 +2,14 @@ import { describe, expect, it } from 'vitest';
 import type { Exercice, Seance } from '../types';
 import { EXERCICES_PAR_ID } from '../data/exercices';
 import { DUREES_MINUTES, FORMATS, NIVEAUX, PARAMETRES_PAR_DEFAUT } from '../data/parametres';
-import { dureeSerieSec, estimerDureeSec, genererSeance, groupesDeBlocs, secondesParRep } from './generateurSeance';
+import {
+  CHANGER_DE_COTE_SEC,
+  dureeSerieSec,
+  estimerDureeSec,
+  genererSeance,
+  groupesDeBlocs,
+  secondesParRep,
+} from './generateurSeance';
 import { TRANSITION_LIEN_SEC, basculerTour, delierDansProgramme, estPoussee, genererProgramme, seancePourPersonne } from './programmeMois';
 import type { ContexteSeance } from './programmeMois';
 import {
@@ -13,6 +20,7 @@ import {
   construireEtapes,
   dureeRestanteSec,
   dureeTotaleSec,
+  etatChangementCote,
   etatMaintien,
   etatMetronome,
   indexApresExercice,
@@ -121,8 +129,8 @@ describe('construireEtapes', () => {
     expect(etape(I.pretSquat1).dureeSec).toBe(DUREE_PRET_SEC);
     // Bilatéral : 8 reps × 10 s
     expect(etape(I.serieSquat1).dureeSec).toBe(80);
-    // Unilatéral : 6 reps × 10 s × 2 côtés
-    expect(etape(I.serieRow1).dureeSec).toBe(120);
+    // Unilatéral : 6 reps × 10 s × 2 côtés, plus 5 s pour changer de côté
+    expect(etape(I.serieRow1).dureeSec).toBe(125);
     // Au temps : les « reps » sont des secondes
     expect(etape(I.serieMarche).dureeSec).toBe(40);
     expect(etape(I.reposSquat1).dureeSec).toBe(60);
@@ -130,7 +138,7 @@ describe('construireEtapes', () => {
     expect(etape(I.reposPress1).dureeSec).toBe(20);
     expect(etape(I.reposTour).dureeSec).toBe(60);
     expect(etape(I.retourCalme).dureeSec).toBe(90);
-    expect(dureeTotaleSec(ETAPES)).toBe(1240);
+    expect(dureeTotaleSec(ETAPES)).toBe(1250);
   });
 
   it('compte une répétition plus courte aux exercices sans arrêt en bas', () => {
@@ -152,8 +160,8 @@ describe('construireEtapes', () => {
     expect(durees).toEqual([
       ['goblet-squat', 8 * 6],
       ['hammer-curl', 8 * 8],
-      ['elevated-reverse-lunge', 6 * 6 * 2],
-      ['single-arm-row', 6 * 8 * 2],
+      ['elevated-reverse-lunge', 6 * 6 * 2 + CHANGER_DE_COTE_SEC],
+      ['single-arm-row', 6 * 8 * 2 + CHANGER_DE_COTE_SEC],
     ]);
   });
 
@@ -242,6 +250,7 @@ describe('etatMetronome', () => {
       totalReps: 8,
       phase: 'descend',
       resteDansPhaseSec: 3,
+      dureePhaseSec: 5,
       cycle: 1,
     });
     expect(etatMetronome(etape(I.serieSquat1), 0, TEMPO)).toMatchObject({
@@ -282,14 +291,22 @@ describe('etatMetronome', () => {
       phase: 'monte',
     });
     expect(etatMetronome(rowing, 59.9, TEMPO)).toMatchObject({ rep: 6, cote: 'droit' });
-    expect(etatMetronome(rowing, 60, TEMPO)).toMatchObject({
+    expect(etatChangementCote(rowing, 59.9, TEMPO)).toBeNull();
+    // Cinq secondes pour changer de côté : le métronome se tait, le compte à
+    // rebours annonce le côté gauche.
+    expect(etatMetronome(rowing, 60, TEMPO)).toBeNull();
+    expect(etatChangementCote(rowing, 60, TEMPO)).toEqual({ cote: 'gauche', resteSec: 5, dureeSec: 5 });
+    expect(etatChangementCote(rowing, 63, TEMPO)).toMatchObject({ resteSec: 2 });
+    expect(etatMetronome(rowing, 65, TEMPO)).toMatchObject({
       rep: 1,
       totalReps: 6,
       cote: 'gauche',
       phase: 'monte',
       resteDansPhaseSec: 5,
     });
-    expect(etatMetronome(rowing, 119, TEMPO)).toMatchObject({ rep: 6, cote: 'gauche', phase: 'descend' });
+    expect(etatChangementCote(rowing, 65, TEMPO)).toBeNull();
+    expect(etatMetronome(rowing, 124, TEMPO)).toMatchObject({ rep: 6, cote: 'gauche', phase: 'descend' });
+    expect(rowing.dureeSec).toBe(125);
   });
 
   it('respecte un tempo asymétrique', () => {
@@ -335,13 +352,16 @@ describe('etatMetronome', () => {
     // Sur un exercice unilatéral, la pause manque des deux côtés.
     const fente: Etape = { type: 'serie', exerciceId: 'elevated-reverse-lunge', serie: 1, series: 1, reps: 4, dureeSec: 48 };
     expect(etatMetronome(fente, 23.9, tempo)).toMatchObject({ rep: 4, totalReps: 4, cote: 'droit' });
-    expect(etatMetronome(fente, 24, tempo)).toMatchObject({ rep: 1, totalReps: 4, cote: 'gauche' });
+    expect(etatMetronome(fente, 24, tempo)).toBeNull();
+    expect(etatMetronome(fente, 29, tempo)).toMatchObject({ rep: 1, totalReps: 4, cote: 'gauche' });
     // Le métronome, la bille et les bips lisent le même tempo que la durée.
     for (const id of ['goblet-squat', 'kb-deadlift', 'elevated-reverse-lunge', 'hammer-curl']) {
       const exercice = EXERCICES_PAR_ID[id];
       const parRep = secondesParRep(tempo, exercice);
       expect(parRep, id).toBe(exercice.sansPauseEnBas ? 6 : 8);
-      expect(dureeSerieSec(exercice, 4, tempo), id).toBe(4 * parRep * (exercice.cotes === 'unilateral' ? 2 : 1));
+      expect(dureeSerieSec(exercice, 4, tempo), id).toBe(
+        exercice.cotes === 'unilateral' ? 4 * parRep * 2 + CHANGER_DE_COTE_SEC : 4 * parRep,
+      );
       for (let t = 0; t < parRep; t += 0.5) {
         const etape: Etape = { type: 'serie', exerciceId: id, serie: 1, series: 1, reps: 4, dureeSec: dureeSerieSec(exercice, 4, tempo) };
         expect(etatMetronome(etape, t, tempo)?.phase === 'pause', `${id} · ${t} s`).toBe(!exercice.sansPauseEnBas && t >= 6);
@@ -412,11 +432,13 @@ describe('etatMetronome', () => {
       reps: 4,
       dureeSec: dureeSerieSec(hydrant, 4, tempo),
     };
-    expect(cotes.dureeSec).toBe(64);
+    // 4 répétitions de 8 s de chaque côté, et 5 s pour changer de côté.
+    expect(cotes.dureeSec).toBe(69);
     expect(etatMetronome(cotes, 4, tempo)).toMatchObject({ rep: 1, cote: 'droit', phase: 'pause' });
     expect(etatMetronome(cotes, 7, tempo)).toMatchObject({ rep: 1, cote: 'droit', phase: 'descend' });
-    expect(etatMetronome(cotes, 36, tempo)).toMatchObject({ rep: 1, cote: 'gauche', phase: 'pause' });
-    expect(etatMetronome(cotes, 38, tempo)).toMatchObject({ rep: 1, cote: 'gauche', phase: 'descend' });
+    expect(etatChangementCote(cotes, 34, tempo)).toMatchObject({ cote: 'gauche', resteSec: 3 });
+    expect(etatMetronome(cotes, 41, tempo)).toMatchObject({ rep: 1, cote: 'gauche', phase: 'pause' });
+    expect(etatMetronome(cotes, 43, tempo)).toMatchObject({ rep: 1, cote: 'gauche', phase: 'descend' });
   });
 
   it('découpe la répétition d’un exercice qui tient en haut : la pause suit la montée, quel que soit le départ', () => {
@@ -534,11 +556,11 @@ describe('etatMetronome', () => {
 
 describe('dureeRestanteSec', () => {
   it('additionne le reste de l’étape courante et les étapes suivantes', () => {
-    expect(dureeRestanteSec(ETAPES, 0, 0)).toBe(1240);
-    expect(dureeRestanteSec(ETAPES, I.echauffement, 20)).toBe(1220);
-    expect(dureeRestanteSec(ETAPES, I.serieSquat1, 30)).toBe(1240 - 120 - 5 - 30);
+    expect(dureeRestanteSec(ETAPES, 0, 0)).toBe(1250);
+    expect(dureeRestanteSec(ETAPES, I.echauffement, 20)).toBe(1230);
+    expect(dureeRestanteSec(ETAPES, I.serieSquat1, 30)).toBe(1250 - 120 - 5 - 30);
     // Un repos prolongé de 15 s
-    expect(dureeRestanteSec(ETAPES, I.reposSquat1, 10, 15)).toBe(1240 - 125 - 80 - 10 + 15);
+    expect(dureeRestanteSec(ETAPES, I.reposSquat1, 10, 15)).toBe(1250 - 125 - 80 - 10 + 15);
     // Au-delà de la durée prévue, le reste de l'étape courante est nul
     expect(dureeRestanteSec(ETAPES, I.retourCalme, 200)).toBe(0);
     expect(dureeRestanteSec(ETAPES, I.fin, 0)).toBe(0);
@@ -593,7 +615,7 @@ describe('agregerRealisation', () => {
     temps[I.pretSquat2] = 5;
     temps[I.serieSquat2] = 30;
     temps[I.reposSquat2] = 45;
-    // Rowing : les deux séries faites, dont une à 60 % (72 s sur 120)
+    // Rowing : les deux séries faites, dont une à 58 % (72 s sur 125)
     temps[I.pretRow1] = 5;
     temps[I.serieRow1] = 120;
     temps[I.reposRow1] = 60;
@@ -618,7 +640,7 @@ describe('agregerRealisation', () => {
     );
 
     expect(realisee.terminee).toBe(false);
-    expect(realisee.dureePrevueSec).toBe(1240);
+    expect(realisee.dureePrevueSec).toBe(1250);
     expect(realisee.dureeReelleSec).toBe(844);
     expect(realisee.parametres).toBe(SEANCE.parametres);
     expect(realisee.id).toBeTruthy();

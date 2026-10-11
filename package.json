@@ -9,6 +9,7 @@
     "build:unique": "npm run build && node scripts/construire_fichier_unique.mjs",
     "lint": "eslint .",
     "test": "vitest run",
+    "mouvements": "vitest run src/utils/tableauMouvements.test.ts --update",
     "preview": "vite preview"
   },
   "dependencies": {

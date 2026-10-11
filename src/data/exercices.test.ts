@@ -89,8 +89,11 @@ describe('consignes de précaution', () => {
     }
   });
 
-  it('ne marque le genou que sur des exercices sans arrêt en bas', () => {
-    expect(EXERCICES.filter((e) => e.genouAMenager && !e.sansPauseEnBas).map((e) => e.id)).toEqual([]);
+  it('ne marque le genou que sur des exercices sans arrêt en bas — ou sans arrêt du tout', () => {
+    // Le tour du monde se fait dans un squat large tenu : un cercle, qui ne
+    // s'arrête jamais, mais le genou plié d'un bout à l'autre.
+    expect(EXERCICES.filter((e) => e.genouAMenager && !e.sansPauseEnBas).map((e) => e.id)).toEqual(['kb-around-the-world']);
+    expect(EXERCICES_PAR_ID['kb-around-the-world'].mouvement).toBe('circulaire');
   });
 
   it('s’affiche partout où les consignes s’affichent : aucun écran ne lit les points d’attention sans elle', () => {
@@ -128,9 +131,11 @@ describe('où se tient l’arrêt du tempo', () => {
     'leg-extension-machine', 'leg-curl-machine', 'leg-extension', 'hamstring-curl', 'calf-raise',
     // Le tirage en planche : l'haltère posé au sol en bas.
     'renegade-row', 'kb-renegade-row', 'plank-t',
-    // Le ventre : allongé à plat, pendu, debout bras en l'air.
+    // Le ventre : allongé à plat, pendu, debout bras en l'air — le genou qui
+    // monte à la rencontre de la charge tient serré, à l'haltère comme au
+    // kettlebell.
     'v-up', 'kb-v-up', 'kb-alternating-v-up', 'kb-x-crunch', 'kb-oblique-crunch', 'kb-straight-arm-sit', 'kb-pullover',
-    'hanging-leg-raise', 'kb-high-knee-crunch', 'kb-half-turkish-get-up', 'kb-turkish-get-up',
+    'hanging-leg-raise', 'kb-high-knee-crunch', 'bow-extension', 'kb-half-turkish-get-up', 'kb-turkish-get-up',
   ];
   const tiennentEnHaut = () => EXERCICES.filter((e) => e.pauseEnHaut).map((e) => e.id);
   const musculationEnReps = EXERCICES.filter((e) => (e.famille ?? 'musculation') === 'musculation' && e.unite === 'reps');

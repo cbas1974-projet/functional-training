@@ -8,9 +8,9 @@
 // l'attente de l'autre finit ; pendant ma série, si l'autre m'attend, il
 // commence plus tôt ; s'il travaille aussi, seul mon téléphone avance — j'ai
 // plus de repos, et l'on repart ensemble.
-import type { BlocSeries, Seance } from '../types';
+import type { BlocSeries, Seance, Tempo } from '../types';
 import type { Etape } from './etapesSeance';
-import { indexApresExercice } from './etapesSeance';
+import { etatChangementCote, indexApresExercice } from './etapesSeance';
 import { tempsActifMs } from './etatCommun';
 import type { ActionCommune, EtatCommun, Instant } from './etatCommun';
 
@@ -135,6 +135,9 @@ export interface Contexte {
   position: Position;
   /** Le prénom de l'autre, pour les messages. */
   partenaire: string;
+  /** Le tempo de la séance : il dit si l'autre change de côté au milieu
+   *  d'une série unilatérale. Absent, on le croit en pleine série. */
+  tempo?: Tempo;
 }
 
 /** Ce que produit un appui : un changement pour les deux, un écart pour
@@ -256,11 +259,22 @@ export function decisionPasserExercice(contexte: Contexte): Decision {
   return { genre: 'locale', ecart: { vers, depuis: contexte.t } };
 }
 
-/** « +15 s » pendant une attente : l'horloge commune s'arrête quinze
- *  secondes, pour les deux, s'ils attendent tous les deux. Pendant la série
- *  de l'autre, ce serait sa série qui s'allongerait. */
+/** L'autre change de côté au milieu d'une série unilatérale : il ne fait
+ *  pas de répétitions, l'horloge peut s'arrêter pour lui aussi. */
+function autreChangeDeCote(contexte: Contexte): boolean {
+  const { etapesAutre, etat, t, tempo } = contexte;
+  if (!tempo) return false;
+  const { index, ecouleSec } = positionCommune(etapesAutre, etat, t);
+  const etape = etapesAutre[index];
+  return etape !== undefined && etatChangementCote(etape, ecouleSec, tempo) !== null;
+}
+
+/** « +15 s » pendant une attente, « +5 s » pendant un changement de côté :
+ *  l'horloge commune s'arrête autant, pour les deux, si l'autre attend ou
+ *  change de côté lui aussi. Pendant ses répétitions, ce serait sa série qui
+ *  s'allongerait : refusé. */
 export function decisionProlonger(contexte: Contexte, sec: number): Decision {
-  if (finAttenteAutre(contexte) === null) {
+  if (finAttenteAutre(contexte) === null && !autreChangeDeCote(contexte)) {
     return { genre: 'refus', raison: `${contexte.partenaire} est en pleine série.` };
   }
   return { genre: 'commune', action: { type: 'prolonger', sec } };

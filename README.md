@@ -100,12 +100,13 @@ du dos, épaules, extérieur et intérieur de cuisse. Rien à taper.
 - **Sans arrêt en bas** pour les exercices où la position basse fatigue le dos
   ou le genou. Pour le dos : les soulevés de terre (trap bar, roumain,
   kettlebell, sur une jambe), le good morning, les rowings buste penché, les
-  oiseaux et la tondeuse. Pour les genoux : les squats (haltères, gobelet,
-  sumo, kettlebell), la chaise au mur, les thrusters, la presse à cuisses, le
-  hack squat et l'extension des jambes à la machine, les fentes et la montée
-  sur marche. Quel que soit le tempo, ces
-  exercices se font en descendant contrôlé et en remontant sans rebond :
-  l'arrêt en bas vaut 0 seconde, pour les deux. La répétition est plus courte,
+  oiseaux, la tondeuse et les bûcherons. Pour les genoux : les squats
+  (haltères, gobelet, sumo, kettlebell, cosaque, bras tendu, sur une jambe
+  vers un banc), la chaise au mur, les thrusters, la presse à cuisses, le
+  hack squat et l'extension des jambes à la machine, les fentes (bulgare
+  comprise), l'esquive latérale, le pas chassé bas et la montée sur marche.
+  Quel que soit le tempo, ces exercices se font en descendant contrôlé et
+  en remontant sans rebond : l'arrêt en bas vaut 0 seconde, pour les deux. La répétition est plus courte,
   la bille ne se pose pas au pied du rail, et la durée annoncée en tient
   compte. Chacun porte une consigne : « Sans arrêt en bas : on descend
   contrôlé, on remonte sans rebond » et, pour les genoux, « On descend
@@ -114,7 +115,9 @@ du dos, épaules, extérieur et intérieur de cuisse. Rien à taper.
   bibliothèque et la séance libre. La liste est dans les données des exercices
   (`sansPauseEnBas`, `genouAMenager`). L'extension des jambes à la machine
   garde un arrêt, mais en haut, jambes tendues, comme le dit l'affiche de la
-  salle : jamais genoux pliés.
+  salle : jamais genoux pliés. Les mouvements explosifs (swings, sauts,
+  arrachés), eux, ne s'arrêtent jamais : un geste balistique ne marque pas
+  d'arrêt.
 - **Tenu en haut** quand la position basse est un repos. La règle : **on
   tient là où le muscle travaille** — en bas quand la position basse est
   étirée sous la charge (curls, développés, écartés, rowings, mollet sur une
@@ -133,6 +136,38 @@ du dos, épaules, extérieur et intérieur de cuisse. Rien à taper.
   haut » ; la consigne « On tient en haut, muscles serrés » s'affiche avec les
   autres. L'arrêt change de place, pas de durée : la répétition et la séance
   durent autant. La liste est dans les données des exercices (`pauseEnHaut`).
+- **Ni haut ni bas : les cercles et les rotations.** Certains mouvements ne
+  montent ni ne descendent. Le **tour de taille**, le **halo** et le **tour
+  du monde** au kettlebell font un **cercle** : le métronome dit « TOURNE »
+  pendant tout le tour, la bille fait le tour d'un cercle, et une répétition
+  est un tour complet, en 6 s au tempo par défaut (la montée plus la
+  descente). À mi-série, il annonce « Change de sens ! » d'un bip, sans
+  s'arrêter. Les **rotations russes**, le **balayage en position creuse**,
+  les **coups croisés assis en V** et le **passage de la cloche sous la
+  planche** vont **d'un côté à l'autre** : « À DROITE » 3 s, puis « À
+  GAUCHE » 3 s, et c'est une répétition ; la bille va et vient sur un rail
+  couché. Ni les uns ni les autres ne s'arrêtent jamais : pas de « TIENS ».
+  Leur consigne : « Mouvement continu, sans arrêt : une répétition, un tour
+  complet » ou « D'un côté à l'autre, sans arrêt : une répétition, à droite
+  puis à gauche ». La forme est dans les données des exercices
+  (`mouvement`) ; elle n'a rien à voir avec le schéma de mouvement, qui sert
+  à équilibrer la séance.
+- **Changer de côté.** Un exercice unilatéral fait toutes ses répétitions du
+  côté droit, puis du côté gauche. Entre les deux, l'écran dit **« CHANGE DE
+  CÔTÉ »** et compte **5 secondes** — « Côté gauche dans 5 s » —, avec les
+  bips de la préparation, puis le côté gauche repart sur la cloche. Il en
+  faut plus pour se rallonger de l'autre côté ? **« +5 s »** en donne cinq de
+  plus, autant de fois qu'il faut. La durée annoncée compte les 5 s de base,
+  pas les « +5 s ». À deux, « +5 s » arrête l'horloge commune pour les deux,
+  comme « +15 s » au repos — et c'est refusé si l'autre est en pleine série.
+  Un exercice alterné (un côté par répétition) n'a pas de changement de côté.
+- **Le tableau des mouvements**, [docs/mouvements.md](docs/mouvements.md) :
+  pour chacun des 151 exercices de musculation, ce que dit le métronome
+  pendant une répétition (« MONTE 3 s → DESCENDS 3 s → TIENS 1 s »), comment
+  se font les côtés, la durée d'une série de 8, et pourquoi quand ce n'est pas
+  le cas par défaut. Il est produit par le code lui-même (`npm run
+  mouvements`) et un test vérifie qu'il le suit : c'est la liste à relire pour
+  trouver un mouvement qui sonne faux.
 - **Mis de côté, pour les deux**, tant que la jambe de Speedy n'a pas été
   examinée par un professionnel : elle lui donne parfois l'impression de
   « lâcher », ses bandelettes ilio-tibiales sont fragiles et son bas du dos
@@ -495,8 +530,12 @@ exercice par un autre de la même zone.
   secondes, et comptage automatique des répétitions. Pendant la pause en bas,
   la bille s'arrête au pied du rail — sauf aux exercices sans arrêt en bas, où
   elle repart aussitôt, et à ceux qui tiennent en haut, où elle s'arrête en
-  haut du rail, après la montée (MONTE, TIENS, DESCENDS). Les exercices unilatéraux annoncent le côté droit puis
-  le côté gauche.
+  haut du rail, après la montée (MONTE, TIENS, DESCENDS). Un cercle dit
+  « TOURNE » et sa bille fait le tour d'un cercle ; une rotation dit « À
+  DROITE », « À GAUCHE », et sa bille va et vient sur un rail couché. La
+  rotation externe coudes au corps dit « OUVRE », « FERME ». Les exercices
+  unilatéraux annoncent le côté droit puis le côté gauche, avec 5 s pour
+  changer de côté entre les deux (« +5 s » si besoin).
 - Bips de montée, de descente et de pause, cloche de fin de série.
 - Repos chronométré avec aperçu de l'exercice suivant et bouton « +15 s ».
 - Pause, précédent, suivant, « Passer l'exercice ».
@@ -884,7 +923,7 @@ src/
 │   ├── SeanceGuidee.tsx          # Séance guidée plein écran et métronome
 │   ├── FicheExercice.tsx         # Vignette et nom d'un exercice
 │   ├── ImageEnGrand.tsx          # L'image d'un exercice en grand, avec ses consignes
-│   ├── PaceurTempo.tsx           # La bille qui monte et descend au tempo
+│   ├── PaceurTempo.tsx           # La bille qui monte et descend au tempo (ou tourne, ou va et vient)
 │   ├── BoutonsRessenti.tsx       # Les trois boutons : lourd, correct, léger
 │   ├── HistoriqueEntrainement.tsx
 │   ├── Progression.tsx           # L'onglet Progression : mensurations et trois graphiques
@@ -897,7 +936,8 @@ src/
 │   └── parametres.ts             # Durées, tempos, niveaux, formats, zones
 ├── utils/
 │   ├── generateurSeance.ts       # Choix des exercices et calcul des volumes
-│   ├── etapesSeance.ts           # Machine à étapes de la séance guidée
+│   ├── etapesSeance.ts           # Machine à étapes de la séance guidée, métronome, changement de côté
+│   ├── tableauMouvements.ts      # Le tableau des mouvements (docs/mouvements.md), lu dans le métronome
 │   ├── programmeMois.ts          # Composition du programme par paires, calendrier A/B, charges, lien
 │   ├── essai.ts                  # La séance d'essai : la séance du jour en dix minutes, sans rien garder, et sa séance commune numérotée
 │   ├── statistiques.ts           # Fréquence d'un exercice, charges par série, charge totale
@@ -961,7 +1001,13 @@ Une répétition compte la montée, la descente et l'arrêt en bas, sauf pour le
 exercices sans arrêt en bas, dont l'arrêt vaut 0. Aux exercices qui tiennent en
 haut (`pauseEnHaut`), l'arrêt garde sa durée et vient juste après la montée :
 l'ordre des phases change, pas la durée — un exercice qui part d'en haut
-descend, remonte, puis tient. Le générateur, les étapes de la séance guidée,
+descend, remonte, puis tient. Un cercle, une rotation ou un mouvement
+explosif n'ont pas d'arrêt du tout : leur répétition dure la montée plus la
+descente. Une série unilatérale compte ses répétitions des deux côtés, plus
+les 5 s du changement de côté (`changementDeCoteSec`), qui font partie de la
+série : la séance d'essai et l'horloge commune les comptent de la même façon.
+« +5 s » allonge la série en cours, comme « +15 s » allonge un repos, sans
+changer la durée annoncée. Le générateur, les étapes de la séance guidée,
 le métronome et la bille lisent tous le même tempo (`tempoPourExercice`), si
 bien que la durée annoncée reste celle de la séance.
 

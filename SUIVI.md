@@ -62,6 +62,47 @@ Claude, de son côté :
   peut répondre, mais la charge n'est pas ajustée.
 - Le serveur n'a pas changé : il garde la séance telle qu'elle arrive, le
   ressenti compris (un test le vérifie). Pas de mise à jour du VPS à faire.
+- **Corrigé : MONTE / TIENS / DESCENDS au tour de taille**, où il n'y a ni
+  haut ni bas. Chaque exercice a maintenant une **forme** : vertical (par
+  défaut), **cercle** ou **d'un côté à l'autre**. Le tour de taille, le halo
+  et le tour du monde tournent : « TOURNE » pendant tout le tour (6 s au
+  tempo par défaut), la bille fait le tour d'un cercle, et à mi-série
+  « Change de sens ! » d'un bip, sans s'arrêter — le halo change de sens à
+  mi-série lui aussi, plus à chaque tour. Les rotations russes (haltère et
+  kettlebell), le balayage en position creuse, les coups croisés assis en V
+  et le passage de la cloche sous la planche disent « À DROITE » 3 s, « À
+  GAUCHE » 3 s : une répétition, c'est les deux. Aucun ne s'arrête jamais :
+  leur répétition est d'une seconde plus courte.
+- **Changer de côté**, demandé par Sébastien : entre le côté droit et le
+  côté gauche d'un exercice unilatéral, l'écran dit « CHANGE DE CÔTÉ » et
+  compte 5 s (« Côté gauche dans 5 s »), avec les bips de la préparation ;
+  « +5 s » en donne cinq de plus, autant de fois qu'il faut. La durée
+  annoncée compte les 5 s (une série unilatérale dure 5 s de plus), pas les
+  « +5 s ». À deux, « +5 s » arrête l'horloge commune comme « +15 s » au
+  repos, refusé si l'autre est en pleine série. Le changement fait partie de
+  la série : pas de nouvelle étape, l'essai et l'horloge commune le comptent
+  d'office.
+- **Relu, les 151 exercices un par un**, et corrigé en passant : le crunch
+  genou-haltère debout dit maintenant comme celui au kettlebell « MONTE (le
+  genou), TIENS, DESCENDS » ; l'écarté et le pull-over en position creuse,
+  le soulevé de terre sur une jambe au kettlebell, le good morning et le
+  burpee partent par la descente ; le pas chassé bas avec rowing et le saut
+  de grenouille, par la montée ; la rotation externe coudes au corps dit
+  « OUVRE, TIENS, FERME ». Plus d'arrêt en bas aux squats et fentes qui en
+  avaient encore un (cosaque, bras tendu, sur une jambe vers un banc,
+  esquive latérale, fente bulgare, fente latérale et développé, pas chassé
+  bas), au soulevé de terre sur une jambe aux haltères et aux deux bûcherons
+  (penchés et tournés en bas) ; ni aux mouvements explosifs. La plupart
+  sont avancés ou mis de côté, et la composition du programme ne dépend pas
+  du tempo : pas de nouvelle version, seules les durées bougent de quelques
+  secondes.
+- **Le tableau des mouvements**, `docs/mouvements.md` : une ligne par
+  exercice, ce que dit le métronome pendant une répétition (« MONTE 3 s →
+  DESCENDS 3 s → TIENS 1 s »), les côtés, la durée d'une série de 8, et
+  pourquoi. Il sort du code (`npm run mouvements`), un test vérifie qu'il le
+  suit. **À relire par Sébastien**, pour signaler ce qui sonne encore faux.
+- Reste connu : le relevé turc complet (avancé, hors programme) prend bien
+  plus que 3 s par montée ; le tempo n'y est pas adapté.
 
 ## Séance du 10 octobre 2026
 

@@ -6,8 +6,12 @@ import { OBJECTIFS, ZONES } from '../data/exercices';
 
 /** « 4 s / 4 s », ou « 3 s / 3 s + 2 s en bas » avec une pause : la montée,
  *  la descente, puis l'arrêt en position étirée. Le tempo d'un exercice qui
- *  tient en haut (`tempoPourExercice`) dit « + 2 s en haut ». */
+ *  tient en haut (`tempoPourExercice`) dit « + 2 s en haut » ; celui d'un
+ *  cercle, « 6 s par tour » ; celui d'un va-et-vient, « 3 s à droite / 3 s à
+ *  gauche ». */
 export const libelleTempo = (tempo: TempoExercice): string => {
+  if (tempo.mouvement === 'circulaire') return `${tempo.monteeSec + tempo.descenteSec} s par tour`;
+  if (tempo.mouvement === 'rotation') return `${tempo.monteeSec} s à droite / ${tempo.descenteSec} s à gauche`;
   const base = `${tempo.monteeSec} s / ${tempo.descenteSec} s`;
   return tempo.pauseSec ? `${base} + ${tempo.pauseSec} s ${tempo.pauseEnHaut ? 'en haut' : 'en bas'}` : base;
 };

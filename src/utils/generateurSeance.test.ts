@@ -18,6 +18,7 @@ import type {
   Seance,
 } from '../types';
 import {
+  CHANGER_DE_COTE_SEC,
   analyserSeance,
   cleMouvement,
   dureeSerieSec,
@@ -695,7 +696,9 @@ describe('durée d’une série', () => {
     expect(secondesParRep(tempo)).toBe(10);
     expect(secondesParRep(PARAMETRES_PAR_DEFAUT.tempo)).toBe(7);
     expect(dureeSerieSec(EXERCICES_PAR_ID['squat'], 8, tempo)).toBe(80);
-    expect(dureeSerieSec(EXERCICES_PAR_ID['single-arm-row'], 8, tempo)).toBe(160);
+    // Unilatéral : 8 répétitions de chaque côté, et 5 s pour changer de côté.
+    expect(CHANGER_DE_COTE_SEC).toBe(5);
+    expect(dureeSerieSec(EXERCICES_PAR_ID['single-arm-row'], 8, tempo)).toBe(165);
     expect(dureeSerieSec(EXERCICES_PAR_ID['farmers-walk'], 40, tempo)).toBe(40);
     expect(dureeSerieSec(EXERCICES_PAR_ID['squat'], 8, { monteeSec: 3, descenteSec: 3 })).toBe(48);
   });
@@ -705,7 +708,7 @@ describe('durée d’une série', () => {
     expect(secondesParRep(avecPause)).toBe(8);
     expect(dureeSerieSec(EXERCICES_PAR_ID['bench-press'], 8, avecPause)).toBe(64);
     // Unilatéral : la pause se tient de chaque côté.
-    expect(dureeSerieSec(EXERCICES_PAR_ID['single-arm-row'], 8, avecPause)).toBe(128);
+    expect(dureeSerieSec(EXERCICES_PAR_ID['single-arm-row'], 8, avecPause)).toBe(128 + 5);
     expect(secondesParRep({ monteeSec: 4, descenteSec: 4, pauseSec: 2 })).toBe(10);
   });
 
@@ -718,9 +721,9 @@ describe('durée d’une série', () => {
       expect(secondesParRep(avecPause, exercice), id).toBe(6);
       expect(dureeSerieSec(exercice, 8, avecPause), id).toBe(48);
     }
-    // Unilatéral : pas de pause de chaque côté.
-    expect(dureeSerieSec(EXERCICES_PAR_ID['elevated-reverse-lunge'], 8, avecPause)).toBe(96);
-    expect(dureeSerieSec(EXERCICES_PAR_ID['kb-lawn-mower'], 6, avecPause)).toBe(72);
+    // Unilatéral : pas de pause de chaque côté — seulement le changement de côté.
+    expect(dureeSerieSec(EXERCICES_PAR_ID['elevated-reverse-lunge'], 8, avecPause)).toBe(96 + 5);
+    expect(dureeSerieSec(EXERCICES_PAR_ID['kb-lawn-mower'], 6, avecPause)).toBe(72 + 5);
     // Au tempo de la séance libre aussi, et sans pause dans le tempo, rien ne change.
     expect(dureeSerieSec(EXERCICES_PAR_ID['squat'], 8, PARAMETRES_PAR_DEFAUT.tempo)).toBe(48);
     expect(dureeSerieSec(EXERCICES_PAR_ID['squat'], 8, { monteeSec: 3, descenteSec: 3 })).toBe(48);
@@ -742,9 +745,10 @@ describe('durée d’une série', () => {
       expect(tempoPourExercice(exercice, avecPause), id).toEqual({ ...avecPause, pauseEnHaut: true });
       expect(secondesParRep(avecPause, exercice), id).toBe(8);
     }
-    // Les durées ne bougent pas : 8 s par répétition, de chaque côté pour un unilatéral.
+    // Les durées ne bougent pas : 8 s par répétition, de chaque côté pour un
+    // unilatéral, plus son changement de côté.
     expect(dureeSerieSec(EXERCICES_PAR_ID['kb-superman'], 8, avecPause)).toBe(64);
-    expect(dureeSerieSec(EXERCICES_PAR_ID['fire-hydrant'], 8, avecPause)).toBe(128);
+    expect(dureeSerieSec(EXERCICES_PAR_ID['fire-hydrant'], 8, avecPause)).toBe(128 + 5);
     for (const exercice of Object.values(EXERCICES_PAR_ID).filter((e) => e.pauseEnHaut && !e.sansPauseEnBas)) {
       for (const tempo of [avecPause, PARAMETRES_PAR_DEFAUT.tempo, { monteeSec: 4, descenteSec: 4 }]) {
         expect(secondesParRep(tempo, exercice), exercice.id).toBe(secondesParRep(tempo));

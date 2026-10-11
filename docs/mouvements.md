@@ -1,0 +1,195 @@
+# Les mouvements, un par un
+
+<!-- Généré par `npm run mouvements` depuis le code (src/utils/tableauMouvements.ts) :
+     ne pas modifier à la main. Un test vérifie que ce fichier suit le code. -->
+
+Ce que dit le métronome de la séance guidée pour chacun des 151 exercices de musculation,
+au tempo par défaut (3 s / 3 s + 1 s), sur une série de 8 répétitions
+(8 de chaque côté pour un exercice unilatéral). Chaque ligne est lue dans le vrai métronome :
+les mots, leurs secondes, le changement de côté et la durée de la série sont ceux de l’application.
+
+- **Vertical** (par défaut) : MONTE, DESCENDS, et TIENS là où le muscle travaille — en bas quand la position
+  basse est étirée sous la charge, en haut quand elle est un repos, nulle part quand le bas fatigue le dos ou le genou.
+- **Circulaire** (3) : TOURNE, un tour complet par répétition, jamais d’arrêt ; à mi-série,
+  « Change de sens ! », sans s’arrêter. `kb-around-the-body`, `kb-halo`, `kb-around-the-world`.
+- **Rotation** (5) : À DROITE puis À GAUCHE dans chaque répétition, jamais d’arrêt.
+  `russian-twist`, `v-sit-cross-jab`, `hollow-body-sweeper`, `kb-russian-twist`, `kb-plank-oblique-pull-through`.
+- **Unilatéral** (41) : toutes les répétitions du côté droit, CHANGE DE CÔTÉ 5 s (« +5 s »
+  en donne cinq de plus), puis le côté gauche. La durée annoncée compte les 5 s.
+- **Explosifs** : seulement quand l’option est cochée ; jamais d’arrêt.
+
+## Haut du corps (42)
+
+| id | Nom | Une répétition | Côtés, sur une série de 8 | Série | Pourquoi |
+|---|---|---|---|---|---|
+| `hammer-curl` | Curl marteau | MONTE 3 s → DESCENDS 3 s → TIENS 1 s | 8 rép. | 56 s |  |
+| `grip-curl` | Curl biceps (prise supination) | MONTE 3 s → DESCENDS 3 s → TIENS 1 s | 8 rép. | 56 s |  |
+| `concentration-curl` | Curl concentré | MONTE 3 s → DESCENDS 3 s → TIENS 1 s | 8 rép. côté droit → CHANGE DE CÔTÉ 5 s (« +5 s » si besoin) → 8 rép. côté gauche | 1 min 57 s |  |
+| `tricep-kickback` | Extension triceps buste penché | MONTE 3 s → TIENS 1 s → DESCENDS 3 s | 8 rép. | 56 s | Tenu en haut : la position basse est un repos. |
+| `tricep-extension` | Extension triceps au-dessus de la tête | DESCENDS 3 s → TIENS 1 s → MONTE 3 s | 8 rép. | 56 s | Part d’en haut : on descend d’abord. |
+| `alternating-front-raise` | Élévation frontale alternée | MONTE 3 s → TIENS 1 s → DESCENDS 3 s | 8 rép. en alternant : un côté par rép. | 56 s | Tenu en haut : la position basse est un repos. |
+| `side-raise` | Élévation latérale | MONTE 3 s → TIENS 1 s → DESCENDS 3 s | 8 rép. | 56 s | Tenu en haut : la position basse est un repos. |
+| `shoulder-press` | Développé épaules | MONTE 3 s → DESCENDS 3 s → TIENS 1 s | 8 rép. | 56 s |  |
+| `shoulder-shrug` | Haussement d’épaules | MONTE 3 s → TIENS 1 s → DESCENDS 3 s | 8 rép. | 56 s | Tenu en haut : la position basse est un repos. |
+| `wrist-curl` | Curl des poignets | MONTE 3 s → DESCENDS 3 s → TIENS 1 s | 8 rép. | 56 s |  |
+| `dumbbell-pullover` | Pull-over | DESCENDS 3 s → TIENS 1 s → MONTE 3 s | 8 rép. | 56 s | Part d’en haut : on descend d’abord. |
+| `bench-press` | Développé couché avec haltères | DESCENDS 3 s → TIENS 1 s → MONTE 3 s | 8 rép. | 56 s | Part d’en haut : on descend d’abord. |
+| `incline-bench-press` | Développé incliné | DESCENDS 3 s → TIENS 1 s → MONTE 3 s | 8 rép. | 56 s | Part d’en haut : on descend d’abord. |
+| `chest-fly` | Écarté couché | DESCENDS 3 s → TIENS 1 s → MONTE 3 s | 8 rép. | 56 s | Part d’en haut : on descend d’abord. |
+| `reverse-fly` | Oiseau (écarté buste penché) | MONTE 3 s → DESCENDS 3 s | 8 rép. | 48 s | Sans arrêt en bas : le dos. |
+| `alternating-curl` | Curl alterné | MONTE 3 s → DESCENDS 3 s → TIENS 1 s | 8 rép. en alternant : un côté par rép. | 56 s |  |
+| `zottman-curl` | Curl Zottman | MONTE 3 s → DESCENDS 3 s → TIENS 1 s | 8 rép. | 56 s |  |
+| `seated-incline-curl` | Curl incliné assis | MONTE 3 s → DESCENDS 3 s → TIENS 1 s | 8 rép. | 56 s |  |
+| `no-money-curl` | Rotation externe coudes au corps | OUVRE 3 s → TIENS 1 s → FERME 3 s | 8 rép. | 56 s | Tenu en haut : la position basse est un repos. Geste horizontal : OUVRE / FERME plutôt que MONTE / DESCENDS. Les avant-bras s’ouvrent vers l’extérieur, coudes au corps. |
+| `curl-to-overhead-press` | Curl puis développé | MONTE 3 s → DESCENDS 3 s → TIENS 1 s | 8 rép. | 56 s |  |
+| `chest-squeeze-press` | Développé serré poitrine | MONTE 3 s → DESCENDS 3 s → TIENS 1 s | 8 rép. | 56 s |  |
+| `dumbbell-push-up` | Pompe sur haltères | DESCENDS 3 s → TIENS 1 s → MONTE 3 s | 8 rép. | 56 s | Part d’en haut : on descend d’abord. |
+| `l-raise` | Élévation en L | MONTE 3 s → TIENS 1 s → DESCENDS 3 s | 8 rép. | 56 s | Tenu en haut : la position basse est un repos. |
+| `single-arm-tricep-extension` | Extension triceps à un bras | DESCENDS 3 s → TIENS 1 s → MONTE 3 s | 8 rép. côté droit → CHANGE DE CÔTÉ 5 s (« +5 s » si besoin) → 8 rép. côté gauche | 1 min 57 s | Part d’en haut : on descend d’abord. |
+| `single-arm-lateral-raise` | Élévation latérale à un bras | MONTE 3 s → TIENS 1 s → DESCENDS 3 s | 8 rép. côté droit → CHANGE DE CÔTÉ 5 s (« +5 s » si besoin) → 8 rép. côté gauche | 1 min 57 s | Tenu en haut : la position basse est un repos. |
+| `skull-crusher` | Extension triceps au front | DESCENDS 3 s → TIENS 1 s → MONTE 3 s | 8 rép. | 56 s | Part d’en haut : on descend d’abord. |
+| `arnold-press` | Développé Arnold | MONTE 3 s → DESCENDS 3 s → TIENS 1 s | 8 rép. | 56 s |  |
+| `shovel-curl-press` | Curl-pelle et développé | MONTE 3 s → DESCENDS 3 s → TIENS 1 s | 8 rép. en alternant : un côté par rép. | 56 s |  |
+| `kb-alternating-curl` | Curl alterné au kettlebell | MONTE 3 s → DESCENDS 3 s → TIENS 1 s | 8 rép. en alternant : un côté par rép. | 56 s |  |
+| `kb-push-up` | Pompe sur kettlebells | DESCENDS 3 s → TIENS 1 s → MONTE 3 s | 8 rép. | 56 s | Part d’en haut : on descend d’abord. |
+| `kb-tricep-dip` | Dips au sol, mains sur kettlebell | DESCENDS 3 s → TIENS 1 s → MONTE 3 s | 8 rép. | 56 s | Part d’en haut : on descend d’abord. |
+| `kb-tricep-extension` | Extension triceps au-dessus de la tête au kettlebell | DESCENDS 3 s → TIENS 1 s → MONTE 3 s | 8 rép. | 56 s | Part d’en haut : on descend d’abord. |
+| `kb-chest-press` | Développé couché au sol | DESCENDS 3 s → TIENS 1 s → MONTE 3 s | 8 rép. | 56 s | Part d’en haut : on descend d’abord. |
+| `kb-shoulder-press` | Développé épaule à un bras au kettlebell | MONTE 3 s → DESCENDS 3 s → TIENS 1 s | 8 rép. côté droit → CHANGE DE CÔTÉ 5 s (« +5 s » si besoin) → 8 rép. côté gauche | 1 min 57 s |  |
+| `kb-side-raise` | Élévation latérale au kettlebell | MONTE 3 s → TIENS 1 s → DESCENDS 3 s | 8 rép. | 56 s | Tenu en haut : la position basse est un repos. |
+| `kb-front-raise` | Élévation frontale | MONTE 3 s → TIENS 1 s → DESCENDS 3 s | 8 rép. côté droit → CHANGE DE CÔTÉ 5 s (« +5 s » si besoin) → 8 rép. côté gauche | 1 min 57 s | Tenu en haut : la position basse est un repos. |
+| `kb-arnold-press` | Développé Arnold assis au kettlebell | MONTE 3 s → DESCENDS 3 s → TIENS 1 s | 8 rép. | 56 s |  |
+| `kb-concentration-curl` | Curl concentré au kettlebell | MONTE 3 s → DESCENDS 3 s → TIENS 1 s | 8 rép. côté droit → CHANGE DE CÔTÉ 5 s (« +5 s » si besoin) → 8 rép. côté gauche | 1 min 57 s |  |
+| `kb-incline-curl` | Curl sur banc incliné | MONTE 3 s → DESCENDS 3 s → TIENS 1 s | 8 rép. | 56 s |  |
+| `kb-tricep-kickback` | Extension triceps buste penché au kettlebell | MONTE 3 s → TIENS 1 s → DESCENDS 3 s | 8 rép. côté droit → CHANGE DE CÔTÉ 5 s (« +5 s » si besoin) → 8 rép. côté gauche | 1 min 57 s | Tenu en haut : la position basse est un repos. |
+| `kb-t-push-up` | Pompe en T | DESCENDS 3 s → TIENS 1 s → MONTE 3 s | 8 rép. en alternant : un côté par rép. | 56 s | Part d’en haut : on descend d’abord. |
+| `kb-halo` | Halo | TOURNE 6 s | 4 tours dans un sens → « Change de sens ! », sans s’arrêter → 4 tours dans l’autre sens | 48 s | Cercle continu : ni haut ni bas, jamais d’arrêt ; un tour = montée + descente. La cloche fait le tour de la tête. Sens changé à mi-série, comme les deux autres cercles (avant : à chaque tour). |
+
+## Gainage (26)
+
+| id | Nom | Une répétition | Côtés, sur une série de 8 | Série | Pourquoi |
+|---|---|---|---|---|---|
+| `side-bend` | Flexion latérale | DESCENDS 3 s → TIENS 1 s → MONTE 3 s | 8 rép. côté droit → CHANGE DE CÔTÉ 5 s (« +5 s » si besoin) → 8 rép. côté gauche | 1 min 57 s | Part d’en haut : on descend d’abord. |
+| `bow-extension` | Crunch debout genou-haltère | MONTE 3 s → TIENS 1 s → DESCENDS 3 s | 8 rép. en alternant : un côté par rép. | 56 s | Tenu en haut : la position basse est un repos. Comme le crunch genou haut : le genou monte à la rencontre de l’haltère, on tient serré (avant : DESCENDS d’abord). |
+| `russian-twist` | Rotation russe | À DROITE 3 s → À GAUCHE 3 s | 8 rép., chacune à droite puis à gauche | 48 s | D’un côté à l’autre : ni haut ni bas, jamais d’arrêt ; une rép. = à droite puis à gauche. Assis, le buste tourne d’un côté à l’autre (avant : MONTE / DESCENDS / TIENS). |
+| `v-up` | V-up | MONTE 3 s → TIENS 1 s → DESCENDS 3 s | 8 rép. | 56 s | Tenu en haut : la position basse est un repos. |
+| `v-sit-cross-jab` | Assis en V, coups croisés | À DROITE 3 s → À GAUCHE 3 s | 8 rép., chacune à droite puis à gauche | 48 s | D’un côté à l’autre : ni haut ni bas, jamais d’arrêt ; une rép. = à droite puis à gauche. Un coup croisé vers la droite, un vers la gauche (avant : MONTE / DESCENDS / TIENS). |
+| `ab-roll-out` | Roulement abdominal sur haltères | DESCENDS 3 s → TIENS 1 s → MONTE 3 s | 8 rép. | 56 s | Part d’en haut : on descend d’abord. |
+| `hanging-leg-raise` | Relevé de jambes suspendu | MONTE 3 s → TIENS 1 s → DESCENDS 3 s | 8 rép. | 56 s | Tenu en haut : la position basse est un repos. |
+| `hollow-body-sweeper` | Balayage en position creuse | À DROITE 3 s → À GAUCHE 3 s | 8 rép., chacune à droite puis à gauche | 48 s | D’un côté à l’autre : ni haut ni bas, jamais d’arrêt ; une rép. = à droite puis à gauche. L’haltère balaie d’un côté à l’autre (avant : MONTE / DESCENDS / TIENS). |
+| `hollow-fly` | Écarté en position creuse | DESCENDS 3 s → TIENS 1 s → MONTE 3 s | 8 rép. | 56 s | Part d’en haut : on descend d’abord. Bras tendus au-dessus de la poitrine au départ, on les ouvre (avant : MONTE d’abord). |
+| `hollow-pullover` | Pull-over en position creuse | DESCENDS 3 s → TIENS 1 s → MONTE 3 s | 8 rép. | 56 s | Part d’en haut : on descend d’abord. Comme le pull-over, les bras passent derrière la tête (avant : MONTE d’abord). |
+| `kb-side-bend` | Flexion latérale au kettlebell | DESCENDS 3 s → TIENS 1 s → MONTE 3 s | 8 rép. côté droit → CHANGE DE CÔTÉ 5 s (« +5 s » si besoin) → 8 rép. côté gauche | 1 min 57 s | Part d’en haut : on descend d’abord. |
+| `kb-around-the-body` | Tour de taille | TOURNE 6 s | 4 tours dans un sens → « Change de sens ! », sans s’arrêter → 4 tours dans l’autre sens | 48 s | Cercle continu : ni haut ni bas, jamais d’arrêt ; un tour = montée + descente. La cloche passe d’une main à l’autre autour de la taille (avant : MONTE / TIENS / DESCENDS). |
+| `kb-russian-twist` | Rotation russe au kettlebell | À DROITE 3 s → À GAUCHE 3 s | 8 rép., chacune à droite puis à gauche | 48 s | D’un côté à l’autre : ni haut ni bas, jamais d’arrêt ; une rép. = à droite puis à gauche. Assis, le buste tourne d’un côté à l’autre (avant : MONTE / DESCENDS / TIENS). |
+| `kb-straight-arm-sit` | Relevé de buste bras tendu | MONTE 3 s → TIENS 1 s → DESCENDS 3 s | 8 rép. côté droit → CHANGE DE CÔTÉ 5 s (« +5 s » si besoin) → 8 rép. côté gauche | 1 min 57 s | Tenu en haut : la position basse est un repos. |
+| `kb-side-swing` | Balancier latéral | MONTE 3 s → DESCENDS 3 s | 8 rép. côté droit → CHANGE DE CÔTÉ 5 s (« +5 s » si besoin) → 8 rép. côté gauche | 1 min 41 s | Explosif (seulement avec l’option) : un geste balistique ne s’arrête pas. |
+| `kb-pullover` | Pull-over et relevé au kettlebell | MONTE 3 s → TIENS 1 s → DESCENDS 3 s | 8 rép. | 56 s | Tenu en haut : la position basse est un repos. |
+| `kb-half-turkish-get-up` | Demi-relevé turc | MONTE 3 s → TIENS 1 s → DESCENDS 3 s | 8 rép. côté droit → CHANGE DE CÔTÉ 5 s (« +5 s » si besoin) → 8 rép. côté gauche | 1 min 57 s | Tenu en haut : la position basse est un repos. |
+| `kb-v-up` | V-up au kettlebell | MONTE 3 s → TIENS 1 s → DESCENDS 3 s | 8 rép. | 56 s | Tenu en haut : la position basse est un repos. |
+| `kb-alternating-v-up` | V-up alterné | MONTE 3 s → TIENS 1 s → DESCENDS 3 s | 8 rép. en alternant : un côté par rép. | 56 s | Tenu en haut : la position basse est un repos. |
+| `kb-isometric-crunch` | Crunch isométrique | — (tenu au temps : un décompte, pas de métronome) | les deux ensemble | au temps | Tenu au temps : un décompte, pas de métronome. |
+| `kb-oblique-crunch` | Crunch oblique | MONTE 3 s → TIENS 1 s → DESCENDS 3 s | 8 rép. côté droit → CHANGE DE CÔTÉ 5 s (« +5 s » si besoin) → 8 rép. côté gauche | 1 min 57 s | Tenu en haut : la position basse est un repos. |
+| `kb-high-knee-crunch` | Crunch genou haut debout | MONTE 3 s → TIENS 1 s → DESCENDS 3 s | 8 rép. en alternant : un côté par rép. | 56 s | Tenu en haut : la position basse est un repos. |
+| `kb-x-crunch` | Crunch en X | MONTE 3 s → TIENS 1 s → DESCENDS 3 s | 8 rép. | 56 s | Tenu en haut : la position basse est un repos. |
+| `kb-plank-oblique-pull-through` | Planche, passage de la cloche | À DROITE 3 s → À GAUCHE 3 s | 8 rép., chacune à droite puis à gauche | 48 s | D’un côté à l’autre : ni haut ni bas, jamais d’arrêt ; une rép. = à droite puis à gauche. La cloche glisse sous le corps d’un côté à l’autre (avant : MONTE / DESCENDS / TIENS). |
+| `kb-side-plank-twist` | Planche latérale avec rotation | MONTE 3 s → DESCENDS 3 s → TIENS 1 s | 8 rép. côté droit → CHANGE DE CÔTÉ 5 s (« +5 s » si besoin) → 8 rép. côté gauche | 1 min 57 s |  |
+| `kb-commando` | Commando (planche haute – basse) | MONTE 3 s → DESCENDS 3 s → TIENS 1 s | 8 rép. en alternant : un côté par rép. | 56 s |  |
+
+## Dos (17)
+
+| id | Nom | Une répétition | Côtés, sur une série de 8 | Série | Pourquoi |
+|---|---|---|---|---|---|
+| `single-arm-row` | Rowing un bras | MONTE 3 s → DESCENDS 3 s → TIENS 1 s | 8 rép. côté droit → CHANGE DE CÔTÉ 5 s (« +5 s » si besoin) → 8 rép. côté gauche | 1 min 57 s |  |
+| `incline-row` | Rowing sur banc incliné | MONTE 3 s → DESCENDS 3 s → TIENS 1 s | 8 rép. | 56 s |  |
+| `floor-t-raise` | Élévation en T au sol | MONTE 3 s → TIENS 1 s → DESCENDS 3 s | 8 rép. | 56 s | Tenu en haut : la position basse est un repos. |
+| `renegade-row` | Rowing en planche | MONTE 3 s → TIENS 1 s → DESCENDS 3 s | 8 rép. en alternant : un côté par rép. | 56 s | Tenu en haut : la position basse est un repos. |
+| `seesaw-row` | Rowing alterné buste penché | MONTE 3 s → DESCENDS 3 s | 8 rép. en alternant : un côté par rép. | 48 s | Sans arrêt en bas : le dos. |
+| `bent-over-row` | Rowing buste penché | MONTE 3 s → DESCENDS 3 s | 8 rép. | 48 s | Sans arrêt en bas : le dos. |
+| `bird-dog-row` | Rowing chien d’arrêt | MONTE 3 s → DESCENDS 3 s → TIENS 1 s | 8 rép. côté droit → CHANGE DE CÔTÉ 5 s (« +5 s » si besoin) → 8 rép. côté gauche | 1 min 57 s |  |
+| `single-arm-upright-row` | Rowing vertical à un bras | MONTE 3 s → DESCENDS 3 s → TIENS 1 s | 8 rép. côté droit → CHANGE DE CÔTÉ 5 s (« +5 s » si besoin) → 8 rép. côté gauche | 1 min 57 s |  |
+| `tripod-row` | Rowing en trépied | MONTE 3 s → DESCENDS 3 s → TIENS 1 s | 8 rép. côté droit → CHANGE DE CÔTÉ 5 s (« +5 s » si besoin) → 8 rép. côté gauche | 1 min 57 s |  |
+| `upright-row` | Rowing vertical | MONTE 3 s → DESCENDS 3 s → TIENS 1 s | 8 rép. | 56 s | Tenu en haut, il pincerait l’épaule. |
+| `kb-bent-over-row` | Rowing buste penché au kettlebell | MONTE 3 s → DESCENDS 3 s | 8 rép. | 48 s | Sans arrêt en bas : le dos. |
+| `kb-renegade-row` | Rowing en planche au kettlebell | MONTE 3 s → TIENS 1 s → DESCENDS 3 s | 8 rép. en alternant : un côté par rép. | 56 s | Tenu en haut : la position basse est un repos. |
+| `kb-single-arm-row` | Rowing à un bras au kettlebell | MONTE 3 s → DESCENDS 3 s → TIENS 1 s | 8 rép. côté droit → CHANGE DE CÔTÉ 5 s (« +5 s » si besoin) → 8 rép. côté gauche | 1 min 57 s |  |
+| `kb-superman` | Superman | MONTE 3 s → TIENS 1 s → DESCENDS 3 s | 8 rép. | 56 s | Tenu en haut : la position basse est un repos. |
+| `kb-golfer-swing` | Swing du golfeur | MONTE 3 s → DESCENDS 3 s | 8 rép. côté droit → CHANGE DE CÔTÉ 5 s (« +5 s » si besoin) → 8 rép. côté gauche | 1 min 41 s | Explosif (seulement avec l’option) : un geste balistique ne s’arrête pas. |
+| `kb-lawn-mower` | Tondeuse | MONTE 3 s → DESCENDS 3 s | 8 rép. côté droit → CHANGE DE CÔTÉ 5 s (« +5 s » si besoin) → 8 rép. côté gauche | 1 min 41 s | Sans arrêt en bas : le dos. |
+| `kb-rear-fly` | Oiseau (écarté buste penché) au kettlebell | MONTE 3 s → DESCENDS 3 s | 8 rép. | 48 s | Sans arrêt en bas : le dos. |
+
+## Bas du corps (38)
+
+| id | Nom | Une répétition | Côtés, sur une série de 8 | Série | Pourquoi |
+|---|---|---|---|---|---|
+| `squat` | Squat avec haltères | DESCENDS 3 s → MONTE 3 s | 8 rép. | 48 s | Sans arrêt en bas : le genou. Part d’en haut : on descend d’abord. |
+| `goblet-squat` | Goblet squat | DESCENDS 3 s → MONTE 3 s | 8 rép. | 48 s | Sans arrêt en bas : le genou. Part d’en haut : on descend d’abord. |
+| `sumo-squat` | Squat sumo | DESCENDS 3 s → MONTE 3 s | 8 rép. | 48 s | Sans arrêt en bas : le genou. Part d’en haut : on descend d’abord. |
+| `jump-squat` | Squat sauté | DESCENDS 3 s → MONTE 3 s | 8 rép. | 48 s | Explosif (seulement avec l’option) : un geste balistique ne s’arrête pas. Part d’en haut : on descend d’abord. |
+| `romanian-deadlift` | Soulevé de terre roumain | DESCENDS 3 s → MONTE 3 s | 8 rép. | 48 s | Sans arrêt en bas : le dos. Part d’en haut : on descend d’abord. |
+| `glute-bridge` | Pont fessier | MONTE 3 s → TIENS 1 s → DESCENDS 3 s | 8 rép. | 56 s | Tenu en haut : la position basse est un repos. |
+| `reverse-lunge` | Fente arrière | DESCENDS 3 s → MONTE 3 s | 8 rép. en alternant : un côté par rép. | 48 s | Sans arrêt en bas : le genou. Part d’en haut : on descend d’abord. |
+| `side-lunge` | Fente latérale | DESCENDS 3 s → MONTE 3 s | 8 rép. en alternant : un côté par rép. | 48 s | Sans arrêt en bas : le genou. Part d’en haut : on descend d’abord. |
+| `step-up` | Montée sur marche | MONTE 3 s → DESCENDS 3 s | 8 rép. en alternant : un côté par rép. | 48 s | Sans arrêt en bas : le genou. |
+| `calf-raise` | Élévation des mollets | MONTE 3 s → TIENS 1 s → DESCENDS 3 s | 8 rép. | 56 s | Tenu en haut : la position basse est un repos. |
+| `bulgarian-lunge` | Fente bulgare | DESCENDS 3 s → MONTE 3 s | 8 rép. côté droit → CHANGE DE CÔTÉ 5 s (« +5 s » si besoin) → 8 rép. côté gauche | 1 min 41 s | Sans arrêt en bas : le genou. Part d’en haut : on descend d’abord. Avant : TIENS en bas de la fente. |
+| `elevated-reverse-lunge` | Fente arrière surélevée | DESCENDS 3 s → MONTE 3 s | 8 rép. côté droit → CHANGE DE CÔTÉ 5 s (« +5 s » si besoin) → 8 rép. côté gauche | 1 min 41 s | Sans arrêt en bas : le genou. Part d’en haut : on descend d’abord. |
+| `curtsy-lunge` | Fente révérence | DESCENDS 3 s → MONTE 3 s | 8 rép. en alternant : un côté par rép. | 48 s | Sans arrêt en bas : le genou. Part d’en haut : on descend d’abord. |
+| `donkey-kick` | Ruade | MONTE 3 s → TIENS 1 s → DESCENDS 3 s | 8 rép. côté droit → CHANGE DE CÔTÉ 5 s (« +5 s » si besoin) → 8 rép. côté gauche | 1 min 57 s | Tenu en haut : la position basse est un repos. |
+| `cossack-squat` | Squat cosaque | DESCENDS 3 s → MONTE 3 s | 8 rép. en alternant : un côté par rép. | 48 s | Sans arrêt en bas : le genou. Part d’en haut : on descend d’abord. Avant : TIENS en bas, genou plié au maximum. |
+| `fire-hydrant` | Bouche d’incendie | MONTE 3 s → TIENS 1 s → DESCENDS 3 s | 8 rép. côté droit → CHANGE DE CÔTÉ 5 s (« +5 s » si besoin) → 8 rép. côté gauche | 1 min 57 s | Tenu en haut : la position basse est un repos. |
+| `frog-pump` | Pont grenouille | MONTE 3 s → TIENS 1 s → DESCENDS 3 s | 8 rép. | 56 s | Tenu en haut : la position basse est un repos. |
+| `hamstring-curl` | Leg curl avec haltère | MONTE 3 s → TIENS 1 s → DESCENDS 3 s | 8 rép. | 56 s | Tenu en haut : la position basse est un repos. |
+| `leg-extension` | Extension des jambes | MONTE 3 s → TIENS 1 s → DESCENDS 3 s | 8 rép. | 56 s | Tenu en haut : la position basse est un repos. |
+| `single-leg-deadlift-db` | Soulevé de terre à une jambe | DESCENDS 3 s → MONTE 3 s | 8 rép. côté droit → CHANGE DE CÔTÉ 5 s (« +5 s » si besoin) → 8 rép. côté gauche | 1 min 41 s | Sans arrêt en bas : le dos. Part d’en haut : on descend d’abord. Comme au kettlebell (avant : TIENS en bas). |
+| `kb-bob-and-weave` | Esquive latérale (bob and weave) | DESCENDS 3 s → MONTE 3 s | 8 rép. en alternant : un côté par rép. | 48 s | Sans arrêt en bas : le genou. Part d’en haut : on descend d’abord. Avant : TIENS en bas du squat. |
+| `kb-goblet-squat` | Squat gobelet au kettlebell | DESCENDS 3 s → MONTE 3 s | 8 rép. | 48 s | Sans arrêt en bas : le genou. Part d’en haut : on descend d’abord. |
+| `kb-deadlift` | Soulevé de terre | MONTE 3 s → DESCENDS 3 s | 8 rép. | 48 s | Sans arrêt en bas : le dos. |
+| `kb-single-leg-deadlift` | Soulevé de terre sur une jambe au kettlebell | DESCENDS 3 s → MONTE 3 s | 8 rép. côté droit → CHANGE DE CÔTÉ 5 s (« +5 s » si besoin) → 8 rép. côté gauche | 1 min 41 s | Sans arrêt en bas : le dos. Part d’en haut : on descend d’abord. Part debout, comme aux haltères (avant : MONTE d’abord). |
+| `kb-lunge` | Fente | DESCENDS 3 s → MONTE 3 s | 8 rép. en alternant : un côté par rép. | 48 s | Sans arrêt en bas : le genou. Part d’en haut : on descend d’abord. |
+| `kb-side-lunge` | Fente latérale au kettlebell | DESCENDS 3 s → MONTE 3 s | 8 rép. en alternant : un côté par rép. | 48 s | Sans arrêt en bas : le genou. Part d’en haut : on descend d’abord. |
+| `kb-good-morning` | Good morning | DESCENDS 3 s → MONTE 3 s | 8 rép. | 48 s | Sans arrêt en bas : le dos. Part d’en haut : on descend d’abord. Part debout : on se penche d’abord (avant : MONTE d’abord). |
+| `kb-single-leg-glute-bridge` | Pont fessier sur une jambe | MONTE 3 s → TIENS 1 s → DESCENDS 3 s | 8 rép. côté droit → CHANGE DE CÔTÉ 5 s (« +5 s » si besoin) → 8 rép. côté gauche | 1 min 57 s | Tenu en haut : la position basse est un repos. |
+| `kb-side-leg-raise` | Élévation latérale de jambe | MONTE 3 s → TIENS 1 s → DESCENDS 3 s | 8 rép. côté droit → CHANGE DE CÔTÉ 5 s (« +5 s » si besoin) → 8 rép. côté gauche | 1 min 57 s | Tenu en haut : la position basse est un repos. |
+| `kb-single-leg-calf-raise` | Mollet sur une jambe, lesté | MONTE 3 s → DESCENDS 3 s → TIENS 1 s | 8 rép. côté droit → CHANGE DE CÔTÉ 5 s (« +5 s » si besoin) → 8 rép. côté gauche | 1 min 57 s | Le talon sous la marche étire le mollet sous la charge. |
+| `kb-pistol-bench-squat` | Squat sur une jambe vers un banc | DESCENDS 3 s → MONTE 3 s | 8 rép. côté droit → CHANGE DE CÔTÉ 5 s (« +5 s » si besoin) → 8 rép. côté gauche | 1 min 41 s | Sans arrêt en bas : le genou. Part d’en haut : on descend d’abord. Avant : TIENS en bas, sur une jambe. |
+| `kb-jump-squat` | Squat sauté au kettlebell | DESCENDS 3 s → MONTE 3 s | 8 rép. | 48 s | Explosif (seulement avec l’option) : un geste balistique ne s’arrête pas. Part d’en haut : on descend d’abord. |
+| `kb-around-the-world` | Tour du monde | TOURNE 6 s | 4 tours dans un sens → « Change de sens ! », sans s’arrêter → 4 tours dans l’autre sens | 48 s | Cercle continu : ni haut ni bas, jamais d’arrêt ; un tour = montée + descente. Genou plié tout du long : on descend jusqu’où il ne fait pas mal. La cloche passe autour des jambes, dans un squat large tenu. |
+| `trap-bar-deadlift` | Soulevé de terre à la trap bar | MONTE 3 s → DESCENDS 3 s | 8 rép. | 48 s | Sans arrêt en bas : le dos. |
+| `leg-press` | Presse à cuisses | DESCENDS 3 s → MONTE 3 s | 8 rép. | 48 s | Sans arrêt en bas : le genou. Part d’en haut : on descend d’abord. |
+| `hack-squat` | Hack squat | DESCENDS 3 s → MONTE 3 s | 8 rép. | 48 s | Sans arrêt en bas : le genou. Part d’en haut : on descend d’abord. |
+| `leg-extension-machine` | Extension des jambes à la machine | MONTE 3 s → TIENS 1 s → DESCENDS 3 s | 8 rép. | 56 s | Jamais d’arrêt genoux pliés : on tient jambes tendues. Comme l’affiche de la salle. |
+| `leg-curl-machine` | Flexion des jambes couché, à la machine | MONTE 3 s → TIENS 1 s → DESCENDS 3 s | 8 rép. | 56 s | Tenu en haut : la position basse est un repos. |
+
+## Corps entier (28)
+
+| id | Nom | Une répétition | Côtés, sur une série de 8 | Série | Pourquoi |
+|---|---|---|---|---|---|
+| `plank-t` | Planche en T | MONTE 3 s → TIENS 1 s → DESCENDS 3 s | 8 rép. en alternant : un côté par rép. | 56 s | Tenu en haut : la position basse est un repos. |
+| `swing` | Swing avec haltère | MONTE 3 s → DESCENDS 3 s | 8 rép. | 48 s | Explosif (seulement avec l’option) : un geste balistique ne s’arrête pas. |
+| `farmers-walk` | Marche du fermier | — (tenu au temps : un décompte, pas de métronome) | les deux ensemble | au temps | Tenu au temps : un décompte, pas de métronome. |
+| `thruster` | Thruster (squat + développé) | DESCENDS 3 s → MONTE 3 s | 8 rép. | 48 s | Sans arrêt en bas : le genou. Part d’en haut : on descend d’abord. |
+| `woodchop` | Bûcheron | MONTE 3 s → DESCENDS 3 s | 8 rép. côté droit → CHANGE DE CÔTÉ 5 s (« +5 s » si besoin) → 8 rép. côté gauche | 1 min 41 s | Sans arrêt en bas : le dos. En bas, le buste est penché et tourné, la charge au pied (avant : TIENS en bas). |
+| `dumbbell-burpee` | Burpee avec haltères | DESCENDS 3 s → MONTE 3 s | 8 rép. | 48 s | Explosif (seulement avec l’option) : un geste balistique ne s’arrête pas. Part d’en haut : on descend d’abord. Part debout : on descend en planche d’abord (avant : MONTE d’abord). |
+| `high-pull` | Tirage haut explosif | MONTE 3 s → DESCENDS 3 s | 8 rép. | 48 s | Explosif (seulement avec l’option) : un geste balistique ne s’arrête pas. |
+| `side-lunge-thruster` | Fente latérale et développé | DESCENDS 3 s → MONTE 3 s | 8 rép. en alternant : un côté par rép. | 48 s | Sans arrêt en bas : le genou. Part d’en haut : on descend d’abord. Avant : TIENS en bas de la fente. |
+| `dumbbell-snatch` | Arraché avec haltère | MONTE 3 s → DESCENDS 3 s | 8 rép. côté droit → CHANGE DE CÔTÉ 5 s (« +5 s » si besoin) → 8 rép. côté gauche | 1 min 41 s | Explosif (seulement avec l’option) : un geste balistique ne s’arrête pas. |
+| `kb-double-arm-swing` | Swing à deux mains | MONTE 3 s → DESCENDS 3 s | 8 rép. | 48 s | Explosif (seulement avec l’option) : un geste balistique ne s’arrête pas. |
+| `kb-turkish-get-up` | Relevé turc | MONTE 3 s → TIENS 1 s → DESCENDS 3 s | 8 rép. côté droit → CHANGE DE CÔTÉ 5 s (« +5 s » si besoin) → 8 rép. côté gauche | 1 min 57 s | Tenu en haut : la position basse est un repos. Limite : un relevé complet prend bien plus de 3 s ; exercice avancé, hors programme. |
+| `kb-single-arm-swing` | Swing à un bras | MONTE 3 s → DESCENDS 3 s | 8 rép. côté droit → CHANGE DE CÔTÉ 5 s (« +5 s » si besoin) → 8 rép. côté gauche | 1 min 41 s | Explosif (seulement avec l’option) : un geste balistique ne s’arrête pas. |
+| `kb-thruster` | Thruster (squat et développé) au kettlebell | DESCENDS 3 s → MONTE 3 s | 8 rép. côté droit → CHANGE DE CÔTÉ 5 s (« +5 s » si besoin) → 8 rép. côté gauche | 1 min 41 s | Sans arrêt en bas : le genou. Part d’en haut : on descend d’abord. |
+| `kb-windmill` | Moulin à vent | DESCENDS 3 s → TIENS 1 s → MONTE 3 s | 8 rép. côté droit → CHANGE DE CÔTÉ 5 s (« +5 s » si besoin) → 8 rép. côté gauche | 1 min 57 s | Part d’en haut : on descend d’abord. |
+| `kb-wood-chop` | Bûcheron au kettlebell | DESCENDS 3 s → MONTE 3 s | 8 rép. côté droit → CHANGE DE CÔTÉ 5 s (« +5 s » si besoin) → 8 rép. côté gauche | 1 min 41 s | Sans arrêt en bas : le dos. Part d’en haut : on descend d’abord. En bas, le buste est penché et tourné, la charge au pied (avant : TIENS en bas). |
+| `kb-lunge-press` | Fente et développé | DESCENDS 3 s → MONTE 3 s | 8 rép. en alternant : un côté par rép. | 48 s | Sans arrêt en bas : le genou. Part d’en haut : on descend d’abord. |
+| `kb-overhead-squat` | Squat bras tendu au-dessus de la tête | DESCENDS 3 s → MONTE 3 s | 8 rép. côté droit → CHANGE DE CÔTÉ 5 s (« +5 s » si besoin) → 8 rép. côté gauche | 1 min 41 s | Sans arrêt en bas : le genou. Part d’en haut : on descend d’abord. Avant : TIENS en bas du squat. |
+| `kb-farmers-walk` | Marche du fermier au kettlebell | — (tenu au temps : un décompte, pas de métronome) | les deux ensemble | au temps | Tenu au temps : un décompte, pas de métronome. |
+| `kb-snatch` | Arraché au kettlebell | MONTE 3 s → DESCENDS 3 s | 8 rép. côté droit → CHANGE DE CÔTÉ 5 s (« +5 s » si besoin) → 8 rép. côté gauche | 1 min 41 s | Explosif (seulement avec l’option) : un geste balistique ne s’arrête pas. |
+| `kb-clean` | Épaulé | MONTE 3 s → DESCENDS 3 s | 8 rép. côté droit → CHANGE DE CÔTÉ 5 s (« +5 s » si besoin) → 8 rép. côté gauche | 1 min 41 s | Explosif (seulement avec l’option) : un geste balistique ne s’arrête pas. |
+| `kb-rotating-side-lunge-press` | Fente latérale tournée et développé | DESCENDS 3 s → MONTE 3 s | 8 rép. en alternant : un côté par rép. | 48 s | Sans arrêt en bas : le genou. Part d’en haut : on descend d’abord. |
+| `kb-frog-jump` | Saut de grenouille | MONTE 3 s → DESCENDS 3 s | 8 rép. | 48 s | Explosif (seulement avec l’option) : un geste balistique ne s’arrête pas. Part dans le squat large : on saute d’abord (avant : DESCENDS d’abord). |
+| `kb-wall-squat-press` | Chaise au mur et développé | MONTE 3 s → DESCENDS 3 s | 8 rép. | 48 s | Sans arrêt en bas : le genou. |
+| `kb-power-jump-squat` | Relevé sauté | MONTE 3 s → DESCENDS 3 s | 8 rép. | 48 s | Explosif (seulement avec l’option) : un geste balistique ne s’arrête pas. |
+| `kb-low-side-step-row` | Pas chassé bas et rowing | MONTE 3 s → DESCENDS 3 s | 8 rép. en alternant : un côté par rép. | 48 s | Sans arrêt en bas : le genou. Part bras tendus, en demi-squat : le rowing monte d’abord (avant : DESCENDS d’abord, TIENS en bas). |
+| `kb-speed-skater` | Patineur | MONTE 3 s → DESCENDS 3 s | 8 rép. en alternant : un côté par rép. | 48 s | Explosif (seulement avec l’option) : un geste balistique ne s’arrête pas. |
+| `kb-log-jump` | Saut de bûche | MONTE 3 s → DESCENDS 3 s | 8 rép. en alternant : un côté par rép. | 48 s | Explosif (seulement avec l’option) : un geste balistique ne s’arrête pas. |
+| `traineau` | Traîneau : pousser, puis tirer | — (tenu au temps : un décompte, pas de métronome) | les deux ensemble | au temps | Tenu au temps : un décompte, pas de métronome. |

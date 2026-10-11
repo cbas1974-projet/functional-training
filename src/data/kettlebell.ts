@@ -229,11 +229,12 @@ export const EXERCICES_KETTLEBELL: Exercice[] = [
     niveauMin: 1,
     cotes: 'alterne',
     unite: 'reps',
+    mouvement: 'circulaire',
     position: 'Debout, pieds largeur de bassin',
     pointsAttention: [
       'Passer la cloche d’une main à l’autre autour de la taille.',
       'Le bassin reste immobile : c’est le gainage qui résiste à l’élan.',
-      'Changer de sens à mi-série.',
+      'Changer de sens à mi-série, quand l’application l’annonce.',
     ],
   }),
 
@@ -250,6 +251,7 @@ export const EXERCICES_KETTLEBELL: Exercice[] = [
     niveauMin: 2,
     cotes: 'alterne',
     unite: 'reps',
+    mouvement: 'rotation',
     position: 'Assis, buste incliné en arrière, pieds au sol',
     pointsAttention: [
       'Dos long : la rotation part des côtes, pas des bras.',
@@ -428,6 +430,8 @@ export const EXERCICES_KETTLEBELL: Exercice[] = [
     cotes: 'alterne',
     unite: 'reps',
     premierePhase: 'descend',
+    sansPauseEnBas: true,
+    genouAMenager: true,
     position: 'Debout, kettlebell tenu contre la poitrine',
     pointsAttention: [
       'Pas chassé de côté, puis squat large, puis retour : tout reste bas.',
@@ -496,6 +500,7 @@ export const EXERCICES_KETTLEBELL: Exercice[] = [
     niveauMin: 2,
     cotes: 'unilateral',
     unite: 'reps',
+    premierePhase: 'descend',
     sansPauseEnBas: true,
     position: 'Debout sur une jambe, kettlebell dans la main opposée',
     pointsAttention: [
@@ -680,6 +685,7 @@ export const EXERCICES_KETTLEBELL: Exercice[] = [
     unite: 'reps',
     // Part cloche au-dessus de l'épaule : la répétition commence en descendant.
     premierePhase: 'descend',
+    sansPauseEnBas: true,
     position: 'Debout, kettlebell à deux mains au-dessus d’une épaule',
     pointsAttention: [
       'Diagonale de l’épaule à la hanche opposée.',
@@ -724,6 +730,8 @@ export const EXERCICES_KETTLEBELL: Exercice[] = [
     cotes: 'unilateral',
     unite: 'reps',
     premierePhase: 'descend',
+    sansPauseEnBas: true,
+    genouAMenager: true,
     position: 'Debout, kettlebell bras tendu au-dessus de la tête',
     pointsAttention: [
       'Épaule verrouillée, bras vertical pendant toute la descente.',
@@ -1042,6 +1050,7 @@ export const EXERCICES_KETTLEBELL: Exercice[] = [
     niveauMin: 2,
     cotes: 'alterne',
     unite: 'reps',
+    mouvement: 'rotation',
     position: 'Planche haute, kettlebell au sol à côté du buste',
     pointsAttention: [
       'Glisser la cloche d’un côté à l’autre sous le corps.',
@@ -1199,11 +1208,12 @@ export const EXERCICES_KETTLEBELL: Exercice[] = [
     niveauMin: 1,
     cotes: 'alterne',
     unite: 'reps',
+    mouvement: 'circulaire',
     position: 'À genoux, kettlebell tenu par les cornes',
     pointsAttention: [
       'Faire le tour de la tête, cloche à l’envers, près du crâne.',
       'Le buste reste immobile : seuls les bras tournent.',
-      'Changer de sens à chaque tour.',
+      'Changer de sens à mi-série, quand l’application l’annonce.',
     ],
     interetJjb: 'Mobilité d’épaule sous charge légère, à faire avant chaque entraînement.',
   }),
@@ -1224,6 +1234,7 @@ export const EXERCICES_KETTLEBELL: Exercice[] = [
     niveauMin: 2,
     cotes: 'bilateral',
     unite: 'reps',
+    premierePhase: 'descend',
     sansPauseEnBas: true,
     position: 'Debout, kettlebell tenu contre la poitrine ou derrière la nuque',
     pointsAttention: [
@@ -1318,6 +1329,8 @@ export const EXERCICES_KETTLEBELL: Exercice[] = [
     cotes: 'unilateral',
     unite: 'reps',
     premierePhase: 'descend',
+    sansPauseEnBas: true,
+    genouAMenager: true,
     position: 'Debout sur une jambe devant un banc, kettlebell contre la poitrine',
     pointsAttention: [
       'Descendre jusqu’à toucher le banc, sans s’y laisser tomber.',
@@ -1382,11 +1395,13 @@ export const EXERCICES_KETTLEBELL: Exercice[] = [
     niveauMin: 2,
     cotes: 'alterne',
     unite: 'reps',
+    genouAMenager: true,
+    mouvement: 'circulaire',
     position: 'Squat large tenu, kettlebell dans une main',
     pointsAttention: [
       'Tenir le squat large pendant que la cloche passe autour des jambes.',
       'Dos droit, poitrine haute.',
-      'Changer de sens à mi-série.',
+      'Changer de sens à mi-série, quand l’application l’annonce.',
     ],
   }),
 
@@ -1405,7 +1420,6 @@ export const EXERCICES_KETTLEBELL: Exercice[] = [
     cotes: 'bilateral',
     unite: 'reps',
     explosif: true,
-    premierePhase: 'descend',
     position: 'Squat large, kettlebell tenu à deux mains',
     pointsAttention: [
       'Sauter depuis le squat large, se réceptionner dans le squat.',
@@ -1471,7 +1485,8 @@ export const EXERCICES_KETTLEBELL: Exercice[] = [
     niveauMin: 2,
     cotes: 'alterne',
     unite: 'reps',
-    premierePhase: 'descend',
+    sansPauseEnBas: true,
+    genouAMenager: true,
     position: 'Demi-squat, un kettlebell dans chaque main',
     pointsAttention: [
       'Rester bas pendant tout le déplacement latéral.',

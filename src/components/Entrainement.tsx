@@ -37,6 +37,7 @@ import {
   libelleBloc,
   remplacerExercice,
   tempoPourExercice,
+  changementDeCoteSec,
   tenueDe,
 } from '../utils/generateurSeance';
 import type { AnalyseSeance } from '../utils/generateurSeance';
@@ -365,7 +366,8 @@ export default function Entrainement({ etat, onChange }: EntrainementProps) {
     if (!bloc) return null;
     const exercice = EXERCICES_PAR_ID[bloc.exerciceId];
     const duree = formaterDuree(dureeSerieDuBloc(bloc, tempo));
-    const cotes = exercice.cotes === 'unilateral' ? ', droite puis gauche' : '';
+    const cotes =
+      exercice.cotes === 'unilateral' ? `, droite puis gauche (${changementDeCoteSec(exercice)} s pour changer de côté)` : '';
     // Sans arrêt en bas, ou arrêt en haut, pour certains exercices : le tempo
     // annoncé est le leur.
     return `Une série de ${bloc.reps} répétitions à ${libelleTempo(tempoPourExercice(exercice, tempo))}${cotes} dure ${duree}.`;

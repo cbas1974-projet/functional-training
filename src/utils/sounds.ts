@@ -17,13 +17,14 @@ export class BellSound {
     }
   }
 
-  // Bip court pour guider le tempo (montée / descente / pause) ou annoncer le
-  // départ. La pause sonne plus grave que la descente : c'est l'arrêt, le même
-  // son qu'on tienne en bas ou en haut (`pauseEnHaut`).
-  playTick(type: 'monte' | 'descend' | 'pause' | 'pret' = 'pret'): void {
+  // Bip court pour guider le tempo (montée / descente / pause / début d'un
+  // tour) ou annoncer le départ. La pause sonne plus grave que la descente :
+  // c'est l'arrêt, le même son qu'on tienne en bas ou en haut (`pauseEnHaut`).
+  // Un tour commence sur le son de la montée.
+  playTick(type: 'monte' | 'descend' | 'pause' | 'tourne' | 'pret' = 'pret'): void {
     const now = this.audioContext.currentTime;
     const frequence =
-      type === 'monte' ? 880 : type === 'descend' ? 440 : type === 'pause' ? 330 : 660;
+      type === 'monte' || type === 'tourne' ? 880 : type === 'descend' ? 440 : type === 'pause' ? 330 : 660;
     const duree = type === 'pret' ? 0.12 : 0.08;
 
     const oscillator = this.audioContext.createOscillator();

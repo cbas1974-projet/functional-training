@@ -27,18 +27,28 @@ import {
   construireEtapes,
   dureeRestanteSec,
   dureeTotaleSec,
+  etatChangementCote,
   etatMaintien,
   etatMetronome,
   exerciceDeSeance,
+  formeDe,
   indexApresExercice,
   indexEtapePrecedente,
   indexReprise,
-  lirePhase,
+  motDePhase,
   pauseAEtirement,
   premierePhase,
 } from '../utils/etapesSeance';
-import type { Etape, EtatMaintien, EtatMetronome, PhaseTempo, Suivant } from '../utils/etapesSeance';
-import { estMobilite, secondesParRep, tempoPourExercice } from '../utils/generateurSeance';
+import type {
+  Etape,
+  EtapeTravail,
+  EtatChangementCote,
+  EtatMaintien,
+  EtatMetronome,
+  PhaseTempo,
+  Suivant,
+} from '../utils/etapesSeance';
+import { CHANGER_DE_COTE_SEC, estMobilite, tempoPourExercice } from '../utils/generateurSeance';
 import { libelleTempo } from '../utils/formatage';
 import type { Essai } from '../utils/essai';
 import { autrePersonne, chargeDeSerie, chargeLeBasDuDos, etirementsPauseDe } from '../utils/programmeMois';
@@ -90,6 +100,8 @@ export interface SeanceGuideeProps {
 /** Intervalle minimal entre deux sauvegardes de la progression pendant une étape. */
 const INTERVALLE_SAUVEGARDE_MS = 10_000;
 const PROLONGATION_REPOS_SEC = 15;
+/** « +5 s » au changement de côté : autant que le changement lui-même. */
+const PROLONGATION_CHANGEMENT_SEC = CHANGER_DE_COTE_SEC;
 /** Une fin d'étape détectée avec au plus ce retard est datée à l'instant
  *  prévu (pas de dérive) ; au-delà (onglet en arrière-plan), l'étape suivante
  *  démarre à l'instant présent. */
@@ -233,12 +245,15 @@ function estPosture(exercice: Exercice): boolean {
   return (exercice.famille ?? 'musculation') !== 'musculation';
 }
 
-/** « 8 répétitions par côté », « 40 s » */
+/** « 8 répétitions par côté », « 8 tours, changement de sens à mi-série »,
+ *  « 40 s » */
 function libelleReps(exercice: Exercice, reps: number): string {
   if (exercice.unite === 'secondes') {
     return exercice.cotes === 'unilateral' ? `${reps} s par côté` : `${reps} s`;
   }
+  if (exercice.mouvement === 'circulaire') return `${pluriel(reps, 'tour')}, changement de sens à mi-série`;
   const base = pluriel(reps, 'répétition');
+  if (exercice.mouvement === 'rotation') return `${base}, à droite puis à gauche`;
   if (exercice.cotes === 'unilateral') return `${base} par côté`;
   if (exercice.cotes === 'alterne') return `${base} en alternant`;
   return base;
@@ -466,7 +481,10 @@ export default function SeanceGuidee({
       : tempsAvecCourante.reduce((total, t) => total + t, 0);
   const tempsRestant = dureeRestanteSec(etapes, index, ecoule, prolongation);
 
-  const metro = etatMetronome(etape, ecoule, tempo);
+  // « +5 s » au changement de côté allonge la série d'autant : le côté gauche
+  // repart d'autant plus tard.
+  const metro = etatMetronome(etape, ecoule, tempo, prolongation);
+  const changement = etatChangementCote(etape, ecoule, tempo, prolongation);
   const maintien = etatMaintien(etape, ecoule);
   // Échauffement et retour au calme : ceux de la séance (tapis ou rameur,
   // étirements du poster), sinon ceux d'usage.
@@ -521,14 +539,34 @@ export default function SeanceGuidee({
       }
     }
 
-    // Métronome : un bip au début de chaque montée et de chaque descente. La
-    // toute première phase de l'étape ne bipe pas : la cloche vient de sonner.
+    // Changement de côté : un bip pour poser la charge, puis les trois
+    // derniers, comme une préparation — « +5 s » les fait rejouer.
+    const CHANGEMENT = `${prefixe}changement`;
+    if (changement) {
+      if (ev.metronome !== CHANGEMENT && ev.metronome.startsWith(prefixe)) bellSound.playTick('pret');
+      const secondes = Math.ceil(changement.resteSec);
+      if (secondes >= 1 && secondes <= 3) {
+        const cle = `${prefixe}${prolongation}:cote:${secondes}`;
+        if (ev.compteARebours !== cle) {
+          ev.compteARebours = cle;
+          bellSound.playTick('pret');
+        }
+      }
+      ev.metronome = CHANGEMENT;
+    }
+
+    // Métronome : un bip au début de chaque phase. La toute première phase
+    // de l'étape ne bipe pas : la cloche vient de sonner. Le côté gauche
+    // repart sur la cloche, après le changement de côté ; le changement de
+    // sens d'un cercle sonne comme un départ, sans arrêter le tour.
     if (metro) {
       const cle = `${prefixe}${metro.cycle}:${metro.phase}`;
       if (ev.metronome !== cle) {
         const memeEtape = ev.metronome.startsWith(prefixe);
+        const apresChangement = ev.metronome === CHANGEMENT;
         ev.metronome = cle;
-        if (memeEtape) bellSound.playTick(metro.phase);
+        if (apresChangement) bellSound.playBell('start');
+        else if (memeEtape) bellSound.playTick(metro.changeDeSens ? 'pret' : metro.phase);
       }
     }
 
@@ -553,7 +591,7 @@ export default function SeanceGuidee({
       const depart = maintenant - finPrevueMs <= TOLERANCE_FIN_MS ? finPrevueMs : maintenant;
       naviguer(index + 1, depart);
     }
-  }, [etat, estFin, etape, reste, prolongation, metro, mouvements, indexMouvement, ecoule, dureeEff, maintenant, index, naviguer, enCommun]);
+  }, [etat, estFin, etape, reste, prolongation, metro, changement, mouvements, indexMouvement, ecoule, dureeEff, maintenant, index, naviguer, enCommun]);
 
   // À deux, la cloche sonne quand l'horloge commune entre dans une série, et
   // quand elle en sort.
@@ -670,6 +708,7 @@ export default function SeanceGuidee({
           t: commune.heure(),
           position: moteurCommun.position,
           partenaire: partenaire ?? 'l’autre',
+          tempo,
         }
       : null;
   /** Un appui, à deux : pour les deux, pour moi seul, ou rien — avec un mot. */
@@ -707,6 +746,13 @@ export default function SeanceGuidee({
     enCommun
       ? decider((contexte) => decisionProlonger(contexte, PROLONGATION_REPOS_SEC))
       : moteur.prolonger(PROLONGATION_REPOS_SEC);
+  /** « +5 s » au changement de côté : la même mécanique que « +15 s » au
+   *  repos. À deux, l'horloge commune s'arrête cinq secondes pour les deux,
+   *  sauf si l'autre est en pleine série. */
+  const prolongerChangement = () =>
+    enCommun
+      ? decider((contexte) => decisionProlonger(contexte, PROLONGATION_CHANGEMENT_SEC))
+      : moteur.prolonger(PROLONGATION_CHANGEMENT_SEC);
 
   /** Enregistre la charge d'une série précise (numérotée à partir de 1). */
   const changerPoids = (exerciceId: string, serie: number, charge: number | null) =>
@@ -856,9 +902,12 @@ export default function SeanceGuidee({
           etape={etape}
           exercice={exercice}
           metro={metro}
+          changement={changement}
+          onProlongerChangement={prolongerChangement}
           maintien={maintien}
           resteSec={reste}
           tempo={tempo}
+          prolongationSec={prolongation}
           guideVisuel={guideVisuel}
           lireEcouleSec={lireEcouleSec}
           bloc={blocDe(etape.exerciceId)}
@@ -1276,7 +1325,17 @@ function CorpsPret({ etape, exercice, resteSec, onDemarrer, onPasser }: CorpsPre
         ? // Une position ne se répète pas : « Série 1 / 1 » n'apprendrait rien.
           libelleReps(exercice, cible.reps)
         : `Série ${cible.serie} / ${cible.series} · ${libelleReps(exercice, cible.reps)}`;
-  const departDescente = exercice.unite === 'reps' && premierePhase(exercice) === 'descend';
+  // Comment part la répétition : par la montée ou la descente, ou, sans haut
+  // ni bas, un tour ou un va-et-vient.
+  const forme = formeDe(exercice);
+  const depart =
+    exercice.unite !== 'reps'
+      ? ''
+      : forme === 'circulaire'
+        ? ' · un tour complet par répétition'
+        : forme === 'rotation'
+          ? ' · à droite puis à gauche'
+          : ` · départ par la ${premierePhase(exercice) === 'descend' ? 'descente' : 'montée'}`;
 
   return (
     <div className="space-y-4">
@@ -1290,7 +1349,7 @@ function CorpsPret({ etape, exercice, resteSec, onDemarrer, onPasser }: CorpsPre
         <p style={{ color: 'var(--texte-discret)' }}>{sousTitre}</p>
         <p className="text-sm" style={{ color: 'var(--texte-discret)' }}>
           {exercice.position}
-          {exercice.unite === 'reps' && ` · départ par la ${departDescente ? 'descente' : 'montée'}`}
+          {depart}
         </p>
       </div>
       <div className="text-center">
@@ -1323,13 +1382,19 @@ function CorpsPret({ etape, exercice, resteSec, onDemarrer, onPasser }: CorpsPre
 }
 
 interface CorpsTravailProps {
-  etape: Extract<Etape, { type: 'serie' | 'station' }>;
+  etape: EtapeTravail;
   exercice: Exercice;
   metro: EtatMetronome | null;
+  /** Le changement de côté au milieu d'une série unilatérale ; null sinon. */
+  changement: EtatChangementCote | null;
+  /** « +5 s » au changement de côté. */
+  onProlongerChangement: () => void;
   /** Position tenue d'un côté puis de l'autre ; null sinon. */
   maintien: EtatMaintien | null;
   resteSec: number;
   tempo: Tempo;
+  /** Ce que « +5 s » a ajouté au changement de côté de cette série. */
+  prolongationSec: number;
   guideVisuel: GuideVisuel;
   /** Horloge de l'étape, lue à chaque image par la bille. */
   lireEcouleSec: () => number;
@@ -1349,9 +1414,12 @@ function CorpsTravail({
   etape,
   exercice,
   metro,
+  changement,
+  onProlongerChangement,
   maintien,
   resteSec,
   tempo,
+  prolongationSec,
   guideVisuel,
   lireEcouleSec,
   bloc,
@@ -1426,11 +1494,15 @@ function CorpsTravail({
         </p>
       )}
 
-      {metro ? (
+      {changement ? (
+        <ChangementDeCote changement={changement} onProlonger={onProlongerChangement} />
+      ) : metro ? (
         <Metronome
+          etape={etape}
           metro={metro}
           exercice={exercice}
           tempo={tempo}
+          prolongationSec={prolongationSec}
           guideVisuel={guideVisuel}
           lireEcouleSec={lireEcouleSec}
         />
@@ -1547,56 +1619,59 @@ function CorpsTravail({
 }
 
 interface MetronomeProps {
+  etape: EtapeTravail;
   metro: EtatMetronome;
   exercice: Exercice;
   tempo: Tempo;
+  /** « +5 s » au changement de côté : le côté gauche repart d'autant plus tard. */
+  prolongationSec: number;
   guideVisuel: GuideVisuel;
   lireEcouleSec: () => number;
 }
 
-/** Le mot dicté en grand pour chaque phase, et sa couleur de signal. */
-const MOT_DE_PHASE: Record<PhaseTempo, { mot: string; couleur: string }> = {
-  monte: { mot: 'MONTE', couleur: 'var(--montee)' },
-  descend: { mot: 'DESCENDS', couleur: 'var(--descente)' },
-  pause: { mot: 'TIENS', couleur: 'var(--tenue)' },
+/** La couleur de signal de chaque phase. Le mot, lui, dépend aussi de la
+ *  forme du mouvement (`motDePhase`) : MONTE, TOURNE, À DROITE… */
+const COULEUR_DE_PHASE: Record<PhaseTempo, string> = {
+  monte: 'var(--montee)',
+  descend: 'var(--descente)',
+  pause: 'var(--tenue)',
+  tourne: 'var(--montee)',
 };
 
 /** Le cœur de l'écran pendant une série : le mot de la phase en grand, puis
  *  la bille, le décompte, ou les deux, selon le guide visuel choisi. */
-function Metronome({ metro, exercice, tempo, guideVisuel, lireEcouleSec }: MetronomeProps) {
-  const { mot, couleur } = MOT_DE_PHASE[metro.phase];
+function Metronome({ etape, metro, exercice, tempo, prolongationSec, guideVisuel, lireEcouleSec }: MetronomeProps) {
+  const mot = motDePhase(metro.phase, exercice);
+  const couleur = COULEUR_DE_PHASE[metro.phase];
   const avecBille = guideVisuel !== 'chiffre';
+  const forme = formeDe(exercice);
 
   // Sans arrêt en bas pour certains exercices : la bille ne s'arrête pas au pied
   // du rail, et la répétition est plus courte — comme dans la durée annoncée.
   // D'autres tiennent en haut : la bille s'arrête en haut du rail, après la
-  // montée, et « TIENS » vient muscles serrés, jamais à plat.
+  // montée, et « TIENS » vient muscles serrés, jamais à plat. Un cercle ou un
+  // va-et-vient ne s'arrête jamais.
   const tempoExercice = tempoPourExercice(exercice, tempo);
-  // Les valeurs dont dépend le placement de la bille, réduites à des nombres :
-  // `lire` garde ainsi la même identité d'un rendu à l'autre et la boucle
-  // d'animation du paceur n'est pas relancée cinq fois par seconde.
-  const { monteeSec, descenteSec } = tempoExercice;
-  const pauseSec = tempoExercice.pauseSec ?? 0;
   const pauseEnHaut = tempoExercice.pauseEnHaut === true;
-  const parRep = secondesParRep(tempoExercice);
-  const premiere = premierePhase(exercice);
 
   /** Position de la bille à l'instant présent. Le calcul est exactement celui
    *  de `etatMetronome`, appliqué à l'horloge de l'étape lue à chaque image :
-   *  même découpage en répétitions, même `lirePhase`. Les deux basculent donc
-   *  au même instant que les bips, qui sortent du même calcul ; les bips
-   *  partent seulement au rendu qui suit (au plus 200 ms), puisqu'ils sont
-   *  déclenchés par l'état React et non par l'animation. */
+   *  même découpage en répétitions, même changement de côté, même
+   *  `lirePhase`. Les deux basculent donc au même instant que les bips, qui
+   *  sortent du même calcul ; les bips partent seulement au rendu qui suit
+   *  (au plus 200 ms), puisqu'ils sont déclenchés par l'état React et non par
+   *  l'animation. L'étape et le tempo gardent leur identité d'un rendu à
+   *  l'autre : la boucle d'animation du paceur n'est pas relancée cinq fois
+   *  par seconde. */
   const lire = useCallback((): LectureTempo | null => {
-    if (parRep <= 0) return null;
-    const ecoule = Math.max(0, lireEcouleSec());
-    const dansCycle = ecoule - Math.floor(ecoule / parRep) * parRep;
-    const lecture = lirePhase({ monteeSec, descenteSec, pauseSec, pauseEnHaut }, premiere, dansCycle);
+    const instant = etatMetronome(etape, lireEcouleSec(), tempo, prolongationSec);
+    if (!instant) return null;
     return {
-      phase: lecture.phase,
-      progression: lecture.dureePhaseSec > 0 ? lecture.ecouleDansPhaseSec / lecture.dureePhaseSec : 0,
+      phase: instant.phase,
+      progression: instant.dureePhaseSec > 0 ? 1 - instant.resteDansPhaseSec / instant.dureePhaseSec : 0,
+      inverse: instant.sens === 'second',
     };
-  }, [lireEcouleSec, parRep, premiere, monteeSec, descenteSec, pauseSec, pauseEnHaut]);
+  }, [etape, lireEcouleSec, tempo, prolongationSec]);
 
   return (
     <div className="select-none py-2 text-center">
@@ -1612,6 +1687,7 @@ function Metronome({ metro, exercice, tempo, guideVisuel, lireEcouleSec }: Metro
             phase={metro.phase}
             avecChiffre={guideVisuel === 'les-deux'}
             pauseEnHaut={pauseEnHaut}
+            forme={forme}
             hauteurPx={HAUTEUR_BILLE_PX}
           />
         </div>
@@ -1629,7 +1705,15 @@ function Metronome({ metro, exercice, tempo, guideVisuel, lireEcouleSec }: Metro
           Côté {metro.cote}
         </div>
       )}
-      {exercice.cotes === 'alterne' && (
+      {metro.sens && (
+        <div
+          className={metro.changeDeSens ? 'text-xl font-bold' : 'text-lg'}
+          style={{ color: metro.changeDeSens ? 'var(--accent)' : 'var(--texte-discret)' }}
+        >
+          {metro.changeDeSens ? 'Change de sens !' : metro.sens === 'premier' ? 'Dans un sens' : 'Dans l’autre sens'}
+        </div>
+      )}
+      {exercice.cotes === 'alterne' && forme === 'vertical' && (
         <div className="text-lg" style={{ color: 'var(--texte-discret)' }}>
           en alternant
         </div>
@@ -1637,6 +1721,34 @@ function Metronome({ metro, exercice, tempo, guideVisuel, lireEcouleSec }: Metro
       <div className="chiffres mt-3 text-sm" style={{ color: 'var(--texte-discret)' }}>
         Tempo {libelleTempo(tempoExercice)} · sans rebond
       </div>
+    </div>
+  );
+}
+
+interface ChangementDeCoteProps {
+  changement: EtatChangementCote;
+  onProlonger: () => void;
+}
+
+/** Entre le côté droit et le côté gauche d'une série unilatérale : on pose,
+ *  on change de main ou de côté, on se replace. Cinq secondes, et « +5 s »
+ *  quand il en faut plus. */
+function ChangementDeCote({ changement, onProlonger }: ChangementDeCoteProps) {
+  const secondes = Math.ceil(changement.resteSec);
+  return (
+    <div className="select-none space-y-3 py-2 text-center">
+      <div className="text-4xl font-extrabold tracking-[0.08em]" style={{ ...ARCHIVO, color: 'var(--accent)' }}>
+        CHANGE DE CÔTÉ
+      </div>
+      <div className="chiffres text-9xl font-bold leading-none" style={{ color: couleurCompte(changement.resteSec, 'var(--texte)') }}>
+        {secondes}
+      </div>
+      <div className="text-xl font-medium">
+        Côté {changement.cote} dans <span className="chiffres">{secondes}</span> s
+      </div>
+      <Bouton variante="neutre" onClick={onProlonger}>
+        +{PROLONGATION_CHANGEMENT_SEC} s
+      </Bouton>
     </div>
   );
 }

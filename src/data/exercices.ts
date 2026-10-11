@@ -397,7 +397,7 @@ export const EXERCICES: Exercice[] = [
     niveauMin: 2,
     cotes: 'alterne',
     unite: 'reps',
-    premierePhase: 'descend',
+    pauseEnHaut: true,
     position: 'Debout',
     pointsAttention: [
       'Haltère tenu à deux mains au-dessus de la tête, bras tendus.',
@@ -420,6 +420,7 @@ export const EXERCICES: Exercice[] = [
     niveauMin: 1,
     cotes: 'alterne',
     unite: 'reps',
+    mouvement: 'rotation',
     position: 'Assis au sol',
     pointsAttention: [
       'Buste incliné à 45°, dos droit, poitrine ouverte.',
@@ -467,6 +468,7 @@ export const EXERCICES: Exercice[] = [
     niveauMin: 2,
     cotes: 'alterne',
     unite: 'reps',
+    mouvement: 'rotation',
     position: 'Assis au sol',
     pointsAttention: [
       'Position en V stable, dos droit, abdos serrés.',
@@ -959,6 +961,7 @@ export const EXERCICES: Exercice[] = [
     niveauMin: 2,
     cotes: 'unilateral',
     unite: 'reps',
+    sansPauseEnBas: true,
     position: 'Debout, pieds écartés',
     pointsAttention: [
       'Haltère tenu à deux mains, bras presque tendus.',
@@ -1055,6 +1058,7 @@ export const EXERCICES: Exercice[] = [
     niveauMin: 1,
     cotes: 'bilateral',
     unite: 'reps',
+    motsTempo: { monte: 'OUVRE', descend: 'FERME' },
     // Avant-bras devant soi, rien ne travaille : on tient ouvert, omoplates serrées.
     pauseEnHaut: true,
     position: 'Debout',
@@ -1337,6 +1341,7 @@ export const EXERCICES: Exercice[] = [
     niveauMin: 3,
     cotes: 'alterne',
     unite: 'reps',
+    mouvement: 'rotation',
     position: 'Allongé en position creuse',
     pointsAttention: [
       'Bas du dos plaqué au sol : si l’espace se crée, arrêter la série.',
@@ -1360,6 +1365,7 @@ export const EXERCICES: Exercice[] = [
     niveauMin: 3,
     cotes: 'bilateral',
     unite: 'reps',
+    premierePhase: 'descend',
     position: 'Allongé en position creuse',
     pointsAttention: [
       'Tenir le creux du corps pendant que les bras s’écartent : le tronc ne bouge pas.',
@@ -1382,6 +1388,7 @@ export const EXERCICES: Exercice[] = [
     niveauMin: 3,
     cotes: 'bilateral',
     unite: 'reps',
+    premierePhase: 'descend',
     position: 'Allongé en position creuse',
     pointsAttention: [
       'Les bras passent au-dessus de la tête sans que les côtes se soulèvent.',
@@ -1525,6 +1532,8 @@ export const EXERCICES: Exercice[] = [
     cotes: 'unilateral',
     unite: 'reps',
     premierePhase: 'descend',
+    sansPauseEnBas: true,
+    genouAMenager: true,
     position: 'Debout, pied arrière posé sur un banc',
     pointsAttention: [
       'Le pied avant assez loin du banc pour que le genou reste au-dessus de la cheville.',
@@ -1624,6 +1633,8 @@ export const EXERCICES: Exercice[] = [
     cotes: 'alterne',
     unite: 'reps',
     premierePhase: 'descend',
+    sansPauseEnBas: true,
+    genouAMenager: true,
     position: 'Debout, pieds très écartés',
     pointsAttention: [
       'Descendre sur une jambe, l’autre reste tendue, pointe de pied vers le haut.',
@@ -1743,6 +1754,7 @@ export const EXERCICES: Exercice[] = [
     cotes: 'unilateral',
     unite: 'reps',
     premierePhase: 'descend',
+    sansPauseEnBas: true,
     position: 'Debout sur une jambe',
     pointsAttention: [
       'La jambe libre part vers l’arrière dans le prolongement du dos.',
@@ -1768,6 +1780,7 @@ export const EXERCICES: Exercice[] = [
     niveauMin: 3,
     cotes: 'bilateral',
     unite: 'reps',
+    premierePhase: 'descend',
     explosif: true,
     position: 'Debout',
     pointsAttention: [
@@ -1815,6 +1828,8 @@ export const EXERCICES: Exercice[] = [
     cotes: 'alterne',
     unite: 'reps',
     premierePhase: 'descend',
+    sansPauseEnBas: true,
+    genouAMenager: true,
     position: 'Debout, haltères aux épaules',
     pointsAttention: [
       'Fente sur le côté, puis développé au-dessus de la tête en se relevant.',
@@ -1944,16 +1959,25 @@ export const CONSIGNE_GENOU = 'On descend seulement jusqu’où le genou ne fait
  *  la montée, là où le muscle travaille, jamais à plat ou jambe posée. */
 export const CONSIGNE_PAUSE_EN_HAUT = 'On tient en haut, muscles serrés';
 
+/** Celle des mouvements circulaires (`mouvement: 'circulaire'`) : un tour
+ *  sans haut ni bas, donc sans arrêt nulle part. */
+export const CONSIGNE_CIRCULAIRE = 'Mouvement continu, sans arrêt : une répétition, un tour complet';
+/** Celle des mouvements d'un côté à l'autre (`mouvement: 'rotation'`). */
+export const CONSIGNE_ROTATION = 'D’un côté à l’autre, sans arrêt : une répétition, à droite puis à gauche';
+
 /** Les consignes d'un exercice, telles qu'on les affiche partout (séance
  *  guidée, image en grand, bibliothèque, séance libre) : celles du tempo et
- *  de précaution d'abord — pas d'arrêt en bas, l'arrêt en haut, le genou —,
- *  puis ses points d'attention. */
+ *  de précaution d'abord — la forme du mouvement, pas d'arrêt en bas, l'arrêt
+ *  en haut, le genou —, puis ses points d'attention. Un cercle ou un
+ *  va-et-vient ne s'arrête jamais : rien ne lui parle d'arrêt. */
 export function consignesDe(
-  exercice: Pick<Exercice, 'pointsAttention' | 'sansPauseEnBas' | 'pauseEnHaut' | 'genouAMenager'>,
+  exercice: Pick<Exercice, 'pointsAttention' | 'sansPauseEnBas' | 'pauseEnHaut' | 'genouAMenager' | 'mouvement'>,
 ): string[] {
+  const forme = exercice.mouvement;
   return [
-    ...(exercice.sansPauseEnBas ? [CONSIGNE_SANS_PAUSE] : []),
-    ...(exercice.pauseEnHaut ? [CONSIGNE_PAUSE_EN_HAUT] : []),
+    ...(forme === 'circulaire' ? [CONSIGNE_CIRCULAIRE] : forme === 'rotation' ? [CONSIGNE_ROTATION] : []),
+    ...(exercice.sansPauseEnBas && !forme ? [CONSIGNE_SANS_PAUSE] : []),
+    ...(exercice.pauseEnHaut && !forme ? [CONSIGNE_PAUSE_EN_HAUT] : []),
     ...(exercice.genouAMenager ? [CONSIGNE_GENOU] : []),
     ...exercice.pointsAttention,
   ];

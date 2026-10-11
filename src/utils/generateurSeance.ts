@@ -421,8 +421,17 @@ function retourCalmeAllonge(
   return Math.max(retourCalmeInitialSec, Math.min(plafond, vise));
 }
 
-/** Le tempo d'un exercice : celui de la séance, avec deux exceptions, quel que
+/** Ce dont dépend le tempo d'un exercice (`tempoPourExercice`). */
+export type ReglesTempo = Pick<Exercice, 'sansPauseEnBas' | 'pauseEnHaut' | 'mouvement' | 'explosif'>;
+
+/** Le tempo d'un exercice : celui de la séance, avec des exceptions, quel que
  *  soit le tempo choisi.
+ *  - Un mouvement circulaire ou en rotation (`mouvement` : tour de taille,
+ *    halo, rotation russe…) n'a ni haut ni bas : jamais d'arrêt. Le tour, ou
+ *    l'aller-retour d'un côté à l'autre, dure la montée plus la descente.
+ *  - Un mouvement explosif (swing, saut, arraché) ne s'arrête pas non plus :
+ *    c'est un geste balistique, qui part des hanches ou des genoux — là où
+ *    l'arrêt fatiguerait le dos ou le genou.
  *  - Les exercices qui tiennent en haut (`pauseEnHaut` : Superman, bouche
  *    d'incendie, pont fessier, élévations…) gardent l'arrêt, de la même durée,
  *    mais après la montée, muscles serrés : la position basse est un repos.
@@ -434,11 +443,10 @@ function retourCalmeAllonge(
  *  même ordre, donc la durée annoncée reste exactement celle de la séance. La
  *  règle ne dépend pas de la personne — les deux téléphones font les mêmes
  *  répétitions, à la même horloge. */
-export function tempoPourExercice(
-  exercice: Pick<Exercice, 'sansPauseEnBas' | 'pauseEnHaut'>,
-  tempo: Tempo,
-): TempoExercice {
+export function tempoPourExercice(exercice: ReglesTempo, tempo: Tempo): TempoExercice {
+  if (exercice.mouvement) return { ...tempo, pauseSec: 0, mouvement: exercice.mouvement };
   if (!tempo.pauseSec) return tempo;
+  if (exercice.explosif) return { ...tempo, pauseSec: 0 };
   if (exercice.pauseEnHaut) return { ...tempo, pauseEnHaut: true };
   if (exercice.sansPauseEnBas) return { ...tempo, pauseSec: 0 };
   return tempo;
@@ -446,22 +454,37 @@ export function tempoPourExercice(
 
 /** Secondes par répétition au tempo donné (montée + descente + arrêt, en bas
  *  ou en haut). Avec l'exercice, l'arrêt vaut 0 s'il n'en a pas. */
-export function secondesParRep(
-  tempo: Tempo,
-  exercice?: Pick<Exercice, 'sansPauseEnBas' | 'pauseEnHaut'>,
-): number {
+export function secondesParRep(tempo: Tempo, exercice?: ReglesTempo): number {
   const { monteeSec, descenteSec, pauseSec } = exercice ? tempoPourExercice(exercice, tempo) : tempo;
   return monteeSec + descenteSec + (pauseSec ?? 0);
 }
 
-/** Durée d'une série en secondes : reps × tempo (doublée si unilatéral),
- *  ou directement `reps` secondes si l'exercice se mesure au temps. */
+/** Le temps de changer de côté au milieu d'une série unilatérale : changer
+ *  l'haltère de main, se rallonger de l'autre côté, se replacer. Cinq
+ *  secondes, pour tous ; « +5 s » en donne cinq de plus quand il en faut
+ *  (la durée annoncée ne compte que ces cinq-là). */
+export const CHANGER_DE_COTE_SEC = 5;
+
+/** Le temps de changer de côté entre les deux moitiés d'une série
+ *  unilatérale en répétitions ; 0 pour tout le reste — un exercice bilatéral
+ *  ou alterné ne change jamais de côté d'un bloc, et une position tenue au
+ *  temps (yoga, étirement) enchaîne ses deux côtés. Il compte dans la durée
+ *  de la série (`dureeSerieSec`), donc dans la durée annoncée, les étapes,
+ *  l'essai et l'horloge commune. */
+export function changementDeCoteSec(exercice: Pick<Exercice, 'cotes' | 'unite'>): number {
+  return exercice.cotes === 'unilateral' && exercice.unite === 'reps' ? CHANGER_DE_COTE_SEC : 0;
+}
+
+/** Durée d'une série en secondes : reps × tempo (doublée si unilatéral, plus
+ *  le changement de côté au milieu), ou directement `reps` secondes si
+ *  l'exercice se mesure au temps. */
 export function dureeSerieSec(exercice: Exercice, reps: number, tempo: Tempo): number {
   const deuxCotes = exercice.cotes === 'unilateral' ? 2 : 1;
   // Une position tenue d'un seul côté se tient aussi de l'autre : la demi-lune
   // ou l'étirement du quadriceps coûtent deux fois la durée annoncée.
   if (exercice.unite === 'secondes') return reps * deuxCotes;
-  return reps * secondesParRep(tempo, exercice) * deuxCotes;
+  if (reps <= 0) return 0;
+  return reps * secondesParRep(tempo, exercice) * deuxCotes + changementDeCoteSec(exercice);
 }
 
 /** Répétitions réellement écrites dans le bloc : les exercices au temps
@@ -1243,8 +1266,13 @@ export function analyserSeance(seance: Seance): AnalyseSeance {
     .map((id) => EXERCICES_PAR_ID[id])
     .filter((exercice) => exercice?.cotes === 'unilateral');
   if (unilateraux.length > 0) {
+    // Les positions tenues enchaînent leurs deux côtés ; les séries en
+    // répétitions prennent cinq secondes pour changer de côté.
+    const changement = unilateraux.some((e) => changementDeCoteSec(e) > 0)
+      ? `, plus ${CHANGER_DE_COTE_SEC} s pour changer de côté`
+      : '';
     ajustements.push(
-      `${unilateraux.map((e) => e.nomFr).join(', ')} : côté droit puis côté gauche, la série compte double.`,
+      `${unilateraux.map((e) => e.nomFr).join(', ')} : côté droit puis côté gauche, la série compte double${changement}.`,
     );
   }
   const tailleEnchainement = Math.max(

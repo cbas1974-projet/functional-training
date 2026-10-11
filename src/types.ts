@@ -95,6 +95,28 @@ export type PatternMoteur =
   | 'isolation'
   | 'mobilite';
 
+/** La forme d'une répétition, telle que le métronome la dicte. Rien à voir
+ *  avec `PatternMoteur`, qui range l'exercice pour équilibrer la séance (une
+ *  « rotation » russe et un tour de taille « anti-rotation » ont pourtant la
+ *  même famille de forme pour le métronome) : la forme dit seulement comment
+ *  la charge bouge pendant une répétition.
+ *
+ *  vertical   : on monte, on descend — le cas par défaut. Le métronome dit
+ *               MONTE, DESCENDS, et TIENS là où se tient l'arrêt.
+ *  circulaire : un cercle continu, sans haut ni bas (tour de taille, halo,
+ *               tour du monde) : jamais d'arrêt. Une répétition est un tour
+ *               complet, qui dure la montée plus la descente ; le métronome
+ *               dit « TOURNE » d'un bout à l'autre du tour, et la bille fait
+ *               le tour d'un cercle. On change de sens à mi-série : le
+ *               métronome l'annonce, et la bille repart dans l'autre sens.
+ *  rotation   : d'un côté à l'autre (rotation russe, balayage, coups
+ *               croisés, passage de la cloche sous le corps) : jamais
+ *               d'arrêt. Une répétition va à droite (le temps de la montée)
+ *               puis à gauche (celui de la descente) ; le métronome dit
+ *               « À DROITE », « À GAUCHE », et la bille va et vient sur un
+ *               rail couché. */
+export type FormeMouvement = 'vertical' | 'circulaire' | 'rotation';
+
 /** Famille d'entraînement : détermine la façon de travailler (répétitions
  *  chargées, maintiens au temps, enchaînements respiratoires). Seule la
  *  musculation entre dans les séances générées ; les deux autres alimentent la
@@ -103,7 +125,8 @@ export type Famille = 'musculation' | 'yoga' | 'etirement';
 
 /** bilateral : les deux côtés ensemble ; alterne : un côté puis l'autre à
  *  chaque répétition ; unilateral : toutes les répétitions d'un côté, puis
- *  l'autre côté (le temps de la série est doublé). */
+ *  l'autre côté (le temps de la série est doublé, plus le temps de changer
+ *  de côté entre les deux : `changementDeCoteSec`). */
 export type Cotes = 'bilateral' | 'alterne' | 'unilateral';
 
 export type Unite = 'reps' | 'secondes';
@@ -187,8 +210,18 @@ export interface Exercice {
   position: string;
   /** Phase par laquelle commence chaque répétition : 'descend' pour les
    *  mouvements qui partent de la position haute (squat, fente, développé
-   *  couché…), 'monte' sinon (valeur par défaut). */
+   *  couché…), 'monte' sinon (valeur par défaut). Sans effet sur un
+   *  mouvement circulaire ou en rotation, qui part toujours du même bout. */
   premierePhase?: 'monte' | 'descend';
+  /** La forme de la répétition pour le métronome ; absente, verticale (on
+   *  monte, on descend). Un mouvement circulaire ou en rotation ne s'arrête
+   *  jamais, quels que soient le tempo, `pauseEnHaut` ou `sansPauseEnBas`.
+   *  Voir `FormeMouvement` et `tempoPourExercice`. */
+  mouvement?: Exclude<FormeMouvement, 'vertical'>;
+  /** Les mots du métronome quand MONTE et DESCENDS ne disent pas le geste :
+   *  la rotation externe coudes au corps s'ouvre et se ferme à l'horizontale
+   *  (« OUVRE », « FERME »). Absents, MONTE et DESCENDS. */
+  motsTempo?: { monte: string; descend: string };
   pointsAttention: string[];
   /** Pourquoi l'exercice est utile pour le jiu-jitsu (facultatif). */
   interetJjb?: string;
@@ -212,6 +245,8 @@ export interface TempoExercice extends Tempo {
   /** L'arrêt se tient en haut, après la montée ; absent, en bas, après la
    *  descente. */
   pauseEnHaut?: boolean;
+  /** Un cercle ou un va-et-vient, jamais d'arrêt ; absent, vertical. */
+  mouvement?: Exclude<FormeMouvement, 'vertical'>;
 }
 
 export interface ParametresSeance {

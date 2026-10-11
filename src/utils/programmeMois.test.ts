@@ -3,7 +3,7 @@ import type { Exercice, ParametresSeance, ProgrammeMois, SeanceDuMois, SeanceRea
 import { EXERCICES_PAR_ID } from '../data/exercices';
 import { PARAMETRES_PAR_DEFAUT, TEMPOS } from '../data/parametres';
 import { construireEtapes, dureeTotaleSec, etatMetronome } from './etapesSeance';
-import { cleMouvement, exercicesDisponibles, secondesParRep, tempoPourExercice } from './generateurSeance';
+import { changementDeCoteSec, cleMouvement, exercicesDisponibles, secondesParRep, tempoPourExercice } from './generateurSeance';
 import { OBJECTIFS_MUSCULAIRES } from './muscles';
 import {
   DUREE_MAXI_SEC,
@@ -1270,12 +1270,24 @@ describe('les précautions : arrêt en bas', () => {
   const POUR_LE_DOS = [
     'trap-bar-deadlift', 'romanian-deadlift', 'kb-deadlift', 'kb-good-morning', 'kb-single-leg-deadlift', 'bent-over-row',
     'kb-bent-over-row', 'seesaw-row', 'reverse-fly', 'kb-rear-fly', 'kb-lawn-mower',
+    // Le soulevé de terre sur une jambe aux haltères, comme au kettlebell ; les
+    // bûcherons, dont le bas est penché et tourné, la charge au pied.
+    'single-leg-deadlift-db', 'woodchop', 'kb-wood-chop',
   ];
   const POUR_LES_GENOUX = [
     'squat', 'goblet-squat', 'kb-goblet-squat', 'sumo-squat', 'thruster', 'kb-thruster', 'hack-squat', 'leg-press',
     'reverse-lunge', 'kb-lunge', 'elevated-reverse-lunge', 'step-up', 'side-lunge', 'kb-side-lunge', 'curtsy-lunge',
     'kb-wall-squat-press', 'kb-lunge-press', 'kb-rotating-side-lunge-press', 'leg-extension-machine',
+    // Les squats et fentes avancés ou mis de côté, qui tenaient encore en bas :
+    // le squat cosaque, l'esquive latérale, le squat bras tendu, le squat sur
+    // une jambe vers un banc, la fente bulgare, la fente latérale et
+    // développé, le pas chassé bas et rowing (buste penché, genoux pliés).
+    'cossack-squat', 'kb-bob-and-weave', 'kb-overhead-squat', 'kb-pistol-bench-squat', 'bulgarian-lunge',
+    'side-lunge-thruster', 'kb-low-side-step-row',
   ];
+  /** Le genou ménagé sans arrêt à retirer : le tour du monde se fait dans un
+   *  squat large tenu, et un cercle ne s'arrête jamais. */
+  const GENOU_SANS_ARRET = ['kb-around-the-world'];
   const marque = (id: string) => EXERCICES_PAR_ID[id].sansPauseEnBas === true;
   const tempoAvecPause = { monteeSec: 3, descenteSec: 3, pauseSec: 2 };
 
@@ -1288,7 +1300,7 @@ describe('les précautions : arrêt en bas', () => {
     expect(tous.sort()).toEqual([...POUR_LE_DOS, ...POUR_LES_GENOUX].sort());
     // La consigne du genou ne concerne que ceux des genoux.
     const genoux = Object.values(EXERCICES_PAR_ID).filter((e) => e.genouAMenager).map((e) => e.id);
-    expect(genoux.sort()).toEqual([...POUR_LES_GENOUX].sort());
+    expect(genoux.sort()).toEqual([...POUR_LES_GENOUX, ...GENOU_SANS_ARRET].sort());
   });
 
   it('n’a plus d’arrêt en bas pour ces exercices, quel que soit le tempo ; les autres gardent le leur', () => {
@@ -1327,15 +1339,17 @@ describe('les précautions : arrêt en bas', () => {
               if (exercice.unite !== 'reps') continue;
               const cycles = etape.reps * (exercice.cotes === 'unilateral' ? 2 : 1);
               const cas = `${programme.graine} · ${s.id} · ${etape.exerciceId} · ${JSON.stringify(tempo)}`;
-              // La série dure exactement ses répétitions, chacune à son tempo.
-              expect(etape.dureeSec, cas).toBe(cycles * secondesParRep(tempo, exercice));
+              // La série dure exactement ses répétitions, chacune à son tempo,
+              // plus le changement de côté d'un exercice unilatéral.
+              expect(etape.dureeSec, cas).toBe(cycles * secondesParRep(tempo, exercice) + changementDeCoteSec(exercice));
               // Le métronome arrive à la dernière répétition au moment où la série finit…
               const fin = etatMetronome(etape, etape.dureeSec - 0.001, seance.parametres.tempo)!;
               expect(fin.cycle, cas).toBe(cycles - 1);
               // … et sans arrêt en bas, la bille ne se pose jamais : pas de phase de pause.
+              // (Au changement de côté d'un unilatéral, le métronome se tait.)
               if (exercice.sansPauseEnBas && !exercice.pauseEnHaut) {
                 for (let t = 0; t < etape.dureeSec; t += 0.5) {
-                  expect(etatMetronome(etape, t, seance.parametres.tempo)!.phase, `${cas} · ${t} s`).not.toBe('pause');
+                  expect(etatMetronome(etape, t, seance.parametres.tempo)?.phase, `${cas} · ${t} s`).not.toBe('pause');
                 }
               }
               // Un exercice qui tient en haut ne tient jamais en bas : la pause
@@ -1343,7 +1357,8 @@ describe('les précautions : arrêt en bas', () => {
               if (exercice.pauseEnHaut) {
                 let avant = '';
                 for (let t = 0; t < etape.dureeSec; t += 0.5) {
-                  const phase = etatMetronome(etape, t, seance.parametres.tempo)!.phase;
+                  const phase = etatMetronome(etape, t, seance.parametres.tempo)?.phase;
+                  if (phase === undefined) continue;
                   if (phase === 'pause') expect(avant, `${cas} · ${t} s`).not.toBe('descend');
                   avant = phase;
                 }

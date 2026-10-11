@@ -5,6 +5,7 @@ import type {
   BlocSeries,
   Exercice,
   ExerciceRealise,
+  FormeMouvement,
   Seance,
   SeanceRealisee,
   Tempo,
@@ -14,6 +15,7 @@ import { EXERCICES_PAR_ID } from '../data/exercices';
 import {
   DUREE_PRET_SEC,
   TRANSITION_SUPERSET_SEC,
+  changementDeCoteSec,
   dureeSerieSec,
   groupesDeBlocs,
   secondesParRep,
@@ -30,8 +32,10 @@ export type SensTempo = 'monte' | 'descend';
 /** Phase d'une répétition. La pause se tient en bas, juste après la
  *  descente : c'est la position étirée, d'où l'on repart sans élan — sauf
  *  aux exercices qui tiennent en haut (`pauseEnHaut`), où elle suit la
- *  montée, muscles serrés. */
-export type PhaseTempo = SensTempo | 'pause';
+ *  montée, muscles serrés. Un mouvement circulaire n'a qu'une phase, le tour
+ *  complet ('tourne') ; un mouvement en rotation garde la montée et la
+ *  descente, qui y vont à droite puis à gauche (`motDePhase`). */
+export type PhaseTempo = SensTempo | 'pause' | 'tourne';
 
 /** Travail annoncé après une préparation ou un repos. */
 export type Suivant =
@@ -130,11 +134,27 @@ export interface EtatMetronome {
   totalReps: number;
   phase: PhaseTempo;
   resteDansPhaseSec: number;
+  /** Durée de la phase en cours : la bille en tire sa progression. */
+  dureePhaseSec: number;
   cote?: 'droit' | 'gauche';
+  /** Mouvement circulaire : le premier sens pendant la première moitié de la
+   *  série, l'autre sens ensuite. */
+  sens?: 'premier' | 'second';
+  /** Le premier tour dans l'autre sens : on l'annonce, sans s'arrêter. */
+  changeDeSens?: boolean;
   /** Numéro de répétition (montée, descente, pause) depuis le début de
    *  l'étape (0, 1, 2…), non borné : sert de clé pour ne jouer chaque bip
    *  qu'une seule fois. */
   cycle: number;
+}
+
+/** Le changement de côté au milieu d'une série unilatérale : un compte à
+ *  rebours, avant de repartir de l'autre côté. */
+export interface EtatChangementCote {
+  /** Le côté qui vient. */
+  cote: 'gauche';
+  resteSec: number;
+  dureeSec: number;
 }
 
 /** Où en est une répétition à un instant donné. */
@@ -169,10 +189,31 @@ export function exerciceDeSeance(exerciceId: string): Exercice {
   return trouve ?? { ...EXERCICE_INCONNU, id: exerciceId };
 }
 
+/** La forme de la répétition de l'exercice : verticale par défaut. */
+export function formeDe(exercice: Pick<Exercice, 'mouvement'>): FormeMouvement {
+  return exercice.mouvement ?? 'vertical';
+}
+
 /** Phase par laquelle commence chaque répétition de l'exercice : portée par
- *  la fiche (`premierePhase`), montée par défaut. */
-export function premierePhase(exercice: Pick<Exercice, 'premierePhase'>): SensTempo {
+ *  la fiche (`premierePhase`), montée par défaut. Un cercle ou un va-et-vient
+ *  part toujours du même bout : le tour, ou la droite. */
+export function premierePhase(exercice: Pick<Exercice, 'premierePhase' | 'mouvement'>): SensTempo {
+  if (exercice.mouvement) return 'monte';
   return exercice.premierePhase ?? 'monte';
+}
+
+/** Le mot que dicte le métronome pour une phase. MONTE, DESCENDS et TIENS
+ *  pour un mouvement vertical — ou les mots propres à l'exercice quand
+ *  monter et descendre ne disent pas le geste (`motsTempo`) ; TOURNE pour un
+ *  cercle, d'un bout à l'autre du tour ; À DROITE puis À GAUCHE pour un
+ *  mouvement d'un côté à l'autre. La séance guidée l'affiche, et le tableau
+ *  des mouvements (docs/mouvements.md) le recopie. */
+export function motDePhase(phase: PhaseTempo, exercice: Pick<Exercice, 'mouvement' | 'motsTempo'>): string {
+  if (phase === 'pause') return 'TIENS';
+  if (phase === 'tourne') return 'TOURNE';
+  if (exercice.mouvement === 'rotation') return phase === 'monte' ? 'À DROITE' : 'À GAUCHE';
+  if (exercice.motsTempo) return exercice.motsTempo[phase];
+  return phase === 'monte' ? 'MONTE' : 'DESCENDS';
 }
 
 /** Les phases d'une répétition, dans l'ordre, avec leur durée. La pause suit
@@ -186,14 +227,22 @@ export function phasesDeRep(
   tempo: TempoExercice,
   premiere: SensTempo,
 ): { phase: PhaseTempo; dureeSec: number }[] {
+  // Un cercle : un seul geste, le tour complet, sans arrêt nulle part.
+  if (tempo.mouvement === 'circulaire') {
+    const tour = tempo.monteeSec + tempo.descenteSec;
+    return tour > 0 ? [{ phase: 'tourne', dureeSec: tour }] : [];
+  }
   const descente = { phase: 'descend' as const, dureeSec: tempo.descenteSec };
-  const pause = { phase: 'pause' as const, dureeSec: tempo.pauseSec ?? 0 };
+  // Un cercle ou un va-et-vient ne s'arrête jamais (`tempoPourExercice`) ; le
+  // va-et-vient part toujours à droite.
+  const pause = { phase: 'pause' as const, dureeSec: tempo.mouvement ? 0 : (tempo.pauseSec ?? 0) };
   const montee = { phase: 'monte' as const, dureeSec: tempo.monteeSec };
+  const depart = tempo.mouvement === 'rotation' ? 'monte' : premiere;
   const ordre = tempo.pauseEnHaut
-    ? premiere === 'descend'
+    ? depart === 'descend'
       ? [descente, montee, pause]
       : [montee, pause, descente]
-    : premiere === 'descend'
+    : depart === 'descend'
       ? [descente, pause, montee]
       : [montee, descente, pause];
   return ordre.filter((p) => p.dureeSec > 0);
@@ -221,11 +270,13 @@ export function lirePhase(tempo: TempoExercice, premiere: SensTempo, dansRepSec:
  *  `progression` (de 0 à 1) de la phase. Elle monte pendant la montée,
  *  descend pendant la descente, et pendant la pause elle reste là où la phase
  *  d'avant l'a laissée : au pied du rail après la descente, en haut après la
- *  montée quand l'exercice tient en haut (`pauseEnHaut`). */
+ *  montée quand l'exercice tient en haut (`pauseEnHaut`). Pour un tour
+ *  ('tourne'), c'est la part du cercle déjà parcourue : la bille ne s'arrête
+ *  jamais. */
 export function positionBille(phase: PhaseTempo, progression: number, pauseEnHaut = false): number {
   const p = Math.min(1, Math.max(0, progression));
   if (phase === 'monte') return 1 - p;
-  if (phase === 'descend') return p;
+  if (phase === 'descend' || phase === 'tourne') return p;
   return pauseEnHaut ? 0 : 1;
 }
 
@@ -689,11 +740,22 @@ export function etatMaintien(etape: Etape, ecouleSec: number): EtatMaintien | nu
 
 // ------------------------------------------------------------- Métronome
 
-/** État du métronome à `ecouleSec` secondes du début d'une série ou d'une
- *  station ; null quand il n'y a rien à compter (exercice au temps, autre
- *  étape). Pour un exercice unilatéral, la première moitié des cycles se
- *  fait du côté droit, la seconde du côté gauche. */
-export function etatMetronome(etape: Etape, ecouleSec: number, tempo: Tempo): EtatMetronome | null {
+/** Le déroulé d'une série ou d'une station en répétitions : leur tempo,
+ *  leur nombre, et, d'un exercice unilatéral, le côté droit, le changement de
+ *  côté, puis le côté gauche. */
+interface PlanTravail {
+  exercice: Exercice;
+  tempo: TempoExercice;
+  parRep: number;
+  cyclesTotaux: number;
+  /** Unilatéral : les répétitions du côté droit, le reste se fait à gauche ;
+   *  null pour un exercice bilatéral ou alterné. */
+  cyclesDroit: number | null;
+  /** Le changement de côté entre les deux, en secondes ; 0 sans changement. */
+  changementSec: number;
+}
+
+function planTravail(etape: Etape, tempo: Tempo): PlanTravail | null {
   if (etape.type !== 'serie' && etape.type !== 'station') return null;
   // Un circuit à rythme libre ne se compte pas en répétitions : vingt secondes
   // de travail au tempo 4 s / 4 s ne feraient que deux répétitions et demie.
@@ -702,44 +764,113 @@ export function etatMetronome(etape: Etape, ecouleSec: number, tempo: Tempo): Et
   if (exercice.unite === 'secondes') return null;
 
   // Un exercice sans arrêt en bas compte une répétition plus courte, un
-  // exercice qui tient en haut place l'arrêt après la montée : c'est le même
-  // tempo que celui des durées (`dureeSerieSec`), pour que la bille, les bips
-  // et la durée de l'étape ne se contredisent jamais.
+  // exercice qui tient en haut place l'arrêt après la montée, un cercle ou un
+  // va-et-vient n'en a pas : c'est le même tempo que celui des durées
+  // (`dureeSerieSec`), pour que la bille, les bips et la durée de l'étape ne
+  // se contredisent jamais.
   const tempoExercice = tempoPourExercice(exercice, tempo);
   const parRep = secondesParRep(tempoExercice);
   if (parRep <= 0) return null;
-  const cyclesTotaux =
-    etape.type === 'serie'
-      ? etape.reps * (exercice.cotes === 'unilateral' ? 2 : 1)
-      : Math.floor(etape.dureeSec / parRep);
-  if (cyclesTotaux <= 0) return null;
+  const unilateral = exercice.cotes === 'unilateral';
+  const plan = { exercice, tempo: tempoExercice, parRep };
 
+  if (etape.type === 'serie') {
+    if (etape.reps <= 0) return null;
+    return {
+      ...plan,
+      cyclesTotaux: etape.reps * (unilateral ? 2 : 1),
+      cyclesDroit: unilateral ? etape.reps : null,
+      changementSec: changementDeCoteSec(exercice),
+    };
+  }
+  // Une station a un temps fixe : le changement de côté s'y prend, s'il
+  // reste au moins une répétition de chaque côté.
+  const changementSec = changementDeCoteSec(exercice);
+  const avecChangement = unilateral ? Math.floor((etape.dureeSec - changementSec) / parRep) : 0;
+  if (avecChangement >= 2) {
+    return { ...plan, cyclesTotaux: avecChangement, cyclesDroit: Math.ceil(avecChangement / 2), changementSec };
+  }
+  const cyclesTotaux = Math.floor(etape.dureeSec / parRep);
+  if (cyclesTotaux <= 0) return null;
+  return { ...plan, cyclesTotaux, cyclesDroit: unilateral ? Math.ceil(cyclesTotaux / 2) : null, changementSec: 0 };
+}
+
+/** Le moment où commence le changement de côté, et sa durée — allongée de
+ *  ce que « +5 s » y a ajouté (`prolongationSec`) ; null sans changement. */
+function fenetreChangement(plan: PlanTravail, prolongationSec: number): { debutSec: number; dureeSec: number } | null {
+  if (plan.cyclesDroit === null || plan.changementSec <= 0) return null;
+  return { debutSec: plan.cyclesDroit * plan.parRep, dureeSec: plan.changementSec + Math.max(0, prolongationSec) };
+}
+
+/** État du métronome à `ecouleSec` secondes du début d'une série ou d'une
+ *  station ; null quand il n'y a rien à compter (exercice au temps, autre
+ *  étape, changement de côté en cours). Pour un exercice unilatéral, toutes
+ *  les répétitions du côté droit, le changement de côté
+ *  (`etatChangementCote`, allongé de `prolongationSec` par « +5 s »), puis
+ *  celles du côté gauche. Pour un mouvement circulaire, la première moitié
+ *  des tours dans un sens, la seconde dans l'autre, sans arrêt : le premier
+ *  tour du second sens porte `changeDeSens`. */
+export function etatMetronome(etape: Etape, ecouleSec: number, tempo: Tempo, prolongationSec = 0): EtatMetronome | null {
+  const plan = planTravail(etape, tempo);
+  if (!plan) return null;
   const ecoule = Math.max(0, ecouleSec);
-  const cycle = Math.floor(ecoule / parRep);
-  const dansCycle = ecoule - cycle * parRep;
-  const lecture = lirePhase(tempoExercice, premierePhase(exercice), dansCycle);
-  const phase = lecture.phase;
-  const resteDansPhaseSec = lecture.dureePhaseSec - lecture.ecouleDansPhaseSec;
+  // Le temps des répétitions : celui de l'étape, moins le changement de côté
+  // une fois passé.
+  let t = ecoule;
+  const changement = fenetreChangement(plan, prolongationSec);
+  if (changement && ecoule >= changement.debutSec) {
+    if (ecoule < changement.debutSec + changement.dureeSec) return null;
+    t = ecoule - changement.dureeSec;
+  }
+
+  const { parRep, cyclesTotaux, cyclesDroit } = plan;
+  const cycle = Math.floor(t / parRep);
+  const dansCycle = t - cycle * parRep;
+  const lecture = lirePhase(plan.tempo, premierePhase(plan.exercice), dansCycle);
+  const instant = {
+    phase: lecture.phase,
+    resteDansPhaseSec: lecture.dureePhaseSec - lecture.ecouleDansPhaseSec,
+    dureePhaseSec: lecture.dureePhaseSec,
+    cycle,
+  };
 
   // Une station dont la durée n'est pas un multiple du tempo a une « queue » :
   // le compteur y reste sur la dernière répétition.
   const cycleBorne = Math.min(cycle, cyclesTotaux - 1);
 
-  if (exercice.cotes === 'unilateral') {
-    const cyclesDroit = Math.ceil(cyclesTotaux / 2);
-    if (cycleBorne < cyclesDroit) {
-      return { rep: cycleBorne + 1, totalReps: cyclesDroit, phase, resteDansPhaseSec, cote: 'droit', cycle };
-    }
-    return {
-      rep: cycleBorne - cyclesDroit + 1,
-      totalReps: cyclesTotaux - cyclesDroit,
-      phase,
-      resteDansPhaseSec,
-      cote: 'gauche',
-      cycle,
-    };
+  if (cyclesDroit !== null) {
+    if (cycleBorne < cyclesDroit) return { rep: cycleBorne + 1, totalReps: cyclesDroit, ...instant, cote: 'droit' };
+    return { rep: cycleBorne - cyclesDroit + 1, totalReps: cyclesTotaux - cyclesDroit, ...instant, cote: 'gauche' };
   }
-  return { rep: cycleBorne + 1, totalReps: cyclesTotaux, phase, resteDansPhaseSec, cycle };
+  const etat: EtatMetronome = { rep: cycleBorne + 1, totalReps: cyclesTotaux, ...instant };
+  if (plan.tempo.mouvement === 'circulaire') {
+    const premierSens = Math.ceil(cyclesTotaux / 2);
+    if (cycleBorne < premierSens) return { ...etat, sens: 'premier' };
+    return { ...etat, sens: 'second', ...(cycleBorne === premierSens ? { changeDeSens: true } : {}) };
+  }
+  return etat;
+}
+
+/** Le changement de côté d'une série unilatérale, s'il est en cours à
+ *  `ecouleSec` secondes du début de l'étape : entre la dernière répétition du
+ *  côté droit et la première du côté gauche, un compte à rebours de 5 s pour
+ *  changer l'haltère de main, se rallonger de l'autre côté ou se replacer
+ *  (`changementDeCoteSec`), plus ce que « +5 s » y ajoute
+ *  (`prolongationSec`). Il fait partie de la série : ses 5 s y sont
+ *  comptées, sur les deux téléphones. Null le reste du temps. */
+export function etatChangementCote(
+  etape: Etape,
+  ecouleSec: number,
+  tempo: Tempo,
+  prolongationSec = 0,
+): EtatChangementCote | null {
+  const plan = planTravail(etape, tempo);
+  const changement = plan ? fenetreChangement(plan, prolongationSec) : null;
+  if (!changement) return null;
+  const ecoule = Math.max(0, ecouleSec);
+  const fin = changement.debutSec + changement.dureeSec;
+  if (ecoule < changement.debutSec || ecoule >= fin) return null;
+  return { cote: 'gauche', resteSec: fin - ecoule, dureeSec: changement.dureeSec };
 }
 
 // ------------------------------------------------------------- Résultat
