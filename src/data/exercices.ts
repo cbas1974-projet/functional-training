@@ -1962,6 +1962,10 @@ export const CONSIGNE_PAUSE_EN_HAUT = 'On tient en haut, muscles serrés';
 /** Celle des mouvements circulaires (`mouvement: 'circulaire'`) : un tour
  *  sans haut ni bas, donc sans arrêt nulle part. */
 export const CONSIGNE_CIRCULAIRE = 'Mouvement continu, sans arrêt : une répétition, un tour complet';
+/** Celle des cercles faits au temps — les trois cercles du kettlebell : pas de
+ *  métronome, chacun tourne à son rythme. */
+export const CONSIGNE_CERCLE_AU_TEMPS =
+  'Au temps, à son rythme : la moitié dans un sens, puis « Change de sens ! » et l’autre moitié dans l’autre sens, sans s’arrêter';
 /** Celle des mouvements d'un côté à l'autre (`mouvement: 'rotation'`). */
 export const CONSIGNE_ROTATION = 'D’un côté à l’autre, sans arrêt : une répétition, à droite puis à gauche';
 
@@ -1971,11 +1975,13 @@ export const CONSIGNE_ROTATION = 'D’un côté à l’autre, sans arrêt : une 
  *  en haut, le genou —, puis ses points d'attention. Un cercle ou un
  *  va-et-vient ne s'arrête jamais : rien ne lui parle d'arrêt. */
 export function consignesDe(
-  exercice: Pick<Exercice, 'pointsAttention' | 'sansPauseEnBas' | 'pauseEnHaut' | 'genouAMenager' | 'mouvement'>,
+  exercice: Pick<Exercice, 'pointsAttention' | 'sansPauseEnBas' | 'pauseEnHaut' | 'genouAMenager' | 'mouvement'> &
+    Partial<Pick<Exercice, 'unite'>>,
 ): string[] {
   const forme = exercice.mouvement;
+  const cercle = exercice.unite === 'secondes' ? CONSIGNE_CERCLE_AU_TEMPS : CONSIGNE_CIRCULAIRE;
   return [
-    ...(forme === 'circulaire' ? [CONSIGNE_CIRCULAIRE] : forme === 'rotation' ? [CONSIGNE_ROTATION] : []),
+    ...(forme === 'circulaire' ? [cercle] : forme === 'rotation' ? [CONSIGNE_ROTATION] : []),
     ...(exercice.sansPauseEnBas && !forme ? [CONSIGNE_SANS_PAUSE] : []),
     ...(exercice.pauseEnHaut && !forme ? [CONSIGNE_PAUSE_EN_HAUT] : []),
     ...(exercice.genouAMenager ? [CONSIGNE_GENOU] : []),

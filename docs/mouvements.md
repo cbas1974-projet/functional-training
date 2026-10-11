@@ -3,6 +3,38 @@
 <!-- Généré par `npm run mouvements` depuis le code (src/utils/tableauMouvements.ts) :
      ne pas modifier à la main. Un test vérifie que ce fichier suit le code. -->
 
+## Au temps ou au tempo ?
+
+Speedy, au halo, le 11 octobre : « pas facile d’y aller à 3/3 — ça devrait être une durée : 30 secondes / 30 secondes ».
+La même question, posée à chaque exercice dont le geste ne monte ni ne descend franchement, ou dure bien plus
+(ou bien moins) que 3 s : au **temps** — un décompte, chacun à son rythme — ou au **tempo** — le métronome,
+3 s / 3 s + 1 s ? Ce qui compte : le bon sens, pour deux gars d’une cinquantaine d’années en salle ;
+le bas du dos de Speedy, qui fatigue vite, et sa jambe, qui lâche parfois ; les genoux de Big Max.
+Au temps seulement quand c’est clairement mieux, sans contrepartie ; le reste, Sébastien décide.
+
+| Exercice | Aujourd’hui | Recommandation | Décision | Pourquoi |
+|---|---|---|---|---|
+| Halo (`kb-halo`), Tour de taille (`kb-around-the-body`), Tour du monde (`kb-around-the-world`) | au temps : 30 s dans un sens → « Change de sens ! » → 30 s dans l’autre | Au temps : 30 s dans un sens, « Change de sens ! » d’un bip sans s’arrêter, 30 s dans l’autre. | **Au temps : fait** | Demandé par Speedy : « pas facile d’y aller à 3/3 ». Un tour n’a ni haut ni bas, et sa vitesse dépend des bras et de la cloche : au tempo, on court après la bille ou on l’attend. Au temps, chacun tourne à son rythme, lentement, le buste immobile. Le même temps pour les deux ; la charge se note et se règle comme avant (lourd, correct, léger). Avant : TOURNE 6 s, 4 tours dans un sens, 4 dans l’autre (48 s). Le tour du monde reste mis de côté du programme. |
+| Relevé turc (`kb-turkish-get-up`) | au temps, de chaque côté, CHANGE DE CÔTÉ 5 s | Au temps, de chaque côté : un relevé lent, aller et retour, puis CHANGE DE CÔTÉ 5 s. | **Au temps : fait** | Huit temps — coude, main, pont, genou, debout, et retour : impossible en 3 s, et huit relevés par côté prendraient un quart d’heure. Au temps, on en fait un, bien posé. Avancé : jamais dans le programme, seulement en séance libre au niveau avancé (45 s par côté). Avant : MONTE 3 s → TIENS 1 s → DESCENDS 3 s, 8 par côté. |
+| Rotation russe (`russian-twist`), Rotation russe au kettlebell (`kb-russian-twist`) | À DROITE 3 s → À GAUCHE 3 s | Garder le tempo : 3 s à droite, 3 s à gauche. | Tempo gardé | La lenteur est la consigne même : un twist rapide charge les vertèbres, pas les obliques. Au temps, on accélère sans s’en rendre compte — mauvais pour le bas du dos de Speedy. Pieds au sol, petite amplitude. |
+| Assis en V, coups croisés (`v-sit-cross-jab`) | À DROITE 3 s → À GAUCHE 3 s | Peut-être au temps : 30 s, coups croisés contrôlés, à son rythme. | **À décider** | Un coup de poing en 3 s, c’est un développé lent, pas un coup : au temps, ce serait plus naturel. Mais le travail, c’est surtout le V tenu, que le tempo dose bien, et au temps les coups partent vite, haltères au bout des bras (épaule, coude). Le V tenu fatigue vite le bas du dos de Speedy : pieds au sol. À essayer une fois avant de choisir. |
+| Planche, passage de la cloche (`kb-plank-oblique-pull-through`) | À DROITE 3 s → À GAUCHE 3 s | Garder le tempo. | Tempo gardé | Glisser la cloche en 3 s, bassin immobile : c’est le bon geste, et c’est ce qui le rend dur. Au temps, on tirerait vite et le bassin tournerait. |
+| Balayage en position creuse (`hollow-body-sweeper`) | À DROITE 3 s → À GAUCHE 3 s | Garder le tempo. | Tempo gardé | Balayer lentement, c’est l’exercice ; le tempo empêche d’accélérer quand le ventre lâche. Bas du dos plaqué au sol, sinon on arrête. Avancé : hors programme. |
+| Planche en T (`plank-t`) | MONTE 3 s → TIENS 1 s → DESCENDS 3 s | Garder le tempo. | Tempo gardé | La rotation lente, tenue en haut, c’est tout l’exercice ; vite, on s’effondre au retour (épaules, poignets). Avancé : hors programme. |
+| Rowing en planche (`renegade-row`), Rowing en planche au kettlebell (`kb-renegade-row`) | MONTE 3 s → TIENS 1 s → DESCENDS 3 s | Garder le tempo. | Tempo gardé | Un rowing reste un rowing : 3 s, tenu en haut, le bassin ne tourne pas. Au temps, on enchaîne et le bassin se balance. Avancés : hors programme. |
+| Commando (planche haute – basse) (`kb-commando`) | MONTE 3 s → DESCENDS 3 s → TIENS 1 s | Garder le tempo ; au temps (30 s) si les 3 s gênent à l’essai. | Tempo gardé | Monter en 3 s, c’est poser les deux mains l’une après l’autre : lent, mais faisable. Au temps, on se presse et le bassin balance. Avancé : hors programme. |
+| Rowing chien d’arrêt (`bird-dog-row`) | MONTE 3 s → DESCENDS 3 s → TIENS 1 s | Garder le tempo. | Tempo gardé | L’équilibre se tient toute la série ; le rowing, lui, va au tempo comme les autres. Un genou sur le banc : rien de risqué pour la jambe de Speedy. Avancé : hors programme. |
+| Demi-relevé turc (`kb-half-turkish-get-up`) | MONTE 3 s → TIENS 1 s → DESCENDS 3 s | Garder le tempo. | Tempo gardé | Monter sur le coude puis sur la main en 3 s, c’est faisable, et la seconde tenue en haut est utile. Le relevé complet, lui, passe au temps. |
+| Planche latérale avec rotation (`kb-side-plank-twist`) | MONTE 3 s → DESCENDS 3 s → TIENS 1 s | Garder le tempo. | Tempo gardé | Passer la cloche sous le buste en 3 s, hanches hautes : le tempo va bien. Huit par côté sur le coude, c’est long : alléger si l’épaule tire. |
+| Moulin à vent (`kb-windmill`) | DESCENDS 3 s → TIENS 1 s → MONTE 3 s | Garder le tempo. | Tempo gardé | Lent par nature, bras chargé vertical ; plus vite, c’est le bas du dos qui prend. Avancé : hors programme. |
+| Chaise au mur et développé (`kb-wall-squat-press`) | MONTE 3 s → DESCENDS 3 s | Garder le tempo. | Tempo gardé | La chaise se tient pendant que le développé suit le tempo : déjà 48 s de chaise, assez pour les genoux de Big Max (pas plus bas que l’angle droit). |
+| Squat sauté (`jump-squat`), Swing avec haltère (`swing`), Burpee avec haltères (`dumbbell-burpee`), Tirage haut explosif (`high-pull`), Arraché avec haltère (`dumbbell-snatch`), Balancier latéral (`kb-side-swing`), Swing à deux mains (`kb-double-arm-swing`), Swing à un bras (`kb-single-arm-swing`), Arraché au kettlebell (`kb-snatch`), Épaulé (`kb-clean`), Swing du golfeur (`kb-golfer-swing`), Squat sauté au kettlebell (`kb-jump-squat`), Saut de grenouille (`kb-frog-jump`), Relevé sauté (`kb-power-jump-squat`), Patineur (`kb-speed-skater`), Saut de bûche (`kb-log-jump`) | DESCENDS 3 s → MONTE 3 s ; ou MONTE 3 s → DESCENDS 3 s | Au temps, 20 s à son rythme, ou des répétitions sans métronome. | **À décider** | Un swing ou un saut en 3 s / 3 s n’est plus un swing ni un saut : le tempo lent ne leur va pas. Mais ils ne sortent qu’avec l’option « explosifs », jamais dans le programme, et ils sont déconseillés au dos de Speedy et aux genoux de Big Max. Pas fait : il faudrait choisir la durée, le nombre de séries, et garder ou non les sauts. |
+| Crunch isométrique (`kb-isometric-crunch`), Marche du fermier (`farmers-walk`), Marche du fermier au kettlebell (`kb-farmers-walk`), Traîneau : pousser, puis tirer (`traineau`) | au temps : un décompte | Rien à changer. | Déjà au temps | Une tenue, un portage, un aller-retour de traîneau : c’est le temps qui compte, pas les répétitions. |
+
+Tous les autres montent et descendent : le tempo est leur geste, on le garde.
+
+## Le métronome, exercice par exercice
+
 Ce que dit le métronome de la séance guidée pour chacun des 151 exercices de musculation,
 au tempo par défaut (3 s / 3 s + 1 s), sur une série de 8 répétitions
 (8 de chaque côté pour un exercice unilatéral). Chaque ligne est lue dans le vrai métronome :
@@ -10,12 +42,13 @@ les mots, leurs secondes, le changement de côté et la durée de la série sont
 
 - **Vertical** (par défaut) : MONTE, DESCENDS, et TIENS là où le muscle travaille — en bas quand la position
   basse est étirée sous la charge, en haut quand elle est un repos, nulle part quand le bas fatigue le dos ou le genou.
-- **Circulaire** (3) : TOURNE, un tour complet par répétition, jamais d’arrêt ; à mi-série,
-  « Change de sens ! », sans s’arrêter. `kb-around-the-body`, `kb-halo`, `kb-around-the-world`.
+- **Circulaire** (3), **au temps** : 30 s dans un sens, « Change de sens ! » d’un bip, sans s’arrêter,
+  puis 30 s dans l’autre ; un décompte, pas de métronome. `kb-around-the-body`, `kb-halo`, `kb-around-the-world`.
 - **Rotation** (5) : À DROITE puis À GAUCHE dans chaque répétition, jamais d’arrêt.
   `russian-twist`, `v-sit-cross-jab`, `hollow-body-sweeper`, `kb-russian-twist`, `kb-plank-oblique-pull-through`.
-- **Unilatéral** (41) : toutes les répétitions du côté droit, CHANGE DE CÔTÉ 5 s (« +5 s »
-  en donne cinq de plus), puis le côté gauche. La durée annoncée compte les 5 s.
+- **Unilatéral** (41) : tout le côté droit, CHANGE DE CÔTÉ 5 s (« +5 s »
+  en donne cinq de plus), puis le côté gauche — au tempo comme au temps. La durée annoncée compte les 5 s.
+- **Au temps** (8) : un décompte, pas de métronome. `farmers-walk`, `kb-around-the-body`, `kb-turkish-get-up`, `kb-farmers-walk`, `kb-isometric-crunch`, `kb-halo`, `kb-around-the-world`, `traineau`.
 - **Explosifs** : seulement quand l’option est cochée ; jamais d’arrêt.
 
 ## Haut du corps (42)
@@ -63,7 +96,7 @@ les mots, leurs secondes, le changement de côté et la durée de la série sont
 | `kb-incline-curl` | Curl sur banc incliné | MONTE 3 s → DESCENDS 3 s → TIENS 1 s | 8 rép. | 56 s |  |
 | `kb-tricep-kickback` | Extension triceps buste penché au kettlebell | MONTE 3 s → TIENS 1 s → DESCENDS 3 s | 8 rép. côté droit → CHANGE DE CÔTÉ 5 s (« +5 s » si besoin) → 8 rép. côté gauche | 1 min 57 s | Tenu en haut : la position basse est un repos. |
 | `kb-t-push-up` | Pompe en T | DESCENDS 3 s → TIENS 1 s → MONTE 3 s | 8 rép. en alternant : un côté par rép. | 56 s | Part d’en haut : on descend d’abord. |
-| `kb-halo` | Halo | TOURNE 6 s | 4 tours dans un sens → « Change de sens ! », sans s’arrêter → 4 tours dans l’autre sens | 48 s | Cercle continu : ni haut ni bas, jamais d’arrêt ; un tour = montée + descente. La cloche fait le tour de la tête. Sens changé à mi-série, comme les deux autres cercles (avant : à chaque tour). |
+| `kb-halo` | Halo | — au temps : 30 s dans un sens → « Change de sens ! » → 30 s dans l’autre | un sens, puis l’autre : « Change de sens ! » d’un bip, sans s’arrêter | 1 min | Cercle au temps : un décompte, pas de métronome ; chacun tourne à son rythme, jamais d’arrêt. La cloche fait le tour de la tête. « Pas facile d’y aller à 3/3 » (Speedy) : au temps (avant : TOURNE 6 s, 4 tours dans chaque sens). |
 
 ## Gainage (26)
 
@@ -80,7 +113,7 @@ les mots, leurs secondes, le changement de côté et la durée de la série sont
 | `hollow-fly` | Écarté en position creuse | DESCENDS 3 s → TIENS 1 s → MONTE 3 s | 8 rép. | 56 s | Part d’en haut : on descend d’abord. Bras tendus au-dessus de la poitrine au départ, on les ouvre (avant : MONTE d’abord). |
 | `hollow-pullover` | Pull-over en position creuse | DESCENDS 3 s → TIENS 1 s → MONTE 3 s | 8 rép. | 56 s | Part d’en haut : on descend d’abord. Comme le pull-over, les bras passent derrière la tête (avant : MONTE d’abord). |
 | `kb-side-bend` | Flexion latérale au kettlebell | DESCENDS 3 s → TIENS 1 s → MONTE 3 s | 8 rép. côté droit → CHANGE DE CÔTÉ 5 s (« +5 s » si besoin) → 8 rép. côté gauche | 1 min 57 s | Part d’en haut : on descend d’abord. |
-| `kb-around-the-body` | Tour de taille | TOURNE 6 s | 4 tours dans un sens → « Change de sens ! », sans s’arrêter → 4 tours dans l’autre sens | 48 s | Cercle continu : ni haut ni bas, jamais d’arrêt ; un tour = montée + descente. La cloche passe d’une main à l’autre autour de la taille (avant : MONTE / TIENS / DESCENDS). |
+| `kb-around-the-body` | Tour de taille | — au temps : 30 s dans un sens → « Change de sens ! » → 30 s dans l’autre | un sens, puis l’autre : « Change de sens ! » d’un bip, sans s’arrêter | 1 min | Cercle au temps : un décompte, pas de métronome ; chacun tourne à son rythme, jamais d’arrêt. La cloche passe d’une main à l’autre autour de la taille (avant : TOURNE 6 s, 4 tours dans chaque sens ; avant encore, MONTE / TIENS / DESCENDS). |
 | `kb-russian-twist` | Rotation russe au kettlebell | À DROITE 3 s → À GAUCHE 3 s | 8 rép., chacune à droite puis à gauche | 48 s | D’un côté à l’autre : ni haut ni bas, jamais d’arrêt ; une rép. = à droite puis à gauche. Assis, le buste tourne d’un côté à l’autre (avant : MONTE / DESCENDS / TIENS). |
 | `kb-straight-arm-sit` | Relevé de buste bras tendu | MONTE 3 s → TIENS 1 s → DESCENDS 3 s | 8 rép. côté droit → CHANGE DE CÔTÉ 5 s (« +5 s » si besoin) → 8 rép. côté gauche | 1 min 57 s | Tenu en haut : la position basse est un repos. |
 | `kb-side-swing` | Balancier latéral | MONTE 3 s → DESCENDS 3 s | 8 rép. côté droit → CHANGE DE CÔTÉ 5 s (« +5 s » si besoin) → 8 rép. côté gauche | 1 min 41 s | Explosif (seulement avec l’option) : un geste balistique ne s’arrête pas. |
@@ -154,7 +187,7 @@ les mots, leurs secondes, le changement de côté et la durée de la série sont
 | `kb-single-leg-calf-raise` | Mollet sur une jambe, lesté | MONTE 3 s → DESCENDS 3 s → TIENS 1 s | 8 rép. côté droit → CHANGE DE CÔTÉ 5 s (« +5 s » si besoin) → 8 rép. côté gauche | 1 min 57 s | Le talon sous la marche étire le mollet sous la charge. |
 | `kb-pistol-bench-squat` | Squat sur une jambe vers un banc | DESCENDS 3 s → MONTE 3 s | 8 rép. côté droit → CHANGE DE CÔTÉ 5 s (« +5 s » si besoin) → 8 rép. côté gauche | 1 min 41 s | Sans arrêt en bas : le genou. Part d’en haut : on descend d’abord. Avant : TIENS en bas, sur une jambe. |
 | `kb-jump-squat` | Squat sauté au kettlebell | DESCENDS 3 s → MONTE 3 s | 8 rép. | 48 s | Explosif (seulement avec l’option) : un geste balistique ne s’arrête pas. Part d’en haut : on descend d’abord. |
-| `kb-around-the-world` | Tour du monde | TOURNE 6 s | 4 tours dans un sens → « Change de sens ! », sans s’arrêter → 4 tours dans l’autre sens | 48 s | Cercle continu : ni haut ni bas, jamais d’arrêt ; un tour = montée + descente. Genou plié tout du long : on descend jusqu’où il ne fait pas mal. La cloche passe autour des jambes, dans un squat large tenu. |
+| `kb-around-the-world` | Tour du monde | — au temps : 30 s dans un sens → « Change de sens ! » → 30 s dans l’autre | un sens, puis l’autre : « Change de sens ! » d’un bip, sans s’arrêter | 1 min | Cercle au temps : un décompte, pas de métronome ; chacun tourne à son rythme, jamais d’arrêt. Genou plié tout du long : on descend jusqu’où il ne fait pas mal. La cloche passe autour des jambes, dans un squat large tenu (avant : TOURNE 6 s, 4 tours dans chaque sens). |
 | `trap-bar-deadlift` | Soulevé de terre à la trap bar | MONTE 3 s → DESCENDS 3 s | 8 rép. | 48 s | Sans arrêt en bas : le dos. |
 | `leg-press` | Presse à cuisses | DESCENDS 3 s → MONTE 3 s | 8 rép. | 48 s | Sans arrêt en bas : le genou. Part d’en haut : on descend d’abord. |
 | `hack-squat` | Hack squat | DESCENDS 3 s → MONTE 3 s | 8 rép. | 48 s | Sans arrêt en bas : le genou. Part d’en haut : on descend d’abord. |
@@ -175,7 +208,7 @@ les mots, leurs secondes, le changement de côté et la durée de la série sont
 | `side-lunge-thruster` | Fente latérale et développé | DESCENDS 3 s → MONTE 3 s | 8 rép. en alternant : un côté par rép. | 48 s | Sans arrêt en bas : le genou. Part d’en haut : on descend d’abord. Avant : TIENS en bas de la fente. |
 | `dumbbell-snatch` | Arraché avec haltère | MONTE 3 s → DESCENDS 3 s | 8 rép. côté droit → CHANGE DE CÔTÉ 5 s (« +5 s » si besoin) → 8 rép. côté gauche | 1 min 41 s | Explosif (seulement avec l’option) : un geste balistique ne s’arrête pas. |
 | `kb-double-arm-swing` | Swing à deux mains | MONTE 3 s → DESCENDS 3 s | 8 rép. | 48 s | Explosif (seulement avec l’option) : un geste balistique ne s’arrête pas. |
-| `kb-turkish-get-up` | Relevé turc | MONTE 3 s → TIENS 1 s → DESCENDS 3 s | 8 rép. côté droit → CHANGE DE CÔTÉ 5 s (« +5 s » si besoin) → 8 rép. côté gauche | 1 min 57 s | Tenu en haut : la position basse est un repos. Limite : un relevé complet prend bien plus de 3 s ; exercice avancé, hors programme. |
+| `kb-turkish-get-up` | Relevé turc | — (au temps, de chaque côté : un décompte, pas de métronome) | côté droit → CHANGE DE CÔTÉ 5 s (« +5 s » si besoin) → côté gauche | au temps | Au temps, de chaque côté : un décompte, pas de métronome. Un relevé complet prend bien plus de 3 s : un relevé lent par côté (avant : MONTE 3 s → TIENS 1 s → DESCENDS 3 s, 8 par côté). Avancé, hors programme. |
 | `kb-single-arm-swing` | Swing à un bras | MONTE 3 s → DESCENDS 3 s | 8 rép. côté droit → CHANGE DE CÔTÉ 5 s (« +5 s » si besoin) → 8 rép. côté gauche | 1 min 41 s | Explosif (seulement avec l’option) : un geste balistique ne s’arrête pas. |
 | `kb-thruster` | Thruster (squat et développé) au kettlebell | DESCENDS 3 s → MONTE 3 s | 8 rép. côté droit → CHANGE DE CÔTÉ 5 s (« +5 s » si besoin) → 8 rép. côté gauche | 1 min 41 s | Sans arrêt en bas : le genou. Part d’en haut : on descend d’abord. |
 | `kb-windmill` | Moulin à vent | DESCENDS 3 s → TIENS 1 s → MONTE 3 s | 8 rép. côté droit → CHANGE DE CÔTÉ 5 s (« +5 s » si besoin) → 8 rép. côté gauche | 1 min 57 s | Part d’en haut : on descend d’abord. |

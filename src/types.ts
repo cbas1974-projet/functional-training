@@ -104,11 +104,14 @@ export type PatternMoteur =
  *  vertical   : on monte, on descend — le cas par défaut. Le métronome dit
  *               MONTE, DESCENDS, et TIENS là où se tient l'arrêt.
  *  circulaire : un cercle continu, sans haut ni bas (tour de taille, halo,
- *               tour du monde) : jamais d'arrêt. Une répétition est un tour
- *               complet, qui dure la montée plus la descente ; le métronome
- *               dit « TOURNE » d'un bout à l'autre du tour, et la bille fait
- *               le tour d'un cercle. On change de sens à mi-série : le
- *               métronome l'annonce, et la bille repart dans l'autre sens.
+ *               tour du monde) : jamais d'arrêt, et on change de sens à
+ *               mi-série, annoncé d'un bip, sans s'arrêter. Les trois cercles
+ *               du kettlebell se font au temps (`unite: 'secondes'`) : 30 s
+ *               dans un sens, puis 30 s dans l'autre (`SENS_CERCLE_SEC`),
+ *               chacun à son rythme, un décompte et pas de métronome. Un
+ *               cercle en répétitions, lui, compterait des tours : un tour
+ *               dure la montée plus la descente, le métronome dit « TOURNE »
+ *               d'un bout à l'autre du tour, et la bille en fait le tour.
  *  rotation   : d'un côté à l'autre (rotation russe, balayage, coups
  *               croisés, passage de la cloche sous le corps) : jamais
  *               d'arrêt. Une répétition va à droite (le temps de la montée)
@@ -174,6 +177,11 @@ export interface Exercice {
   /** 1 = accessible aux débutants, 2 = intermédiaire, 3 = avancé */
   niveauMin: 1 | 2 | 3;
   cotes: Cotes;
+  /** reps : au tempo, le métronome dicte et compte les répétitions.
+   *  secondes : au temps, un décompte et pas de métronome — les tenues, les
+   *  portages, le traîneau, les cercles du kettlebell et le relevé turc. Le
+   *  `reps` du bloc est alors une durée en secondes : par côté pour un
+   *  exercice unilatéral, dans chaque sens pour un cercle (`partiesAuTemps`). */
   unite: Unite;
   /** Mouvement balistique (saut, swing) : incompatible avec le tempo lent,
    *  exclu tant que l'option « explosifs » n'est pas activée. */
@@ -216,6 +224,7 @@ export interface Exercice {
   /** La forme de la répétition pour le métronome ; absente, verticale (on
    *  monte, on descend). Un mouvement circulaire ou en rotation ne s'arrête
    *  jamais, quels que soient le tempo, `pauseEnHaut` ou `sansPauseEnBas`.
+   *  Un cercle fait au temps change de sens à mi-série (`etatMaintien`).
    *  Voir `FormeMouvement` et `tempoPourExercice`. */
   mouvement?: Exclude<FormeMouvement, 'vertical'>;
   /** Les mots du métronome quand MONTE et DESCENDS ne disent pas le geste :

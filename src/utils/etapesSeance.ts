@@ -17,6 +17,7 @@ import {
   TRANSITION_SUPERSET_SEC,
   changementDeCoteSec,
   dureeSerieSec,
+  estCercleAuTemps,
   groupesDeBlocs,
   secondesParRep,
   tempoPourExercice,
@@ -119,15 +120,25 @@ export type Etape =
 
 export type EtapeTravail = Extract<Etape, { type: 'serie' | 'station' }>;
 
-/** État affiché par le métronome pendant une série ou une station. */
-/** Position tenue d'un côté puis de l'autre. */
+/** Une série au temps, partie par partie : une position tenue d'un côté
+ *  puis de l'autre (le côté), ou un cercle tourné dans un sens puis dans
+ *  l'autre (le sens). */
 export interface EtatMaintien {
-  cote: 'droit' | 'gauche';
-  /** Secondes restantes sur le côté en cours. */
+  /** Un exercice unilatéral : le côté en cours. */
+  cote?: 'droit' | 'gauche';
+  /** Un cercle au temps : le premier sens pendant la première moitié de la
+   *  série, l'autre sens ensuite. */
+  sens?: 'premier' | 'second';
+  /** Les premières secondes du second sens : on l'annonce, sans s'arrêter
+   *  (`ANNONCE_CHANGE_DE_SENS_SEC`). */
+  changeDeSens?: boolean;
+  /** Secondes restantes dans la partie en cours. */
   resteSec: number;
-  parCoteSec: number;
+  /** La durée d'une partie : un côté, ou un sens. */
+  partieSec: number;
 }
 
+/** État affiché par le métronome pendant une série ou une station. */
 export interface EtatMetronome {
   /** Répétition en cours, de 1 à `totalReps` (par côté si unilatéral). */
   rep: number;
@@ -719,23 +730,60 @@ export function indexApresExercice(etapes: Etape[], index: number): number {
 
 // ------------------------------------------------------------- Maintien
 
-/** Côté et temps restant d'une position tenue d'un seul côté puis de l'autre :
- *  la première moitié du maintien à droite, la seconde à gauche. Renvoie null
- *  pour tout le reste — une position bilatérale se tient d'un bloc, et un
- *  exercice compté en répétitions relève du métronome. */
-export function etatMaintien(etape: Etape, ecouleSec: number): EtatMaintien | null {
-  if (etape.type !== 'serie') return null;
+/** Un cercle au temps change de sens sans s'arrêter : « Change de sens ! »
+ *  reste affiché les premières secondes de l'autre sens, après un bip. */
+export const ANNONCE_CHANGE_DE_SENS_SEC = 3;
+
+/** Le changement de côté d'une série au temps de musculation (le relevé
+ *  turc), entre le côté droit et le côté gauche : ses 5 s
+ *  (`changementDeCoteSec`), plus ce que « +5 s » y a ajouté ; null sans
+ *  changement — une position de yoga ou un étirement enchaîne ses côtés. */
+function fenetreChangementAuTemps(
+  etape: Extract<Etape, { type: 'serie' }>,
+  exercice: Exercice,
+  prolongationSec: number,
+): { debutSec: number; dureeSec: number } | null {
+  const changement = changementDeCoteSec(exercice);
+  if (exercice.unite !== 'secondes' || changement <= 0 || etape.reps <= 0) return null;
+  return { debutSec: etape.reps, dureeSec: changement + Math.max(0, prolongationSec) };
+}
+
+/** Où en est une série au temps, partie par partie ; null pour tout le reste
+ *  — une tenue d'un bloc se lit au décompte de l'étape, et un exercice compté
+ *  en répétitions relève du métronome.
+ *  - Une position tenue d'un seul côté : la première moitié à droite, la
+ *    seconde à gauche. Un exercice de musculation (le relevé turc) change de
+ *    côté entre les deux (`etatChangementCote`, allongé de `prolongationSec`
+ *    par « +5 s ») : null pendant ce temps.
+ *  - Un cercle au temps (`estCercleAuTemps`) : `reps` secondes dans un sens,
+ *    puis autant dans l'autre, sans s'arrêter — la moitié de son temps pour
+ *    une station de circuit. Les premières secondes de l'autre sens portent
+ *    `changeDeSens`. */
+export function etatMaintien(etape: Etape, ecouleSec: number, prolongationSec = 0): EtatMaintien | null {
+  if (etape.type !== 'serie' && etape.type !== 'station') return null;
   const exercice = exerciceDeSeance(etape.exerciceId);
-  if (exercice.unite !== 'secondes' || exercice.cotes !== 'unilateral') return null;
+  if (exercice.unite !== 'secondes') return null;
+  const ecoule = Math.max(0, ecouleSec);
+
+  if (estCercleAuTemps(exercice)) {
+    const parSens = etape.type === 'serie' ? etape.reps : etape.dureeSec / 2;
+    if (parSens <= 0) return null;
+    if (ecoule < parSens) return { sens: 'premier', resteSec: parSens - ecoule, partieSec: parSens };
+    return {
+      sens: 'second',
+      ...(ecoule - parSens < ANNONCE_CHANGE_DE_SENS_SEC ? { changeDeSens: true } : {}),
+      resteSec: Math.max(0, parSens * 2 - ecoule),
+      partieSec: parSens,
+    };
+  }
+
+  if (etape.type !== 'serie' || exercice.cotes !== 'unilateral') return null;
   const parCote = etape.reps;
   if (parCote <= 0) return null;
-  const ecoule = Math.max(0, ecouleSec);
-  const premier = ecoule < parCote;
-  return {
-    cote: premier ? 'droit' : 'gauche',
-    resteSec: Math.max(0, premier ? parCote - ecoule : parCote * 2 - ecoule),
-    parCoteSec: parCote,
-  };
+  if (ecoule < parCote) return { cote: 'droit', resteSec: parCote - ecoule, partieSec: parCote };
+  const debutGauche = parCote + (fenetreChangementAuTemps(etape, exercice, prolongationSec)?.dureeSec ?? 0);
+  if (ecoule < debutGauche) return null;
+  return { cote: 'gauche', resteSec: Math.max(0, debutGauche + parCote - ecoule), partieSec: parCote };
 }
 
 // ------------------------------------------------------------- Métronome
@@ -802,6 +850,22 @@ function fenetreChangement(plan: PlanTravail, prolongationSec: number): { debutS
   return { debutSec: plan.cyclesDroit * plan.parRep, dureeSec: plan.changementSec + Math.max(0, prolongationSec) };
 }
 
+/** Le changement de côté d'une série ou d'une station : celui de ses
+ *  répétitions (`fenetreChangement`), ou, au temps, celui du relevé turc
+ *  (`fenetreChangementAuTemps`) ; null sans changement. */
+function fenetreChangementDeCote(
+  etape: Etape,
+  tempo: Tempo,
+  prolongationSec: number,
+): { debutSec: number; dureeSec: number } | null {
+  if (etape.type === 'serie') {
+    const exercice = exerciceDeSeance(etape.exerciceId);
+    if (exercice.unite === 'secondes') return fenetreChangementAuTemps(etape, exercice, prolongationSec);
+  }
+  const plan = planTravail(etape, tempo);
+  return plan ? fenetreChangement(plan, prolongationSec) : null;
+}
+
 /** État du métronome à `ecouleSec` secondes du début d'une série ou d'une
  *  station ; null quand il n'y a rien à compter (exercice au temps, autre
  *  étape, changement de côté en cours). Pour un exercice unilatéral, toutes
@@ -853,7 +917,8 @@ export function etatMetronome(etape: Etape, ecouleSec: number, tempo: Tempo, pro
 
 /** Le changement de côté d'une série unilatérale, s'il est en cours à
  *  `ecouleSec` secondes du début de l'étape : entre la dernière répétition du
- *  côté droit et la première du côté gauche, un compte à rebours de 5 s pour
+ *  côté droit et la première du côté gauche — ou, au temps, entre les deux
+ *  moitiés d'un relevé turc —, un compte à rebours de 5 s pour
  *  changer l'haltère de main, se rallonger de l'autre côté ou se replacer
  *  (`changementDeCoteSec`), plus ce que « +5 s » y ajoute
  *  (`prolongationSec`). Il fait partie de la série : ses 5 s y sont
@@ -864,8 +929,7 @@ export function etatChangementCote(
   tempo: Tempo,
   prolongationSec = 0,
 ): EtatChangementCote | null {
-  const plan = planTravail(etape, tempo);
-  const changement = plan ? fenetreChangement(plan, prolongationSec) : null;
+  const changement = fenetreChangementDeCote(etape, tempo, prolongationSec);
   if (!changement) return null;
   const ecoule = Math.max(0, ecouleSec);
   const fin = changement.debutSec + changement.dureeSec;

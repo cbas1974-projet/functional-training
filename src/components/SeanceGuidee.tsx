@@ -48,7 +48,7 @@ import type {
   PhaseTempo,
   Suivant,
 } from '../utils/etapesSeance';
-import { CHANGER_DE_COTE_SEC, estMobilite, tempoPourExercice } from '../utils/generateurSeance';
+import { CHANGER_DE_COTE_SEC, estCercleAuTemps, estMobilite, tempoPourExercice } from '../utils/generateurSeance';
 import { libelleTempo } from '../utils/formatage';
 import type { Essai } from '../utils/essai';
 import { autrePersonne, chargeDeSerie, chargeLeBasDuDos, etirementsPauseDe } from '../utils/programmeMois';
@@ -246,9 +246,10 @@ function estPosture(exercice: Exercice): boolean {
 }
 
 /** « 8 répétitions par côté », « 8 tours, changement de sens à mi-série »,
- *  « 40 s » */
+ *  « 40 s », « 30 s dans un sens, puis 30 s dans l’autre » */
 function libelleReps(exercice: Exercice, reps: number): string {
   if (exercice.unite === 'secondes') {
+    if (estCercleAuTemps(exercice)) return `${reps} s dans un sens, puis ${reps} s dans l’autre`;
     return exercice.cotes === 'unilateral' ? `${reps} s par côté` : `${reps} s`;
   }
   if (exercice.mouvement === 'circulaire') return `${pluriel(reps, 'tour')}, changement de sens à mi-série`;
@@ -485,7 +486,7 @@ export default function SeanceGuidee({
   // repart d'autant plus tard.
   const metro = etatMetronome(etape, ecoule, tempo, prolongation);
   const changement = etatChangementCote(etape, ecoule, tempo, prolongation);
-  const maintien = etatMaintien(etape, ecoule);
+  const maintien = etatMaintien(etape, ecoule, prolongation);
   // Échauffement et retour au calme : ceux de la séance (tapis ou rameur,
   // étirements du poster), sinon ceux d'usage.
   const mouvements: MouvementGuide[] | null =
@@ -570,6 +571,19 @@ export default function SeanceGuidee({
       }
     }
 
+    // Au temps : le côté gauche repart sur la cloche, après le changement de
+    // côté ; un cercle change de sens d'un bip, sans s'arrêter.
+    if (maintien) {
+      const cle = `${prefixe}${maintien.cote ?? maintien.sens}`;
+      if (ev.metronome !== cle) {
+        const memeEtape = ev.metronome.startsWith(prefixe);
+        const apresChangement = ev.metronome === CHANGEMENT;
+        ev.metronome = cle;
+        if (apresChangement) bellSound.playBell('start');
+        else if (memeEtape && maintien.sens === 'second') bellSound.playTick('pret');
+      }
+    }
+
     // Changement de mouvement d'échauffement ou d'étirement.
     if (mouvements) {
       const cle = `${prefixe}${indexMouvement}`;
@@ -591,7 +605,7 @@ export default function SeanceGuidee({
       const depart = maintenant - finPrevueMs <= TOLERANCE_FIN_MS ? finPrevueMs : maintenant;
       naviguer(index + 1, depart);
     }
-  }, [etat, estFin, etape, reste, prolongation, metro, changement, mouvements, indexMouvement, ecoule, dureeEff, maintenant, index, naviguer, enCommun]);
+  }, [etat, estFin, etape, reste, prolongation, metro, changement, maintien, mouvements, indexMouvement, ecoule, dureeEff, maintenant, index, naviguer, enCommun]);
 
   // À deux, la cloche sonne quand l'horloge commune entre dans une série, et
   // quand elle en sort.
@@ -1330,7 +1344,9 @@ function CorpsPret({ etape, exercice, resteSec, onDemarrer, onPasser }: CorpsPre
   const forme = formeDe(exercice);
   const depart =
     exercice.unite !== 'reps'
-      ? ''
+      ? estCercleAuTemps(exercice)
+        ? ' · à son rythme, sans métronome'
+        : ''
       : forme === 'circulaire'
         ? ' · un tour complet par répétition'
         : forme === 'rotation'
@@ -1506,6 +1522,8 @@ function CorpsTravail({
           guideVisuel={guideVisuel}
           lireEcouleSec={lireEcouleSec}
         />
+      ) : maintien?.sens ? (
+        <CercleAuTemps maintien={maintien} avecCercle={guideVisuel !== 'chiffre'} />
       ) : (
         // Exercice au temps : pas de répétition à rythmer, donc pas de bille,
         // seulement le décompte du maintien.
@@ -1514,7 +1532,7 @@ function CorpsTravail({
             className="text-xs font-bold uppercase tracking-[0.18em]"
             style={{ color: maintien ? 'var(--accent)' : 'var(--texte-discret)' }}
           >
-            {maintien
+            {maintien?.cote
               ? `Côté ${maintien.cote}`
               : etape.type === 'station' && etape.rythme === 'libre'
                 ? 'À fond jusqu’au signal'
@@ -1720,6 +1738,91 @@ function Metronome({ etape, metro, exercice, tempo, prolongationSec, guideVisuel
       )}
       <div className="chiffres mt-3 text-sm" style={{ color: 'var(--texte-discret)' }}>
         Tempo {libelleTempo(tempoExercice)} · sans rebond
+      </div>
+    </div>
+  );
+}
+
+/** Le cercle d'un cercle au temps : il se remplit dans le sens du geste —
+ *  celui des aiguilles d'une montre, puis l'autre après le changement de
+ *  sens —, au fil des secondes et non des tours : il montre le sens et le
+ *  temps qui reste, sans imposer de vitesse. */
+const RAYON_CERCLE_AU_TEMPS = 76;
+const TAILLE_CERCLE_AU_TEMPS = 176;
+
+interface CercleAuTempsProps {
+  maintien: EtatMaintien;
+  /** Le cercle autour du décompte ; sans lui, le décompte seul (guide « chiffre »). */
+  avecCercle: boolean;
+}
+
+/** Un cercle au kettlebell, au temps : « Dans un sens », « Change de sens ! »
+ *  sans s'arrêter, puis « Dans l'autre sens », avec le décompte de chaque
+ *  sens. Pas de bille : chacun tourne à son rythme. */
+function CercleAuTemps({ maintien, avecCercle }: CercleAuTempsProps) {
+  const second = maintien.sens === 'second';
+  const secondes = Math.ceil(maintien.resteSec);
+  const fait = maintien.partieSec > 0 ? Math.min(1, Math.max(0, 1 - maintien.resteSec / maintien.partieSec)) : 0;
+  const circonference = 2 * Math.PI * RAYON_CERCLE_AU_TEMPS;
+  const centre = TAILLE_CERCLE_AU_TEMPS / 2;
+  const chiffre = (
+    <span
+      className={`chiffres font-bold leading-none ${avecCercle ? 'text-7xl' : 'text-9xl'}`}
+      style={{ color: couleurCompte(maintien.resteSec, 'var(--montee)') }}
+    >
+      {secondes}
+    </span>
+  );
+  return (
+    <div className="select-none py-2 text-center">
+      {/* Une hauteur fixe : l'annonce, plus grande, ne fait pas sauter le cercle. */}
+      <div className="flex min-h-12 items-center justify-center" style={{ ...ARCHIVO, color: 'var(--accent)' }}>
+        {maintien.changeDeSens ? (
+          <span className="text-4xl font-extrabold tracking-[0.04em]">Change de sens !</span>
+        ) : (
+          <span className="text-2xl font-bold">{second ? '↺ Dans l’autre sens' : '↻ Dans un sens'}</span>
+        )}
+      </div>
+      {avecCercle ? (
+        <div
+          className="relative mx-auto mt-3"
+          style={{ width: TAILLE_CERCLE_AU_TEMPS, height: TAILLE_CERCLE_AU_TEMPS }}
+        >
+          <svg
+            // Un nouveau cercle pour l'autre sens : il repart vide, sans revenir en arrière.
+            key={maintien.sens}
+            aria-hidden="true"
+            width={TAILLE_CERCLE_AU_TEMPS}
+            height={TAILLE_CERCLE_AU_TEMPS}
+            viewBox={`0 0 ${TAILLE_CERCLE_AU_TEMPS} ${TAILLE_CERCLE_AU_TEMPS}`}
+            // L'autre sens : le même cercle, vu dans un miroir.
+            style={second ? { transform: 'scaleX(-1)' } : undefined}
+          >
+            <circle cx={centre} cy={centre} r={RAYON_CERCLE_AU_TEMPS} fill="none" stroke="var(--surface-haute)" strokeWidth={12} />
+            <circle
+              cx={centre}
+              cy={centre}
+              r={RAYON_CERCLE_AU_TEMPS}
+              fill="none"
+              stroke="var(--montee)"
+              strokeWidth={12}
+              strokeLinecap="round"
+              strokeDasharray={circonference.toFixed(2)}
+              strokeDashoffset={(circonference * (1 - fait)).toFixed(2)}
+              transform={`rotate(-90 ${centre} ${centre})`}
+              style={{ transition: 'stroke-dashoffset 0.25s linear' }}
+            />
+          </svg>
+          <div className="absolute inset-0 flex items-center justify-center">{chiffre}</div>
+        </div>
+      ) : (
+        <div className="mt-2">{chiffre}</div>
+      )}
+      <div className="mt-3 text-sm" style={{ color: 'var(--texte-discret)' }}>
+        {second ? 'secondes restantes' : 'secondes, puis on change de sens'}
+      </div>
+      <div className="mt-1 text-sm" style={{ color: 'var(--texte-discret)' }}>
+        À son rythme, sans s’arrêter
       </div>
     </div>
   );

@@ -734,9 +734,9 @@ describe('accord entre la durée estimée et les étapes', () => {
 
     // Le maintien dure deux fois la tenue annoncée : trente secondes par côté.
     expect(unilaterale.dureeSec).toBe(60);
-    expect(etatMaintien(unilaterale, 0)).toEqual({ cote: 'droit', resteSec: 30, parCoteSec: 30 });
+    expect(etatMaintien(unilaterale, 0)).toEqual({ cote: 'droit', resteSec: 30, partieSec: 30 });
     expect(etatMaintien(unilaterale, 29)).toMatchObject({ cote: 'droit' });
-    expect(etatMaintien(unilaterale, 30)).toEqual({ cote: 'gauche', resteSec: 30, parCoteSec: 30 });
+    expect(etatMaintien(unilaterale, 30)).toEqual({ cote: 'gauche', resteSec: 30, partieSec: 30 });
     expect(etatMaintien(unilaterale, 59)).toMatchObject({ cote: 'gauche', resteSec: 1 });
     // Pas de bille à suivre : une position ne se compte pas en répétitions.
     expect(etatMetronome(unilaterale, 10, PARAMETRES_PAR_DEFAUT.tempo)).toBeNull();

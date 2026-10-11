@@ -135,7 +135,7 @@ describe('où se tient l’arrêt du tempo', () => {
     // monte à la rencontre de la charge tient serré, à l'haltère comme au
     // kettlebell.
     'v-up', 'kb-v-up', 'kb-alternating-v-up', 'kb-x-crunch', 'kb-oblique-crunch', 'kb-straight-arm-sit', 'kb-pullover',
-    'hanging-leg-raise', 'kb-high-knee-crunch', 'bow-extension', 'kb-half-turkish-get-up', 'kb-turkish-get-up',
+    'hanging-leg-raise', 'kb-high-knee-crunch', 'bow-extension', 'kb-half-turkish-get-up',
   ];
   const tiennentEnHaut = () => EXERCICES.filter((e) => e.pauseEnHaut).map((e) => e.id);
   const musculationEnReps = EXERCICES.filter((e) => (e.famille ?? 'musculation') === 'musculation' && e.unite === 'reps');

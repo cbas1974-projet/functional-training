@@ -131,27 +131,36 @@ du dos, épaules, extérieur et intérieur de cuisse. Rien à taper.
   extensions triceps buste penché ; les deux machines des cuisses et leurs
   versions à l'haltère ; le mollet au sol ; les tirages en planche ; les
   exercices du ventre allongé, pendu ou debout bras en l'air (V-up, crunchs,
-  relevés, relevé turc). Le métronome dit MONTE, TIENS, DESCENDS ; la bille
-  s'arrête en haut du rail ; le tempo affiché pendant la série dit « + 1 s en
+  relevés, demi-relevé turc). Le métronome dit MONTE, TIENS, DESCENDS ; la
+  bille s'arrête en haut du rail ; le tempo affiché pendant la série dit « + 1 s en
   haut » ; la consigne « On tient en haut, muscles serrés » s'affiche avec les
   autres. L'arrêt change de place, pas de durée : la répétition et la séance
   durent autant. La liste est dans les données des exercices (`pauseEnHaut`).
 - **Ni haut ni bas : les cercles et les rotations.** Certains mouvements ne
   montent ni ne descendent. Le **tour de taille**, le **halo** et le **tour
-  du monde** au kettlebell font un **cercle** : le métronome dit « TOURNE »
-  pendant tout le tour, la bille fait le tour d'un cercle, et une répétition
-  est un tour complet, en 6 s au tempo par défaut (la montée plus la
-  descente). À mi-série, il annonce « Change de sens ! » d'un bip, sans
-  s'arrêter. Les **rotations russes**, le **balayage en position creuse**,
-  les **coups croisés assis en V** et le **passage de la cloche sous la
-  planche** vont **d'un côté à l'autre** : « À DROITE » 3 s, puis « À
-  GAUCHE » 3 s, et c'est une répétition ; la bille va et vient sur un rail
-  couché. Ni les uns ni les autres ne s'arrêtent jamais : pas de « TIENS ».
-  Leur consigne : « Mouvement continu, sans arrêt : une répétition, un tour
-  complet » ou « D'un côté à l'autre, sans arrêt : une répétition, à droite
-  puis à gauche ». La forme est dans les données des exercices
-  (`mouvement`) ; elle n'a rien à voir avec le schéma de mouvement, qui sert
-  à équilibrer la séance.
+  du monde** au kettlebell font un **cercle**, et ils se font **au temps**,
+  pas au tempo — « pas facile d'y aller à 3/3 », a dit Speedy : **30 s dans
+  un sens**, puis l'écran dit **« Change de sens ! »** d'un bip, sans
+  s'arrêter, et **30 s dans l'autre sens**. Une minute par série, la même
+  pour les deux. Pas de bille ni de métronome : un décompte, dans un cercle
+  qui se remplit dans le sens du geste, et chacun tourne à son rythme. Le
+  poids se note comme avant, et « lourd, correct, léger » le fait monter ou
+  descendre. L'essai les raccourcit comme les autres exercices au temps :
+  20 s dans chaque sens. Les **rotations russes**, le **balayage en position
+  creuse**, les **coups croisés assis en V** et le **passage de la cloche
+  sous la planche** vont **d'un côté à l'autre**, au tempo : « À DROITE »
+  3 s, puis « À GAUCHE » 3 s, et c'est une répétition ; la bille va et vient
+  sur un rail couché, sans jamais s'arrêter. Leur consigne : « D'un côté à
+  l'autre, sans arrêt : une répétition, à droite puis à gauche ». La forme
+  est dans les données des exercices (`mouvement`) ; elle n'a rien à voir
+  avec le schéma de mouvement, qui sert à équilibrer la séance.
+- **Au temps ou au tempo ?** Le relevé turc complet (avancé, hors
+  programme) passe au temps lui aussi : un relevé lent de chaque côté, avec
+  le changement de côté entre les deux. Pour les autres exercices qui
+  pourraient se faire au temps — rotations russes, planches, coups croisés,
+  mouvements explosifs… —, la réponse et sa raison sont en tête du
+  [tableau des mouvements](docs/mouvements.md#au-temps-ou-au-tempo-) :
+  certains gardent le tempo, d'autres attendent la décision de Sébastien.
 - **Changer de côté.** Un exercice unilatéral fait toutes ses répétitions du
   côté droit, puis du côté gauche. Entre les deux, l'écran dit **« CHANGE DE
   CÔTÉ »** et compte **5 secondes** — « Côté gauche dans 5 s » —, avec les
@@ -161,13 +170,18 @@ du dos, épaules, extérieur et intérieur de cuisse. Rien à taper.
   pas les « +5 s ». À deux, « +5 s » arrête l'horloge commune pour les deux,
   comme « +15 s » au repos — et c'est refusé si l'autre est en pleine série.
   Un exercice alterné (un côté par répétition) n'a pas de changement de côté.
+  Le relevé turc, fait au temps, change de côté de la même façon ; une
+  position de yoga ou un étirement enchaîne ses deux côtés.
 - **Le tableau des mouvements**, [docs/mouvements.md](docs/mouvements.md) :
   pour chacun des 151 exercices de musculation, ce que dit le métronome
-  pendant une répétition (« MONTE 3 s → DESCENDS 3 s → TIENS 1 s »), comment
-  se font les côtés, la durée d'une série de 8, et pourquoi quand ce n'est pas
-  le cas par défaut. Il est produit par le code lui-même (`npm run
-  mouvements`) et un test vérifie qu'il le suit : c'est la liste à relire pour
-  trouver un mouvement qui sonne faux.
+  pendant une répétition (« MONTE 3 s → DESCENDS 3 s → TIENS 1 s ») ou, au
+  temps, le décompte (« 30 s dans un sens → « Change de sens ! » → 30 s dans
+  l'autre »), comment se font les côtés, la durée d'une série de 8, et
+  pourquoi quand ce n'est pas le cas par défaut. En tête, « Au temps ou au
+  tempo ? » : exercice par exercice, ce qui gagnerait à se faire au temps.
+  Il est produit par le code lui-même (`npm run mouvements`) et un test
+  vérifie qu'il le suit : c'est la liste à relire pour trouver un mouvement
+  qui sonne faux.
 - **Mis de côté, pour les deux**, tant que la jambe de Speedy n'a pas été
   examinée par un professionnel : elle lui donne parfois l'impression de
   « lâcher », ses bandelettes ilio-tibiales sont fragiles et son bas du dos
@@ -530,9 +544,10 @@ exercice par un autre de la même zone.
   secondes, et comptage automatique des répétitions. Pendant la pause en bas,
   la bille s'arrête au pied du rail — sauf aux exercices sans arrêt en bas, où
   elle repart aussitôt, et à ceux qui tiennent en haut, où elle s'arrête en
-  haut du rail, après la montée (MONTE, TIENS, DESCENDS). Un cercle dit
-  « TOURNE » et sa bille fait le tour d'un cercle ; une rotation dit « À
-  DROITE », « À GAUCHE », et sa bille va et vient sur un rail couché. La
+  haut du rail, après la montée (MONTE, TIENS, DESCENDS). Une rotation dit
+  « À DROITE », « À GAUCHE », et sa bille va et vient sur un rail couché. Un
+  cercle au kettlebell, au temps, n'a pas de bille : « Dans un sens », le
+  décompte, « Change de sens ! » d'un bip, puis « Dans l'autre sens ». La
   rotation externe coudes au corps dit « OUVRE », « FERME ». Les exercices
   unilatéraux annoncent le côté droit puis le côté gauche, avec 5 s pour
   changer de côté entre les deux (« +5 s » si besoin).
@@ -937,7 +952,7 @@ src/
 ├── utils/
 │   ├── generateurSeance.ts       # Choix des exercices et calcul des volumes
 │   ├── etapesSeance.ts           # Machine à étapes de la séance guidée, métronome, changement de côté
-│   ├── tableauMouvements.ts      # Le tableau des mouvements (docs/mouvements.md), lu dans le métronome
+│   ├── tableauMouvements.ts      # Le tableau des mouvements (docs/mouvements.md), lu dans le métronome, et « Au temps ou au tempo ? »
 │   ├── programmeMois.ts          # Composition du programme par paires, calendrier A/B, charges, lien
 │   ├── essai.ts                  # La séance d'essai : la séance du jour en dix minutes, sans rien garder, et sa séance commune numérotée
 │   ├── statistiques.ts           # Fréquence d'un exercice, charges par série, charge totale
@@ -1001,11 +1016,14 @@ Une répétition compte la montée, la descente et l'arrêt en bas, sauf pour le
 exercices sans arrêt en bas, dont l'arrêt vaut 0. Aux exercices qui tiennent en
 haut (`pauseEnHaut`), l'arrêt garde sa durée et vient juste après la montée :
 l'ordre des phases change, pas la durée — un exercice qui part d'en haut
-descend, remonte, puis tient. Un cercle, une rotation ou un mouvement
-explosif n'ont pas d'arrêt du tout : leur répétition dure la montée plus la
-descente. Une série unilatérale compte ses répétitions des deux côtés, plus
-les 5 s du changement de côté (`changementDeCoteSec`), qui font partie de la
-série : la séance d'essai et l'horloge commune les comptent de la même façon.
+descend, remonte, puis tient. Une rotation ou un mouvement explosif n'ont
+pas d'arrêt du tout : leur répétition dure la montée plus la descente. Une
+série unilatérale compte ses répétitions des deux côtés, plus les 5 s du
+changement de côté (`changementDeCoteSec`), qui font partie de la série : la
+séance d'essai et l'horloge commune les comptent de la même façon. Un
+exercice au temps dure ses secondes, par côté ou dans chaque sens : un
+cercle, deux fois 30 s (`SENS_CERCLE_SEC`) ; le relevé turc, ses deux côtés
+et les 5 s entre les deux.
 « +5 s » allonge la série en cours, comme « +15 s » allonge un repos, sans
 changer la durée annoncée. Le générateur, les étapes de la séance guidée,
 le métronome et la bille lisent tous le même tempo (`tempoPourExercice`), si

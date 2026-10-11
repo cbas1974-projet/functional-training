@@ -21,7 +21,7 @@ import type {
 import { EXERCICES_PAR_ID, NOM_MUSCLE, cheminImage } from '../data/exercices';
 import { GUIDES_VISUELS, TEMPOS, UNITES_POIDS } from '../data/parametres';
 import { OBJECTIFS_MUSCULAIRES } from '../utils/muscles';
-import { formaterDuree, groupesDeBlocs } from '../utils/generateurSeance';
+import { formaterDuree, groupesDeBlocs, precisionAuTemps } from '../utils/generateurSeance';
 import { formaterDateFr, graineAleatoire, memeTempo } from '../utils/formatage';
 import { SUFFIXE_UNITE, chargeTotale, uniteDeSeance } from '../utils/statistiques';
 import { bellSound } from '../utils/sounds';
@@ -161,12 +161,12 @@ const dateLongue = (date: Date) =>
 const musclesCibles = (exercice: Exercice) =>
   (exercice.musclesPrincipaux ?? []).map((muscle) => NOM_MUSCLE[muscle]).join(', ');
 
-/** « 3 × 8 », « 2 × 8 par côté », « 3 × 30 s ». */
+/** « 3 × 8 », « 2 × 8 par côté », « 3 × 30 s », « 3 × 30 s dans chaque sens ». */
 function volume(bloc: Pick<BlocSeries, 'series' | 'reps'>, exercice: Exercice): string {
-  const repetitions = exercice.unite === 'secondes' ? `${bloc.reps} s` : `${bloc.reps}`;
+  if (exercice.unite === 'secondes') return `${bloc.series} × ${bloc.reps} s${precisionAuTemps(exercice)}`;
   const cotes =
     exercice.cotes === 'unilateral' ? ' par côté' : exercice.cotes === 'alterne' ? ' en alternant' : '';
-  return `${bloc.series} × ${repetitions}${cotes}`;
+  return `${bloc.series} × ${bloc.reps}${cotes}`;
 }
 
 /** « 1 min 30 », « 45 s ». */

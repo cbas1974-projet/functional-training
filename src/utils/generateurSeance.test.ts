@@ -19,9 +19,11 @@ import type {
 } from '../types';
 import {
   CHANGER_DE_COTE_SEC,
+  SENS_CERCLE_SEC,
   analyserSeance,
   cleMouvement,
   dureeSerieSec,
+  estCercleAuTemps,
   groupesDeBlocs,
   estimerDureeSec,
   exercicesDisponibles,
@@ -470,17 +472,17 @@ describe('genererSeance : toutes les durées, niveaux et formats', () => {
     expect(seance.circuit?.stations).toHaveLength(6);
   });
 
-  it('donne aux exercices au temps une tenue en secondes propre au niveau', () => {
+  it('donne aux exercices au temps une tenue en secondes propre au niveau, et aux cercles 30 s dans chaque sens', () => {
     const tenues: Record<Niveau, number> = { debutant: 30, intermediaire: 40, avance: 45 };
     for (const niveau of NIVEAUX) {
       for (let graine = 1; graine <= 40; graine += 1) {
-        const seance = genererSeance(
-          avec({ niveau: niveau.id, dureeMinutes: 45 }),
-          graine,
-        );
-        for (const bloc of seance.blocs) {
-          if (EXERCICES_PAR_ID[bloc.exerciceId].unite === 'secondes') {
-            expect(bloc.reps).toBe(tenues[niveau.id]);
+        for (const materiels of [['halteres'], ['halteres', 'kettlebell']] as Materiel[][]) {
+          const seance = genererSeance(avec({ niveau: niveau.id, dureeMinutes: 45, materiels }), graine);
+          for (const bloc of seance.blocs) {
+            const exercice = EXERCICES_PAR_ID[bloc.exerciceId];
+            if (exercice.unite === 'secondes') {
+              expect(bloc.reps).toBe(estCercleAuTemps(exercice) ? SENS_CERCLE_SEC : tenues[niveau.id]);
+            }
           }
         }
       }
@@ -628,8 +630,9 @@ describe('remplacerExercice', () => {
         const remplacant = EXERCICES_PAR_ID[nouveau.exerciceId];
         const remplace = EXERCICES_PAR_ID[bloc.exerciceId];
         if (remplacant.unite === 'secondes') {
-          // Un exercice au temps reçoit la durée de tenue du niveau.
-          expect(nouveau.reps).toBe(40);
+          // Un exercice au temps reçoit la durée de tenue du niveau ; un
+          // cercle, 30 s dans chaque sens.
+          expect(nouveau.reps).toBe(estCercleAuTemps(remplacant) ? SENS_CERCLE_SEC : 40);
         } else if (remplace.unite === 'secondes') {
           // On passe du temps aux répétitions : ce sont celles demandées.
           expect(nouveau.reps).toBe(8);

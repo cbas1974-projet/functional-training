@@ -228,7 +228,8 @@ export const EXERCICES_KETTLEBELL: Exercice[] = [
     pattern: 'anti-rotation',
     niveauMin: 1,
     cotes: 'alterne',
-    unite: 'reps',
+    // Au temps : 30 s dans un sens, puis 30 s dans l’autre (`SENS_CERCLE_SEC`).
+    unite: 'secondes',
     mouvement: 'circulaire',
     position: 'Debout, pieds largeur de bassin',
     pointsAttention: [
@@ -593,11 +594,12 @@ export const EXERCICES_KETTLEBELL: Exercice[] = [
     pattern: 'anti-rotation',
     niveauMin: 3,
     cotes: 'unilateral',
-    unite: 'reps',
-    // Allongé, on se repose : on tient debout, bras chargé vertical.
-    pauseEnHaut: true,
+    // Au temps, pas au tempo : un relevé complet — huit temps, et retour —
+    // prend bien plus que 3 s. Un côté, le changement de côté, puis l'autre.
+    unite: 'secondes',
     position: 'Allongé, kettlebell bras tendu vers le plafond',
     pointsAttention: [
+      'Au temps, de chaque côté : un relevé lent, aller et retour, sans se presser.',
       'Huit temps, chacun marqué : coude, main, pont, jambe, genou, debout — et retour.',
       'Commencer sans charge, ou avec une chaussure posée sur le poing.',
       'Le bras chargé reste vertical tout du long.',
@@ -1207,7 +1209,8 @@ export const EXERCICES_KETTLEBELL: Exercice[] = [
     pattern: 'isolation',
     niveauMin: 1,
     cotes: 'alterne',
-    unite: 'reps',
+    // Au temps : 30 s dans un sens, puis 30 s dans l’autre (`SENS_CERCLE_SEC`).
+    unite: 'secondes',
     mouvement: 'circulaire',
     position: 'À genoux, kettlebell tenu par les cornes',
     pointsAttention: [
@@ -1394,7 +1397,8 @@ export const EXERCICES_KETTLEBELL: Exercice[] = [
     pattern: 'squat',
     niveauMin: 2,
     cotes: 'alterne',
-    unite: 'reps',
+    // Au temps : 30 s dans un sens, puis 30 s dans l’autre (`SENS_CERCLE_SEC`).
+    unite: 'secondes',
     genouAMenager: true,
     mouvement: 'circulaire',
     position: 'Squat large tenu, kettlebell dans une main',

@@ -101,8 +101,19 @@ Claude, de son côté :
   DESCENDS 3 s → TIENS 1 s »), les côtés, la durée d'une série de 8, et
   pourquoi. Il sort du code (`npm run mouvements`), un test vérifie qu'il le
   suit. **À relire par Sébastien**, pour signaler ce qui sonne encore faux.
-- Reste connu : le relevé turc complet (avancé, hors programme) prend bien
-  plus que 3 s par montée ; le tempo n'y est pas adapté.
+- **Les cercles au temps**, à la demande de Sébastien (« pas facile d'y
+  aller à 3/3 » au halo) : le halo, le tour de taille et le tour du monde se
+  font maintenant **30 s dans un sens, « Change de sens ! » d'un bip sans
+  s'arrêter, 30 s dans l'autre** — une minute par série, la même pour les
+  deux, sans métronome (un décompte dans un cercle qui se remplit). Le poids
+  se note et « lourd, correct, léger » le règle comme avant ; l'essai fait
+  20 s + 20 s. Le relevé turc complet (avancé, hors programme) passe au temps
+  lui aussi, un côté puis l'autre avec les 5 s pour changer de côté. Les
+  autres candidats sont passés en revue en tête de `docs/mouvements.md`
+  (« Au temps ou au tempo ? ») : **à décider par Sébastien**, les coups
+  croisés assis en V et les mouvements explosifs ; les rotations russes, les
+  planches et les rowings en planche gardent le tempo. Le programme n'est pas
+  recomposé : seules les séries de cercles passent de 48 s à 1 min.
 
 ## Séance du 10 octobre 2026
 

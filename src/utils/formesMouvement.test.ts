@@ -1,6 +1,13 @@
-import { describe, expect, it } from 'vitest';
+import { afterAll, describe, expect, it } from 'vitest';
 import type { Exercice, Seance, Tempo } from '../types';
-import { CONSIGNE_CIRCULAIRE, CONSIGNE_ROTATION, EXERCICES, EXERCICES_PAR_ID, consignesDe } from '../data/exercices';
+import {
+  CONSIGNE_CERCLE_AU_TEMPS,
+  CONSIGNE_CIRCULAIRE,
+  CONSIGNE_ROTATION,
+  EXERCICES,
+  EXERCICES_PAR_ID,
+  consignesDe,
+} from '../data/exercices';
 import { PARAMETRES_PAR_DEFAUT } from '../data/parametres';
 import {
   construireEtapes,
@@ -40,6 +47,17 @@ const serie = (exercice: Exercice, reps: number, tempo: Tempo = TEMPO): Etape =>
   reps,
   dureeSec: dureeSerieSec(exercice, reps, tempo),
 });
+/** Un cercle en répétitions, inscrit dans la bibliothèque le temps de ces
+ *  tests : les trois cercles du kettlebell se font au temps, mais le
+ *  métronome sait toujours compter des tours. */
+const cercleEnReps = (id: string): Exercice => {
+  const exercice: Exercice = { ...EXERCICES_PAR_ID[id], id: `${id}-en-reps`, unite: 'reps' };
+  EXERCICES_PAR_ID[exercice.id] = exercice;
+  return exercice;
+};
+afterAll(() => {
+  for (const id of Object.keys(EXERCICES_PAR_ID)) if (id.endsWith('-en-reps')) delete EXERCICES_PAR_ID[id];
+});
 /** Ce que montre le métronome, quart de seconde par quart de seconde. */
 const lecture = (etape: Etape, tempo: Tempo = TEMPO) => {
   const instants = [];
@@ -73,10 +91,10 @@ describe('la forme du mouvement', () => {
     expect(verticauxEnRotation.sort()).toEqual(['kb-golfer-swing', 'kb-side-swing', 'kb-wood-chop', 'plank-t', 'woodchop'].sort());
   });
 
-  it('ne donne une forme qu’à des exercices de musculation en répétitions, lents, sans arrêt ni départ propre', () => {
+  it('ne donne une forme qu’à des exercices de musculation lents, sans arrêt ni départ propre : les cercles au temps, les rotations au tempo', () => {
     for (const exercice of EXERCICES.filter((e) => e.mouvement)) {
       expect(exercice.famille ?? 'musculation', exercice.id).toBe('musculation');
-      expect(exercice.unite, exercice.id).toBe('reps');
+      expect(exercice.unite, exercice.id).toBe(exercice.mouvement === 'circulaire' ? 'secondes' : 'reps');
       expect(exercice.explosif, exercice.id).toBeUndefined();
       expect([exercice.pauseEnHaut, exercice.sansPauseEnBas, exercice.premierePhase], exercice.id).toEqual([
         undefined,
@@ -89,7 +107,7 @@ describe('la forme du mouvement', () => {
 
   it('ne s’arrête jamais en cercle ni d’un côté à l’autre, quels que soient le tempo et les marques d’arrêt', () => {
     for (const id of [...CIRCULAIRES, ...ROTATIONS]) {
-      const exercice = EXERCICES_PAR_ID[id];
+      const exercice = CIRCULAIRES.includes(id) ? cercleEnReps(id) : EXERCICES_PAR_ID[id];
       // Même prêté avec un arrêt en haut, ou sans arrêt en bas : aucun arrêt.
       for (const prete of [exercice, { ...exercice, pauseEnHaut: true }, { ...exercice, sansPauseEnBas: true }]) {
         for (const tempo of TEMPOS) {
@@ -106,15 +124,17 @@ describe('la forme du mouvement', () => {
     }
   });
 
-  it('un cercle : un seul geste, TOURNE, un tour complet le temps de la montée et de la descente', () => {
-    const tour = tempoPourExercice(EXERCICES_PAR_ID['kb-around-the-body'], TEMPO);
+  it('un cercle en répétitions : un seul geste, TOURNE, un tour complet le temps de la montée et de la descente', () => {
+    const tour = tempoPourExercice(cercleEnReps('kb-around-the-body'), TEMPO);
     expect(phasesDeRep(tour, 'monte')).toEqual([{ phase: 'tourne', dureeSec: 6 }]);
     expect(phasesDeRep(tour, 'descend')).toEqual([{ phase: 'tourne', dureeSec: 6 }]);
     expect(motDePhase('tourne', EXERCICES_PAR_ID['kb-halo'])).toBe('TOURNE');
     expect(libelleTempo(tour)).toBe('6 s par tour');
     // La bille fait le tour sans s'arrêter : elle avance du début à la fin du tour.
     expect([0, 0.25, 0.5, 1].map((p) => positionBille('tourne', p))).toEqual([0, 0.25, 0.5, 1]);
-    expect(consignesDe(EXERCICES_PAR_ID['kb-around-the-body'])[0]).toBe(CONSIGNE_CIRCULAIRE);
+    expect(consignesDe(cercleEnReps('kb-around-the-body'))[0]).toBe(CONSIGNE_CIRCULAIRE);
+    // Au temps, la consigne dit le temps, pas le tour.
+    expect(consignesDe(EXERCICES_PAR_ID['kb-around-the-body'])[0]).toBe(CONSIGNE_CERCLE_AU_TEMPS);
   });
 
   it('un va-et-vient : À DROITE le temps de la montée, puis À GAUCHE le temps de la descente', () => {
@@ -140,8 +160,8 @@ describe('la forme du mouvement', () => {
 });
 
 describe('le métronome d’une série, selon la forme', () => {
-  it('le tour de taille : TOURNE, huit tours de 6 s, quatre dans un sens, quatre dans l’autre, annoncé sans s’arrêter', () => {
-    const exercice = EXERCICES_PAR_ID['kb-around-the-body'];
+  it('un cercle en répétitions : TOURNE, huit tours de 6 s, quatre dans un sens, quatre dans l’autre, annoncé sans s’arrêter', () => {
+    const exercice = cercleEnReps('kb-around-the-body');
     const etape = serie(exercice, 8);
     expect(etape.dureeSec).toBe(48);
     const instants = lecture(etape);
@@ -157,7 +177,7 @@ describe('le métronome d’une série, selon la forme', () => {
     expect(etatMetronome(etape, 47.9, TEMPO)).toMatchObject({ rep: 8, sens: 'second' });
     expect(etatChangementCote(etape, 24, TEMPO)).toBeNull();
     // Un nombre impair : le premier sens prend le tour de plus.
-    expect(etatMetronome(serie(EXERCICES_PAR_ID['kb-halo'], 5), 18.5, TEMPO)).toMatchObject({ rep: 4, sens: 'second', changeDeSens: true });
+    expect(etatMetronome(serie(cercleEnReps('kb-halo'), 5), 18.5, TEMPO)).toMatchObject({ rep: 4, sens: 'second', changeDeSens: true });
   });
 
   it('la rotation russe : À DROITE 3 s, À GAUCHE 3 s, huit fois, sans arrêt ni côté à annoncer', () => {
@@ -173,9 +193,13 @@ describe('le métronome d’une série, selon la forme', () => {
   });
 
   it('dure exactement ce que la séance annonce, cercles, rotations et unilatéraux compris', () => {
-    const blocs = ['kb-halo', 'russian-twist', 'single-arm-row', 'fire-hydrant', 'kb-around-the-world', 'goblet-squat'].map(
+    const enReps = cercleEnReps('kb-halo').id;
+    const blocs = [enReps, 'russian-twist', 'single-arm-row', 'fire-hydrant', 'goblet-squat'].map(
       (exerciceId) => ({ exerciceId, series: 2, reps: 8, reposSec: 45 }),
     );
+    // Les cercles du kettlebell, au temps : 30 s dans chaque sens.
+    blocs.push({ exerciceId: 'kb-halo', series: 2, reps: 30, reposSec: 45 });
+    blocs.push({ exerciceId: 'kb-around-the-world', series: 2, reps: 30, reposSec: 45 });
     for (const tempo of TEMPOS) {
       const seance: Seance = {
         id: 'formes',
@@ -190,9 +214,13 @@ describe('le métronome d’une série, selon la forme', () => {
       };
       const etapes = construireEtapes(seance);
       expect(dureeTotaleSec(etapes)).toBe(estimerDureeSec(seance));
-      // Le cercle et la rotation : montée + descente par répétition, rien de plus.
-      for (const id of ['kb-halo', 'russian-twist']) {
+      // Le cercle en répétitions et la rotation : montée + descente par répétition, rien de plus.
+      for (const id of [enReps, 'russian-twist']) {
         expect(etapes.find((e) => e.type === 'serie' && e.exerciceId === id)?.dureeSec, id).toBe(8 * (tempo.monteeSec + tempo.descenteSec));
+      }
+      // Au temps, une minute, quel que soit le tempo.
+      for (const id of ['kb-halo', 'kb-around-the-world']) {
+        expect(etapes.find((e) => e.type === 'serie' && e.exerciceId === id)?.dureeSec, id).toBe(60);
       }
     }
   });
@@ -201,12 +229,17 @@ describe('le métronome d’une série, selon la forme', () => {
 describe('le changement de côté', () => {
   const rowing = EXERCICES_PAR_ID['single-arm-row'];
 
-  it('prend 5 s entre les deux côtés de chaque série unilatérale en répétitions, et nulle part ailleurs', () => {
+  it('prend 5 s entre les deux côtés de chaque série unilatérale de musculation, et nulle part ailleurs', () => {
     expect(CHANGER_DE_COTE_SEC).toBe(5);
     for (const exercice of EXERCICES) {
-      const attendu = exercice.cotes === 'unilateral' && exercice.unite === 'reps' ? 5 : 0;
+      const musculation = (exercice.famille ?? 'musculation') === 'musculation';
+      const attendu = exercice.cotes === 'unilateral' && musculation ? 5 : 0;
       expect(changementDeCoteSec(exercice), exercice.id).toBe(attendu);
     }
+    // En répétitions, et une fois au temps : le relevé turc.
+    expect(EXERCICES.filter((e) => changementDeCoteSec(e) > 0 && e.unite === 'secondes').map((e) => e.id)).toEqual([
+      'kb-turkish-get-up',
+    ]);
     // Les positions tenues d'un côté puis de l'autre enchaînent, comme avant.
     expect(dureeSerieSec(EXERCICES_PAR_ID['yoga-guerrier-2'], 30, TEMPO)).toBe(60);
     // Une série unilatérale : ses répétitions des deux côtés, et les 5 s.
@@ -262,7 +295,7 @@ describe('le changement de côté', () => {
       retourCalmeSec: 120,
       blocs: [
         { exerciceId: 'single-arm-row', series: 3, reps: 8, reposSec: 60 },
-        { exerciceId: 'kb-halo', series: 3, reps: 8, reposSec: 60 },
+        { exerciceId: 'kb-halo', series: 3, reps: 30, reposSec: 60 },
       ],
       circuit: null,
       dureeEstimeeSec: 0,

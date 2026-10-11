@@ -29,7 +29,7 @@ import { EXERCICES, EXERCICES_PAR_ID, NOM_MUSCLE } from '../data/exercices';
 import { TEMPOS } from '../data/parametres';
 import { construireEtapes, dureeTotaleSec } from './etapesSeance';
 import { memeTempo } from './formatage';
-import { cleMouvement, familleDe } from './generateurSeance';
+import { cleMouvement, familleDe, secondesAuTemps } from './generateurSeance';
 import { exercicesPourMuscles, musclesDe } from './muscles';
 import { CRAN_CHARGE as CRAN, convertirPoids, uniteDeSeance } from './statistiques';
 import { ajustementDeCharge, avecCran } from './ressenti';
@@ -156,7 +156,8 @@ export const REPOS_PETITS_SEC = 60;
 export const REPOS_TRAP_BAR_SEC = 120;
 /** Les deux exercices d'une paire : le temps de passer de l'un à l'autre. */
 export const TRANSITION_LIEN_SEC = 15;
-/** Tenue des exercices au temps : planche, marche du fermier. */
+/** Tenue des exercices au temps : planche, marche du fermier. Un cercle au
+ *  kettlebell tourne `SENS_CERCLE_SEC` dans chaque sens (`secondesAuTemps`). */
 const TENUE_SEC = 30;
 /** On tire parmi les meilleurs candidats d'un emplacement : deux programmes
  *  ne se ressemblent pas tous, sans jamais prendre un exercice hors sujet. */
@@ -1193,6 +1194,14 @@ export function reposDe(exercice: Exercice, seance: Pick<SeanceDuMois, 'type'>):
 export const reposDePaire = (paire: string[], seance: Pick<SeanceDuMois, 'type'>): number =>
   Math.max(REPOS_PETITS_SEC, ...paire.filter(estConnu).map((id) => reposDe(EXERCICES_PAR_ID[id], seance)));
 
+/** La charge s'y règle d'une fois sur l'autre : le cran de la semaine dure,
+ *  celui du ressenti, la dernière série légère du mardi. Les exercices en
+ *  répétitions, et les cercles au kettlebell — faits au temps, mais la cloche
+ *  reste une charge qu'on monte ou qu'on baisse, comme avant. Pas les
+ *  portages, le traîneau ni les tenues : là, c'est le temps qui compte. */
+export const chargeReglable = (exercice: Exercice): boolean =>
+  exercice.unite === 'reps' || exercice.mouvement === 'circulaire';
+
 /** La séance du programme, mise aux réglages de la personne : c'est elle que
  *  déroule la séance guidée — tapis ou rameur, bille, répétitions comptées,
  *  charges notées, étirements. À deux, chaque exercice porte aussi le volume
@@ -1218,13 +1227,15 @@ export function seancePourPersonne(
     const habituelles = qui
       ? (contexte.reps?.[qui] ?? REPS_PAR_DEFAUT[qui])
       : (parametres.repsParSerie ?? REPS_PAR_DEFAUT.sebastien);
-    const reps = exercice.unite === 'secondes' ? TENUE_SEC : habituelles + enPlus;
+    // Au temps, le même temps pour les deux : les répétitions de chacun, et
+    // les deux de plus de la semaine dure, ne valent qu'en répétitions.
+    const reps = exercice.unite === 'secondes' ? secondesAuTemps(exercice, TENUE_SEC) : habituelles + enPlus;
     return finale ? volumeFinale(exercice, series, reps) : { series, reps };
   };
 
   const blocDe = (exercice: Exercice, finale: boolean): BlocSeries => {
     const mien = volumeDe(moi, exercice, finale);
-    const charge = exercice.unite === 'reps';
+    const charge = chargeReglable(exercice);
     return {
       exerciceId: exercice.id,
       series: mien.series,

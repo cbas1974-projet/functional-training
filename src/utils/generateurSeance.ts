@@ -466,31 +466,69 @@ export function secondesParRep(tempo: Tempo, exercice?: ReglesTempo): number {
 export const CHANGER_DE_COTE_SEC = 5;
 
 /** Le temps de changer de côté entre les deux moitiés d'une série
- *  unilatérale en répétitions ; 0 pour tout le reste — un exercice bilatéral
- *  ou alterné ne change jamais de côté d'un bloc, et une position tenue au
- *  temps (yoga, étirement) enchaîne ses deux côtés. Il compte dans la durée
- *  de la série (`dureeSerieSec`), donc dans la durée annoncée, les étapes,
- *  l'essai et l'horloge commune. */
-export function changementDeCoteSec(exercice: Pick<Exercice, 'cotes' | 'unite'>): number {
-  return exercice.cotes === 'unilateral' && exercice.unite === 'reps' ? CHANGER_DE_COTE_SEC : 0;
+ *  unilatérale de musculation, en répétitions comme au temps (le relevé
+ *  turc) ; 0 pour tout le reste — un exercice bilatéral ou alterné ne change
+ *  jamais de côté d'un bloc, et une position de yoga ou un étirement enchaîne
+ *  ses deux côtés. Il compte dans la durée de la série (`dureeSerieSec`),
+ *  donc dans la durée annoncée, les étapes, l'essai et l'horloge commune. */
+export function changementDeCoteSec(exercice: Pick<Exercice, 'cotes' | 'famille'>): number {
+  return exercice.cotes === 'unilateral' && (exercice.famille ?? 'musculation') === 'musculation'
+    ? CHANGER_DE_COTE_SEC
+    : 0;
+}
+
+/** Un cercle au kettlebell (tour de taille, halo, tour du monde) se fait au
+ *  temps, pas au tempo : tant de secondes dans un sens, « Change de sens ! »
+ *  d'un bip, sans s'arrêter, puis autant dans l'autre sens — 30 s + 30 s, une
+ *  minute par série, pour les deux. Chacun tourne à son rythme : la vitesse
+ *  d'un tour dépend des bras et de la cloche, pas d'un métronome. C'est la
+ *  durée d'un sens (le `reps` du bloc) ; l'essai la raccourcit comme les
+ *  autres exercices au temps. */
+export const SENS_CERCLE_SEC = 30;
+
+/** Un cercle fait au temps (`unite: 'secondes'`, `mouvement: 'circulaire'`). */
+export const estCercleAuTemps = (exercice: Pick<Exercice, 'unite' | 'mouvement'>): boolean =>
+  exercice.unite === 'secondes' && exercice.mouvement === 'circulaire';
+
+/** Les parties d'une série au temps, de `reps` secondes chacune : deux côtés
+ *  pour un exercice unilatéral, deux sens pour un cercle, une sinon. */
+export function partiesAuTemps(exercice: Pick<Exercice, 'cotes' | 'unite' | 'mouvement'>): 1 | 2 {
+  return exercice.cotes === 'unilateral' || estCercleAuTemps(exercice) ? 2 : 1;
+}
+
+/** Les secondes d'une partie de série au temps : celles d'un sens pour un
+ *  cercle (`SENS_CERCLE_SEC`), la tenue demandée (`tenueSec`) sinon. */
+export function secondesAuTemps(exercice: Pick<Exercice, 'unite' | 'mouvement'>, tenueSec: number): number {
+  return estCercleAuTemps(exercice) ? SENS_CERCLE_SEC : tenueSec;
+}
+
+/** Ce que compte le temps d'une série au temps : « par côté », « dans chaque
+ *  sens » ou rien. Commence par une espace : « 30 s dans chaque sens ». */
+export function precisionAuTemps(exercice: Pick<Exercice, 'cotes' | 'unite' | 'mouvement'>): string {
+  if (estCercleAuTemps(exercice)) return ' dans chaque sens';
+  return exercice.cotes === 'unilateral' ? ' par côté' : '';
 }
 
 /** Durée d'une série en secondes : reps × tempo (doublée si unilatéral, plus
  *  le changement de côté au milieu), ou directement `reps` secondes si
- *  l'exercice se mesure au temps. */
+ *  l'exercice se mesure au temps — par côté, ou dans chaque sens pour un
+ *  cercle (`partiesAuTemps`), plus le changement de côté d'un exercice de
+ *  musculation unilatéral. */
 export function dureeSerieSec(exercice: Exercice, reps: number, tempo: Tempo): number {
-  const deuxCotes = exercice.cotes === 'unilateral' ? 2 : 1;
-  // Une position tenue d'un seul côté se tient aussi de l'autre : la demi-lune
-  // ou l'étirement du quadriceps coûtent deux fois la durée annoncée.
-  if (exercice.unite === 'secondes') return reps * deuxCotes;
   if (reps <= 0) return 0;
+  // Une position tenue d'un seul côté se tient aussi de l'autre : la demi-lune
+  // ou l'étirement du quadriceps coûtent deux fois la durée annoncée. Un
+  // cercle tourne autant dans un sens que dans l'autre.
+  if (exercice.unite === 'secondes') return reps * partiesAuTemps(exercice) + changementDeCoteSec(exercice);
+  const deuxCotes = exercice.cotes === 'unilateral' ? 2 : 1;
   return reps * secondesParRep(tempo, exercice) * deuxCotes + changementDeCoteSec(exercice);
 }
 
 /** Répétitions réellement écrites dans le bloc : les exercices au temps
- *  reçoivent une durée de tenue en secondes, pas un nombre de répétitions. */
+ *  reçoivent une durée de tenue en secondes, pas un nombre de répétitions —
+ *  celle d'un sens pour un cercle (`secondesAuTemps`). */
 function repsEffectives(exercice: Exercice, reps: number, reglages: ReglagesNiveau): number {
-  return exercice.unite === 'secondes' ? reglages.tenueSec : reps;
+  return exercice.unite === 'secondes' ? secondesAuTemps(exercice, reglages.tenueSec) : reps;
 }
 
 /** Regroupe les blocs consécutifs qui partagent le même numéro de superset ;
@@ -1137,6 +1175,8 @@ function adapterReps(
   uniteActuelle: Exercice['unite'],
   reglages: ReglagesNiveau,
 ): number {
+  // Un cercle tourne toujours le même temps dans chaque sens.
+  if (estCercleAuTemps(remplacant)) return SENS_CERCLE_SEC;
   if (remplacant.unite === uniteActuelle) return repsActuelles;
   return remplacant.unite === 'secondes' ? reglages.tenueSec : (reglages.repsPreferees ?? reglages.reps[0]);
 }
@@ -1266,8 +1306,8 @@ export function analyserSeance(seance: Seance): AnalyseSeance {
     .map((id) => EXERCICES_PAR_ID[id])
     .filter((exercice) => exercice?.cotes === 'unilateral');
   if (unilateraux.length > 0) {
-    // Les positions tenues enchaînent leurs deux côtés ; les séries en
-    // répétitions prennent cinq secondes pour changer de côté.
+    // Les positions de yoga et les étirements enchaînent leurs deux côtés ;
+    // la musculation prend cinq secondes pour changer de côté.
     const changement = unilateraux.some((e) => changementDeCoteSec(e) > 0)
       ? `, plus ${CHANGER_DE_COTE_SEC} s pour changer de côté`
       : '';
@@ -1317,7 +1357,8 @@ export function formaterDuree(sec: number): string {
   return minutes === 0 ? `${heures} h` : `${heures} h ${String(minutes).padStart(2, '0')}`;
 }
 
-/** "3 × 8 reps par côté · repos 60 s", "3 × 40 s · repos 60 s". */
+/** "3 × 8 reps par côté · repos 60 s", "3 × 40 s · repos 60 s",
+ *  "3 × 30 s dans chaque sens · repos 60 s". */
 export function libelleBloc(bloc: BlocSeries, exercice: Exercice): string {
   const repos = ` · repos ${bloc.reposSec} s`;
   const cote = exercice.cotes === 'unilateral' ? ' par côté' : '';
@@ -1326,7 +1367,7 @@ export function libelleBloc(bloc: BlocSeries, exercice: Exercice): string {
   if (familleDe(exercice) !== 'musculation') {
     return `${bloc.reps} s${cote} · transition ${bloc.reposSec} s`;
   }
-  if (exercice.unite === 'secondes') return `${bloc.series} × ${bloc.reps} s${cote}${repos}`;
+  if (exercice.unite === 'secondes') return `${bloc.series} × ${bloc.reps} s${precisionAuTemps(exercice)}${repos}`;
   if (exercice.cotes === 'unilateral') return `${bloc.series} × ${bloc.reps} reps par côté${repos}`;
   if (exercice.cotes === 'alterne') return `${bloc.series} × ${bloc.reps} reps en alternant${repos}`;
   return `${bloc.series} × ${bloc.reps} reps${repos}`;
