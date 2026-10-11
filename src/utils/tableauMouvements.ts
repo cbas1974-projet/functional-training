@@ -335,10 +335,10 @@ export const AU_TEMPS_OU_AU_TEMPO: AvisAuTemps[] = [
   },
   {
     ids: ['v-sit-cross-jab'],
-    recommandation: 'Peut-être au temps : 30 s, coups croisés contrôlés, à son rythme.',
-    decision: 'a-decider',
+    recommandation: 'Garder le tempo : répétitions lentes (choix de Speedy).',
+    decision: 'garde',
     pourquoi:
-      'Un coup de poing en 3 s, c’est un développé lent, pas un coup : au temps, ce serait plus naturel. Mais le travail, c’est surtout le V tenu, que le tempo dose bien, et au temps les coups partent vite, haltères au bout des bras (épaule, coude). Le V tenu fatigue vite le bas du dos de Speedy : pieds au sol. À essayer une fois avant de choisir.',
+      'Choisi par Speedy le 11 octobre : répétitions lentes. Un coup de poing en 3 s, c’est un développé lent, pas un coup : au temps, ce serait plus naturel. Mais le travail, c’est surtout le V tenu, que le tempo dose bien, et au temps les coups partent vite, haltères au bout des bras (épaule, coude). Le V tenu fatigue vite le bas du dos de Speedy : pieds au sol. À essayer une fois avant de choisir.',
   },
   {
     ids: ['kb-plank-oblique-pull-through'],

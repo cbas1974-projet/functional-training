@@ -135,7 +135,7 @@ describe('au temps ou au tempo ? (en tête de docs/mouvements.md)', () => {
     expect(explosifs.every((id) => ids.includes(id))).toBe(true);
   });
 
-  it('passe au temps les trois cercles, le relevé turc et les 16 explosifs, et laisse à Sébastien les coups croisés', () => {
+  it('passe au temps les trois cercles, le relevé turc et les 16 explosifs, et garde au tempo les coups croisés (choix de Sébastien)', () => {
     const decision = (id: string) => AU_TEMPS_OU_AU_TEMPO.find((avis) => avis.ids.includes(id))?.decision;
     for (const id of ['kb-halo', 'kb-around-the-body', 'kb-around-the-world', 'kb-turkish-get-up']) {
       expect(decision(id), id).toBe('fait');
@@ -143,7 +143,7 @@ describe('au temps ou au tempo ? (en tête de docs/mouvements.md)', () => {
     const explosifs = EXERCICES.filter((e) => e.explosif).map((e) => e.id);
     expect(explosifs).toHaveLength(16);
     for (const id of explosifs) expect(decision(id), id).toBe('fait');
-    expect(decision('v-sit-cross-jab')).toBe('a-decider');
+    expect(decision('v-sit-cross-jab')).toBe('garde');
     for (const id of ['russian-twist', 'kb-russian-twist', 'kb-commando', 'plank-t', 'renegade-row', 'bird-dog-row']) {
       expect(decision(id), id).toBe('garde');
     }
