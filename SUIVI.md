@@ -268,7 +268,7 @@ d'installation du README.
   (`cbas1974-projet`). GitHub la suspend après 60 jours sans commit sur un
   dépôt public ; on la relance dans l'onglet *Actions*.
 - **Vérifications** :
-  - `npx vitest run` (784 tests) ;
+  - `npx vitest run` (814 tests) ;
   - `npx tsc -b --noEmit` ;
   - `npx eslint .` ;
   - `npm run build`.
