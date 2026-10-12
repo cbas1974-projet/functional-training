@@ -1673,24 +1673,27 @@ export function remplacerDansProgramme(
   ancienId: string,
   nouveauId: string,
 ): ProgrammeMois {
-  const surMachine = estConnu(nouveauId) && EXERCICES_PAR_ID[nouveauId].materiel === 'salle';
   return {
     ...programme,
-    seances: programme.seances.map((s) => {
-      if (s.id !== seanceId) return s;
-      const remplacer = (id: string) => (id === ancienId ? nouveauId : id);
-      const remplacee: SeanceDuMois = {
-        ...s,
-        exercices: s.exercices.map(remplacer),
-        ...(s.finale === ancienId ? { finale: nouveauId } : {}),
-        ...(s.liens ? { liens: s.liens.map((groupe) => groupe.map(remplacer)) } : {}),
-      };
-      const tour = [...(s.tour ?? []).filter((id) => id !== ancienId), ...(surMachine ? [nouveauId] : [])];
-      if (tour.length > 0) remplacee.tour = tour;
-      else delete remplacee.tour;
-      return remplacee;
-    }),
+    seances: programme.seances.map((s) => (s.id === seanceId ? remplacerDansSeance(s, ancienId, nouveauId) : s)),
   };
+}
+
+/** Change un exercice d'une séance : le lien court rejoue ainsi un
+ *  « Changer » sur la séance composée. */
+function remplacerDansSeance(s: SeanceDuMois, ancienId: string, nouveauId: string): SeanceDuMois {
+  const surMachine = estConnu(nouveauId) && EXERCICES_PAR_ID[nouveauId].materiel === 'salle';
+  const remplacer = (id: string) => (id === ancienId ? nouveauId : id);
+  const remplacee: SeanceDuMois = {
+    ...s,
+    exercices: s.exercices.map(remplacer),
+    ...(s.finale === ancienId ? { finale: nouveauId } : {}),
+    ...(s.liens ? { liens: s.liens.map((groupe) => groupe.map(remplacer)) } : {}),
+  };
+  const tour = [...(s.tour ?? []).filter((id) => id !== ancienId), ...(surMachine ? [nouveauId] : [])];
+  if (tour.length > 0) remplacee.tour = tour;
+  else delete remplacee.tour;
+  return remplacee;
 }
 
 /** Passe un exercice de « en même temps » à « chacun son tour », ou
@@ -1976,12 +1979,14 @@ function mettreANiveau(programme: ProgrammeMois): ProgrammeMois {
   return recomposer(programme);
 }
 
-/** Le programme dans un lien. Une paire, et un exercice fait chacun son
- *  tour, s'y notent par leur place dans la séance plutôt que par leurs noms ;
- *  ce qui va de soi n'y est pas (le format en séries, une séance « facile ») :
- *  le lien reste assez court pour un texto, même à six séances. Les liens
- *  d'avant, avec les noms, se lisent toujours (`validerProgramme`). */
-export function encoderProgramme(programme: ProgrammeMois): string {
+/** Le programme en entier dans un lien : le format d'avant le lien court,
+ *  qui reste celui des programmes que la recette ne sait pas refaire (un
+ *  programme d'une autre version, une graine illisible). Une paire, et un
+ *  exercice fait chacun son tour, s'y notent par leur place dans la séance
+ *  plutôt que par leurs noms ; ce qui va de soi n'y est pas (le format en
+ *  séries, une séance « facile »). Les liens d'avant, avec les noms, se
+ *  lisent toujours (`validerProgramme`). */
+export function encoderEnEntier(programme: ProgrammeMois): string {
   const court = {
     ...programme,
     seances: programme.seances.map((s) => {
@@ -2003,21 +2008,370 @@ export function encoderProgramme(programme: ProgrammeMois): string {
   return versBase64Url(JSON.stringify(court));
 }
 
-export function decoderProgramme(code: string): ProgrammeMois | null {
+// ------------------------------------------------------------- Le lien court
+
+// Le lien court ne transporte que la recette du programme : l'application le
+// recompose à l'identique avec la même graine, les mêmes réglages et la même
+// version (`genererProgramme` ne tire rien au hasard hors de la graine), puis
+// rejoue les retouches faites à la main. Des champs séparés par des points :
+//
+//   7.1kq2x9c.g02.3f0a[.champ…]
+//
+// la version de la composition, la graine et le premier lundi (en jours
+// depuis 1970) en base 36, puis l'empreinte des séances : le téléphone qui
+// reçoit vérifie qu'il retombe exactement sur les mêmes. Ensuite, seulement ce
+// qui n'est pas la valeur par défaut, une lettre puis sa valeur :
+//   o  les objectifs (leurs identifiants, séparés par « ~ ») ;
+//   m  le matériel (une lettre chacun, `LETTRE_MATERIEL`) ;
+//   a  les jours n'alternent pas (trois séances) ;
+//   r  les répétitions de Speedy puis de Big Max ; l  celles du lundi ;
+//   t  le tempo (montée, descente, arrêt) ; n  le nombre d'exercices ;
+//   e  le code d'équipe (vide : celui tiré de la graine et du premier lundi) ;
+//   s  le serveur en https (vide : celui du site), h  en http (sur ce poste) ;
+//   0 à 9  les retouches d'une séance, par sa place dans le programme, en
+//      morceaux séparés par « ~ » : c (un exercice changé : sa place dans la
+//      séance composée, puis le nouveau), o (le nouvel ordre), p (les paires),
+//      t (chacun son tour), les places en un chiffre de base 36.
+// Un exercice se nomme par son identifiant, jamais par un rang dans la
+// bibliothèque : un lien reste lisible quand la bibliothèque grandit.
+
+/** Les matériels du lien court : une lettre chacun, fixée une fois pour
+ *  toutes. */
+const LETTRE_MATERIEL: Record<Materiel, string> = {
+  aucun: 'a',
+  halteres: 'h',
+  kettlebell: 'k',
+  banc: 'b',
+  step: 'p',
+  'barre-fixe': 'f',
+  elastique: 'e',
+  swissball: 'w',
+  tapis: 't',
+  salle: 's',
+};
+const MATERIEL_DE_LETTRE = new Map(Object.entries(LETTRE_MATERIEL).map(([materiel, lettre]) => [lettre, materiel as Materiel]));
+
+/** Un identifiant d'exercice ou d'objectif tel que le lien le transporte. */
+const IDENTIFIANT_LIEN = /^[a-z0-9-]+$/;
+const BASE36 = /^[0-9a-z]+$/;
+
+/** Un petit nombre en un caractère de base 36 ; null s'il n'y tient pas. */
+const chiffre = (n: number | undefined): string | null =>
+  n !== undefined && Number.isInteger(n) && n >= 0 && n < 36 ? n.toString(36) : null;
+/** Un nombre en base 36, ou NaN. */
+const lireBase36 = (texte: string | undefined): number => (texte && BASE36.test(texte) ? parseInt(texte, 36) : NaN);
+
+/** Les places de ces exercices dans la liste, un chiffre chacune ; null si
+ *  l'un n'y est pas. */
+function places(ids: string[], liste: string[]): string | null {
+  const chiffres = ids.map((id) => chiffre(liste.indexOf(id)));
+  return chiffres.every((c) => c !== null) ? chiffres.join('') : null;
+}
+/** Les exercices à ces places ; null si une place est hors de la liste. */
+function auxPlaces(texte: string, liste: string[]): string[] | null {
+  const ids = [...texte].map((c) => liste[lireBase36(c)]);
+  return ids.every((id) => id !== undefined) ? ids : null;
+}
+
+const joursDepuis1970 = (iso: string): number => {
+  const [annee, mois, jour] = iso.split('-').map(Number);
+  return Date.UTC(annee, mois - 1, jour) / JOUR_MS;
+};
+const isoDuJour = (jours: number): string => new Date(jours * JOUR_MS).toISOString().slice(0, 10);
+
+/** L'empreinte des séances, quatre caractères : le téléphone qui reçoit
+ *  vérifie qu'il retombe sur les mêmes. */
+function empreinteDe(seances: SeanceDuMois[]): string {
+  const texte = JSON.stringify(seances.map(rangee));
+  let h = 0x811c9dc5;
+  for (let i = 0; i < texte.length; i++) {
+    h ^= texte.charCodeAt(i);
+    h = Math.imul(h, 0x01000193);
+  }
+  return ((h >>> 0) % 36 ** 4).toString(36).padStart(4, '0');
+}
+
+/** Une valeur aux clés rangées, sans les champs vides : deux programmes se
+ *  comparent quel que soit l'ordre de leurs champs. */
+function rangeeEnProfondeur(valeur: unknown): unknown {
+  if (Array.isArray(valeur)) return valeur.map(rangeeEnProfondeur);
+  if (typeof valeur !== 'object' || valeur === null) return valeur;
+  return Object.fromEntries(
+    Object.entries(valeur)
+      .filter(([, v]) => v !== undefined)
+      .sort(([a], [b]) => (a < b ? -1 : 1))
+      .map(([cle, v]) => [cle, rangeeEnProfondeur(v)]),
+  );
+}
+const memeContenu = (a: unknown, b: unknown) => JSON.stringify(rangeeEnProfondeur(a)) === JSON.stringify(rangeeEnProfondeur(b));
+
+/** Les retouches qui mènent de la séance composée à la séance retouchée :
+ *  les exercices changés, puis l'ordre, les paires et chacun son tour s'ils
+ *  diffèrent encore. Null si on ne sait pas les dire. */
+function retouchesDe(composee: SeanceDuMois, seance: SeanceDuMois): string[] | null {
+  const avant = idsDe(composee);
+  const apres = idsDe(seance);
+  const retires = avant.filter((id) => !apres.includes(id));
+  const ajoutes = apres.filter((id) => !avant.includes(id));
+  if (retires.length !== ajoutes.length) return null;
+  // Un exercice changé garde sa place : on apparie d'abord à la même place.
+  const libres = [...ajoutes];
+  const changes: [string, string][] = [];
+  const sansPlace: string[] = [];
+  for (const id of retires) {
+    const enFace = apres[avant.indexOf(id)];
+    if (enFace !== undefined && libres.includes(enFace)) {
+      changes.push([id, enFace]);
+      libres.splice(libres.indexOf(enFace), 1);
+    } else sansPlace.push(id);
+  }
+  sansPlace.forEach((id, i) => changes.push([id, libres[i]]));
+
+  const morceaux: string[] = [];
+  let s = composee;
+  for (const [ancien, nouveau] of changes) {
+    const place = chiffre(avant.indexOf(ancien));
+    if (place === null || !IDENTIFIANT_LIEN.test(nouveau)) return null;
+    morceaux.push(`c${place}${nouveau}`);
+    s = remplacerDansSeance(s, ancien, nouveau);
+  }
+  if (s.exercices.join() !== seance.exercices.join()) {
+    const ordre = places(seance.exercices, s.exercices);
+    if (ordre === null || s.exercices.length !== seance.exercices.length) return null;
+    morceaux.push(`o${ordre}`);
+    s = { ...s, exercices: [...seance.exercices] };
+  }
+  if (JSON.stringify(s.liens ?? []) !== JSON.stringify(seance.liens ?? [])) {
+    const liens = seance.liens ?? [];
+    const paires = places(liens.flat(), seance.exercices);
+    if (paires === null || liens.some((paire) => paire.length !== 2)) return null;
+    morceaux.push(`p${paires}`);
+  }
+  if (JSON.stringify(s.tour ?? []) !== JSON.stringify(seance.tour ?? [])) {
+    const tour = places(seance.tour ?? [], idsDe(seance));
+    if (tour === null) return null;
+    morceaux.push(`t${tour}`);
+  }
+  return morceaux;
+}
+
+/** Rejoue les retouches sur la séance composée ; null si un morceau est
+ *  illisible. Les paires et chacun son tour sont ensuite vérifiés comme ceux
+ *  d'un lien entier (`validerProgramme`). */
+function rejouerRetouches(composee: SeanceDuMois, morceaux: string[]): SeanceDuMois | null {
+  const avant = idsDe(composee);
+  let s = composee;
+  for (const morceau of morceaux) {
+    const valeur = morceau.slice(1);
+    if (morceau[0] === 'c') {
+      const ancien = avant[lireBase36(valeur[0])];
+      const nouveau = valeur.slice(1);
+      if (ancien === undefined || !estConnu(nouveau)) return null;
+      s = remplacerDansSeance(s, ancien, nouveau);
+    } else if (morceau[0] === 'o') {
+      const exercices = auxPlaces(valeur, s.exercices);
+      if (!exercices || exercices.length !== s.exercices.length || new Set(exercices).size !== exercices.length) return null;
+      s = { ...s, exercices };
+    } else if (morceau[0] === 'p') {
+      const ids = auxPlaces(valeur, s.exercices);
+      if (!ids || ids.length % 2 !== 0) return null;
+      s = { ...s, liens: ids.flatMap((id, i) => (i % 2 === 0 ? [[id, ids[i + 1]]] : [])) };
+    } else if (morceau[0] === 't') {
+      const tour = auxPlaces(valeur, idsDe(s));
+      if (!tour) return null;
+      s = { ...s, tour };
+    } else return null;
+  }
+  return s;
+}
+
+/** La recette du programme : de quoi le recomposer. */
+function recetteDe(programme: ProgrammeMois): OptionsProgramme {
+  return {
+    objectifs: programme.objectifs,
+    materiels: programme.materiels,
+    alternance: programme.seances.some((s) => s.semaine !== undefined),
+    graine: programme.graine,
+    exercices: nombreExercicesDe(programme),
+    aujourdhui: depuisIso(programme.debut),
+  };
+}
+
+/** Le lien court du programme, ou null s'il ne sait pas le dire exactement :
+ *  le lien entier prend alors le relais. */
+function encoderCourt(programme: ProgrammeMois, serveurDuSite: string | null): string | null {
+  const { graine, debut, duo } = programme;
+  if (programme.version !== VERSION_PROGRAMME || !Number.isInteger(graine) || graine < 0 || graine > 0xffffffff) {
+    return null;
+  }
+  const jours = joursDepuis1970(debut);
+  if (!Number.isInteger(jours) || jours < 0 || isoDuJour(jours) !== debut) return null;
+  const champs = [VERSION_PROGRAMME.toString(36), graine.toString(36), jours.toString(36), empreinteDe(programme.seances)];
+
+  if (!memeContenu(programme.objectifs, OBJECTIFS_PAR_DEFAUT)) {
+    if (!programme.objectifs.every((id) => IDENTIFIANT_LIEN.test(id))) return null;
+    champs.push(`o${programme.objectifs.join('~')}`);
+  }
+  if (!memeContenu(programme.materiels, MATERIELS_PROGRAMME)) {
+    const lettres = programme.materiels.map((m) => (Object.prototype.hasOwnProperty.call(LETTRE_MATERIEL, m) ? LETTRE_MATERIEL[m] : null));
+    if (!lettres.every((l) => l !== null)) return null;
+    champs.push(`m${lettres.join('')}`);
+  }
+  const recette = recetteDe(programme);
+  if (!recette.alternance) champs.push('a');
+  if (duo?.reps) champs.push(`r${chiffre(duo.reps.sebastien)}${chiffre(duo.reps.max)}`);
+  if (duo?.repsLundi !== undefined) champs.push(`l${chiffre(duo.repsLundi)}`);
+  if (duo?.tempo) champs.push(`t${chiffre(duo.tempo.monteeSec)}${chiffre(duo.tempo.descenteSec)}${chiffre(duo.tempo.pauseSec ?? 0)}`);
+  if (duo?.exercices !== undefined) champs.push(`n${chiffre(duo.exercices)}`);
+  if (programme.equipe !== undefined) {
+    champs.push(`e${programme.equipe === equipeDe({ graine, debut }) ? '' : programme.equipe}`);
+  }
+  if (programme.serveur !== undefined && programme.serveur === serveurDuSite) champs.push('s');
+  else if (programme.serveur !== undefined) {
+    const [protocole, hote] = programme.serveur.split('://');
+    if (!hote || hote.includes('~') || !/^https?$/.test(protocole)) return null;
+    champs.push(`${protocole === 'https' ? 's' : 'h'}${hote.replace(/\./g, '~')}`);
+  }
+
+  const composees = genererProgramme(recette).seances;
+  if (composees.length !== programme.seances.length || composees.length > 10) return null;
+  for (const [i, seance] of programme.seances.entries()) {
+    const morceaux = retouchesDe(composees[i], seance);
+    if (morceaux === null) return null;
+    if (morceaux.length > 0) champs.push(`${i}${morceaux.join('~')}`);
+  }
+  const code = champs.join('.');
+  // Le lien ne part que s'il redonne exactement ce programme.
+  const relu = decoderCourt(code, serveurDuSite, composees);
+  return relu && memeContenu(relu, programme) ? code : null;
+}
+
+/** Le programme d'un lien court ; null s'il est illisible, ou si ce
+ *  téléphone ne retombe pas exactement sur les séances envoyées (un lien
+ *  d'une version plus récente de l'application, une bibliothèque qui a
+ *  changé). Un lien d'une version plus ancienne est recomposé comme un
+ *  programme de cette version (`mettreANiveau`) : sans ses retouches, comme
+ *  le fera le téléphone qui l'a envoyé. */
+function decoderCourt(code: string, serveurDuSite: string | null, dejaComposees?: SeanceDuMois[]): ProgrammeMois | null {
+  const [v, g, j, empreinte, ...champs] = code.split('.');
+  const version = lireBase36(v);
+  const graine = lireBase36(g);
+  const jours = lireBase36(j);
+  if (!(version >= 1 && version <= VERSION_PROGRAMME) || !(graine <= 0xffffffff) || !(jours >= 0) || !empreinte) {
+    return null;
+  }
+  const debut = isoDuJour(jours);
+  let objectifs = [...OBJECTIFS_PAR_DEFAUT];
+  let materiels = [...MATERIELS_PROGRAMME];
+  let alternance = true;
+  const duo: Record<string, unknown> = {};
+  let equipe: string | undefined;
+  let serveur: string | undefined;
+  const retouches = new Map<number, string[]>();
+  for (const champ of champs) {
+    const valeur = champ.slice(1);
+    const nombres = [...valeur].map((c) => lireBase36(c));
+    switch (champ[0]) {
+      case 'o':
+        objectifs = valeur === '' ? [] : valeur.split('~');
+        if (!objectifs.every((id) => IDENTIFIANT_LIEN.test(id))) return null;
+        break;
+      case 'm': {
+        const lus = [...valeur].map((l) => MATERIEL_DE_LETTRE.get(l));
+        if (!lus.every((m) => m !== undefined)) return null;
+        materiels = lus as Materiel[];
+        break;
+      }
+      case 'a':
+        alternance = false;
+        break;
+      case 'r':
+        duo.reps = { sebastien: nombres[0], max: nombres[1] };
+        break;
+      case 'l':
+        duo.repsLundi = nombres[0];
+        break;
+      case 't':
+        duo.tempo = { monteeSec: nombres[0], descenteSec: nombres[1], pauseSec: nombres[2] };
+        break;
+      case 'n':
+        duo.exercices = nombres[0];
+        break;
+      case 'e':
+        equipe = valeur || equipeDe({ graine, debut });
+        break;
+      case 's':
+        serveur = valeur ? `https://${valeur.replace(/~/g, '.')}` : (serveurDuSite ?? undefined);
+        break;
+      case 'h':
+        serveur = `http://${valeur.replace(/~/g, '.')}`;
+        break;
+      default: {
+        const place = Number(champ[0]);
+        if (!Number.isInteger(place) || retouches.has(place)) return null;
+        retouches.set(place, valeur.split('~'));
+      }
+    }
+  }
+  const brut: ProgrammeMois = {
+    debut,
+    objectifs,
+    materiels,
+    graine,
+    seances: [],
+    version,
+    ...(Object.keys(duo).length > 0 ? { duo: duo as ReglagesDuo } : {}),
+    ...(equipe !== undefined ? { equipe } : {}),
+    ...(serveur !== undefined ? { serveur } : {}),
+  };
+  const composees = dejaComposees ?? genererProgramme({ ...recetteDe({ ...brut, duo: lireDuo(brut.duo) }), alternance }).seances;
+  const aJour = version === VERSION_PROGRAMME;
+  if (aJour && [...retouches.keys()].some((place) => place >= composees.length)) return null;
+  const seances = composees.map((s, i) => (aJour && retouches.has(i) ? rejouerRetouches(s, retouches.get(i)!) : s));
+  if (!seances.every((s) => s !== null)) return null;
+  const programme = validerProgramme({ ...brut, seances });
+  if (!programme || (aJour && empreinteDe(programme.seances) !== empreinte)) return null;
+  return programme;
+}
+
+/** Le programme dans un lien : le lien court quand la recette redonne
+ *  exactement ce programme, sinon le programme en entier. */
+export function encoderProgramme(programme: ProgrammeMois, serveurDuSite: string | null = null): string {
+  return encoderCourt(programme, serveurDuSite) ?? encoderEnEntier(programme);
+}
+
+/** Le programme d'un lien, court ou entier ; null s'il est illisible. */
+export function decoderProgramme(code: string, serveurDuSite: string | null = null): ProgrammeMois | null {
+  // Un point final, collé avec la phrase qui suivait le lien, n'en fait pas
+  // partie.
+  const nettoye = code.replace(/[.~:]+$/, '');
   try {
-    return validerProgramme(JSON.parse(depuisBase64Url(code)));
+    if (nettoye.includes('.')) return decoderCourt(nettoye, serveurDuSite);
+    return validerProgramme(JSON.parse(depuisBase64Url(nettoye)));
   } catch {
     return null;
   }
 }
 
-/** Le lien qui ouvre l'application avec ce programme. */
-export function lienDePartage(programme: ProgrammeMois, adresse: string): string {
-  return `${adresse.split('#')[0]}#${CLE_LIEN}=${encoderProgramme(programme)}`;
+/** Le lien qui ouvre l'application avec ce programme. `serveurDuSite` :
+ *  l'adresse fixée à la publication du site, que le lien court n'écrit pas
+ *  en entier. */
+export function lienDePartage(programme: ProgrammeMois, adresse: string, serveurDuSite: string | null = null): string {
+  return `${adresse.split('#')[0]}#${CLE_LIEN}=${encoderProgramme(programme, serveurDuSite)}`;
 }
 
-/** Le programme contenu dans l'ancre d'une adresse, s'il y en a un. */
-export function programmeDansLien(ancre: string): ProgrammeMois | null {
-  const trouve = ancre.match(new RegExp(`${CLE_LIEN}=([A-Za-z0-9_-]+)`));
-  return trouve ? decoderProgramme(trouve[1]) : null;
+/** Le programme contenu dans l'ancre d'une adresse, s'il y en a un. Une
+ *  messagerie qui aurait encodé les « ~ » ne gêne pas. */
+export function programmeDansLien(ancre: string, serveurDuSite: string | null = null): ProgrammeMois | null {
+  let texte = ancre;
+  try {
+    texte = decodeURIComponent(ancre);
+  } catch {
+    // Un « % » isolé : on lit l'ancre telle quelle.
+  }
+  const trouve = texte.match(new RegExp(`${CLE_LIEN}=([A-Za-z0-9_.~:-]+)`));
+  return trouve ? decoderProgramme(trouve[1], serveurDuSite) : null;
 }
+
+/** L'ancre porte un lien de programme. */
+export const ancreAvecProgramme = (ancre: string): boolean => ancre.includes(`${CLE_LIEN}=`);

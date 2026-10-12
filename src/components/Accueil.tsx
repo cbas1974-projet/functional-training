@@ -71,7 +71,7 @@ import {
 } from '../utils/programmeMois';
 import type { AccordPaire, ContexteSeance } from '../utils/programmeMois';
 import type { ConfigSynchro } from '../hooks/useSeanceCommune';
-import { avecSeanceFaite, serveurDe } from '../utils/enLigne';
+import { SERVEUR_DU_SITE, avecSeanceFaite, serveurDe } from '../utils/enLigne';
 import { ajustementDeCharge, ligneProposition, raisonProposition, ressentisQuiChangent } from '../utils/ressenti';
 import {
   ESSAI,
@@ -103,6 +103,9 @@ interface AccueilProps {
   /** Programme arrivé par un lien, en attente d'une réponse. */
   programmeRecu: ProgrammeMois | null;
   onReponseProgrammeRecu: (accepte: boolean) => void;
+  /** Un lien de programme que ce téléphone n'a pas su lire. */
+  lienIllisible?: boolean;
+  onFermerLienIllisible?: () => void;
   onOuvrir: (vue: VueSecondaire) => void;
 }
 
@@ -719,7 +722,7 @@ function RecevoirParLien({ onRecevoir }: { onRecevoir: (texte: string) => boolea
       </div>
       {illisible && (
         <p role="alert" className="mt-2 text-xs font-semibold" style={{ color: 'var(--alerte)' }}>
-          Ce lien ne contient pas de programme.
+          Ce lien ne contient pas de programme lisible ici : rechargez la page, ou demandez à l’autre de le renvoyer.
         </p>
       )}
     </Groupe>
@@ -830,6 +833,8 @@ export default function Accueil({
   onChange,
   programmeRecu,
   onReponseProgrammeRecu,
+  lienIllisible = false,
+  onFermerLienIllisible,
   onOuvrir,
 }: AccueilProps) {
   const { parametres, historique, enCours } = etat;
@@ -1043,7 +1048,7 @@ export default function Accueil({
 
   /** Un lien collé dans les réglages : le programme reçu de l'autre. */
   const recevoir = (texte: string): boolean => {
-    const recu = programmeDansLien(texte);
+    const recu = programmeDansLien(texte, SERVEUR_DU_SITE);
     if (!recu) return false;
     changerProgramme(recu, false);
     setFeuille(null);
@@ -1141,7 +1146,7 @@ export default function Accueil({
   };
 
   const partager = async () => {
-    const lien = lienDePartage(programme, window.location.href);
+    const lien = lienDePartage(programme, window.location.href, SERVEUR_DU_SITE);
     const texte = `Notre programme du mois : ouvre ce lien sur ton téléphone${autre ? `, ${autre}` : ''}.`;
     setLienACopier(null);
     if (typeof navigator.share === 'function') {
@@ -1205,6 +1210,21 @@ export default function Accueil({
                 Le prendre
               </button>
               <BoutonSecondaire onClick={() => onReponseProgrammeRecu(false)}>Garder le mien</BoutonSecondaire>
+            </div>
+          </Bandeau>
+        )}
+
+        {lienIllisible && (
+          <Bandeau couleur="var(--alerte)">
+            <p className="text-sm font-semibold" style={{ color: 'var(--texte)' }}>
+              Ce lien de programme ne s’ouvre pas ici.
+            </p>
+            <p className="text-xs" style={{ color: 'var(--texte-discret)' }}>
+              Il vient sans doute d’une autre version de l’application. Rechargez la page ; sinon, demandez à
+              l’autre de recharger la sienne et de renvoyer le programme.
+            </p>
+            <div className="mt-2">
+              <BoutonSecondaire onClick={() => onFermerLienIllisible?.()}>Compris</BoutonSecondaire>
             </div>
           </Bandeau>
         )}

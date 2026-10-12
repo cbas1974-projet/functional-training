@@ -51,6 +51,8 @@ import {
   chargesPassees,
   decoderProgramme,
   delierDansProgramme,
+  encoderEnEntier,
+  encoderProgramme,
   dureeSec,
   equipeDe,
   estPoussee,
@@ -1605,15 +1607,15 @@ describe('le partage avec Max', () => {
     expect(programmeDansLien(new URL(lien).hash)).toEqual(p);
   });
 
-  it('reste un lien qu’on peut envoyer par texto, même à six séances', () => {
+  it('en entier, quand le lien court ne sait pas le dire, reste un lien qu’on peut envoyer par texto', () => {
     // Les paires et chacun son tour par leur place, sans ce qui va de soi :
     // moins de 3 000 caractères pour six séances (2 500 pour cinq, avant).
     // Les messageries le prennent tel quel.
     for (const programme of programmes) {
-      expect(lienDePartage(programme, 'https://sgtraining.netlify.app/').length).toBeLessThan(3000);
+      expect(`https://sgtraining.netlify.app/#programme=${encoderEnEntier(programme)}`.length).toBeLessThan(3000);
+      expect(decoderProgramme(encoderEnEntier(programme))).toEqual(programme);
     }
-    const code = new URL(lienDePartage(p, 'https://sgtraining.netlify.app/')).hash;
-    const brut = JSON.parse(depuisCode(code.replace('#programme=', '')));
+    const brut = JSON.parse(depuisCode(encoderEnEntier(p)));
     const lundi = brut.seances.find((x: { id: string }) => x.id === 'lundi-a');
     expect(lundi.tour).toEqual([0, lundi.exercices.length]);
     expect('format' in lundi).toBe(false);
@@ -1794,6 +1796,175 @@ describe('le partage avec Max', () => {
     // Des noms hérités de tout objet JavaScript ne sont pas des exercices.
     const piege = { ...p, seances: p.seances.map((s, i) => (i === 0 ? { ...s, exercices: ['constructor', 'toString', '__proto__', ...s.exercices] } : s)) };
     expect(validerProgramme(piege)).toEqual(p);
+  });
+});
+
+describe('le lien court : la recette du programme, et les retouches', () => {
+  const SITE = 'https://sgtraining.netlify.app/';
+  const SERVEUR = 'https://srv1302277.hstgr.cloud';
+  const codeDe = (lien: string) => new URL(lien).hash.replace('#programme=', '');
+  const estCourt = (lien: string) => codeDe(lien).includes('.');
+
+  /** Un tirage reproductible, pour les retouches. */
+  const tirage = (graine: number) => {
+    let x = graine * 2654435761;
+    return () => {
+      x = (Math.imul(x, 1103515245) + 12345) >>> 0;
+      return x / 2 ** 32;
+    };
+  };
+  /** Des retouches à la main, comme sur l'écran : « Changer », « Ensemble /
+   *  Chacun son tour », « Séparer », « Faire une paire », « Refaire les
+   *  paires ». */
+  function retoucher(programme: ProgrammeMois, alea: () => number, combien: number): ProgrammeMois {
+    let q = programme;
+    const un = <T,>(liste: T[]) => liste[Math.floor(alea() * liste.length)];
+    for (let k = 0; k < combien; k++) {
+      const s = un(q.seances);
+      const ids = [...s.exercices, ...(s.finale ? [s.finale] : [])];
+      const id = un(ids);
+      const autre = un(s.exercices);
+      switch (Math.floor(alea() * 5)) {
+        case 0: {
+          const possibles = alternatives(q, s.id, id);
+          if (possibles.length > 0) q = remplacerDansProgramme(q, s.id, id, un(possibles).id);
+          break;
+        }
+        case 1:
+          q = basculerTour(q, s.id, id);
+          break;
+        case 2:
+          q = delierDansProgramme(q, s.id, id);
+          break;
+        case 3:
+          q = lierDansProgramme(delierDansProgramme(delierDansProgramme(q, s.id, id), s.id, autre), s.id, id, autre);
+          break;
+        default:
+          q = refairePaires(q, s.id);
+      }
+    }
+    return q;
+  }
+
+  const p = genererProgramme({ graine: 3_141_592_653, aujourdhui: LUNDI });
+
+  it('tient en moins de 200 caractères, avec le serveur et le code d’équipe', () => {
+    const avecEquipe = { ...refaireProgramme(p, { graine: 2_718_281_828, aujourdhui: LUNDI }), serveur: 'https://srv123.hstgr.cloud' };
+    expect(avecEquipe.equipe).toBe(equipeDe(p));
+    const lien = lienDePartage(avecEquipe, SITE, SERVEUR);
+    // https://sgtraining.netlify.app/#programme=7.19xy8w4.g01.….ep1fi6cbe20261005.ssrv123~hstgr~cloud
+    expect(lien).toMatch(/^https:\/\/sgtraining\.netlify\.app\/#programme=7\.[0-9a-z]+\.[0-9a-z]+\.[0-9a-z]{4}\.ep[0-9a-z]+20261005\.ssrv123~hstgr~cloud$/);
+    expect(lien.length).toBeLessThan(200);
+    expect(programmeDansLien(new URL(lien).hash, SERVEUR)).toEqual(avecEquipe);
+    // Le serveur du site ne s'écrit pas en entier : une lettre.
+    const surLeSite = { ...p, serveur: SERVEUR };
+    const court = lienDePartage(surLeSite, SITE, SERVEUR);
+    expect(codeDe(court).endsWith('.s')).toBe(true);
+    expect(court.length).toBeLessThan(70);
+    expect(programmeDansLien(new URL(court).hash, SERVEUR)).toEqual(surLeSite);
+    // Bien plus court que le programme en entier.
+    expect(`${SITE}#programme=${encoderEnEntier(p)}`.length).toBeGreaterThan(1500);
+  });
+
+  // Graines 1 à 50, pour chaque jeu de réglages, avec de 0 à 4 retouches
+  // tirées au hasard : le téléphone qui reçoit refait exactement le même
+  // programme. Chaque essai compose le programme trois fois (l'envoyé, la
+  // recette, la lecture) : quelques secondes.
+  const JEUX = [
+    { nom: 'par défaut', options: {} },
+    { nom: 'deux objectifs, quatre exercices', options: { objectifs: ['bas-du-dos', 'epaules'], exercices: 4 } },
+    {
+      nom: 'sans alternance ni machines, huit exercices',
+      options: { alternance: false, exercices: 8, materiels: ['halteres', 'kettlebell', 'banc', 'tapis'] as ProgrammeMois['materiels'] },
+    },
+  ];
+  for (const [i, { nom, options }] of JEUX.entries()) {
+    it(`refait exactement le programme envoyé, retouches comprises — ${nom}`, () => {
+      const longueurs: number[] = [];
+      for (let graine = 1; graine <= 50; graine++) {
+        const alea = tirage(graine * 3 + i);
+        let programme = genererProgramme({ graine, aujourdhui: jour(graine % 7), ...options });
+        // Les réglages du duo, une équipe et un serveur, un programme sur deux.
+        if ((graine + i) % 2 === 0) {
+          programme = {
+            ...programme,
+            duo: {
+              exercices: nombreExercicesDe(programme),
+              tempo: { ...TEMPOS[graine % TEMPOS.length].tempo },
+              reps: { sebastien: 6 + (graine % 5), max: 12 },
+              repsLundi: 9,
+            },
+            equipe: `p${graine}abcdef20261005`,
+            serveur: graine % 4 === 0 ? SERVEUR : 'http://localhost:8080',
+          };
+        }
+        const envoye = retoucher(programme, alea, Math.floor(alea() * 5));
+        const lien = lienDePartage(envoye, SITE, SERVEUR);
+        expect(estCourt(lien)).toBe(true);
+        expect(programmeDansLien(new URL(lien).hash, SERVEUR)).toEqual(envoye);
+        longueurs.push(lien.length);
+      }
+      expect(Math.max(...longueurs)).toBeLessThan(400);
+    }, 30_000);
+  }
+
+  it('chaque retouche ajoute quelques caractères', () => {
+    const seance = p.seances[1];
+    const [a, b] = seance.exercices;
+    const nouveau = alternatives(p, seance.id, a)[0].id;
+    const base = lienDePartage(p, SITE).length;
+    const change = remplacerDansProgramme(p, seance.id, a, nouveau);
+    expect(codeDe(lienDePartage(change, SITE))).toMatch(new RegExp(`\\.1c0${nouveau}$`));
+    expect(lienDePartage(change, SITE).length - base).toBe(4 + nouveau.length);
+    const separe = delierDansProgramme(p, seance.id, b);
+    expect(lienDePartage(separe, SITE).length - base).toBeLessThan(10);
+    const enTour = basculerTour(p, seance.id, b);
+    expect(lienDePartage(enTour, SITE).length - base).toBeLessThan(10);
+    for (const retouche of [change, separe, enTour]) {
+      expect(programmeDansLien(new URL(lienDePartage(retouche, SITE)).hash)).toEqual(retouche);
+    }
+  });
+
+  it('passe au lien entier quand la recette ne redonne pas le programme', () => {
+    const autresCas: ProgrammeMois[] = [
+      { ...p, version: 6 },
+      { ...p, graine: 1.5 },
+      { ...p, graine: -3 },
+      { ...p, materiels: [...p.materiels, 'trampoline' as ProgrammeMois['materiels'][number]] },
+      // Une séance qui n'a plus rien de la recette.
+      { ...p, seances: p.seances.map((s, i) => (i === 0 ? { ...s, exercices: s.exercices.slice(0, 2), liens: undefined } : s)) },
+    ];
+    for (const programme of autresCas) {
+      const lien = lienDePartage(programme, SITE);
+      expect(estCourt(lien)).toBe(false);
+      expect(programmeDansLien(new URL(lien).hash)).toEqual(validerProgramme(JSON.parse(JSON.stringify(programme))));
+    }
+  });
+
+  it('ne fait jamais un autre programme sans le dire : version, bibliothèque, lien abîmé', () => {
+    const code = encoderProgramme(p);
+    const [, ...reste] = code.split('.');
+    // Une application plus ancienne que le lien : elle ne sait pas le refaire.
+    expect(decoderProgramme([(VERSION_PROGRAMME + 1).toString(36), ...reste].join('.'))).toBeNull();
+    // Une recette qui ne redonne pas les mêmes séances (une autre graine, une
+    // bibliothèque qui a changé) : l'empreinte ne correspond plus.
+    const [v, g, ...suite] = code.split('.');
+    expect(decoderProgramme([v, (parseInt(g, 36) + 1).toString(36), ...suite].join('.'))).toBeNull();
+    // Un lien d'une version plus ancienne est recomposé comme le programme
+    // de cette version-là (`mettreANiveau`) : le téléphone qui l'a envoyé le
+    // recompose de même en se mettant à jour.
+    const ancien = decoderProgramme(['6', ...reste].join('.'))!;
+    expect(ancien).toEqual(validerProgramme({ ...p, version: 6 }));
+    expect(ancien.version).toBe(VERSION_PROGRAMME);
+    // Abîmés : illisibles.
+    for (const abime of ['7.', '7.x.y.z', `${code}.zq`, `${code}.9c0n-existe-pas`, `${code}.1o00`, `${code}.1c0constructor`]) {
+      expect(decoderProgramme(abime)).toBeNull();
+    }
+    // Un point final, ou des « ~ » encodés par la messagerie, ne gênent pas.
+    const change = remplacerDansProgramme(p, 'mardi-a', p.seances[1].exercices[0], alternatives(p, 'mardi-a', p.seances[1].exercices[0])[0].id);
+    const lien = lienDePartage({ ...change, objectifs: ['bas-du-dos', 'epaules'] }, SITE);
+    expect(programmeDansLien(`${new URL(lien).hash}.`)).not.toBeNull();
+    expect(programmeDansLien(new URL(lien).hash.replace(/~/g, '%7E'))).toEqual(programmeDansLien(new URL(lien).hash));
   });
 });
 

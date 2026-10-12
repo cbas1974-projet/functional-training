@@ -4,6 +4,7 @@ import { chargerEtat, enregistrerEtat } from './utils/storage';
 import {
   IDENTIFIANT_PARTAGEABLE,
   RELANCE_ENVOI_MS,
+  SERVEUR_DU_SITE,
   avecMesure,
   effacerRealisation,
   envoyerRealisation,
@@ -12,7 +13,7 @@ import {
   sansSeance,
 } from './utils/enLigne';
 import { useEnvoiMesures } from './hooks/useEnvoiMesures';
-import { NOM_PERSONNE, autrePersonne, genererProgramme, programmeDansLien } from './utils/programmeMois';
+import { NOM_PERSONNE, ancreAvecProgramme, autrePersonne, genererProgramme, programmeDansLien } from './utils/programmeMois';
 import { graineAleatoire } from './utils/formatage';
 import { uniteDeSeance } from './utils/statistiques';
 import Accueil from './components/Accueil';
@@ -37,22 +38,29 @@ const avecReglagesDe = (programme: ProgrammeMois, recu: ProgrammeMois): Programm
   ...(recu.equipe ? { equipe: recu.equipe } : {}),
 });
 
+/** Un lien de programme que ce téléphone ne sait pas lire : abîmé, ou venu
+ *  d'une autre version de l'application (`programmeDansLien`). */
+const lienIllisible = (ancre: string, recu: ProgrammeMois | null) => !recu && ancreAvecProgramme(ancre);
+
 /** L'état au lancement. Le premier jour, l'application compose le programme
  *  elle-même ; un programme reçu par lien est pris d'office s'il n'y en avait
  *  pas encore, sinon il attend une réponse. */
-function demarrer(): { etat: EntrainementState; recu: ProgrammeMois | null } {
+function demarrer(): { etat: EntrainementState; recu: ProgrammeMois | null; illisible: boolean } {
   const etat = chargerEtat();
-  const recu = programmeDansLien(window.location.hash);
-  if (recu && !etat.programme) return { etat: { ...etat, programme: recu, programmeARenvoyer: false }, recu: null };
+  const recu = programmeDansLien(window.location.hash, SERVEUR_DU_SITE);
+  const illisible = lienIllisible(window.location.hash, recu);
+  if (recu && !etat.programme) {
+    return { etat: { ...etat, programme: recu, programmeARenvoyer: false }, recu: null, illisible };
+  }
   if (etat.programme) {
     if (recu && memesSeances(recu, etat.programme)) {
-      return { etat: { ...etat, programme: avecReglagesDe(etat.programme, recu) }, recu: null };
+      return { etat: { ...etat, programme: avecReglagesDe(etat.programme, recu) }, recu: null, illisible };
     }
-    return { etat, recu };
+    return { etat, recu, illisible };
   }
   // Un programme tout neuf : l'autre téléphone ne l'a pas encore.
   const programme = genererProgramme({ graine: graineAleatoire() });
-  return { etat: { ...etat, programme, programmeARenvoyer: true }, recu: null };
+  return { etat: { ...etat, programme, programmeARenvoyer: true }, recu: null, illisible };
 }
 
 /** Le programme du lien est lu : on retire l'ancre, pour qu'un rechargement
@@ -70,6 +78,7 @@ export default function App() {
   const [depart] = useState(demarrer);
   const [etat, setEtat] = useState<EntrainementState>(depart.etat);
   const [programmeRecu, setProgrammeRecu] = useState<ProgrammeMois | null>(depart.recu);
+  const [lienNonLu, setLienNonLu] = useState(depart.illisible);
   const [vue, setVue] = useState<VueSecondaire | null>(null);
 
   useEffect(() => {
@@ -88,7 +97,11 @@ export default function App() {
   }, [etat.programme]);
   useEffect(() => {
     const surAncre = () => {
-      const recu = programmeDansLien(window.location.hash);
+      const recu = programmeDansLien(window.location.hash, SERVEUR_DU_SITE);
+      if (lienIllisible(window.location.hash, recu)) {
+        setLienNonLu(true);
+        effacerLien();
+      }
       if (!recu) return;
       if (memesSeances(recu, programmeActuel.current)) {
         setEtat((prec) => (prec.programme ? { ...prec, programme: avecReglagesDe(prec.programme, recu) } : prec));
@@ -193,6 +206,8 @@ export default function App() {
             onChange={onChange}
             programmeRecu={programmeRecu && !memesSeances(programmeRecu, etat.programme) ? programmeRecu : null}
             onReponseProgrammeRecu={repondre}
+            lienIllisible={lienNonLu}
+            onFermerLienIllisible={() => setLienNonLu(false)}
             onOuvrir={setVue}
           />
         )

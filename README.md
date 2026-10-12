@@ -394,12 +394,24 @@ de quelqu'un, elle ne raccourcit que les attentes.**
 | Passer l'exercice | Pour soi seul (un genou qui fait mal) : l'autre continue, on se retrouve au prochain « Go » |
 | Précédent | Désactivé : l'horloge est commune |
 
-**Envoyer à Big Max** (ou à Speedy) partage un lien qui contient tout le
-programme — les paires, les répétitions de chacun, le nombre d'exercices et
-le tempo compris : Big Max l'ouvre et a les mêmes séances, les mêmes semaines A
-et B, la même horloge. Les liens envoyés avant la nouvelle semaine s'ouvrent
-toujours : le programme est recomposé avec la même graine, pareil sur les deux
-téléphones. S'il
+**Envoyer à Big Max** (ou à Speedy) partage un **lien court**, une
+soixantaine de caractères
+(`https://sgtraining.netlify.app/#programme=7.9ix.g02.cl44`) : il ne
+contient que la recette du programme — la version de la composition, la
+graine du tirage, le premier lundi, et seulement les réglages qui ne sont pas
+ceux par défaut (objectifs, matériel, alternance, répétitions de chacun,
+tempo, nombre d'exercices, code d'équipe, serveur s'il n'est pas celui du
+site) —, plus les retouches faites à la main (« Changer », les paires,
+« Ensemble / Chacun son tour »), une vingtaine de caractères par exercice
+changé. Le téléphone de Big Max recompose le programme avec la même graine,
+rejoue les retouches et vérifie l'empreinte des séances : il a exactement les
+mêmes séances, les mêmes semaines A et B, la même horloge. S'il n'y arrive pas
+(une autre version de l'application), il le dit au lieu d'inventer un autre
+programme : on recharge la page et on renvoie le lien. Un programme que la
+recette ne sait pas refaire part en entier, dans un lien long, comme avant ;
+les liens longs déjà envoyés s'ouvrent toujours, et ceux d'avant la nouvelle
+semaine aussi : le programme est recomposé avec la même graine, pareil sur
+les deux téléphones. S'il
 avait déjà un programme, l'application lui demande s'il prend celui-ci. Tant
 que l'autre téléphone n'a pas le programme — au premier jour, ou après un
 changement —, l'accueil le rappelle. Une application installée sur l'écran

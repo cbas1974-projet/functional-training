@@ -52,6 +52,17 @@ Claude, de son côté :
     matériel et explosifs derrière « Plus de réglages ».
   - Le lien « Envoyer à Big Max » est plus compact (six séances, moins de
     3 000 caractères).
+- **Le lien court** (option A choisie par Sébastien : 3 000 caractères dans
+  Messenger, c'était absurde). « Envoyer à Big Max » ne transporte plus que
+  la recette : version, graine, premier lundi, empreinte des séances, les
+  réglages qui changent (dont l'équipe et le serveur s'il n'est pas celui du
+  site) et les retouches à la main. **56 à 62 caractères** pour un programme
+  neuf, une centaine avec un code d'équipe et un autre serveur, + 17 à 20 par
+  « Changer », + 5 à 7 pour une paire ou chacun son tour. Le téléphone qui
+  reçoit recompose, rejoue les retouches et vérifie l'empreinte ; s'il ne
+  retombe pas sur les mêmes séances (autre version), un bandeau le dit. Ce que
+  la recette ne sait pas refaire part en lien long ; les liens longs se
+  lisent toujours (`encoderProgramme`, `src/utils/programmeMois.ts`).
 
 - **Décisions de Sébastien sur l'audit de la logique** (points 1.4, 1.5,
   1.8, pépites 5 et 7 ; version 7 du programme, recomposé avec la même
@@ -426,7 +437,7 @@ d'installation du README.
   (`cbas1974-projet`). GitHub la suspend après 60 jours sans commit sur un
   dépôt public ; on la relance dans l'onglet *Actions*.
 - **Vérifications** :
-  - `npx vitest run` (968 tests) ;
+  - `npx vitest run` (975 tests) ;
   - `npx tsc -b --noEmit` ;
   - `npx eslint .` ;
   - `npm run build`.
