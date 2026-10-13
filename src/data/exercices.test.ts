@@ -107,7 +107,9 @@ describe('consignes de précaution', () => {
       const texte = COMPOSANTS[`../components/${nom}.tsx`];
       expect(texte, nom).toContain('consignesDe(');
     }
-    expect(COMPOSANTS['../components/SeanceGuidee.tsx'].match(/consignesDe\(/g)).toHaveLength(2);
+    // La séance guidée : la préparation, la série, et la liste du programme
+    // sur un seul téléphone.
+    expect(COMPOSANTS['../components/SeanceGuidee.tsx'].match(/consignesDe\(/g)).toHaveLength(3);
   });
 });
 

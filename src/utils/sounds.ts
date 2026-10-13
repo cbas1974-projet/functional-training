@@ -164,3 +164,14 @@ export class BellSound {
 }
 
 export const bellSound = new BellSound();
+
+/** La fin d'une pause se sent aussi dans la poche : deux vibrations. Rien
+ *  quand le téléphone ne sait pas vibrer — l'iPhone, dans le navigateur — ou
+ *  le refuse. */
+export function vibrer(motif: number[] = [400, 150, 400]): void {
+  try {
+    if (typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function') navigator.vibrate(motif);
+  } catch {
+    // Le navigateur refuse : le son suffit.
+  }
+}

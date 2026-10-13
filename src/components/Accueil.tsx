@@ -26,7 +26,6 @@ import { formaterDateFr, graineAleatoire, memeTempo } from '../utils/formatage';
 import { SUFFIXE_UNITE, chargeTotale, uniteDeSeance } from '../utils/statistiques';
 import { bellSound } from '../utils/sounds';
 import {
-  EXERCICES_EN_PLUS_LUNDI,
   JOURS,
   NOMBRES_EXERCICES,
   NOM_PERSONNE,
@@ -48,6 +47,7 @@ import {
   estRetouche,
   faiteCetteSemaine,
   faiteLe,
+  historiqueDe,
   isoDate,
   lienDePartage,
   lierDansProgramme,
@@ -70,6 +70,7 @@ import {
   tempoDuProgramme,
 } from '../utils/programmeMois';
 import type { AccordPaire, ContexteSeance } from '../utils/programmeMois';
+import { SEANCE_COMMUNE } from '../hooks/useSeanceCommune';
 import type { ConfigSynchro } from '../hooks/useSeanceCommune';
 import { SERVEUR_DU_SITE, avecSeanceFaite, serveurDe } from '../utils/enLigne';
 import { ajustementDeCharge, ligneProposition, raisonProposition, ressentisQuiChangent } from '../utils/ressenti';
@@ -255,9 +256,11 @@ function LigneExercice({
   personne,
   partenaire,
   passees,
+  passeesAutre,
   unite,
   lien,
   douleur,
+  unTelephone,
   onChanger,
   onBasculerTour,
   onBasculerDouleur,
@@ -270,7 +273,14 @@ function LigneExercice({
   /** À deux : le prénom de l'autre, dont on montre le volume. */
   partenaire: string | null;
   passees: number[] | undefined;
+  /** Sur un seul téléphone, à deux : les charges de l'autre la dernière fois,
+   *  notées ici. */
+  passeesAutre?: number[];
   unite: UnitePoids;
+  /** Sur un seul téléphone, la façon de faire va de soi — une paire ensemble,
+   *  un exercice seul chacun son tour : pas de « Ensemble / Chacun son
+   *  tour ». */
+  unTelephone: boolean;
   lien: EtatLien;
   /** « J'ai mal à cet exercice » est signalé. */
   douleur: boolean;
@@ -333,6 +343,9 @@ function LigneExercice({
         {bloc.autre && partenaire && (
           <p className="chiffres text-xs" style={{ color: 'var(--texte-discret)' }}>
             {partenaire} : {volume(bloc.autre, exercice)}
+            {passeesAutre && passeesAutre.some((charge) => charge > 0)
+              ? ` · dernière fois ${passeesAutre.map((charge) => (charge > 0 ? charge : '—')).join(' · ')} ${SUFFIXE_UNITE[unite]}`
+              : ''}
           </p>
         )}
         {passees && passees.some((charge) => charge > 0) && (
@@ -352,15 +365,18 @@ function LigneExercice({
         )}
         {/* Une douleur : charges à 70 %, pas de montée, jusqu'à ce qu'on l'enlève. */}
         <BoutonDouleur actif={douleur} avecCharge={seCharge(exercice)} onBasculer={onBasculerDouleur} className="mt-1" />
-        {/* À deux : côte à côte, ou chacun son tour sur la machine. */}
-        <div role="group" aria-label="À deux" className="mt-1">
-          <ChoixTour actif={!tour} onClick={onBasculerTour}>
-            Ensemble
-          </ChoixTour>
-          <ChoixTour actif={tour} onClick={onBasculerTour}>
-            Chacun son tour
-          </ChoixTour>
-        </div>
+        {/* À deux sur deux téléphones : côte à côte, ou chacun son tour sur la
+            machine. Sur un seul, ça va de soi. */}
+        {!unTelephone && (
+          <div role="group" aria-label="À deux" className="mt-1">
+            <ChoixTour actif={!tour} onClick={onBasculerTour}>
+              Ensemble
+            </ChoixTour>
+            <ChoixTour actif={tour} onClick={onBasculerTour}>
+              Chacun son tour
+            </ChoixTour>
+          </div>
+        )}
         {/* Un exercice seul : on lui choisit un partenaire. */}
         {lien.mode === 'libre' && (
           <button
@@ -503,7 +519,7 @@ function FeuilleReglages({
 
       <Groupe
         titre="Exercices par séance"
-        aide={`Le mardi et le jeudi ; le lundi, la grosse séance, en a ${EXERCICES_EN_PLUS_LUNDI} de plus. Deux par deux, sans compter le dernier exercice. Changer le nombre recompose les séances, avec les mêmes objectifs.`}
+        aide="Les trois jours, le dernier compris : le premier et le dernier se font seuls, chacun son tour ; les autres par paires. Changer le nombre recompose les séances, avec les mêmes objectifs."
       >
         <div className="flex flex-wrap gap-2">
           {NOMBRES_EXERCICES.map((n) => (
@@ -513,13 +529,13 @@ function FeuilleReglages({
           ))}
         </div>
         <p className="chiffres mt-2 text-xs" style={{ color: 'var(--texte-discret)' }}>
-          Lundi {nombreExercices + EXERCICES_EN_PLUS_LUNDI} · mardi {nombreExercices} · jeudi {nombreExercices}
+          {(nombreExercices - 2) / 2} paire{nombreExercices > 4 ? 's' : ''} et 2 exercices seuls, les trois jours
         </p>
       </Groupe>
 
       <Groupe
         titre="Tempo des séances"
-        aide="Le nombre d’exercices et le tempo sont les mêmes sur les deux téléphones : ils partent avec le programme. La séance libre garde son tempo à elle. Les exercices qui fatiguent le dos ou le genou se font toujours sans arrêt en bas ; ceux dont la position basse est un repos (Superman, pont fessier, élévations…) tiennent en haut."
+        aide="Le nombre d’exercices et le tempo partent avec le programme. Pendant une série, le tempo ne s’affiche que si on touche « Tempo ». La séance libre garde son tempo à elle. Les exercices qui fatiguent le dos ou le genou se font toujours sans arrêt en bas ; ceux dont la position basse est un repos (Superman, pont fessier, élévations…) tiennent en haut."
       >
         <div className="space-y-2">
           {TEMPOS.map((t) => (
@@ -587,7 +603,7 @@ function FeuilleReglages({
         Réglages, programme et historique restent sur ce téléphone.
       </p>
       <p className="chiffres text-xs" style={{ color: 'var(--texte-discret)' }}>
-        Version du {versionDuSite()}
+        Version {__VERSION_APP__} du {versionDuSite()}
       </p>
     </Feuille>
   );
@@ -633,7 +649,10 @@ function ReglageServeur({
     }
   };
   return (
-    <Groupe titre="Serveur, pour le direct à deux" aide="L’adresse de ton VPS. Elle part avec le lien du programme.">
+    <Groupe
+      titre={SEANCE_COMMUNE ? 'Serveur, pour le direct à deux' : 'Serveur, pour l’historique des deux'}
+      aide="L’adresse de ton VPS. Elle part avec le lien du programme."
+    >
       <div className="flex gap-2">
         <input
           value={texte}
@@ -664,7 +683,9 @@ function ReglageServeur({
           style={{ color: etat === 'ok' ? 'var(--montee)' : 'var(--alerte)' }}
         >
           {etat === 'ok'
-            ? 'Le serveur répond : le direct à deux est prêt. Renvoie le programme à l’autre.'
+            ? SEANCE_COMMUNE
+              ? 'Le serveur répond : le direct à deux est prêt. Renvoie le programme à l’autre.'
+              : 'Le serveur répond : l’historique des deux est prêt. Renvoie le programme à l’autre.'
             : etat === 'muet'
               ? 'Pas de réponse à cette adresse.'
               : 'L’adresse doit commencer par https://'}
@@ -870,39 +891,57 @@ export default function Accueil({
   // À deux par défaut, dès qu'on sait qui s'entraîne ici.
   const aDeux = personne !== null && etat.aDeux !== false;
   const reps = repsDuDuo(programme);
-  const contexte = useMemo<ContexteSeance>(
-    () => ({
+  // Un seul téléphone pour deux, depuis le 12 octobre 2026 : celui qui le
+  // tient note pour les deux. La séance commune sur deux téléphones est
+  // cachée (`SEANCE_COMMUNE`).
+  const unTelephone = !SEANCE_COMMUNE;
+  /** L'autre, quand ce téléphone note aussi pour lui. */
+  const lAutre = unTelephone && aDeux && personne ? autrePersonne(personne) : null;
+  /** Ce que ce téléphone a noté pour l'autre, séance après séance. */
+  const historiqueAutre = useMemo(
+    () => (lAutre ? historiqueDe(historique, lAutre, personne) : []),
+    [historique, lAutre, personne],
+  );
+  const contexte = useMemo<ContexteSeance>(() => {
+    const ids = [...seanceMois.exercices, ...(seanceMois.finale ? [seanceMois.finale] : [])];
+    return {
       personne,
       aDeux,
+      unTelephone,
       // Les répétitions du jour : le lundi, Speedy en fait autant que Big Max.
       reps: repsDuJour(programme, seanceMois.jour),
-      // Le tempo du programme, le même sur les deux téléphones.
+      // Le tempo du programme, le même pour les deux.
       tempo: tempoDuProgramme(programme),
       // Léger assez de fois de suite (trois pour Speedy, deux pour Big Max) :
       // un cran de plus ; lourd deux fois : un cran de moins.
       // Une douleur signalée : pas de montée, seulement la descente.
-      ressentis: ressentisQuiChangent(
-        historique,
-        [...seanceMois.exercices, ...(seanceMois.finale ? [seanceMois.finale] : [])],
-        unite,
-        personne,
-        Object.keys(douleurs),
-      ),
-    }),
-    [personne, aDeux, programme, historique, seanceMois, unite, douleurs],
-  );
+      ressentis: ressentisQuiChangent(historique, ids, unite, personne, Object.keys(douleurs)),
+      // Sur un seul téléphone, la même règle pour l'autre, d'après ce qu'on a
+      // noté pour lui.
+      ...(lAutre ? { ressentisAutre: ressentisQuiChangent(historiqueAutre, ids, unite, lAutre) } : {}),
+    };
+  }, [personne, aDeux, unTelephone, programme, historique, historiqueAutre, lAutre, seanceMois, unite, douleurs]);
   const seance = useMemo(() => seancePourPersonne(seanceMois, parametres, contexte), [seanceMois, parametres, contexte]);
   const passees = useMemo(
     () => chargesPassees(historique, seance.blocs.map((bloc) => bloc.exerciceId), unite),
     [historique, seance, unite],
   );
+  const passeesAutre = useMemo(
+    () => (lAutre ? chargesPassees(historiqueAutre, seance.blocs.map((bloc) => bloc.exerciceId), unite) : {}),
+    [lAutre, historiqueAutre, seance, unite],
+  );
   // La charge soulevée la dernière fois qu'on a fait cette séance : le chiffre
-  // à battre, affiché à la fin.
+  // à battre, affiché à la fin — pour chacun, sur un seul téléphone.
   const chargeDerniereFois = useMemo(() => {
     if (!active?.seance.titre) return undefined;
     const precedente = historique.find((h) => h.titre === active.seance.titre);
     return precedente ? chargeTotale(precedente, uniteDeSeance(active.seance.parametres)) : undefined;
   }, [active, historique]);
+  const chargeDerniereFoisAutre = useMemo(() => {
+    if (!active?.seance.titre) return undefined;
+    const precedente = historiqueAutre.find((h) => h.titre === active.seance.titre);
+    return precedente ? chargeTotale(precedente, uniteDeSeance(active.seance.parametres)) : undefined;
+  }, [active, historiqueAutre]);
   // Dans l'aperçu, c'est l'écran de l'autre : nos charges n'y ont pas leur place.
   const chargesActives = useMemo(
     () =>
@@ -914,6 +953,17 @@ export default function Accueil({
           )
         : {},
     [active, historique],
+  );
+  const chargesActivesAutre = useMemo(
+    () =>
+      active && active.essai?.genre !== 'apercu' && lAutre
+        ? chargesPassees(
+            historiqueAutre,
+            active.seance.blocs.map((bloc) => bloc.exerciceId),
+            uniteDeSeance(active.seance.parametres),
+          )
+        : {},
+    [active, historiqueAutre, lAutre],
   );
 
   const autre = personne ? NOM_PERSONNE[autrePersonne(personne)] : null;
@@ -985,9 +1035,11 @@ export default function Accueil({
         personne={personne}
         partenaire={aDeux ? autre : null}
         passees={passees[bloc.exerciceId]}
+        passeesAutre={passeesAutre[bloc.exerciceId]}
         unite={unite}
         lien={etatLien(bloc)}
         douleur={douleurDe(etat.douleurs, bloc.exerciceId) !== null}
+        unTelephone={unTelephone}
         onChanger={() => setFeuille({ type: 'changer', seanceId: seanceMois.id, exerciceId: bloc.exerciceId })}
         onBasculerTour={() => modifierProgramme((prec) => basculerTour(prec, seanceMois.id, bloc.exerciceId))}
         onBasculerDouleur={() =>
@@ -1074,11 +1126,12 @@ export default function Accueil({
     }
   };
 
-  /** La séance commune du jour, si l'on s'entraîne à deux et que le serveur
-   *  est réglé. */
+  /** La séance commune du jour, si l'on s'entraîne à deux sur deux téléphones
+   *  et que le serveur est réglé. Cachée depuis le 12 octobre 2026
+   *  (`SEANCE_COMMUNE`) : un seul téléphone suffit. */
   const serveur = serveurDe(programme);
   const configSynchro = (seanceId: string, aDeuxIci: boolean): ConfigSynchro | undefined =>
-    aDeuxIci && personne && serveur
+    SEANCE_COMMUNE && aDeuxIci && personne && serveur
       ? { serveur, equipe: equipeDe(programme), cle: `${isoDate(new Date())}_${seanceId}`, personne }
       : undefined;
 
@@ -1361,18 +1414,21 @@ export default function Accueil({
               {seanceMois.semaine ? ` · semaine ${seanceMois.semaine}` : ''}
             </p>
             <p className="mt-2 text-sm" style={{ color: 'var(--texte-discret)' }}>
-              {avecPaires
-                ? `Par paires : les deux exercices à la suite, puis 1 min de pause${avecTrapBar ? ' (1 min 30 après la paire de la trap bar)' : ''}. À chaque nouvelle paire, on installe, puis on repart sur « Go ».`
-                : `Pauses : ${avecTrapBar ? '2 min à la trap bar, ' : ''}1 min 30 aux gros exercices, 1 min aux petits. À chaque nouvel exercice, on installe, puis on repart sur « Go ».`}
+              {unTelephone
+                ? `Le premier et le dernier exercice se font seuls${aDeux ? ', chacun son tour' : ''}. Une paire : A, B, A, B, sans pause entre les tours. La pause se lance d’un toucher à la fin : 1 min${avecTrapBar ? ', 1 min 30 après la trap bar' : ''}.`
+                : avecPaires
+                  ? `Par paires : les deux exercices à la suite, puis 1 min de pause${avecTrapBar ? ' (1 min 30 après la trap bar)' : ''}. À chaque nouvel exercice, on installe, puis on repart sur « Go ».`
+                  : `Pauses : 1 min${avecTrapBar ? ', 1 min 30 à la trap bar' : ''}. À chaque nouvel exercice, on installe, puis on repart sur « Go ».`}
               {plafond ? ` ${plafond}` : ''}
             </p>
             {/* Pour essayer sans rien garder : la séance en version courte, ou
-                l'écran de l'autre. */}
-            <div className={`mt-3 grid gap-2 ${autre ? 'grid-cols-2' : 'grid-cols-1'}`}>
+                l'écran de l'autre — inutile sur un seul téléphone à deux, qui
+                montre déjà les deux. */}
+            <div className={`mt-3 grid gap-2 ${autre && !lAutre ? 'grid-cols-2' : 'grid-cols-1'}`}>
               <button type="button" onClick={() => void lancerEssai()} className="rounded-xl px-3 py-2.5 text-sm font-semibold" style={DISCRET}>
                 Séance d’essai
               </button>
-              {autre && (
+              {autre && !lAutre && (
                 <button type="button" onClick={lancerApercu} className="rounded-xl px-3 py-2.5 text-sm font-semibold" style={DISCRET}>
                   Voir comme {autre}
                 </button>
@@ -1408,7 +1464,21 @@ export default function Accueil({
             {/* Les paires : deux exercices opposés, à la suite, puis la pause. */}
             <div className="mt-3 space-y-2">
               {groupes.map((groupe) => {
-                if (groupe.length === 1) return <ul key={groupe[0].exerciceId}>{ligne(groupe[0])}</ul>;
+                if (groupe.length === 1) {
+                  // Un exercice seul — le premier, le gros du jour : chacun son
+                  // tour, et la pause à la fin.
+                  return (
+                    <div key={groupe[0].exerciceId} className="space-y-1">
+                      {unTelephone && (
+                        <p className="chiffres pl-1 text-xs font-semibold" style={{ color: 'var(--texte-discret)' }}>
+                          Seul{aDeux ? ', chacun son tour' : ''} · pause {aDeux ? 'à la fin' : 'entre les séries'} :{' '}
+                          {dureeCourte(groupe[0].reposSec)}
+                        </p>
+                      )}
+                      <ul>{ligne(groupe[0])}</ul>
+                    </div>
+                  );
+                }
                 const numero = groupes.filter((g) => g.length > 1).indexOf(groupe) + 1;
                 const [a, b] = groupe.map((bloc) => EXERCICES_PAR_ID[bloc.exerciceId]);
                 const accord = a && b ? accordPaire(a, b) : null;
@@ -1432,9 +1502,10 @@ export default function Accueil({
                             {croisee ? ' · à deux, on se croise' : ''}
                           </p>
                         )}
-                        {/* La pause de la paire : 1 min, 1 min 30 avec la trap bar. */}
+                        {/* La pause de la paire : 1 min, à la fin de tous ses tours. */}
                         <p className="chiffres text-xs" style={{ color: 'var(--texte-discret)' }}>
-                          Pause après la paire : {dureeCourte(groupe[0].reposSec)}
+                          {unTelephone ? 'A, B, A, B, sans pause · pause à la fin' : 'Pause après la paire'} :{' '}
+                          {dureeCourte(groupe[0].reposSec)}
                         </p>
                       </div>
                       <button
@@ -1469,7 +1540,7 @@ export default function Accueil({
             {blocFinal && (
               <div className="mt-3">
                 <p className="mb-2 text-sm font-bold" style={{ color: 'var(--texte)' }}>
-                  Pour finir : les jambes
+                  Pour finir, seul{aDeux && unTelephone ? ', chacun son tour' : ''}
                 </p>
                 <ul className="space-y-2">{ligne(blocFinal)}</ul>
               </div>
@@ -1671,7 +1742,9 @@ export default function Accueil({
           synchro={active.synchro}
           essai={active.essai}
           chargeDerniereFois={chargeDerniereFois}
+          chargeDerniereFoisAutre={chargeDerniereFoisAutre}
           chargesPassees={chargesActives}
+          chargesPasseesAutre={chargesActivesAutre}
           // L'aperçu est l'écran de l'autre : nos douleurs n'y sont pas.
           douleurs={active.essai?.genre === 'apercu' ? undefined : douleurs}
           onBasculerDouleur={active.essai?.genre === 'apercu' ? undefined : basculerDouleurIci}

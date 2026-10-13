@@ -7,6 +7,7 @@ import type {
   ExerciceRealise,
   FormeMouvement,
   MouvementGuide,
+  Personne,
   Seance,
   SeanceRealisee,
   Tempo,
@@ -57,8 +58,17 @@ export type Suivant =
  *  tour          : chacun son tour, l'autre fait sa série ;
  *  serie-de-plus : l'autre fait une série de plus que soi ;
  *  attente       : l'autre finit sa série, plus longue ;
- *  installation  : nouvel exercice — poids à changer, machine à régler. */
-export type MotifRepos = 'repos' | 'tour' | 'serie-de-plus' | 'attente' | 'installation';
+ *  installation  : nouvel exercice — poids à changer, machine à régler ;
+ *  a-lancer      : sur un seul téléphone, la fin d'un exercice ou d'une
+ *                  paire : la pause attend qu'on la lance d'un clic ;
+ *  pause         : sur un seul téléphone, la pause lancée, qui compte sa
+ *                  minute et repart d'elle-même, sur un son et une
+ *                  vibration. */
+export type MotifRepos = 'repos' | 'tour' | 'serie-de-plus' | 'attente' | 'installation' | 'a-lancer' | 'pause';
+
+/** Sur un seul téléphone, à deux : qui fait une série — la personne du
+ *  téléphone, l'autre, ou les deux ensemble. */
+export type QuiFait = 'moi' | 'autre' | 'les-deux';
 
 /** Ce qu'annonce une préparation : toujours un travail, jamais le retour au calme. */
 export type SuivantTravail = Exclude<Suivant, { type: 'retourCalme' }>;
@@ -84,6 +94,11 @@ export type Etape =
       reps: number;
       dureeSec: number;
       groupe?: number;
+      /** Sur un seul téléphone, à deux : qui la fait. Absent : soi. */
+      qui?: QuiFait;
+      /** Sur un seul téléphone : elle se finit sur « Série terminée », pas au
+       *  bout du temps ; sa durée n'est qu'une estimation. */
+      manuelle?: boolean;
     }
   | {
       type: 'repos';
@@ -319,9 +334,11 @@ type Attente = Extract<Morceau, { genre: 'attente' }>;
 const FORCE_MOTIF: Record<MotifRepos, number> = {
   attente: 0,
   repos: 1,
+  pause: 1,
   tour: 2,
   'serie-de-plus': 3,
   installation: 4,
+  'a-lancer': 5,
 };
 
 /** Deux attentes qui se suivent ne font qu'une pause, nommée par la plus
@@ -484,9 +501,137 @@ function construireEtapesHorloge(seance: Seance): Etape[] {
   return etapes;
 }
 
+/** Les exercices d'une séance sur un seul téléphone, groupe par groupe — un
+ *  exercice seul, ou les deux d'une paire —, numérotés comme le `groupe` de
+ *  ses étapes : l'écran de la séance les liste dans cet ordre. */
+export function groupesUnTelephone(seance: Seance): BlocSeries[][] {
+  const aDeux = seance.blocs.some((bloc) => bloc.autre !== undefined);
+  return groupesDeBlocs(seance.blocs.filter((bloc) => bloc.series > 0 || (aDeux && (bloc.autre?.series ?? 0) > 0)));
+}
+
+/** Les étapes d'une séance du programme sur un seul téléphone (décision de
+ *  Sébastien, 12 octobre 2026) : celui qui le tient note pour les deux, et
+ *  regarde le mouvement plutôt que le chrono.
+ *  - Pas de minuteur pendant une série : elle se finit sur « Série terminée »
+ *    (`manuelle`). Sa durée n'est qu'une estimation, pour la durée annoncée :
+ *    la série elle-même, au tempo — la plus longue des deux quand on la fait
+ *    ensemble —, et le temps de passer à la suivante.
+ *  - Une paire : A, B, A, B…, les deux ensemble, jusqu'au bout de toutes les
+ *    séries, sans pause entre les tours.
+ *  - Un exercice seul, à deux : chacun son tour, celui qui commence d'abord —
+ *    la série de l'un est le repos de l'autre. Seul, sans l'autre, la pause
+ *    vient entre deux séries.
+ *  - La pause, à la fin d'un exercice ou d'une paire, attend qu'on la lance
+ *    (`a-lancer`), puis compte sa minute (`pause`) et repart d'elle-même vers
+ *    l'exercice suivant. Pas de mise en place en plus : on s'installe pendant
+ *    la pause.
+ *  Ni préparation, ni « Go », ni attente de l'autre. */
+function construireEtapesUnTelephone(seance: Seance): Etape[] {
+  const { tempo } = seance.parametres;
+  const aDeux = seance.blocs.some((bloc) => bloc.autre !== undefined);
+  const jeCommence = seance.horloge?.jeCommence ?? true;
+  const seriesAutre = (bloc: BlocSeries) => (aDeux ? (bloc.autre?.series ?? 0) : 0);
+  const repsAutre = (bloc: BlocSeries) => bloc.autre?.reps ?? bloc.reps;
+  const groupes = groupesUnTelephone(seance);
+  const duree = (bloc: BlocSeries, reps: number) => dureeSerieSec(exerciceDeSeance(bloc.exerciceId), reps, tempo);
+
+  /** Une série à faire : qui la fait, et le temps qu'elle prend. */
+  interface Travail {
+    bloc: BlocSeries;
+    serie: number;
+    series: number;
+    qui: QuiFait;
+    reps: number;
+    sec: number;
+  }
+  const etapes: Etape[] = [];
+  if (seance.echauffementSec > 0) etapes.push({ type: 'echauffement', dureeSec: seance.echauffementSec });
+  // La cible d'une pause — la série qui suit — n'est connue qu'ensuite :
+  // elle se pose à la fin.
+  const aRetourCalme: Suivant = { type: 'retourCalme' };
+  /** La pause, à lancer d'un clic, puis lancée. */
+  const poserPause = (exerciceId: string, dureeSec: number, groupe: number) => {
+    if (dureeSec <= 0) return;
+    etapes.push({ type: 'repos', exerciceId, dureeSec: 0, suivant: aRetourCalme, groupe, motif: 'a-lancer', manuel: true });
+    etapes.push({ type: 'repos', exerciceId, dureeSec, suivant: aRetourCalme, groupe, motif: 'pause' });
+  };
+
+  groupes.forEach((groupe, g) => {
+    const seul = groupe.length === 1;
+    const travaux: Travail[] = [];
+    if (seul) {
+      const [bloc] = groupe;
+      const tours = Math.max(bloc.series, seriesAutre(bloc));
+      const ordre: ('moi' | 'autre')[] = !aDeux ? ['moi'] : jeCommence ? ['moi', 'autre'] : ['autre', 'moi'];
+      for (let k = 1; k <= tours; k += 1) {
+        for (const qui of ordre) {
+          if (k > (qui === 'moi' ? bloc.series : seriesAutre(bloc))) continue;
+          const reps = qui === 'moi' ? bloc.reps : repsAutre(bloc);
+          travaux.push({ bloc, serie: k, series: tours, qui, reps, sec: duree(bloc, reps) });
+        }
+      }
+    } else {
+      const tours = Math.max(...groupe.map((bloc) => Math.max(bloc.series, seriesAutre(bloc))));
+      for (let k = 1; k <= tours; k += 1) {
+        for (const bloc of groupe) {
+          const moi = k <= bloc.series;
+          const lui = k <= seriesAutre(bloc);
+          if (!moi && !lui) continue;
+          travaux.push({
+            bloc,
+            serie: k,
+            series: Math.max(bloc.series, seriesAutre(bloc)),
+            qui: moi && lui ? 'les-deux' : moi ? 'moi' : 'autre',
+            reps: Math.max(moi ? bloc.reps : 0, lui ? repsAutre(bloc) : 0),
+            sec: Math.max(moi ? duree(bloc, bloc.reps) : 0, lui ? duree(bloc, repsAutre(bloc)) : 0),
+          });
+        }
+      }
+    }
+    travaux.forEach((travail, i) => {
+      const dernier = i === travaux.length - 1;
+      // Le temps de passer à la série qui suit : à l'autre exercice de la
+      // paire, ou à l'autre personne. Seul, la pause en tient lieu.
+      const passage =
+        dernier || (seul && !aDeux) ? 0 : seul ? CHANGEMENT_SEC : (travail.bloc.transitionSec ?? CHANGEMENT_SEC);
+      etapes.push({
+        type: 'serie',
+        exerciceId: travail.bloc.exerciceId,
+        serie: travail.serie,
+        series: travail.series,
+        reps: travail.reps,
+        dureeSec: travail.sec + passage,
+        groupe: g,
+        ...(aDeux ? { qui: travail.qui } : {}),
+        manuelle: true,
+      });
+      if (seul && !aDeux && !dernier) poserPause(travail.bloc.exerciceId, travail.bloc.reposSec, g);
+    });
+    // La pause de l'exercice ou de la paire : celle de son dernier bloc. Pas
+    // après le dernier : les étirements suivent.
+    const dernierBloc = groupe[groupe.length - 1];
+    if (g < groupes.length - 1) poserPause(dernierBloc.exerciceId, dernierBloc.reposSec, g);
+  });
+
+  // Chaque pause annonce la série qui la suit.
+  let cible: Suivant = aRetourCalme;
+  for (let i = etapes.length - 1; i >= 0; i -= 1) {
+    const etape = etapes[i];
+    if (etape.type === 'serie') {
+      cible = { type: 'serie', exerciceId: etape.exerciceId, serie: etape.serie, series: etape.series, reps: etape.reps };
+    } else if (etape.type === 'repos') {
+      etapes[i] = { ...etape, suivant: cible };
+    }
+  }
+  if (seance.retourCalmeSec > 0) etapes.push({ type: 'retourCalme', dureeSec: seance.retourCalmeSec });
+  etapes.push({ type: 'fin', dureeSec: 0 });
+  return etapes;
+}
+
 /** Attendre l'autre assez longtemps pour s'étirer. */
 const ATTENTE_ETIREMENT_SEC = 45;
-/** Une grosse pause : les deux minutes de la trap bar. */
+/** Une grosse pause : deux minutes. La trap bar n'en a plus depuis le 12
+ *  octobre 2026 — une minute trente. */
 const GROSSE_PAUSE_SEC = 120;
 
 /** Une pause où l'on peut s'étirer : pendant la série de l'autre — chacun son
@@ -502,6 +647,7 @@ export function pauseAEtirement(etape: Etape): boolean {
 
 /** Produit la liste plate des étapes de la séance, dans l'ordre. */
 export function construireEtapes(seance: Seance): Etape[] {
+  if (seance.horloge?.unTelephone) return construireEtapesUnTelephone(seance);
   if (seance.horloge) return construireEtapesHorloge(seance);
   const { tempo } = seance.parametres;
   const etapes: Etape[] = [];
@@ -672,6 +818,12 @@ function estDebutUnite(etapes: Etape[], index: number): boolean {
       return true;
     case 'station':
       return etapes[index - 1]?.type !== 'pret';
+    // Sur un seul téléphone, chaque série et la pause à lancer : sans
+    // préparation, elles sont leur propre départ.
+    case 'serie':
+      return etape.manuelle === true;
+    case 'repos':
+      return etape.motif === 'a-lancer';
     default:
       return false;
   }
@@ -1017,10 +1169,22 @@ function poidsParSerie(saisies: number[] | undefined, seriesPrevues: number): nu
   return valeurs;
 }
 
+/** Ce qu'une séance sur un seul téléphone ajoute au compte rendu. */
+export interface OptionsRealisation {
+  /** Les séries finies sur « Série terminée », par leur place dans les
+   *  étapes : elles seules comptent comme faites. Absentes, une série compte
+   *  quand on y a passé la moitié de son temps. */
+  faites?: readonly number[];
+  /** À deux : les charges notées pour l'autre, par exercice et par série. */
+  poidsAutre?: Record<string, number[]>;
+}
+
 /** Agrège le temps passé sur chaque étape en un compte rendu par exercice.
  *  Une série ou une station compte comme faite si le temps passé atteint la
- *  moitié de la durée prévue ; le temps d'un exercice additionne ses
- *  préparations, séries, stations et repos. */
+ *  moitié de la durée prévue — sur un seul téléphone, si on l'a finie sur
+ *  « Série terminée » (`faites`) ; le temps d'un exercice additionne ses
+ *  préparations, séries, stations et repos. Sur un seul téléphone, à deux, ce
+ *  que l'autre a fait part avec, dans `partenaire`. */
 export function agregerRealisation(
   seance: Seance,
   etapes: Etape[],
@@ -1028,52 +1192,75 @@ export function agregerRealisation(
   poids: Record<string, number[]>,
   dureeReelleSec: number,
   terminee: boolean,
+  options: OptionsRealisation = {},
 ): SeanceRealisee {
   const parExercice = new Map<string, ExerciceRealise>();
-  const prevoir = (exerciceId: string, seriesPrevues: number, reps: number) => {
-    const existant = parExercice.get(exerciceId);
+  // L'autre, quand le téléphone note aussi pour lui.
+  const moi = seance.horloge?.personne;
+  const lui = seance.horloge?.unTelephone && moi && seance.blocs.some((bloc) => bloc.autre) ? autreQue(moi) : null;
+  const pourLui = new Map<string, ExerciceRealise>();
+  const prevoir = (dans: Map<string, ExerciceRealise>, exerciceId: string, seriesPrevues: number, reps: number) => {
+    const existant = dans.get(exerciceId);
     if (existant) {
       existant.seriesPrevues += seriesPrevues;
     } else {
-      parExercice.set(exerciceId, { exerciceId, seriesPrevues, seriesFaites: 0, reps, dureeSec: 0 });
+      dans.set(exerciceId, { exerciceId, seriesPrevues, seriesFaites: 0, reps, dureeSec: 0 });
     }
   };
-  seance.blocs.forEach((bloc) => prevoir(bloc.exerciceId, bloc.series, bloc.reps));
+  seance.blocs.forEach((bloc) => {
+    prevoir(parExercice, bloc.exerciceId, bloc.series, bloc.reps);
+    if (lui && bloc.autre) prevoir(pourLui, bloc.exerciceId, bloc.autre.series, bloc.autre.reps);
+  });
   const circuit = seance.circuit;
   if (circuit) {
-    circuit.stations.forEach((exerciceId) => prevoir(exerciceId, circuit.tours, circuit.travailSec));
+    circuit.stations.forEach((exerciceId) => prevoir(parExercice, exerciceId, circuit.tours, circuit.travailSec));
   }
+  const faites = options.faites ? new Set(options.faites) : null;
 
   etapes.forEach((etape, index) => {
     if (!etape.exerciceId) return;
     const realise = parExercice.get(etape.exerciceId);
     if (!realise) return;
+    const sien = pourLui.get(etape.exerciceId);
     const temps = tempsParEtapeSec[index] ?? 0;
     switch (etape.type) {
       case 'serie':
-      case 'station':
-        realise.dureeSec += temps;
-        if (etape.dureeSec > 0 && temps >= etape.dureeSec / 2) realise.seriesFaites += 1;
+      case 'station': {
+        const faite = faites ? faites.has(index) : etape.dureeSec > 0 && temps >= etape.dureeSec / 2;
+        // Qui l'a faite : soi, l'autre, ou les deux.
+        const qui = etape.type === 'serie' ? (etape.qui ?? 'moi') : 'moi';
+        if (qui !== 'autre') {
+          realise.dureeSec += temps;
+          if (faite) realise.seriesFaites += 1;
+        }
+        if (sien && qui !== 'moi') {
+          sien.dureeSec += temps;
+          if (faite) sien.seriesFaites += 1;
+        }
         break;
+      }
       case 'pret':
       case 'repos':
         realise.dureeSec += temps;
+        if (sien) sien.dureeSec += temps;
         break;
     }
   });
 
-  const exercices: ExerciceRealise[] = [...parExercice.values()].map((realise) => {
-    const parSerie = poidsParSerie(poids[realise.exerciceId], realise.seriesPrevues);
-    // `poids` est la charge de référence de l'exercice — la plus lourde des
-    // séries — pour les écrans qui n'affichent qu'un chiffre. Son unité est
-    // celle de la séance (`parametres.unitePoids`).
-    const maximum = parSerie.reduce((max, valeur) => Math.max(max, valeur), 0);
-    return {
-      ...realise,
-      dureeSec: Math.round(realise.dureeSec),
-      ...(maximum > 0 ? { poids: maximum, poidsParSerie: parSerie } : {}),
-    };
-  });
+  /** Les exercices faits, avec leurs charges notées. */
+  const avecCharges = (dans: Map<string, ExerciceRealise>, charges: Record<string, number[]>): ExerciceRealise[] =>
+    [...dans.values()].map((realise) => {
+      const parSerie = poidsParSerie(charges[realise.exerciceId], realise.seriesPrevues);
+      // `poids` est la charge de référence de l'exercice — la plus lourde des
+      // séries — pour les écrans qui n'affichent qu'un chiffre. Son unité est
+      // celle de la séance (`parametres.unitePoids`).
+      const maximum = parSerie.reduce((max, valeur) => Math.max(max, valeur), 0);
+      return {
+        ...realise,
+        dureeSec: Math.round(realise.dureeSec),
+        ...(maximum > 0 ? { poids: maximum, poidsParSerie: parSerie } : {}),
+      };
+    });
 
   return {
     id: nouvelIdentifiant(),
@@ -1082,7 +1269,12 @@ export function agregerRealisation(
     parametres: seance.parametres,
     dureePrevueSec: dureeTotaleSec(etapes),
     dureeReelleSec: Math.round(dureeReelleSec),
-    exercices,
+    exercices: avecCharges(parExercice, poids),
     terminee,
+    ...(lui ? { partenaire: { personne: lui, exercices: avecCharges(pourLui, options.poidsAutre ?? {}) } } : {}),
   };
 }
+
+/** L'autre des deux. (Le module du programme a la sienne ; celui-ci ne
+ *  dépend pas de lui.) */
+const autreQue = (personne: Personne): Personne => (personne === 'sebastien' ? 'max' : 'sebastien');

@@ -19,6 +19,130 @@ Claude, de son côté :
 4. Résume en quelques lignes simples ce qui attend, propose par quoi
    commencer, et attend le feu vert de Sébastien avant les gros changements.
 
+## Séance du 12 octobre 2026
+
+- **À tester demain matin, à la salle** (sur le téléphone de Speedy, « Avec
+  Big Max ») :
+  1. L'accueil annonce **8 exercices** : le premier et le dernier « Seul,
+     chacun son tour », trois paires entre les deux, **jamais deux exercices
+     de la même zone** (« Haut ↔ tronc », « Haut ↔ bas », « Bas ↔ tronc »).
+  2. L'écran de séance montre **tout le programme du jour** : l'exercice en
+     cours ouvert, le suivant marqué « Ensuite », rappelé au-dessus des
+     boutons.
+  3. **Pas de décompte pendant une série** : seulement « Série terminée ·
+     série ≈ 1 min » (le métronome vient si on touche « Tempo »).
+  4. Une paire : **A, B, A, B sans pause entre les tours** ; un exercice
+     seul : Big Max, puis Speedy, en alternance, sans pause.
+  5. À la fin d'une paire ou d'un exercice seul, **la pause part seulement
+     au toucher** : « Pause · 1 min », **1 min 30 après la trap bar** (ou
+     « Sans pause »).
+  6. Fin de la pause : **un son et une vibration** (Android ; l'iPhone ne
+     vibre pas depuis le navigateur), puis l'exercice suivant tout seul.
+  7. **Deux colonnes de charges**, Speedy et Big Max ; à la deuxième séance,
+     **pré-remplies avec la dernière fois** (la première série de la trap bar
+     à 70 %, comme avant). Lourd / Correct / Léger pour les deux à la fin de
+     chaque exercice ; à la fin, la charge totale de chacun.
+- **Un seul téléphone pour deux** (décision de Sébastien) : celui qui le tient
+  note pour les deux. Pendant les séries et les pauses, l'écran est la liste
+  du programme (`ListeProgramme`, `src/components/SeanceGuidee.tsx`) :
+  l'échauffement coché, le groupe en cours déroulé (une ligne par série, la
+  charge de Speedy et celle de Big Max côte à côte, « ▶ Série 2 — Big Max »),
+  les groupes faits et à venir en une ligne. Gardés : « J'ai mal à cet
+  exercice » et ses 70 %, les raccourcis 70 % / 100 %, la charge par côté
+  (en petit, sous la case touchée), pas de case de poids sans charge
+  (`seCharge` : un crochet quand la série est faite). La séance enregistrée
+  garde ce qu'a fait l'autre (`SeanceRealisee.partenaire`) ; ce téléphone en
+  tire les charges et le ressenti de l'autre pour la fois d'après
+  (`historiqueDe`). L'accueil montre, sous chaque exercice, le volume et la
+  dernière charge de l'autre. La reprise après un rechargement garde les
+  charges des deux et les séries faites.
+- **Pas de chrono pendant une série** : une série se finit sur « Série
+  terminée » (`manuelle`) ; sa durée (« série ≈ 48 s ») n'est qu'une
+  estimation, au tempo, la plus longue des deux quand on la fait ensemble,
+  plus 15 s pour passer à la suivante. Le métronome, le changement de côté
+  et le cercle au temps ne viennent que sur « Tempo », et repartent de zéro.
+  La routine du soir et la séance libre gardent leurs décomptes.
+- **La pause se lance d'un clic** (`construireEtapesUnTelephone`,
+  `src/utils/etapesSeance.ts`) : 1 min partout, 1 min 30 pour la trap bar
+  (`reposDe`), à la fin d'une paire ou d'un exercice seul, une seule fois —
+  les pauses empilées (repos + installation) ont disparu. À la fin : la
+  cloche, une vibration (`vibrer`, `src/utils/sounds.ts`, protégée quand le
+  téléphone ne sait pas vibrer), et la séance repart d'elle-même. Rien après
+  le dernier exercice (les étirements suivent ; son ressenti s'y donne).
+  Seul, sans l'autre : une pause à lancer entre deux séries d'un exercice
+  seul.
+- **Paires : jamais deux exercices de la même zone** (`src/utils/zones.ts`) :
+  le haut (zones « haut », « dos » sauf le bas du dos), le bas (« bas »), le
+  tronc (« gainage », et tout exercice qui vise le bas du dos — le Superman) ;
+  un exercice de tout le corps prend les zones de ses muscles principaux
+  (le good morning : bas et tronc). Appliqué à `accordPaire` (programme,
+  nouvel accord « même zone ») et à `scoreCompagnon` (séance libre : un
+  enchaînement compte donc trois exercices au plus). Les règles du souffle,
+  du bas du dos et du swing restent.
+- **Version 8 du programme** (même graine : les deux téléphones retombent sur
+  le même ; les liens de la version 7 s'ouvrent, recomposés) : **8 exercices
+  les trois jours, semaines A et B, le premier et le dernier seuls, trois
+  paires entre les deux**. « Exercices par séance » : 4, 6 ou 8, les trois
+  jours, 8 par défaut. Durées à deux, graine 1 : lundi 1 h 03 / 1 h 11, mardi
+  1 h 01 / 1 h 08, jeudi 58 / 52 min (semaines A / B) ; sur 30 graines, lundi
+  ≈ 1 h 06, mardi ≈ 1 h 04, jeudi ≈ 55 min.
+- **Tranché par Claude, à valider par Sébastien** :
+  - **Les deux exercices seuls de chaque jour** : lundi, la trap bar en tête
+    et la presse ou le hack squat pour finir (A / B) ; jeudi, le swing en
+    tête et le traîneau pour finir ; **mardi, le développé couché aux
+    haltères en tête et la marche du fermier pour finir** — la trap bar, la
+    presse et le hack squat n'ont pas leur place le jour du haut, avec le
+    jiu-jitsu le soir.
+  - **Le mardi**, jour du haut, ne peut pas jumeler deux exercices du haut :
+    chacun va avec le ventre (du gainage, rien sur le bas du dos) ou **une
+    jambe légère** (une isolation des jambes sans machine : mollets, bouche
+    d'incendie, élévation latérale de jambe), qui ne vole pas les jambes du
+    jiu-jitsu.
+  - **Le jeudi**, jour des jambes : la Copenhague et les deux machines,
+    chacune avec le ventre ou un tirage léger (oiseau, rowing appuyé) ; les
+    machines ne vont plus ensemble, et il n'y a plus de place pour une fente.
+    Il dure parfois un peu plus d'une heure, quand ses tirages légers se
+    font d'un bras puis de l'autre (61 min au plus, sur 30 graines).
+  - **Le lundi** : le Superman, le ventre ou une jambe légère, chacun avec le
+    haut du corps (un développé au-dessus de la tête, un tirage, un
+    développé).
+  - **La semaine B** reprend le moins possible les exercices de la semaine A
+    (sauf les favoris : trap bar, Superman, développé couché, swing,
+    Copenhague, les deux machines).
+  - **L'oiseau aux haltères et au kettlebell comptent pour un seul
+    mouvement** (`MEME_MOUVEMENT`, `src/utils/generateurSeance.ts`) : le jeudi
+    en tirait les deux, un sur trois. Un test le vérifie pour tous les
+    programmes.
+  - **Un nombre d'exercices choisi avant la version 8 repart à 8** : il
+    valait pour le mardi et le jeudi, le lundi en avait deux de plus
+    (`mettreANiveau`). Pareil sur les deux téléphones et pour un ancien lien.
+  - **« Ensuite · … » au-dessus des boutons** : à 375 px, la carte d'une paire
+    remplit l'écran et cachait le suivant.
+  - « Sans pause » à côté de « Pause · 1 min » ; « Passer cette paire »
+    saute la paire entière.
+- **La séance commune sur deux téléphones est cachée, pas supprimée** :
+  `SEANCE_COMMUNE` (`src/hooks/useSeanceCommune.ts`) ne s'allume qu'avec
+  `VITE_SEANCE_COMMUNE=oui` à la publication ; alors l'ancienne horloge
+  revient telle quelle. Le serveur et `src/utils/etatCommun.ts` n'ont pas
+  changé : pas de mise à jour du VPS. Les tests de l'horloge commune tournent
+  sur une semaine de la version 7 (`semaineDeuxTelephones.fixture.ts`).
+- **Version 1.1.0**, affichée dans les Réglages (lue dans `package.json` à la
+  construction, `__VERSION_APP__`).
+- **Vérifié dans le navigateur à 375 px** (Playwright, serveur de dev) : une
+  séance du lundi à deux, la liste et « Ensuite », les charges des deux,
+  l'alternance sans pause, la pause de 1 min 30 au clic puis la vibration
+  demandée et l'exercice suivant tout seul, la paire sans pause entre les
+  tours, la pause de 1 min, la reprise après rechargement, l'enregistrement
+  (les charges et le ressenti de Big Max dans `partenaire`), le
+  pré-remplissage à la séance suivante, l'écran de fin.
+- **Non vérifié** : la vibration et le son sur un vrai téléphone ; une vraie
+  séance à la salle ; la séance commune rallumée (`VITE_SEANCE_COMMUNE=oui`)
+  dans le navigateur (seulement par les tests) ; ce que le serveur fait du
+  champ `partenaire` (lu dans son code : il garde la séance telle qu'elle
+  arrive, 64 Ko au plus — pas exécuté). Le téléphone de Big Max ne connaît
+  pas les charges notées pour lui sur celui de Speedy : faire la séance
+  toujours sur le même téléphone.
+
 ## Séance du 11 octobre 2026
 
 - **À présenter à Sébastien, en liste courte avec un avis par point, avant

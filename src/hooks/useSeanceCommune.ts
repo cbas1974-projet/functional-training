@@ -8,6 +8,14 @@ import type { Personne } from '../types';
 import { appliquer, lireEnvoi, lireEtat } from '../utils/etatCommun';
 import type { ActionCommune, EnvoiAction, EtatCommun } from '../utils/etatCommun';
 
+/** La séance commune — deux téléphones sur la même horloge, en direct par le
+ *  serveur — est cachée depuis le 12 octobre 2026 : les deux s'entraînent
+ *  maintenant avec un seul téléphone, celui qui le tient note pour les deux.
+ *  Rien n'est supprimé, ni ici ni sur le serveur : publier le site avec
+ *  `VITE_SEANCE_COMMUNE = "oui"` la rend, avec l'horloge d'avant (une séance
+ *  sans `horloge.unTelephone`). */
+export const SEANCE_COMMUNE: boolean = import.meta.env.VITE_SEANCE_COMMUNE === 'oui';
+
 export interface ConfigSynchro {
   /** « https://srv123.hstgr.cloud » */
   serveur: string;

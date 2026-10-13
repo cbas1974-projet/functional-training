@@ -1,9 +1,15 @@
+import { readFileSync } from 'node:fs'
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
 /** Commit à l'origine du build. Netlify fournit COMMIT_REF, GitHub Actions
  *  GITHUB_SHA ; en local, il n'y en a pas. */
 const version = process.env.COMMIT_REF || process.env.GITHUB_SHA || 'dev'
+
+/** Le numéro de version de l'application, celui de package.json : on le
+ *  monte à chaque lot livré, et les Réglages l'affichent. */
+const versionApp = (JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf-8')) as { version: string })
+  .version
 
 /** L'heure du build, affichée en bas des Réglages avec le commit : pour savoir
  *  d'un coup d'œil si le téléphone a la dernière version. */
@@ -29,6 +35,7 @@ export default defineConfig({
   plugins: [react(), marqueurDeVersion()],
   define: {
     __VERSION__: JSON.stringify(version.slice(0, 7)),
+    __VERSION_APP__: JSON.stringify(versionApp),
     __CONSTRUIT_LE__: JSON.stringify(construitLe),
   },
   // Chemins relatifs : le build fonctionne à la racine d'un site (Netlify,

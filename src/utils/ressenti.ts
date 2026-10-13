@@ -8,7 +8,7 @@
 //
 // Tout est pur et se recalcule depuis l'historique : rien n'est stocké en
 // plus du ressenti lui-même, dans la séance faite.
-import type { BlocSeries, Personne, Ressenti, SeanceRealisee, UnitePoids } from '../types';
+import type { BlocSeries, ExerciceRealise, Personne, Ressenti, SeanceRealisee, UnitePoids } from '../types';
 import type { Etape } from './etapesSeance';
 import { CRAN_CHARGE, SUFFIXE_UNITE, convertirPoids, poidsDe, uniteDeSeance } from './statistiques';
 
@@ -249,15 +249,28 @@ export function exercicesAEvaluer(etapes: readonly Etape[], index: number): stri
   return finis;
 }
 
-/** La séance faite, avec les ressentis donnés. Un exercice dont aucune série
+/** Les exercices, avec les ressentis donnés. Un exercice dont aucune série
  *  n'a été faite (passé) n'en garde pas. */
-export function avecRessentis(realisee: SeanceRealisee, ressentis: Record<string, Ressenti>): SeanceRealisee {
-  if (Object.keys(ressentis).length === 0) return realisee;
+const exercicesAvecRessentis = (exercices: ExerciceRealise[], ressentis: Record<string, Ressenti>): ExerciceRealise[] =>
+  exercices.map((exo) => {
+    const ressenti = Object.prototype.hasOwnProperty.call(ressentis, exo.exerciceId) ? ressentis[exo.exerciceId] : undefined;
+    return estRessenti(ressenti) && exo.seriesFaites > 0 ? { ...exo, ressenti } : exo;
+  });
+
+/** La séance faite, avec les ressentis donnés — et, sur un seul téléphone à
+ *  deux, ceux de l'autre (`ressentisAutre`), avec ce qu'il a fait. */
+export function avecRessentis(
+  realisee: SeanceRealisee,
+  ressentis: Record<string, Ressenti>,
+  ressentisAutre: Record<string, Ressenti> = {},
+): SeanceRealisee {
+  const pourLui = realisee.partenaire && Object.keys(ressentisAutre).length > 0;
+  if (Object.keys(ressentis).length === 0 && !pourLui) return realisee;
   return {
     ...realisee,
-    exercices: realisee.exercices.map((exo) => {
-      const ressenti = Object.prototype.hasOwnProperty.call(ressentis, exo.exerciceId) ? ressentis[exo.exerciceId] : undefined;
-      return estRessenti(ressenti) && exo.seriesFaites > 0 ? { ...exo, ressenti } : exo;
-    }),
+    exercices: exercicesAvecRessentis(realisee.exercices, ressentis),
+    ...(realisee.partenaire && pourLui
+      ? { partenaire: { ...realisee.partenaire, exercices: exercicesAvecRessentis(realisee.partenaire.exercices, ressentisAutre) } }
+      : {}),
   };
 }

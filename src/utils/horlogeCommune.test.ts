@@ -14,9 +14,14 @@ import {
   tempsDesEtapesQuittees,
 } from './horlogeCommune';
 import type { Contexte, Ecart } from './horlogeCommune';
-import { basculerTour, delierDansProgramme, genererProgramme, seancePourPersonne } from './programmeMois';
+import { basculerTour, delierDansProgramme, seancePourPersonne } from './programmeMois';
+import { programmeDeuxTelephones } from './semaineDeuxTelephones.fixture';
 
-const programme = genererProgramme({ graine: 3, aujourdhui: new Date(2026, 9, 5) });
+// L'horloge commune, sur deux téléphones : cachée depuis le 12 octobre 2026
+// (`SEANCE_COMMUNE`), pas supprimée. Ses séances viennent de la semaine
+// d'avant, qui a ce que ces tests vérifient (la trap bar en paire, deux
+// machines ensemble).
+const programme = programmeDeuxTelephones();
 // Le lundi, la trap bar séparée de sa paire : seule, chacun son tour, Max
 // d'abord. L'exercice qui la suit se fait seul aussi, côte à côte.
 const lundiTrapBar = delierDansProgramme(programme, 'lundi-a', 'trap-bar-deadlift').seances.find((s) => s.id === 'lundi-a')!;

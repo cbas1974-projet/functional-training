@@ -369,3 +369,55 @@ describe('« J’ai mal à cet exercice », dans la sauvegarde', () => {
     expect(chargerEtat().douleurs).toBeUndefined();
   });
 });
+
+describe('un seul téléphone, dans la sauvegarde', () => {
+  beforeEach(() => localStorage.clear());
+
+  it('garde ce qu’on a noté pour l’autre : la séance faite, et la séance en cours à reprendre', () => {
+    const partenaire = {
+      personne: 'max' as const,
+      exercices: [{ exerciceId: 'shoulder-press', seriesPrevues: 4, seriesFaites: 4, reps: 10, dureeSec: 300, poids: 55, poidsParSerie: [50, 55, 55, 55], ressenti: 'leger' as const }],
+    };
+    const faite = {
+      id: 'faite-1',
+      date: '2026-10-12T10:00:00.000Z',
+      titre: 'Lundi A — tout le corps',
+      parametres: { ...PARAMETRES_PAR_DEFAUT, unitePoids: 'lb' as const },
+      dureePrevueSec: 3600,
+      dureeReelleSec: 3500,
+      exercices: [{ exerciceId: 'shoulder-press', seriesPrevues: 3, seriesFaites: 3, reps: 10, dureeSec: 300, poids: 45, poidsParSerie: [40, 45, 45] }],
+      terminee: true,
+      partenaire,
+    };
+    const enCours = {
+      ...ANCIENNE_SAUVEGARDE.enCours,
+      poids: { 'shoulder-press': [40] },
+      poidsAutre: { 'shoulder-press': [50, 55] },
+      ressentisAutre: { 'shoulder-press': 'lourd' as const },
+      faites: [3, 4, 5],
+    };
+    localStorage.setItem(CLE, JSON.stringify({ ...ANCIENNE_SAUVEGARDE, historique: [faite], enCours }));
+    const etat = chargerEtat();
+    expect(etat.historique[0].partenaire).toEqual(partenaire);
+    expect(etat.enCours?.poidsAutre).toEqual({ 'shoulder-press': [50, 55] });
+    expect(etat.enCours?.ressentisAutre).toEqual({ 'shoulder-press': 'lourd' });
+    expect(etat.enCours?.faites).toEqual([3, 4, 5]);
+    // Ce qui ne se lit pas est écarté, le reste demeure.
+    localStorage.setItem(
+      CLE,
+      JSON.stringify({
+        ...ANCIENNE_SAUVEGARDE,
+        historique: [{ ...faite, partenaire: { personne: 'quelqu’un', exercices: [] } }],
+        enCours: { ...enCours, ressentisAutre: { 'shoulder-press': 'énorme' }, faites: [1, 'deux', -3, 2.5] },
+      }),
+    );
+    const abime = chargerEtat();
+    expect(abime.historique[0].partenaire).toBeUndefined();
+    expect(abime.historique[0].exercices[0].poids).toBe(45);
+    expect(abime.enCours?.ressentisAutre).toEqual({});
+    expect(abime.enCours?.faites).toEqual([1]);
+    // Une sauvegarde d'avant n'en a pas.
+    localStorage.setItem(CLE, JSON.stringify(ANCIENNE_SAUVEGARDE));
+    expect(chargerEtat().enCours?.faites).toBeUndefined();
+  });
+});

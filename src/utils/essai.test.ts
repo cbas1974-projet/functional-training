@@ -231,8 +231,9 @@ describe('raccourcirPourEssai', () => {
     expect(minutes(essai(JEUDI, SEUL_SEB))).toBeGreaterThan(6);
     expect(minutes(essai(JEUDI, SEUL_SEB))).toBeLessThan(11);
     for (const s of SEANCES) {
-      // La vraie séance, elle, tient l'heure.
-      expect(minutes(reelle(s, SEUL_SEB))).toBeGreaterThan(45);
+      // La vraie séance, elle, dure bien plus — même avec les pauses d'une
+      // minute (une minute trente à la trap bar) du 12 octobre 2026.
+      expect(minutes(reelle(s, SEUL_SEB))).toBeGreaterThan(35);
       for (const contexte of CONTEXTES) {
         expect(minutes(essai(s, contexte))).toBeGreaterThan(6);
         expect(minutes(essai(s, contexte))).toBeLessThan(15);

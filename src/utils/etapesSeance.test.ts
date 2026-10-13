@@ -12,6 +12,7 @@ import {
 } from './generateurSeance';
 import { TRANSITION_LIEN_SEC, basculerTour, delierDansProgramme, estPoussee, genererProgramme, seancePourPersonne } from './programmeMois';
 import type { ContexteSeance } from './programmeMois';
+import { programmeDeuxTelephones } from './semaineDeuxTelephones.fixture';
 import {
   CHANGEMENT_SEC,
   DUREE_PRET_SEC,
@@ -858,8 +859,12 @@ describe('superset', () => {
   });
 });
 
+// L'horloge de la séance commune, sur deux téléphones : cachée depuis le 12
+// octobre 2026 (`SEANCE_COMMUNE`), pas supprimée. Ses séances n'ont pas
+// `horloge.unTelephone` ; elles viennent de la semaine d'avant, qui a ce que
+// ces tests vérifient (la trap bar en paire, deux machines ensemble).
 describe('l’horloge des séances du programme', () => {
-  const programme = genererProgramme({ graine: 3, aujourdhui: new Date(2026, 9, 5) });
+  const programme = programmeDeuxTelephones();
   /** Le lundi, la trap bar en tête. */
   const lundiMois = programme.seances.find((s) => s.id === 'lundi-a')!;
   /** Le même lundi, chaque exercice seul : la trap bar chacun son tour. */
@@ -1062,21 +1067,22 @@ describe('l’horloge des séances du programme', () => {
 
   it('propose de s’étirer pendant la série de l’autre et les grosses pauses, pas à chaque repos', () => {
     const avecEtirement = (etapes: Etape[]) => etapes.filter(pauseAEtirement);
-    // À deux, la trap bar seule : chaque attente de la série de l'autre, puis
-    // la pause qui suit sa dernière série, avant d'installer le suivant.
+    // À deux, la trap bar seule : chaque attente de la série de l'autre.
     const seb = etapesDe(lundiSeul);
     const attentes = seb.filter((e) => e.type === 'repos' && e.motif === 'tour' && e.exerciceId === 'trap-bar-deadlift');
     expect(attentes.length).toBeGreaterThan(0);
     expect(attentes.every(pauseAEtirement)).toBe(true);
+    // Plus de grosse pause depuis le 12 octobre 2026 : la trap bar se repose
+    // une minute trente, plus deux minutes — ni avant d'installer le suivant…
     const installations = seb.filter((e) => e.type === 'repos' && e.manuel);
-    expect(installations.map(pauseAEtirement)).toEqual(
-      installations.map((_, g) => g > 0 && lundiSeul.exercices[g - 1] === 'trap-bar-deadlift'),
-    );
-    // Seul : les deux minutes de la trap bar, jamais la minute trente des autres.
+    expect(installations.some(pauseAEtirement)).toBe(false);
+    // … ni seul, entre deux séries.
     const seul = construireEtapes(seancePourPersonne(lundiSeul, parametres, { personne: 'sebastien' }));
     const grossesPauses = avecEtirement(seul).filter((e) => !(e.type === 'repos' && e.manuel));
-    expect(grossesPauses.length).toBe(2);
-    expect(grossesPauses.every((e) => e.exerciceId === 'trap-bar-deadlift' && e.dureeSec === 120)).toBe(true);
+    expect(grossesPauses).toEqual([]);
+    expect(
+      seul.filter((e) => e.type === 'repos' && !e.manuel && e.exerciceId === 'trap-bar-deadlift').map((e) => e.dureeSec),
+    ).toEqual([90, 90]);
     // En paire : 1 min 30 après la paire de la trap bar, 1 min après les
     // autres — pas de grosse pause : à deux, on s'étire pendant la série de
     // l'autre.

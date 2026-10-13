@@ -87,6 +87,11 @@ const migrerPoids = (
   return poids;
 };
 
+/** Les séries finies sur « Série terminée » : des places d'étapes, rien
+ *  d'autre. */
+const placesLues = (brut: unknown): number[] | undefined =>
+  Array.isArray(brut) ? brut.filter((n): n is number => Number.isInteger(n) && n >= 0) : undefined;
+
 const migrerProgression = (enCours: ProgressionSeance | null): ProgressionSeance | null =>
   enCours === null
     ? null
@@ -95,6 +100,11 @@ const migrerProgression = (enCours: ProgressionSeance | null): ProgressionSeance
         poids: migrerPoids(enCours.poids),
         // Une séance commencée avant l'arrivée du ressenti n'en a pas.
         ressentis: lireRessentis(enCours.ressentis),
+        // Sur un seul téléphone, à deux : ce qu'on a noté pour l'autre, et
+        // les séries finies. Une séance d'avant n'en a pas.
+        ...(enCours.poidsAutre ? { poidsAutre: migrerPoids(enCours.poidsAutre) } : {}),
+        ...(enCours.ressentisAutre ? { ressentisAutre: lireRessentis(enCours.ressentisAutre) } : {}),
+        ...(placesLues(enCours.faites) ? { faites: placesLues(enCours.faites) } : {}),
         // Une séance commencée avant le réglage d'unité l'a été en kilos.
         seance: {
           ...enCours.seance,
@@ -118,12 +128,26 @@ const migrerExercice = (exo: ExerciceRealise): ExerciceRealise => {
   return migre;
 };
 
+/** Ce que le téléphone a noté pour l'autre, sur un seul téléphone : gardé
+ *  s'il se lit, écarté sinon. */
+const partenaireLu = (partenaire: SeanceRealisee['partenaire']): SeanceRealisee['partenaire'] =>
+  partenaire &&
+  (partenaire.personne === 'sebastien' || partenaire.personne === 'max') &&
+  Array.isArray(partenaire.exercices)
+    ? { personne: partenaire.personne, exercices: partenaire.exercices.map(migrerExercice) }
+    : undefined;
+
 const migrerHistorique = (historique: SeanceRealisee[]): SeanceRealisee[] =>
-  historique.map((realisee) => ({
-    ...realisee,
-    parametres: { ...realisee.parametres, unitePoids: uniteDeSeance(realisee.parametres) },
-    exercices: realisee.exercices.map(migrerExercice),
-  }));
+  historique.map((realisee) => {
+    const { partenaire, ...reste } = realisee;
+    const lu = partenaireLu(partenaire);
+    return {
+      ...reste,
+      parametres: { ...realisee.parametres, unitePoids: uniteDeSeance(realisee.parametres) },
+      exercices: realisee.exercices.map(migrerExercice),
+      ...(lu ? { partenaire: lu } : {}),
+    };
+  });
 
 /** Une file d'identifiants relue : que des textes, deux cents au plus. */
 const identifiants = (brut: unknown): string[] =>

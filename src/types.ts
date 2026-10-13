@@ -341,8 +341,11 @@ export interface BlocSeries {
    *  série de l'autre. Absent = en même temps, côte à côte. */
   tour?: boolean;
   /** À deux : les séries et les répétitions de l'autre sur cet exercice. Les
-   *  deux téléphones en tirent la même horloge. Absent = seul. */
-  autre?: { series: number; reps: number };
+   *  deux téléphones en tirent la même horloge — ou, sur un seul téléphone,
+   *  celui qui le tient note aussi pour l'autre. Absent = seul. Sur un seul
+   *  téléphone, le cran que propose le ressenti de l'autre
+   *  (`ajustementRessenti`, comme celui du bloc). */
+  autre?: { series: number; reps: number; ajustementRessenti?: number };
   /** Le ressenti des dernières fois : la charge de la dernière fois, plus ce
    *  cran (léger assez de fois de suite : quatre pour Speedy, deux pour Big
    *  Max) ou moins ce cran (lourd deux fois de suite) ; négatif = on
@@ -405,6 +408,14 @@ export interface Seance {
     /** La mise en place avant chaque nouvel exercice, en secondes ; absente,
      *  30 s. L'essai la raccourcit. */
     installationSec?: number;
+    /** La séance se mène sur un seul téléphone : celui qui le tient note pour
+     *  les deux (décision du 12 octobre 2026). Pas de minuteur pendant une
+     *  série, qui se finit sur « Série terminée » ; une paire se fait A, B,
+     *  A, B sans pause entre les tours, un exercice seul chacun son tour ; la
+     *  pause, à la fin, se lance d'un clic. Absent : l'horloge d'avant, qui
+     *  déroule les séries au tempo — celle de la séance commune sur deux
+     *  téléphones (`SEANCE_COMMUNE`). Voir `construireEtapes`. */
+    unTelephone?: boolean;
   };
   blocs: BlocSeries[];
   circuit: Circuit | null;
@@ -445,6 +456,11 @@ export interface SeanceRealisee {
   dureeReelleSec: number;
   exercices: ExerciceRealise[];
   terminee: boolean;
+  /** Sur un seul téléphone, à deux : ce que l'autre a fait, noté par celui
+   *  qui tenait le téléphone — ses séries, ses charges, son ressenti. Les
+   *  `exercices` restent ceux de la personne du téléphone. Absent : seul, ou
+   *  chacun sur son téléphone (et toutes les séances d'avant). */
+  partenaire?: { personne: Personne; exercices: ExerciceRealise[] };
 }
 
 /** Progression d'une séance guidée, sauvegardée pour pouvoir la reprendre
@@ -459,6 +475,14 @@ export interface ProgressionSeance {
   poids: Record<string, number[]>;
   /** Ressentis donnés jusque-là, par exercice ; absent avant leur arrivée. */
   ressentis?: Record<string, Ressenti>;
+  /** Sur un seul téléphone, à deux : les charges et les ressentis de l'autre,
+   *  notés ici. */
+  poidsAutre?: Record<string, number[]>;
+  ressentisAutre?: Record<string, Ressenti>;
+  /** Sur un seul téléphone : les séries finies sur « Série terminée », par
+   *  leur place dans les étapes. Absent : une série compte quand on y a
+   *  passé au moins la moitié de son temps, comme avant. */
+  faites?: number[];
   demarreeLe: string;
   /** Dernière sauvegarde (ISO), pour le bandeau de reprise. */
   sauvegardeeLe?: string;
@@ -609,8 +633,10 @@ export interface ReglagesDuo {
   /** Le tempo des séances du programme ; la séance libre garde celui du
    *  téléphone. */
   tempo?: Tempo;
-  /** Le nombre d'exercices du mardi et du jeudi, sans compter le dernier :
-   *  4, 6 ou 8. Le lundi en a deux de plus. */
+  /** Le nombre d'exercices des séances, le dernier compris : 4, 6 ou 8, les
+   *  trois jours. Le premier et le dernier se font seuls, les autres par
+   *  paires. (Avant la version 8 du programme : sans compter le dernier, et
+   *  deux de plus le lundi.) */
   exercices?: number;
 }
 

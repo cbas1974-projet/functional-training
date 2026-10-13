@@ -5,6 +5,7 @@
 // Les signatures exportées sont le contrat de l'onglet Entraînement ; elles ne
 // doivent pas changer sans mettre à jour les composants appelants.
 import { EXERCICES, EXERCICES_PAR_ID } from '../data/exercices';
+import { memeZone } from './zones';
 import type {
   BlocSeries,
   Circuit,
@@ -225,10 +226,14 @@ export function estExigeant(exercice: Exercice): boolean {
 const REFUS = -1;
 
 /** À quel point `candidat` ferait un bon partenaire pour un enchaînement
- *  déjà commencé. Négatif = incompatible. */
+ *  déjà commencé. Négatif = incompatible. Jamais deux exercices de la même
+ *  grande zone — le haut du corps, le bas du corps, le tronc (`memeZone`) —,
+ *  comme dans les paires du programme : un enchaînement en compte donc trois
+ *  au plus. */
 function scoreCompagnon(enchainement: Exercice[], candidat: Exercice): number {
   let score = 0;
   for (const membre of enchainement) {
+    if (memeZone(membre, candidat)) return REFUS;
     if (estExigeant(membre) && estExigeant(candidat)) return REFUS;
     // Même muscle, ou même schéma : ce n'est plus un enchaînement, c'est une
     // série longue déguisée. L'isolation fait exception, elle couvre des
@@ -237,7 +242,7 @@ function scoreCompagnon(enchainement: Exercice[], candidat: Exercice): number {
     if (membre.pattern === candidat.pattern && membre.pattern !== 'isolation') return REFUS;
     if (PATTERNS_OPPOSES[membre.pattern]?.includes(candidat.pattern)) score += 4;
     if (GROUPES_OPPOSES[membre.groupe]?.includes(candidat.groupe)) score += 4;
-    if (membre.zone !== candidat.zone) score += 1;
+    score += 1;
   }
   return score;
 }
@@ -706,9 +711,14 @@ function premierNonVide<T>(...listes: T[][]): T[] {
 
 /** Les mouvements qui portent un autre nom anglais : la flexion des jambes
  *  couché à la machine (« Lying Leg Curl ») est le leg curl à l'haltère
- *  (« Hamstring Curl »). L'extension des jambes, elle, porte le même nom
- *  (« Leg Extension ») à la machine et à l'haltère. */
-const MEME_MOUVEMENT = new Map([['lyinglegcurl', 'hamstringcurl']]);
+ *  (« Hamstring Curl ») ; l'oiseau au kettlebell (« Rear Fly ») est celui
+ *  aux haltères (« Reverse Fly ») — le jeudi en tirait les deux. L'extension
+ *  des jambes, elle, porte le même nom (« Leg Extension ») à la machine et à
+ *  l'haltère. */
+const MEME_MOUVEMENT = new Map([
+  ['lyinglegcurl', 'hamstringcurl'],
+  ['rearfly', 'reversefly'],
+]);
 
 /** Le mouvement d'un exercice, indépendamment du matériel : le squat gobelet
  *  aux haltères et au kettlebell portent le même nom anglais sur leurs posters.
