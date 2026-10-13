@@ -10,7 +10,15 @@ import {
   groupesDeBlocs,
   secondesParRep,
 } from './generateurSeance';
-import { TRANSITION_LIEN_SEC, basculerTour, delierDansProgramme, estPoussee, genererProgramme, seancePourPersonne } from './programmeMois';
+import {
+  POINTS_FAIBLES_PAR_DEFAUT,
+  TRANSITION_LIEN_SEC,
+  basculerTour,
+  delierDansProgramme,
+  genererProgramme,
+  seancePourPersonne,
+  serieDePlus,
+} from './programmeMois';
 import type { ContexteSeance } from './programmeMois';
 import { programmeDeuxTelephones } from './semaineDeuxTelephones.fixture';
 import {
@@ -963,9 +971,11 @@ describe('l’horloge des séances du programme', () => {
     jamaisEnsemble(surExercice(seb, 'trap-bar-deadlift'), surExercice(max, 'trap-bar-deadlift'));
   });
 
-  it('Max fait sa série de plus aux poussées : Sébastien a un repos prolongé', () => {
+  it('Max fait sa série de plus sur ses points faibles : Sébastien a un repos prolongé', () => {
     const seance = seancePourPersonne(lundiSeul, parametres, SEB);
-    const poussee = seance.blocs.find((b) => estPoussee(EXERCICES_PAR_ID[b.exerciceId]) && !b.tour)!;
+    // Les pecs, les épaules, les biceps, les triceps : ses points faibles par
+    // défaut.
+    const poussee = seance.blocs.find((b) => serieDePlus(POINTS_FAIBLES_PAR_DEFAUT.max, EXERCICES_PAR_ID[b.exerciceId]) && !b.tour)!;
     expect(poussee.autre?.series).toBe(poussee.series + 1);
     const prolonge = construireEtapes(seance).find(
       (e) => e.type === 'repos' && e.motif === 'serie-de-plus' && e.exerciceId === poussee.exerciceId,

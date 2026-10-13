@@ -208,8 +208,8 @@ describe('où se tient l’arrêt du tempo', () => {
     // Le curl, le développé, l'écarté, le rowing, le mollet sur une marche, le
     // rowing vertical (tenu en haut, il pincerait l'épaule).
     for (const id of [
-      'hammer-curl', 'bench-press', 'chest-fly', 'single-arm-row', 'kb-single-leg-calf-raise', 'upright-row',
-      'tricep-extension', 'wrist-curl',
+      'hammer-curl', 'bench-press', 'chest-fly', 'single-arm-row', 'kb-single-leg-calf-raise', 'seated-calf-raise',
+      'upright-row', 'tricep-extension', 'wrist-curl',
     ]) {
       const exercice = EXERCICES_PAR_ID[id];
       expect([exercice.pauseEnHaut, exercice.sansPauseEnBas], id).toEqual([undefined, undefined]);
@@ -224,12 +224,45 @@ describe('où se tient l’arrêt du tempo', () => {
 });
 
 describe('machines de la salle', () => {
-  it('compte six machines, chacune avec son dessin', () => {
+  it('compte sept machines, chacune avec son dessin', () => {
     const machines = EXERCICES.filter((e) => e.materiel === 'salle').map((e) => e.id);
     expect(machines).toEqual([
       'trap-bar-deadlift', 'leg-press', 'hack-squat', 'traineau', 'leg-extension-machine', 'leg-curl-machine',
+      'seated-calf-raise',
     ]);
     for (const id of machines) expect(FICHIERS.has(`${id}.png`), id).toBe(true);
+  });
+
+  it('la machine à mollets assis : les deux jambes ensemble, une charge, l’arrêt en bas, mollet étiré', () => {
+    const mollets = EXERCICES_PAR_ID['seated-calf-raise'];
+    expect([mollets.materiel, mollets.cotes, mollets.unite, mollets.groupe, mollets.pattern]).toEqual([
+      'salle', 'bilateral', 'reps', 'mollets', 'isolation',
+    ]);
+    expect(mollets.musclesPrincipaux).toEqual(['mollets']);
+    // L'arrêt du tempo reste en bas, talons sous la marche : comme au mollet
+    // sur une marche, le mollet s'étire sous la charge.
+    expect([mollets.pauseEnHaut, mollets.sansPauseEnBas]).toEqual([undefined, undefined]);
+    expect(mollets.pointsAttention[0]).toBe('Coussin sur le bas des cuisses, pointes de pieds sur la marche.');
+    expect(consignesDe(mollets).join(' ')).toMatch(/descendre lentement en étirant le mollet/);
+    expect(consignesDe(mollets)).not.toContain(CONSIGNE_PAUSE_EN_HAUT);
+  });
+
+  it('la planche et la planche latérale : du gainage classique, au poids du corps, au temps', () => {
+    for (const id of ['plank', 'side-plank']) {
+      const planche = EXERCICES_PAR_ID[id];
+      expect([planche.materiel, planche.unite, planche.pattern, planche.famille], id).toEqual(['tapis', 'secondes', 'anti-rotation', undefined]);
+      expect(FICHIERS.has(`${id}.png`), id).toBe(true);
+    }
+    expect(EXERCICES_PAR_ID['plank'].cotes).toBe('bilateral');
+    // La planche latérale : un côté puis l'autre ; l'extérieur de la hanche
+    // travaille autant que le ventre.
+    expect(EXERCICES_PAR_ID['side-plank'].cotes).toBe('unilateral');
+    expect(EXERCICES_PAR_ID['side-plank'].musclesPrincipaux).toEqual(['obliques', 'abducteurs']);
+  });
+
+  it('les pompes sur haltères ou sur kettlebells : les poignées d’appui ne sont pas une charge', () => {
+    for (const id of ['dumbbell-push-up', 'kb-push-up']) expect(EXERCICES_PAR_ID[id].appuiSeulement, id).toBe(true);
+    expect(EXERCICES.filter((e) => e.appuiSeulement).map((e) => e.id).sort()).toEqual(['dumbbell-push-up', 'kb-push-up']);
   });
 
   it('ménage les genoux à l’extension des jambes, à la machine comme à l’haltère ; garde le leg curl aux haltères', () => {

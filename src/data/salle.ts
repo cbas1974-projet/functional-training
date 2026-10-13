@@ -2,9 +2,12 @@
 // sont des dessins simples, deux temps du mouvement, en attendant des photos
 // (même nom de fichier dans `public/exercices/`).
 //
-// Une seule machine pour deux : ces exercices se font chacun son tour.
-// L'extension et la flexion des jambes, deux machines, vont ensemble en
-// paire le lundi : chacun commence sur l'une, puis on échange.
+// Une seule machine pour deux : ces exercices se font chacun son tour. Les
+// machines des cuisses (extension et flexion des jambes) ne vont plus
+// ensemble : chacune a son partenaire, du ventre ou un tirage léger, le
+// jeudi. La machine à mollets assis (13 octobre 2026) remplace au programme
+// le mollet sur une jambe au kettlebell : les deux jambes ensemble, plus
+// simple et plus rapide.
 
 import type { Exercice } from '../types';
 
@@ -161,5 +164,29 @@ export const EXERCICES_SALLE: Exercice[] = [
       'Revenir lentement, sans laisser tomber la charge ni donner de coup en bas.',
     ],
     interetJjb: 'Les ischios qui ferment la garde, et qui protègent le genou.',
+  },
+  {
+    id: 'seated-calf-raise',
+    nomFr: 'Mollets assis, à la machine',
+    nomEn: 'Seated Calf Raise',
+    zone: 'bas',
+    groupe: 'mollets',
+    muscles: 'Mollets (soléaire), tendon d’Achille',
+    musclesPrincipaux: ['mollets'],
+    materiel: 'salle',
+    pattern: 'isolation',
+    niveauMin: 1,
+    cotes: 'bilateral',
+    unite: 'reps',
+    // L'arrêt reste en bas, comme au mollet sur une marche : talons sous la
+    // marche, le mollet s'étire sous la charge — tout le contraire d'un repos.
+    position: 'Assis, le coussin sur le bas des cuisses, les pointes de pieds sur la marche',
+    pointsAttention: [
+      'Coussin sur le bas des cuisses, pointes de pieds sur la marche.',
+      'Monter haut, puis descendre lentement en étirant le mollet.',
+      'Tenir une seconde en bas, talons sous la marche, puis remonter sans rebond.',
+      'Les deux jambes ensemble : plus simple et plus rapide qu’une jambe à la fois.',
+    ],
+    interetJjb: 'Des chevilles et des tendons d’Achille solides pour les appuis et les relevés.',
   },
 ];

@@ -237,12 +237,12 @@ describe('le changement de côté', () => {
       const attendu = exercice.cotes === 'unilateral' && musculation ? 5 : 0;
       expect(changementDeCoteSec(exercice), exercice.id).toBe(attendu);
     }
-    // En répétitions, et au temps : le relevé turc, les explosifs d'un seul bras
-    // et la planche de Copenhague.
+    // En répétitions, et au temps : le relevé turc, les explosifs d'un seul bras,
+    // la planche de Copenhague et la planche latérale.
     expect(EXERCICES.filter((e) => changementDeCoteSec(e) > 0 && e.unite === 'secondes').map((e) => e.id).sort()).toEqual(
       [
         'kb-turkish-get-up', 'dumbbell-snatch', 'kb-side-swing', 'kb-single-arm-swing', 'kb-snatch', 'kb-clean',
-        'kb-golfer-swing', 'copenhagen-plank',
+        'kb-golfer-swing', 'copenhagen-plank', 'side-plank',
       ].sort(),
     );
     // Les positions tenues d'un côté puis de l'autre enchaînent, comme avant.

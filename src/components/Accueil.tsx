@@ -11,6 +11,7 @@ import type {
   Exercice,
   ParametresSeance,
   Personne,
+  PointFaible,
   ProgressionSeance,
   ProgrammeMois,
   Seance,
@@ -22,6 +23,7 @@ import { EXERCICES_PAR_ID, NOM_MUSCLE, cheminImage } from '../data/exercices';
 import { GUIDES_VISUELS, TEMPOS, UNITES_POIDS } from '../data/parametres';
 import { OBJECTIFS_MUSCULAIRES } from '../utils/muscles';
 import { formaterDuree, groupesDeBlocs, precisionAuTemps } from '../utils/generateurSeance';
+import { pauseEntreLesTours } from '../utils/etapesSeance';
 import { formaterDateFr, graineAleatoire, memeTempo } from '../utils/formatage';
 import { SUFFIXE_UNITE, chargeTotale, uniteDeSeance } from '../utils/statistiques';
 import { bellSound } from '../utils/sounds';
@@ -29,8 +31,10 @@ import {
   JOURS,
   NOMBRES_EXERCICES,
   NOM_PERSONNE,
+  NOM_POINT_FAIBLE,
   NOM_ROLE,
   PERSONNES,
+  POINTS_FAIBLES,
   SERIES_PROGRAMME,
   TEMPO_PROGRAMME,
   accordPaire,
@@ -38,6 +42,7 @@ import {
   alternatives,
   autrePersonne,
   avecNombreExercices,
+  avecPointsFaibles,
   avecTempo,
   basculerTour,
   chargesPassees,
@@ -54,6 +59,7 @@ import {
   nombreExercicesDe,
   notePlafond,
   pairesAutomatiques,
+  pointsFaiblesDe,
   programmeDansLien,
   refairePaires,
   refaireProgramme,
@@ -85,8 +91,9 @@ import {
 } from '../utils/essai';
 import type { Essai } from '../utils/essai';
 import FicheExercice from './FicheExercice';
-import BoutonDouleur, { ReperDouleur } from './BoutonDouleur';
-import { basculerDouleur, douleurDe } from '../utils/douleurs';
+import BoutonDouleur, { BoutonDouleurCompact, ReperDouleur } from './BoutonDouleur';
+import { basculerDouleurDe, douleurDe } from '../utils/douleurs';
+import type { QuiDouleur } from '../utils/douleurs';
 import { seCharge } from '../utils/charges';
 import ImageEnGrand from './ImageEnGrand';
 import SeanceGuidee from './SeanceGuidee';
@@ -260,6 +267,7 @@ function LigneExercice({
   unite,
   lien,
   douleur,
+  douleurAutre,
   unTelephone,
   onChanger,
   onBasculerTour,
@@ -282,14 +290,26 @@ function LigneExercice({
    *  tour ». */
   unTelephone: boolean;
   lien: EtatLien;
-  /** « J'ai mal à cet exercice » est signalé. */
+  /** « J'ai mal à cet exercice » est signalé, pour la personne du téléphone. */
   douleur: boolean;
+  /** Sur un seul téléphone, à deux : pour l'autre — chacun la sienne. Absent :
+   *  seul. */
+  douleurAutre?: boolean;
   onChanger: () => void;
   onBasculerTour: () => void;
-  onBasculerDouleur: () => void;
+  onBasculerDouleur: (qui: QuiDouleur) => void;
   onImage: () => void;
 }) {
   const tour = bloc.tour === true;
+  // Sur un seul téléphone, à deux : un « J'ai mal » chacun, Speedy d'abord.
+  const nomMoi = personne ? NOM_PERSONNE[personne] : null;
+  const douleursDuo =
+    douleurAutre !== undefined && nomMoi && partenaire
+      ? [
+          { qui: 'moi' as const, nom: nomMoi, actif: douleur },
+          { qui: 'autre' as const, nom: partenaire, actif: douleurAutre },
+        ].sort((a, b) => Number(b.nom === NOM_PERSONNE.sebastien) - Number(a.nom === NOM_PERSONNE.sebastien))
+      : null;
   // Le cran que propose le ressenti sur la dernière charge.
   const ajustement = ajustementDeCharge(bloc);
   const rouge = lien.mode === 'candidat' && lien.accord.accord !== 'bon';
@@ -325,7 +345,11 @@ function LigneExercice({
               {NOM_ROLE[autre]}
             </span>
           ))}
-          {douleur && <ReperDouleur avecCharge={seCharge(exercice)} />}
+          {douleursDuo
+            ? douleursDuo
+                .filter((d) => d.actif)
+                .map((d) => <ReperDouleur key={d.qui} avecCharge={seCharge(exercice)} nom={d.nom} />)
+            : douleur && <ReperDouleur avecCharge={seCharge(exercice)} />}
         </p>
         <div className="flex items-center justify-between gap-2">
           <p className="chiffres text-base font-bold" style={{ color: 'var(--texte)' }}>
@@ -363,8 +387,24 @@ function LigneExercice({
             · {raisonProposition(ajustement.motif, personne)}
           </p>
         )}
-        {/* Une douleur : charges à 70 %, pas de montée, jusqu'à ce qu'on l'enlève. */}
-        <BoutonDouleur actif={douleur} avecCharge={seCharge(exercice)} onBasculer={onBasculerDouleur} className="mt-1" />
+        {/* Une douleur : charges à 70 %, pas de montée, jusqu'à ce qu'on
+            l'enlève. À deux sur un téléphone, chacun la sienne. */}
+        {douleursDuo ? (
+          <div className="mt-1 grid grid-cols-2 gap-2">
+            {douleursDuo.map((d) => (
+              <BoutonDouleurCompact
+                key={d.qui}
+                actif={d.actif}
+                avecCharge={seCharge(exercice)}
+                nom={d.nom}
+                montrerNom
+                onBasculer={() => onBasculerDouleur(d.qui)}
+              />
+            ))}
+          </div>
+        ) : (
+          <BoutonDouleur actif={douleur} avecCharge={seCharge(exercice)} onBasculer={() => onBasculerDouleur('moi')} className="mt-1" />
+        )}
         {/* À deux sur deux téléphones : côte à côte, ou chacun son tour sur la
             machine. Sur un seul, ça va de soi. */}
         {!unTelephone && (
@@ -425,6 +465,39 @@ function LigneExercice({
 
 /** Les réglages : qui s'entraîne, les répétitions de chacun, le nombre
  *  d'exercices et le tempo du programme, l'unité, le programme, l'affichage. */
+/** Une case à cocher, en pastille : un point faible. */
+function CaseACocher({ coche, onClick, children }: { coche: boolean; onClick: () => void; children: ReactNode }) {
+  return (
+    <button
+      type="button"
+      role="checkbox"
+      aria-checked={coche}
+      onClick={onClick}
+      className="flex items-center gap-1.5 rounded-xl px-2.5 text-sm font-semibold"
+      style={{
+        minHeight: 40,
+        background: 'var(--surface-haute)',
+        color: 'var(--texte)',
+        border: `1px solid ${coche ? 'var(--accent)' : 'var(--bordure)'}`,
+      }}
+    >
+      <span
+        aria-hidden="true"
+        className="grid h-5 w-5 shrink-0 place-items-center text-xs font-bold"
+        style={{
+          borderRadius: 6,
+          background: coche ? 'var(--accent)' : 'transparent',
+          color: 'var(--accent-texte)',
+          border: `1px solid ${coche ? 'var(--accent)' : 'var(--bordure)'}`,
+        }}
+      >
+        {coche ? '✓' : ''}
+      </span>
+      {children}
+    </button>
+  );
+}
+
 function FeuilleReglages({
   personne,
   parametres,
@@ -432,11 +505,13 @@ function FeuilleReglages({
   repsLundi,
   nombreExercices,
   tempo,
+  pointsFaibles,
   onPersonne,
   onReps,
   onRepsLundi,
   onNombreExercices,
   onTempo,
+  onPointsFaibles,
   onParametres,
   onObjectifs,
   onRefaire,
@@ -456,6 +531,9 @@ function FeuilleReglages({
    *  téléphones. */
   nombreExercices: number;
   tempo: Tempo;
+  /** Les points faibles de chacun : une série de plus. Ils partent avec le
+   *  programme. */
+  pointsFaibles: Record<Personne, PointFaible[]>;
   serveur: string | null;
   onServeur: (adresse: string | null) => void;
   onPersonne: (personne: Personne) => void;
@@ -463,6 +541,7 @@ function FeuilleReglages({
   onRepsLundi: (reps: number) => void;
   onNombreExercices: (nombre: number) => void;
   onTempo: (tempo: Tempo) => void;
+  onPointsFaibles: (personne: Personne, liste: PointFaible[]) => void;
   onParametres: (partiel: Partial<ParametresSeance>) => void;
   onObjectifs: () => void;
   onRefaire: () => void;
@@ -483,7 +562,7 @@ function FeuilleReglages({
 
       <Groupe
         titre="Répétitions par série"
-        aide={`Trois séries ; ${NOM_PERSONNE.max} en fait une de plus aux poussées. Le mardi et le jeudi, jiu-jitsu le soir : ${NOM_PERSONNE.sebastien} en fait moins.`}
+        aide={`Trois séries, une de plus sur les points faibles de chacun (plus bas). Le mardi et le jeudi, jiu-jitsu le soir : ${NOM_PERSONNE.sebastien} en fait moins.`}
       >
         <div className="space-y-3">
           {[
@@ -511,6 +590,37 @@ function FeuilleReglages({
                     <span className="chiffres">{n}</span>
                   </Pastille>
                 ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      </Groupe>
+
+      <Groupe titre="Points faibles" aide="Une série de plus sur ces muscles.">
+        <div className="space-y-3">
+          {PERSONNES.map((p) => (
+            <div key={p.id} role="group" aria-label={`Points faibles de ${NOM_PERSONNE[p.id]}`}>
+              <p className="mb-1 text-sm font-semibold" style={{ color: 'var(--texte)' }}>
+                {NOM_PERSONNE[p.id]}
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {POINTS_FAIBLES.map((point) => {
+                  const coche = pointsFaibles[p.id].includes(point);
+                  return (
+                    <CaseACocher
+                      key={point}
+                      coche={coche}
+                      onClick={() =>
+                        onPointsFaibles(
+                          p.id,
+                          coche ? pointsFaibles[p.id].filter((x) => x !== point) : [...pointsFaibles[p.id], point],
+                        )
+                      }
+                    >
+                      {NOM_POINT_FAIBLE[point]}
+                    </CaseACocher>
+                  );
+                })}
               </div>
             </div>
           ))}
@@ -861,9 +971,11 @@ export default function Accueil({
   const { parametres, historique, enCours } = etat;
   const personne = etat.personne ?? null;
   const douleurs = useMemo(() => etat.douleurs ?? {}, [etat.douleurs]);
-  /** « J'ai mal à cet exercice » : signalé, ou enlevé ; sur ce téléphone. */
-  const basculerDouleurIci = (exerciceId: string, charge: number, uniteCharge: UnitePoids) =>
-    onChange((prec) => ({ ...prec, douleurs: basculerDouleur(prec.douleurs, exerciceId, charge, uniteCharge) }));
+  const douleursAutre = useMemo(() => etat.douleursAutre ?? {}, [etat.douleursAutre]);
+  /** « J'ai mal à cet exercice » : signalé, ou enlevé — pour la personne du
+   *  téléphone, ou pour l'autre ; sur ce téléphone. */
+  const basculerDouleurIci = (qui: QuiDouleur, exerciceId: string, charge: number, uniteCharge: UnitePoids) =>
+    onChange((prec) => ({ ...prec, ...basculerDouleurDe(prec, qui, exerciceId, charge, uniteCharge) }));
   const unite = uniteDeSeance(parametres);
 
   /** Séance choisie dans la semaine ; null = celle que propose le calendrier. */
@@ -912,15 +1024,17 @@ export default function Accueil({
       reps: repsDuJour(programme, seanceMois.jour),
       // Le tempo du programme, le même pour les deux.
       tempo: tempoDuProgramme(programme),
-      // Léger assez de fois de suite (trois pour Speedy, deux pour Big Max) :
+      // Les points faibles de chacun : une série de plus.
+      pointsFaibles: pointsFaiblesDe(programme),
+      // Léger assez de fois de suite (deux pour Speedy, une pour Big Max) :
       // un cran de plus ; lourd deux fois : un cran de moins.
       // Une douleur signalée : pas de montée, seulement la descente.
       ressentis: ressentisQuiChangent(historique, ids, unite, personne, Object.keys(douleurs)),
       // Sur un seul téléphone, la même règle pour l'autre, d'après ce qu'on a
-      // noté pour lui.
-      ...(lAutre ? { ressentisAutre: ressentisQuiChangent(historiqueAutre, ids, unite, lAutre) } : {}),
+      // noté pour lui — avec ses douleurs à lui.
+      ...(lAutre ? { ressentisAutre: ressentisQuiChangent(historiqueAutre, ids, unite, lAutre, Object.keys(douleursAutre)) } : {}),
     };
-  }, [personne, aDeux, unTelephone, programme, historique, historiqueAutre, lAutre, seanceMois, unite, douleurs]);
+  }, [personne, aDeux, unTelephone, programme, historique, historiqueAutre, lAutre, seanceMois, unite, douleurs, douleursAutre]);
   const seance = useMemo(() => seancePourPersonne(seanceMois, parametres, contexte), [seanceMois, parametres, contexte]);
   const passees = useMemo(
     () => chargesPassees(historique, seance.blocs.map((bloc) => bloc.exerciceId), unite),
@@ -997,6 +1111,10 @@ export default function Accueil({
   const echauffement = seance.echauffement ?? [];
   const etirements = [...new Set((seance.retourCalme ?? []).map((m) => m.exerciceId).filter(estUnExercice))];
   const avecTrapBar = seance.blocs.some((bloc) => bloc.exerciceId === 'trap-bar-deadlift');
+  // Un exercice seul, à deux, sans pause entre les tours : la marche du fermier.
+  const avecFermier = groupesDeBlocs(seance.blocs).some(
+    (groupe) => groupe.length === 1 && !pauseEntreLesTours({ id: groupe[0].exerciceId }),
+  );
   // Speedy : 8 au plus à la trap bar, même le lundi.
   const plafond = notePlafond(seanceMois, repsDuJour(programme, seanceMois.jour));
 
@@ -1041,15 +1159,17 @@ export default function Accueil({
         passeesAutre={passeesAutre[bloc.exerciceId]}
         unite={unite}
         lien={etatLien(bloc)}
-        douleur={douleurDe(etat.douleurs, bloc.exerciceId) !== null}
+        douleur={douleurDe(douleurs, bloc.exerciceId) !== null}
+        {...(lAutre && bloc.autre ? { douleurAutre: douleurDe(douleursAutre, bloc.exerciceId) !== null } : {})}
         unTelephone={unTelephone}
         onChanger={() => setFeuille({ type: 'changer', seanceId: seanceMois.id, exerciceId: bloc.exerciceId })}
         onBasculerTour={() => modifierProgramme((prec) => basculerTour(prec, seanceMois.id, bloc.exerciceId))}
-        onBasculerDouleur={() =>
-          // La charge de travail du moment : la plus lourde de la dernière fois.
+        onBasculerDouleur={(qui) =>
+          // Sa charge de travail du moment : la plus lourde de sa dernière fois.
           basculerDouleurIci(
+            qui,
             bloc.exerciceId,
-            (passees[bloc.exerciceId] ?? []).reduce((max, charge) => Math.max(max, charge), 0),
+            ((qui === 'moi' ? passees : passeesAutre)[bloc.exerciceId] ?? []).reduce((max, charge) => Math.max(max, charge), 0),
             unite,
           )
         }
@@ -1061,6 +1181,23 @@ export default function Accueil({
   const semaineDuMois = semainesEcoulees(programme, maintenant);
   /** Combien de jours d'entraînement par semaine : une colonne chacun. */
   const joursDuProgramme = new Set(programme.seances.map((s) => s.jour)).size;
+  const semaineCourante = semaineDe(programme, maintenant);
+  /** Les pastilles de la semaine : une ligne par semaine (A, puis B), une
+   *  colonne par jour. Le lundi, le même chaque semaine, revient sur chaque
+   *  ligne. */
+  const lignesDeSeances = useMemo(() => {
+    const semaines = [...new Set(programme.seances.flatMap((s) => (s.semaine ? [s.semaine] : [])))].sort();
+    if (semaines.length === 0) return [{ semaine: undefined, seances: programme.seances }];
+    const rang = (jour: number) => (jour + 6) % 7;
+    const jours = [...new Set(programme.seances.map((s) => s.jour))].sort((a, b) => rang(a) - rang(b));
+    return semaines.map((semaine) => ({
+      semaine,
+      seances: jours.flatMap((jour) => {
+        const s = programme.seances.find((x) => x.jour === jour && (x.semaine === undefined || x.semaine === semaine));
+        return s ? [s] : [];
+      }),
+    }));
+  }, [programme]);
   const objectifs =
     programme.objectifs
       .map((id) => OBJECTIFS_MUSCULAIRES.find((o) => o.id === id)?.nom)
@@ -1093,6 +1230,10 @@ export default function Accueil({
     modifierProgramme((prec) => avecNombreExercices(prec, n));
   };
   const changerTempo = (tempo: Tempo) => modifierProgramme((prec) => avecTempo(prec, tempo));
+  /** Les points faibles voyagent aussi avec le programme : les deux
+   *  téléphones comptent les mêmes séries. */
+  const changerPointsFaibles = (qui: Personne, liste: PointFaible[]) =>
+    modifierProgramme((prec) => avecPointsFaibles(prec, qui, liste));
 
   const changerProgramme = (nouveau: ProgrammeMois, aRenvoyerEnsuite = true) => {
     onChange((prec) => ({ ...prec, programme: nouveau, programmeARenvoyer: aRenvoyerEnsuite }));
@@ -1270,6 +1411,26 @@ export default function Accueil({
           </Bandeau>
         )}
 
+        {/* Le programme sauvegardé était d'une version plus ancienne : il a été
+            recomposé — on le dit une fois. */}
+        {etat.programmeRecomposeDepuis !== undefined && (
+          <Bandeau couleur="var(--accent)">
+            <p className="text-sm font-semibold" style={{ color: 'var(--texte)' }}>
+              Nouvelle version du programme : des exercices classiques ce mois-ci, et le lundi pareil chaque
+              semaine.
+            </p>
+            <p className="text-xs" style={{ color: 'var(--texte-discret)' }}>
+              Il a été recomposé avec la même graine, pareil sur les deux téléphones. Un exercice changé ou une
+              paire refaite à la main est à refaire ; les charges notées restent.
+            </p>
+            <div className="mt-2">
+              <BoutonSecondaire onClick={() => onChange((prec) => ({ ...prec, programmeRecomposeDepuis: undefined }))}>
+                Compris
+              </BoutonSecondaire>
+            </div>
+          </Bandeau>
+        )}
+
         {lienIllisible && (
           <Bandeau couleur="var(--alerte)">
             <p className="text-sm font-semibold" style={{ color: 'var(--texte)' }}>
@@ -1292,7 +1453,7 @@ export default function Accueil({
             </p>
             <p className="text-xs" style={{ color: 'var(--texte-discret)' }}>
               Le mardi et le jeudi, {NOM_PERSONNE.max} fait deux répétitions de plus ; il fait une série de plus
-              aux poussées.
+              sur ses points faibles (pecs, épaules, biceps, triceps — à changer dans les Réglages).
             </p>
             <div className="mt-2 grid grid-cols-2 gap-2">
               {PERSONNES.map((p) => (
@@ -1361,13 +1522,14 @@ export default function Accueil({
           className="grid gap-2"
           style={{ gridTemplateColumns: `repeat(${joursDuProgramme}, minmax(0, 1fr))` }}
         >
-          {programme.seances.map((s) => {
+          {lignesDeSeances.flatMap(({ semaine, seances }) => seances.map((s) => ({ semaine, s }))).map(({ semaine, s }) => {
             const selectionnee = s.id === seanceMois.id;
-            const faite = faiteCetteSemaine(historique, s, maintenant);
-            const autreSemaine = s.semaine !== undefined && s.semaine !== semaineAffichee;
+            // Faite cette semaine : sur la ligne de la semaine en cours.
+            const faite = (semaine === undefined || semaine === semaineCourante) && faiteCetteSemaine(historique, s, maintenant);
+            const autreSemaine = semaine !== undefined && semaine !== semaineAffichee;
             return (
               <button
-                key={s.id}
+                key={`${semaine ?? ''}-${s.id}`}
                 type="button"
                 aria-pressed={selectionnee}
                 aria-label={`${s.nom}${faite ? ', faite cette semaine' : ''}`}
@@ -1418,7 +1580,7 @@ export default function Accueil({
             </p>
             <p className="mt-2 text-sm" style={{ color: 'var(--texte-discret)' }}>
               {unTelephone
-                ? `Le premier et le dernier exercice se font seuls${aDeux ? ', chacun son tour' : ''}. Une paire : A, B, A, B, sans pause entre les tours${machineEnPaire ? ' — sa machine, chacun son tour' : ''}. La pause se lance d’un toucher à la fin : 1 min${avecTrapBar ? ', 1 min 30 après la trap bar' : ''}.`
+                ? `Le premier et le dernier exercice se font seuls${aDeux ? `, chacun son tour, avec une pause d’un toucher entre les tours${avecFermier ? ' (pas à la marche du fermier)' : ''}` : ''}. Une paire : A, B, A, B, sans pause entre les tours${machineEnPaire ? ' — sa machine, chacun son tour' : ''}. La pause se lance d’un toucher à la fin : 1 min${avecTrapBar ? ', 1 min 30 après la trap bar' : ''}.`
                 : avecPaires
                   ? `Par paires : les deux exercices à la suite, puis 1 min de pause${avecTrapBar ? ' (1 min 30 après la trap bar)' : ''}. À chaque nouvel exercice, on installe, puis on repart sur « Go ».`
                   : `Pauses : 1 min${avecTrapBar ? ', 1 min 30 à la trap bar' : ''}. À chaque nouvel exercice, on installe, puis on repart sur « Go ».`}
@@ -1469,12 +1631,14 @@ export default function Accueil({
               {groupes.map((groupe) => {
                 if (groupe.length === 1) {
                   // Un exercice seul — le premier, le gros du jour : chacun son
-                  // tour, et la pause à la fin.
+                  // tour, une pause entre les tours, et à la fin.
+                  const entreLesTours = pauseEntreLesTours({ id: groupe[0].exerciceId });
                   return (
                     <div key={groupe[0].exerciceId} className="space-y-1">
                       {unTelephone && (
                         <p className="chiffres pl-1 text-xs font-semibold" style={{ color: 'var(--texte-discret)' }}>
-                          Seul{aDeux ? ', chacun son tour' : ''} · pause {aDeux ? 'à la fin' : 'entre les séries'} :{' '}
+                          Seul{aDeux ? ', chacun son tour' : ''} · pause{' '}
+                          {aDeux ? (entreLesTours ? 'entre les tours et à la fin' : 'à la fin') : 'entre les séries'} :{' '}
                           {dureeCourte(groupe[0].reposSec)}
                         </p>
                       )}
@@ -1546,6 +1710,9 @@ export default function Accueil({
               <div className="mt-3">
                 <p className="mb-2 text-sm font-bold" style={{ color: 'var(--texte)' }}>
                   Pour finir, seul{aDeux && unTelephone ? ', chacun son tour' : ''}
+                  {aDeux && unTelephone && pauseEntreLesTours({ id: blocFinal.exerciceId })
+                    ? ` · pause entre les tours : ${dureeCourte(blocFinal.reposSec)}`
+                    : ''}
                 </p>
                 <ul className="space-y-2">{ligne(blocFinal)}</ul>
               </div>
@@ -1688,8 +1855,10 @@ export default function Accueil({
           repsLundi={repsLundiDe(programme)}
           nombreExercices={nombreExercices}
           tempo={tempoDuProgramme(programme)}
+          pointsFaibles={pointsFaiblesDe(programme)}
           onNombreExercices={changerNombreExercices}
           onTempo={changerTempo}
+          onPointsFaibles={changerPointsFaibles}
           serveur={programme.serveur ?? null}
           onServeur={(adresse) =>
             modifierProgramme((prec) => {
@@ -1752,6 +1921,7 @@ export default function Accueil({
           chargesPasseesAutre={chargesActivesAutre}
           // L'aperçu est l'écran de l'autre : nos douleurs n'y sont pas.
           douleurs={active.essai?.genre === 'apercu' ? undefined : douleurs}
+          douleursAutre={active.essai?.genre === 'apercu' ? undefined : douleursAutre}
           onBasculerDouleur={active.essai?.genre === 'apercu' ? undefined : basculerDouleurIci}
           onProgression={(progression) => {
             // Un essai ne laisse aucune trace : ni reprise, ni séance interrompue effacée.

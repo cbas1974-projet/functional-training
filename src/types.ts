@@ -71,8 +71,8 @@ export type Materiel =
   | 'swissball'
   | 'tapis'
   /** Les machines de la salle : trap bar, presse à cuisses, hack squat,
-   *  traîneau, extension et flexion des jambes. Une pour deux : on s'y
-   *  relaie. */
+   *  traîneau, extension et flexion des jambes, mollets assis. Une pour
+   *  deux : on s'y relaie. */
   | 'salle';
 
 /** Schéma de mouvement. C'est la clé de l'équilibre d'une séance : on évite
@@ -231,6 +231,10 @@ export interface Exercice {
    *  poids noté est celui des disques seulement, sans la barre ni le
    *  chariot, et l'écran dit combien en mettre de chaque côté. */
   chargeParCote?: boolean;
+  /** Le matériel ne sert que d'appui, pas de charge : les pompes sur haltères
+   *  ou sur kettlebells se font au poids du corps — rien à noter, rien à
+   *  monter (`chargeReglable`). */
+  appuiSeulement?: boolean;
   position: string;
   /** Phase par laquelle commence chaque répétition : 'descend' pour les
    *  mouvements qui partent de la position haute (squat, fente, développé
@@ -347,7 +351,7 @@ export interface BlocSeries {
    *  (`ajustementRessenti`, comme celui du bloc). */
   autre?: { series: number; reps: number; ajustementRessenti?: number };
   /** Le ressenti des dernières fois : la charge de la dernière fois, plus ce
-   *  cran (léger assez de fois de suite : quatre pour Speedy, deux pour Big
+   *  cran (léger assez de fois de suite : trois pour Speedy, deux pour Big
    *  Max) ou moins ce cran (lourd deux fois de suite) ; négatif = on
    *  redescend. Voir `ajustementDeCharge`. */
   ajustementRessenti?: number;
@@ -423,8 +427,9 @@ export interface Seance {
   dureeEstimeeSec: number;
 }
 
-/** Comment la charge d'un exercice a été trouvée, dite après sa dernière
- *  série : lourde, correcte ou légère. Facultatif : on peut ne rien dire. */
+/** Comment la charge d'un exercice a été trouvée, dite sur sa dernière
+ *  série : lourde (☹️), correcte (😐) ou légère (😊). Facultatif : on peut ne
+ *  rien dire. */
 export type Ressenti = 'lourd' | 'correct' | 'leger';
 
 export interface ExerciceRealise {
@@ -442,7 +447,7 @@ export interface ExerciceRealise {
   poidsKg?: number;
   /** Charge de chaque série, dans l'ordre ; 0 = non saisie. */
   poidsParSerie?: number[];
-  /** Le ressenti de la personne sur la charge, après la dernière série ;
+  /** Le ressenti de la personne sur la charge, dit sur la dernière série ;
    *  absent = rien dit (et toutes les séances d'avant son arrivée). */
   ressenti?: Ressenti;
 }
@@ -526,8 +531,17 @@ export interface EntrainementState {
    *  part jamais vers le serveur. Absente des sauvegardes d'avant son arrivée. */
   routineSoir?: RoutineSoirLocale;
   /** « J'ai mal à cet exercice », par exercice : sur ce téléphone seulement,
-   *  pour celui qui s'entraîne ici. Absent des sauvegardes d'avant. */
+   *  pour celui qui s'entraîne ici (la personne des réglages) — celles d'avant
+   *  le 13 octobre 2026 aussi, notées avant qu'on sépare les deux. Absent des
+   *  sauvegardes d'avant. */
   douleurs?: Record<string, Douleur>;
+  /** Sur un seul téléphone, à deux : celles de l'autre, notées ici, à part —
+   *  la douleur de l'un ne touche jamais les charges de l'autre. */
+  douleursAutre?: Record<string, Douleur>;
+  /** Le programme sauvegardé vient d'être recomposé : il était de cette
+   *  version-là, plus ancienne. L'accueil le dit une fois — un exercice changé
+   *  ou une paire refaite à la main est à refaire —, puis l'oublie. */
+  programmeRecomposeDepuis?: number;
 }
 
 /** Une douleur signalée sur un exercice : pas de charge en plus proposée, et
@@ -609,9 +623,9 @@ export interface SeanceDuMois {
   /** Identifiants d'exercices de la bibliothèque, dans l'ordre de la séance :
    *  les deux exercices d'une paire côte à côte. */
   exercices: string[];
-  /** Le dernier exercice : la presse ou le hack squat le lundi, la marche du
-   *  fermier le mardi, le traîneau le jeudi. Seul, en séries, après les
-   *  paires. */
+  /** Le dernier exercice : la marche du fermier le lundi (la presse ou le
+   *  hack squat passent dans une paire), les pompes le mardi, le traîneau le
+   *  jeudi. Seul, en séries, après les paires. */
   finale?: string;
   /** La partie du corps du jour : tout le corps le lundi (type 'dure'), le
    *  haut le mardi, le bas le jeudi. */
@@ -623,6 +637,24 @@ export interface SeanceDuMois {
    *  font en même temps. */
   tour?: string[];
 }
+
+/** Les points faibles qu'on peut cocher dans les Réglages, par grand groupe
+ *  musculaire : chacun coché donne une série de plus aux exercices dont c'est
+ *  le groupe principal (`pointFaibleDe`, `src/utils/programmeMois.ts`). */
+export type PointFaible =
+  | 'avant-cuisse'
+  | 'arriere-cuisse'
+  | 'fessiers'
+  | 'interieur-cuisse'
+  | 'exterieur-cuisse'
+  | 'mollets'
+  | 'abdos'
+  | 'bas-du-dos'
+  | 'haut-du-dos'
+  | 'epaules'
+  | 'pecs'
+  | 'biceps'
+  | 'triceps';
 
 /** Les réglages du programme que les deux téléphones partagent. */
 export interface ReglagesDuo {
@@ -639,6 +671,11 @@ export interface ReglagesDuo {
    *  paires. (Avant la version 8 du programme : sans compter le dernier, et
    *  deux de plus le lundi.) */
   exercices?: number;
+  /** Les points faibles de chacun, cochés dans les Réglages ; absents, ceux
+   *  par défaut — Big Max : pecs, épaules, biceps, triceps ; Speedy : aucun
+   *  (`POINTS_FAIBLES_PAR_DEFAUT`). Toujours les deux, dans l'ordre de la
+   *  liste. */
+  pointsFaibles?: Record<Personne, PointFaible[]>;
 }
 
 export interface ProgrammeMois {
@@ -655,9 +692,9 @@ export interface ProgrammeMois {
    *  avec la même graine. */
   version?: number;
   /** Les réglages communs aux deux téléphones : les répétitions de chacun,
-   *  le tempo et le nombre d'exercices des séances. Le lien les transporte,
-   *  pour que les deux téléphones calculent la même horloge. Absents, ceux
-   *  par défaut. */
+   *  le tempo, le nombre d'exercices des séances et les points faibles. Le
+   *  lien les transporte, pour que les deux téléphones calculent la même
+   *  horloge. Absents, ceux par défaut. */
   duo?: ReglagesDuo;
   /** Le code d'équipe qui regroupe les deux téléphones sur le serveur ;
    *  absent, il se tire de la graine et du premier lundi. */

@@ -41,6 +41,7 @@ import {
   lireMouvement,
   motDePhase,
   pauseAEtirement,
+  pauseEntreLesTours,
   premierePhase,
 } from '../utils/etapesSeance';
 import type {
@@ -67,6 +68,7 @@ import { NOM_PERSONNE, autrePersonne, chargeLeBasDuDos, etirementsPauseDe } from
 import { chargeAllegee, chargesDeLaSerie, libelleDisques, libelleParCote, seCharge } from '../utils/charges';
 import type { ChargesSerie } from '../utils/charges';
 import { douleurDe } from '../utils/douleurs';
+import type { QuiDouleur } from '../utils/douleurs';
 import { choixDeSortie, compteSeries, phraseEnregistrementPartiel } from '../utils/sortieSeance';
 import type { ChoixSortie } from '../utils/sortieSeance';
 import { decisionPasserExercice, decisionProlonger, decisionSuivant, perspectiveAutre } from '../utils/horlogeCommune';
@@ -74,22 +76,22 @@ import { tempsActifMs } from '../utils/etatCommun';
 import type { Contexte, Decision } from '../utils/horlogeCommune';
 import { SUFFIXE_UNITE, assezFaite, chargeTotale, libellePoidsParSerie, uniteDeSeance } from '../utils/statistiques';
 import {
-  NOM_RESSENTI,
-  RESSENTIS,
-  SENS_RESSENTI,
+  AIDE_RESSENTI,
+  LEGENDE_VISAGES,
   ajustementDeCharge,
   avecRessentis,
   exercicesAEvaluer,
   motRessenti,
   phraseRessenti,
+  ressentiSurLaSerie,
 } from '../utils/ressenti';
 import { ajouterTemps, appuiAccepte, useMoteurEtapes } from '../hooks/useMoteurEtapes';
 import { useMoteurCommun } from '../hooks/useMoteurCommun';
 import { useSeanceCommune } from '../hooks/useSeanceCommune';
 import type { ConfigSynchro } from '../hooks/useSeanceCommune';
 import { useVerrouEcran } from '../hooks/useVerrouEcran';
-import BoutonDouleur, { ReperDouleur } from './BoutonDouleur';
-import BoutonsRessenti from './BoutonsRessenti';
+import BoutonDouleur, { BoutonDouleurCompact, ReperDouleur } from './BoutonDouleur';
+import BoutonsRessenti, { VisagesRessenti } from './BoutonsRessenti';
 import PaceurTempo from './PaceurTempo';
 import type { LectureTempo } from './PaceurTempo';
 
@@ -125,12 +127,16 @@ export interface SeanceGuideeProps {
   /** Un essai ou un aperçu : rien n'est enregistré — ni la progression, ni la
    *  séance faite. Son bandeau reste affiché du début à la fin. */
   essai?: Essai;
-  /** « J'ai mal à cet exercice », par exercice : charges à 70 %, pas de
-   *  montée. */
+  /** « J'ai mal à cet exercice », par exercice, pour la personne du
+   *  téléphone : charges à 70 %, pas de montée. */
   douleurs?: Record<string, Douleur>;
-  /** Signale la douleur d'un exercice, ou l'enlève ; `charge` : la charge de
-   *  travail du moment (100 %), 0 si on ne la connaît pas. */
-  onBasculerDouleur?: (exerciceId: string, charge: number, unite: UnitePoids) => void;
+  /** Sur un seul téléphone, à deux : celles de l'autre, à part — elles ne
+   *  touchent que ses charges à lui. */
+  douleursAutre?: Record<string, Douleur>;
+  /** Signale la douleur d'un exercice pour l'un ou l'autre, ou l'enlève ;
+   *  `charge` : sa charge de travail du moment (100 %), 0 si on ne la connaît
+   *  pas. */
+  onBasculerDouleur?: (qui: QuiDouleur, exerciceId: string, charge: number, unite: UnitePoids) => void;
 }
 
 // ------------------------------------------------------------- Réglages
@@ -409,7 +415,7 @@ function avecCharge(
 
 /** Sur un seul téléphone, une colonne de la liste du programme : la personne
  *  du téléphone, ou l'autre. */
-type QuiColonne = 'moi' | 'autre';
+export type QuiColonne = 'moi' | 'autre';
 
 /** Les colonnes d'une série : qui la fait. */
 function colonnesDeLaSerie(qui: QuiFait | undefined): QuiColonne[] {
@@ -429,10 +435,18 @@ function estEtapeDeListe(etape: Etape): boolean {
 
 /** Sur un seul téléphone, ce qui vient après l'exercice ou la paire en
  *  cours : ses noms, ou les étirements. Il reste en vue au-dessus des
- *  boutons, même quand la carte d'une paire remplit l'écran. */
+ *  boutons, même quand la carte d'une paire remplit l'écran. Pendant une
+ *  pause entre deux tours d'un exercice seul : le tour qui suit. */
 function ensuiteDansLaListe(seance: Seance, etapes: Etape[], etape: Etape): string | null {
   if ((etape.type !== 'serie' && etape.type !== 'repos') || etape.groupe === undefined) return null;
-  const suivant = groupesUnTelephone(seance)[etape.groupe + 1];
+  const groupes = groupesUnTelephone(seance);
+  if (etape.type === 'repos' && etape.suivant.type === 'serie') {
+    const { exerciceId, serie } = etape.suivant;
+    if (groupes[etape.groupe]?.some((bloc) => bloc.exerciceId === exerciceId)) {
+      return `Série ${serie} · ${exerciceDeSeance(exerciceId).nomFr}`;
+    }
+  }
+  const suivant = groupes[etape.groupe + 1];
   if (suivant) return suivant.map((bloc) => exerciceDeSeance(bloc.exerciceId).nomFr).join(' + ');
   return etapes.some((e) => e.type === 'retourCalme') ? 'Étirements' : null;
 }
@@ -454,6 +468,7 @@ export default function SeanceGuidee({
   chargeDerniereFoisAutre,
   essai,
   douleurs = {},
+  douleursAutre = {},
   onBasculerDouleur,
 }: SeanceGuideeProps) {
   // La progression proposée à la reprise est figée à l'ouverture : les
@@ -1019,41 +1034,67 @@ export default function SeanceGuidee({
     moteur.prolonger(PROLONGATION_CHANGEMENT_SEC);
   };
 
-  /** Les charges d'une série : pré-remplie, 70 % et 100 %. */
-  const chargesIci = (exerciceId: string, serie: number, saisies = poids[exerciceId] ?? [], douleur = douleurDe(douleurs, exerciceId)): ChargesSerie =>
-    chargesDeLaSerie({
+  /** Les douleurs de l'un ou de l'autre : chacun les siennes. */
+  const douleursDe = (qui: QuiColonne) => (qui === 'moi' ? douleurs : douleursAutre);
+
+  /** Les charges d'une série, pour soi ou pour l'autre, avec ces saisies et
+   *  cette douleur : pré-remplie — la dernière fois, un cran plus loin si son
+   *  ressenti le demande —, 70 % et 100 %. */
+  const chargesPour = (
+    qui: QuiColonne,
+    exerciceId: string,
+    serie: number,
+    saisies: number[],
+    douleur: Douleur | null,
+  ): ChargesSerie => {
+    const bloc = blocDe(exerciceId);
+    return chargesDeLaSerie({
       exercice: exerciceDeSeance(exerciceId),
-      bloc: blocDe(exerciceId),
+      bloc:
+        qui === 'moi'
+          ? bloc
+          : bloc?.autre
+            ? { series: bloc.autre.series, ajustementRessenti: bloc.autre.ajustementRessenti }
+            : undefined,
       saisies,
-      passees: chargesPassees[exerciceId] ?? [],
+      passees: (qui === 'moi' ? chargesPassees : chargesPasseesAutre)[exerciceId] ?? [],
       serie,
       unite: unitePoids,
       douleur,
     });
+  };
 
-  /** « J'ai mal à cet exercice » : on le signale, ou on l'enlève. La série en
-   *  cours suit aussitôt — à 70 %, ou de nouveau comme avant. */
-  const basculerDouleurIci = (exerciceId: string) => {
+  /** Les charges d'une série, pour soi ou pour l'autre : pré-remplie, 70 % et
+   *  100 % — à 70 % pour celui des deux qui a mal à cet exercice. */
+  const chargesDe = (qui: QuiColonne, exerciceId: string, serie: number): ChargesSerie =>
+    chargesPour(qui, exerciceId, serie, (qui === 'moi' ? poids : poidsAutre)[exerciceId] ?? [], douleurDe(douleursDe(qui), exerciceId));
+
+  /** Les charges d'une série de la personne du téléphone. */
+  const chargesIci = (exerciceId: string, serie: number): ChargesSerie => chargesDe('moi', exerciceId, serie);
+
+  /** « J'ai mal à cet exercice », pour l'un ou pour l'autre : on le signale,
+   *  ou on l'enlève. Sa série en cours suit aussitôt — à 70 %, ou de nouveau
+   *  comme avant ; celle de l'autre ne bouge pas. */
+  const basculerDouleurDe = (qui: QuiColonne, exerciceId: string) => {
     if (!onBasculerDouleur) return;
-    const avait = douleurDe(douleurs, exerciceId) !== null;
-    // La série en cours, si elle est la sienne : pendant celle de l'autre, sur
-    // un seul téléphone, ses charges à soi ne bougent pas.
+    const avait = douleurDe(douleursDe(qui), exerciceId) !== null;
+    // La série en cours, si elle est la sienne.
     const enCoursIci =
       (etape.type === 'serie' || etape.type === 'station') &&
       etape.exerciceId === exerciceId &&
-      !(etape.type === 'serie' && etape.qui === 'autre')
+      (etape.type !== 'serie' || colonnesDeLaSerie(etape.qui).includes(qui))
         ? etape.type === 'serie'
           ? etape.serie
           : etape.tour
         : null;
-    const sansLaSerie = [...(poids[exerciceId] ?? [])];
+    const sansLaSerie = [...((qui === 'moi' ? poids : poidsAutre)[exerciceId] ?? [])];
     if (enCoursIci !== null) sansLaSerie[enCoursIci - 1] = 0;
-    // La charge de travail du moment, sans la montée que la douleur coupe.
-    const charge = avait ? 0 : chargesIci(exerciceId, enCoursIci ?? 1, sansLaSerie, { depuis: '' }).pleine;
-    onBasculerDouleur(exerciceId, charge, unitePoids);
+    // Sa charge de travail du moment, sans la montée que la douleur coupe.
+    const charge = avait ? 0 : chargesPour(qui, exerciceId, enCoursIci ?? 1, sansLaSerie, { depuis: '' }).pleine;
+    onBasculerDouleur(qui, exerciceId, charge, unitePoids);
     if (enCoursIci !== null) {
       const apres: Douleur | null = avait ? null : { depuis: '', ...(charge > 0 ? { charge, unite: unitePoids } : {}) };
-      changerPoids(exerciceId, enCoursIci, chargesIci(exerciceId, enCoursIci, sansLaSerie, apres).proposee);
+      changerCharge(qui, exerciceId, enCoursIci, chargesPour(qui, exerciceId, enCoursIci, sansLaSerie, apres).proposee);
     }
   };
 
@@ -1066,23 +1107,6 @@ export default function SeanceGuidee({
     setRessentis((precedents) => (precedents[exerciceId] === ressenti ? precedents : { ...precedents, [exerciceId]: ressenti }));
 
   // ------------------------------------------------ Sur un seul téléphone
-
-  /** Les charges d'une série, pour soi ou pour l'autre : pré-remplie — la
-   *  dernière fois, un cran plus loin si son ressenti le demande —, 70 % et
-   *  100 %. La douleur signalée sur ce téléphone est celle de sa personne. */
-  const chargesDe = (qui: QuiColonne, exerciceId: string, serie: number): ChargesSerie => {
-    if (qui === 'moi') return chargesIci(exerciceId, serie);
-    const bloc = blocDe(exerciceId);
-    return chargesDeLaSerie({
-      exercice: exerciceDeSeance(exerciceId),
-      bloc: bloc?.autre ? { series: bloc.autre.series, ajustementRessenti: bloc.autre.ajustementRessenti } : undefined,
-      saisies: poidsAutre[exerciceId] ?? [],
-      passees: chargesPasseesAutre[exerciceId] ?? [],
-      serie,
-      unite: unitePoids,
-      douleur: null,
-    });
-  };
 
   /** Note la charge d'une série, pour soi ou pour l'autre. */
   const changerCharge = (qui: QuiColonne, exerciceId: string, serie: number, charge: number | null) => {
@@ -1269,7 +1293,9 @@ export default function SeanceGuidee({
 
   const exercice = etape.exerciceId ? exerciceDeSeance(etape.exerciceId) : null;
   const ambiance = ambianceEtape(etape);
-  const douleurIci = (exerciceId: string) => douleurDe(douleurs, exerciceId) !== null;
+  /** L'un ou l'autre a mal à cet exercice. */
+  const douleurDeColonne = (qui: QuiColonne, exerciceId: string) => douleurDe(douleursDe(qui), exerciceId) !== null;
+  const douleurIci = (exerciceId: string) => douleurDeColonne('moi', exerciceId);
   // Sur un seul téléphone : une colonne chacun, Speedy d'abord ; seul, la
   // sienne.
   const colonneMoi: ColonneDuo = { qui: 'moi', ...(personne ? { personne } : {}) };
@@ -1280,23 +1306,25 @@ export default function SeanceGuidee({
     : [colonneMoi];
   const ressentiDe = (qui: QuiColonne, exerciceId: string): Ressenti | undefined =>
     (qui === 'moi' ? ressentis : ressentisAutre)[exerciceId];
-  // Rien à dire sur la charge d'un exercice qui n'en a pas.
-  const aEvaluer = exercicesAEvaluer(etapes, index).filter((id) => seCharge(exerciceDeSeance(id)));
-  // Après la dernière série d'un exercice : lourd, correct ou léger ? Pendant
-  // la pause qui suit, ou, pour le dernier exercice, aux étirements. Sur un
-  // seul téléphone, pour chacun.
+  // Après la dernière série d'un exercice : facile, correct ou difficile ?
+  // Pendant la pause qui suit, ou, pour le dernier exercice, aux étirements.
+  // Sur un seul téléphone, les visages sont sur la ligne de la dernière série
+  // de la liste : seuls les étirements les redemandent, pour chacun.
   const panneauRessenti = unTelephone ? (
     <div className="space-y-2">
-      {aEvaluer.map((id) => (
-        <RessentiDuo
-          key={id}
-          exerciceId={id}
-          nom={exerciceDeSeance(id).nomFr}
-          colonnes={colonnes}
-          ressentiDe={ressentiDe}
-          onRessenti={choisirRessentiDe}
-        />
-      ))}
+      {exercicesAEvaluer(etapes, index)
+        // Rien à dire sur la charge d'un exercice qui n'en a pas.
+        .filter((id) => seCharge(exerciceDeSeance(id)))
+        .map((id) => (
+          <RessentiDesColonnes
+            key={id}
+            exerciceId={id}
+            nom={exerciceDeSeance(id).nomFr}
+            colonnes={colonnes}
+            ressentiDe={ressentiDe}
+            onRessenti={choisirRessentiDe}
+          />
+        ))}
     </div>
   ) : (
     <BoutonsRessenti
@@ -1340,7 +1368,7 @@ export default function SeanceGuidee({
           exercice={exercice}
           resteSec={reste}
           douleur={douleurIci(exercice.id)}
-          onBasculerDouleur={onBasculerDouleur ? () => basculerDouleurIci(exercice.id) : undefined}
+          onBasculerDouleur={onBasculerDouleur ? () => basculerDouleurDe('moi', exercice.id) : undefined}
           onPasser={demanderPasserExercice}
         />
       );
@@ -1370,7 +1398,7 @@ export default function SeanceGuidee({
           chargesPassees={chargesPassees[etape.exerciceId] ?? []}
           unitePoids={unitePoids}
           douleur={douleur}
-          onBasculerDouleur={onBasculerDouleur ? () => basculerDouleurIci(etape.exerciceId) : undefined}
+          onBasculerDouleur={onBasculerDouleur ? () => basculerDouleurDe('moi', etape.exerciceId) : undefined}
           onPoids={(serie, charge) => changerPoids(etape.exerciceId, serie, charge)}
           onPasser={demanderPasserExercice}
         />
@@ -1454,9 +1482,8 @@ export default function SeanceGuidee({
         charges={chargesDe}
         faites={faites}
         ressentiDe={ressentiDe}
-        aEvaluer={aEvaluer}
-        douleur={douleurIci}
-        onBasculerDouleur={onBasculerDouleur ? basculerDouleurIci : undefined}
+        douleur={douleurDeColonne}
+        onBasculerDouleur={onBasculerDouleur ? basculerDouleurDe : undefined}
         onCharge={changerCharge}
         onRessenti={choisirRessentiDe}
         guide={guide}
@@ -2963,7 +2990,7 @@ function CorpsFin({
 // Big Max côte à côte, pré-remplies avec celles de la dernière fois.
 
 /** Une colonne de la liste : la personne du téléphone, ou l'autre. */
-interface ColonneDuo {
+export interface ColonneDuo {
   qui: QuiColonne;
   /** Absente : seul, sans personne connue. */
   personne?: Personne;
@@ -2991,7 +3018,7 @@ function dureePause(sec: number): string {
   return secondes === 0 ? `${minutes} min` : `${minutes} min ${secondes}`;
 }
 
-interface ListeProgrammeProps {
+export interface ListeProgrammeProps {
   seance: Seance;
   etapes: Etape[];
   index: number;
@@ -3006,13 +3033,10 @@ interface ListeProgrammeProps {
    *  étapes. */
   faites: readonly number[];
   ressentiDe: (qui: QuiColonne, exerciceId: string) => Ressenti | undefined;
-  /** Les exercices dont on peut dire le ressenti maintenant : ceux du
-   *  groupe qui vient de finir. */
-  aEvaluer: readonly string[];
-  /** « J'ai mal à cet exercice », pour la personne du téléphone. */
-  douleur: (exerciceId: string) => boolean;
+  /** « J'ai mal à cet exercice », pour l'une ou l'autre colonne. */
+  douleur: (qui: QuiColonne, exerciceId: string) => boolean;
   /** Absent : on ne peut pas le signaler d'ici. */
-  onBasculerDouleur?: (exerciceId: string) => void;
+  onBasculerDouleur?: (qui: QuiColonne, exerciceId: string) => void;
   onCharge: (qui: QuiColonne, exerciceId: string, serie: number, charge: number | null) => void;
   onRessenti: (qui: QuiColonne, exerciceId: string, ressenti: Ressenti) => void;
   /** Le guide du tempo de la série en cours, quand on l'a demandé. */
@@ -3022,7 +3046,7 @@ interface ListeProgrammeProps {
 }
 
 /** Tout le programme du jour, en liste. */
-function ListeProgramme(props: ListeProgrammeProps) {
+export function ListeProgramme(props: ListeProgrammeProps) {
   const { seance, etapes, index, colonnes } = props;
   const groupes = useMemo(() => groupesUnTelephone(seance), [seance]);
   // Les étapes de chaque groupe : de la première à la dernière.
@@ -3194,7 +3218,7 @@ interface CarteGroupeProps extends ListeProgrammeProps {
 }
 
 /** L'exercice ou la paire en cours, déroulé : chaque exercice, ses séries,
- *  les charges des deux, puis lourd, correct ou léger. */
+ *  les charges des deux, et les visages du ressenti sur la dernière série. */
 function CarteGroupe({ ref, ...props }: CarteGroupeProps) {
   const { groupe, numero, colonnes, etapes, index, dernier } = props;
   const etape = etapes[index];
@@ -3202,6 +3226,9 @@ function CarteGroupe({ ref, ...props }: CarteGroupeProps) {
   const aDeux = colonnes.length > 1;
   // À deux, la machine d'une paire — un seul siège — se fait chacun son tour.
   const machine = paire && aDeux ? groupe.find((bloc) => bloc.tour) : undefined;
+  // Un exercice seul, à deux : une pause d'un toucher entre deux tours — sauf
+  // la marche du fermier.
+  const entreLesTours = !paire && aDeux && pauseEntreLesTours(exerciceDeSeance(groupe[0].exerciceId));
   // Chacun son tour : qui commence.
   const premiere = etapes.find(
     (e): e is Extract<Etape, { type: 'serie' }> =>
@@ -3216,9 +3243,10 @@ function CarteGroupe({ ref, ...props }: CarteGroupeProps) {
         : 'A, B, A, B, les deux, sans pause entre les tours'
       : 'A, B, A, B, sans pause entre les tours'
     : aDeux
-      ? `Chacun son tour : ${quiCommence} commence`
+      ? `Chacun son tour : ${quiCommence} commence${entreLesTours ? '' : ', sans pause entre les tours'}`
       : 'Une pause entre deux séries';
   const pause = groupe[groupe.length - 1].reposSec;
+  const lancee = `${dureePause(pause)}, lancée d’un toucher`;
   return (
     <li
       ref={ref}
@@ -3232,9 +3260,13 @@ function CarteGroupe({ ref, ...props }: CarteGroupeProps) {
         <div className="chiffres text-xs" style={{ color: 'var(--texte-discret)' }}>
           {etape.type === 'repos' && etape.motif === 'pause'
             ? 'Pause en cours'
-            : dernier
-              ? 'Pas de pause à la fin : les étirements suivent'
-              : `Pause à la fin${paire ? ' de la paire' : ''} : ${dureePause(pause)}, lancée d’un toucher`}
+            : entreLesTours
+              ? dernier
+                ? `Pause entre les tours : ${lancee} ; à la fin, les étirements suivent`
+                : `Pause entre les tours et à la fin : ${lancee}`
+              : dernier
+                ? 'Pas de pause à la fin : les étirements suivent'
+                : `Pause à la fin${paire ? ' de la paire' : ''} : ${lancee}`}
         </div>
       </div>
       {groupe.map((bloc) => (
@@ -3262,7 +3294,6 @@ function BlocDuProgramme({
   faites,
   places,
   ressentiDe,
-  aEvaluer,
   douleur,
   onBasculerDouleur,
   onCharge,
@@ -3274,7 +3305,6 @@ function BlocDuProgramme({
   const actif = etape.type === 'serie' && etape.exerciceId === bloc.exerciceId ? etape : null;
   const avecCharge = seCharge(exercice);
   const posture = estPosture(exercice);
-  const mal = douleur(exercice.id);
   const volumes = colonnes
     .map((colonne) => {
       const { series, reps } = volumeDeColonne(bloc, colonne.qui);
@@ -3303,7 +3333,6 @@ function BlocDuProgramme({
           <p className="chiffres text-xs" style={{ color: 'var(--texte-discret)' }}>
             {volumes}
           </p>
-          {mal && <ReperDouleur avecCharge={avecCharge} className="mt-1" />}
         </div>
       </div>
       {actif && (
@@ -3330,33 +3359,18 @@ function BlocDuProgramme({
         places={places}
         avecCharge={avecCharge}
         onCharge={onCharge}
+        ressentiDe={ressentiDe}
+        onRessenti={onRessenti}
+        douleur={douleur}
+        onBasculerDouleur={posture ? undefined : onBasculerDouleur}
       />
-      {aEvaluer.includes(exercice.id) && (
-        <RessentiDuo
-          exerciceId={exercice.id}
-          nom={exercice.nomFr}
-          colonnes={colonnes}
-          ressentiDe={ressentiDe}
-          onRessenti={onRessenti}
-        />
-      )}
       <details className="rounded-xl px-2" style={{ background: 'var(--surface)' }}>
-        <summary className="flex min-h-11 cursor-pointer items-center text-sm font-medium">
-          Points d’attention{onBasculerDouleur && !posture ? ' · douleur' : ''}
-        </summary>
+        <summary className="flex min-h-11 cursor-pointer items-center text-sm font-medium">Points d’attention</summary>
         <ul className="list-disc space-y-1 pb-2 pl-5 text-sm" style={{ color: 'var(--texte-discret)' }}>
           {consignesDe(exercice).map((point) => (
             <li key={point}>{point}</li>
           ))}
         </ul>
-        {onBasculerDouleur && !posture && (
-          <BoutonDouleur
-            actif={mal}
-            avecCharge={avecCharge}
-            onBasculer={() => onBasculerDouleur(exercice.id)}
-            className="mb-2"
-          />
-        )}
       </details>
     </div>
   );
@@ -3364,8 +3378,10 @@ function BlocDuProgramme({
 
 /** Les séries d'un exercice, une ligne chacune, une colonne par personne :
  *  la charge, pré-remplie avec celle de la dernière fois — on ne tape que si
- *  elle change —, ou un crochet pour un exercice sans charge. Sous la série en
- *  cours : 70 % et 100 % d'un toucher, et ce qu'on met de chaque côté. */
+ *  elle change —, ou un crochet pour un exercice sans charge. Sous les noms,
+ *  « J'ai mal » pour chacun. Sous la série en cours : 70 % et 100 % d'un
+ *  toucher, et ce qu'on met de chaque côté. Sous la dernière série de chacun,
+ *  dès qu'elle commence, et sous elle seulement : les visages du ressenti. */
 function TableauSeries({
   bloc,
   exercice,
@@ -3378,15 +3394,39 @@ function TableauSeries({
   places,
   avecCharge,
   onCharge,
-}: Pick<ListeProgrammeProps, 'colonnes' | 'index' | 'unitePoids' | 'saisies' | 'charges' | 'faites' | 'onCharge'> & {
+  ressentiDe,
+  onRessenti,
+  douleur,
+  onBasculerDouleur,
+}: Pick<
+  ListeProgrammeProps,
+  | 'colonnes'
+  | 'index'
+  | 'unitePoids'
+  | 'saisies'
+  | 'charges'
+  | 'faites'
+  | 'onCharge'
+  | 'ressentiDe'
+  | 'onRessenti'
+  | 'douleur'
+  | 'onBasculerDouleur'
+> & {
   bloc: BlocSeries;
   exercice: Exercice;
   places: Map<string, number>;
   avecCharge: boolean;
 }) {
   const lignes = Math.max(...colonnes.map((colonne) => volumeDeColonne(bloc, colonne.qui).series));
+  const numeros = Array.from({ length: lignes }, (_, i) => i + 1);
   const grille = { gridTemplateColumns: `2.25rem repeat(${colonnes.length}, minmax(0, 1fr))` };
   const disques = avecCharge ? libelleDisques(exercice) : null;
+  // Les visages du ressenti : sur la dernière série de chacun. Rien sur un
+  // exercice sans charge — il n'y a rien à monter.
+  const visagesSur = (colonne: ColonneDuo, serie: number) =>
+    avecCharge &&
+    ressentiSurLaSerie(serie, volumeDeColonne(bloc, colonne.qui).series, places.get(`${exercice.id}|${serie}|${colonne.qui}`), index);
+  const avecVisages = numeros.some((serie) => colonnes.some((colonne) => visagesSur(colonne, serie)));
   return (
     <div className="space-y-1" role="group" aria-label={`Séries : ${exercice.nomFr}`}>
       {colonnes.length > 1 || avecCharge ? (
@@ -3399,7 +3439,22 @@ function TableauSeries({
           ))}
         </div>
       ) : null}
-      {Array.from({ length: lignes }, (_, i) => i + 1).map((serie) => {
+      {/* « J'ai mal » : un par personne, la douleur de l'un ne touche pas l'autre. */}
+      {onBasculerDouleur && (
+        <div className="grid items-center gap-2" style={grille}>
+          <span />
+          {colonnes.map((colonne) => (
+            <BoutonDouleurCompact
+              key={colonne.qui}
+              actif={douleur(colonne.qui, exercice.id)}
+              avecCharge={avecCharge}
+              nom={nomColonne(colonne)}
+              onBasculer={() => onBasculerDouleur(colonne.qui, exercice.id)}
+            />
+          ))}
+        </div>
+      )}
+      {numeros.map((serie) => {
         const enCours = colonnes.some((colonne) => places.get(`${exercice.id}|${serie}|${colonne.qui}`) === index);
         return (
           <div key={serie} className="space-y-1">
@@ -3472,9 +3527,33 @@ function TableauSeries({
                 )}
               </div>
             )}
+            {/* Sur la dernière série de chacun : facile, correct ou difficile ? */}
+            {colonnes.some((colonne) => visagesSur(colonne, serie)) && (
+              <div className="grid gap-2" style={grille}>
+                <span />
+                {colonnes.map((colonne) =>
+                  visagesSur(colonne, serie) ? (
+                    <VisagesRessenti
+                      key={colonne.qui}
+                      compact
+                      choisi={ressentiDe(colonne.qui, exercice.id)}
+                      nom={`${nomColonne(colonne)}, ${exercice.nomFr}`}
+                      onChoisir={(ressenti) => onRessenti(colonne.qui, exercice.id, ressenti)}
+                    />
+                  ) : (
+                    <span key={colonne.qui} />
+                  ),
+                )}
+              </div>
+            )}
           </div>
         );
       })}
+      {avecVisages && (
+        <p className="text-xs" style={{ color: 'var(--texte-discret)' }}>
+          {AIDE_RESSENTI} {LEGENDE_VISAGES}.
+        </p>
+      )}
       {disques && (
         <p className="text-xs" style={{ color: 'var(--texte-discret)' }}>
           {disques.charAt(0).toUpperCase() + disques.slice(1)}.
@@ -3588,8 +3667,10 @@ function Raccourcis({
   );
 }
 
-/** Lourd, correct ou léger, pour chacun : un toucher, facultatif. */
-function RessentiDuo({
+/** Aux étirements, pour le dernier exercice : facile, correct ou difficile,
+ *  pour chacun — s'il ne l'a pas dit sur sa dernière série. Un toucher,
+ *  facultatif. */
+function RessentiDesColonnes({
   exerciceId,
   nom,
   colonnes,
@@ -3603,32 +3684,27 @@ function RessentiDuo({
   onRessenti: ListeProgrammeProps['onRessenti'];
 }) {
   return (
-    <section aria-label={`Ressenti sur la charge : ${nom}`} className="space-y-2 rounded-xl p-2" style={{ background: 'var(--surface)' }}>
+    <section
+      aria-label={`Ressenti sur la dernière série : ${nom}`}
+      className="space-y-2 rounded-xl p-2 text-left"
+      style={{ background: 'var(--surface)' }}
+    >
       <div className="text-xs font-bold uppercase tracking-[0.14em]" style={{ color: 'var(--texte-discret)' }}>
-        Comment était la charge ? <span className="font-normal normal-case tracking-normal">(facultatif)</span>
+        {nom} · la dernière série ? <span className="font-normal normal-case tracking-normal">(facultatif)</span>
       </div>
       <p className="text-xs" style={{ color: 'var(--texte-discret)' }}>
-        {RESSENTIS.map((ressenti) => `${NOM_RESSENTI[ressenti]} : ${SENS_RESSENTI[ressenti]}`).join(' · ')}
+        {AIDE_RESSENTI} {LEGENDE_VISAGES}.
       </p>
       {colonnes.map((colonne) => (
-        <div key={colonne.qui} role="group" aria-label={`Ressenti de ${nomColonne(colonne)} : ${nom}`} className="flex items-center gap-2">
+        <div key={colonne.qui} className="flex items-center gap-2">
           {colonnes.length > 1 && <span className="w-16 shrink-0 text-sm font-bold">{nomColonne(colonne)}</span>}
-          <div className="grid flex-1 grid-cols-3 gap-1">
-            {RESSENTIS.map((ressenti) => {
-              const choisi = ressentiDe(colonne.qui, exerciceId) === ressenti;
-              return (
-                <button
-                  key={ressenti}
-                  type="button"
-                  aria-pressed={choisi}
-                  onClick={() => onRessenti(colonne.qui, exerciceId, ressenti)}
-                  className={`${BOUTON_COMMUN} min-h-11 rounded-xl px-1 text-sm`}
-                  style={choisi ? STYLES_BOUTON.accent : STYLES_BOUTON.neutre}
-                >
-                  {NOM_RESSENTI[ressenti]}
-                </button>
-              );
-            })}
+          <div className="min-w-0 flex-1">
+            <VisagesRessenti
+              compact
+              choisi={ressentiDe(colonne.qui, exerciceId)}
+              nom={`${nomColonne(colonne)}, ${nom}`}
+              onChoisir={(ressenti) => onRessenti(colonne.qui, exerciceId, ressenti)}
+            />
           </div>
         </div>
       ))}

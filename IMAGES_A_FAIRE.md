@@ -1,8 +1,8 @@
 # Images à faire avec Gemini (Nano Banana)
 
-Six machines et deux exercices au poids du corps (le Superman sans poids, la
-planche de Copenhague) n'ont qu'un dessin simple dans l'application. On les
-refait dans le style des autres exercices.
+Sept machines et quatre exercices au poids du corps (le Superman sans poids,
+la planche de Copenhague, la planche, la planche latérale) n'ont qu'un dessin
+simple dans l'application. On les refait dans le style des autres exercices.
 
 ## Comment faire
 
@@ -94,6 +94,29 @@ Gemini s'en inspire très bien. Joins-la en plus du modèle et ajoute
 > dessous au sol. Position 2 : les hanches montées, épaule, hanche et genou
 > en ligne, la jambe du dessous libre sous le banc. Muscles en noir :
 > intérieur des cuisses (adducteurs).
+
+### 9. `seated-calf-raise` : mollets assis, à la machine
+
+> L'exercice : mollets assis à la machine (seated calf raise). Position 1 :
+> assise, le coussin de la machine sur le bas des cuisses, juste au-dessus
+> des genoux, l'avant des pieds sur la marche, les talons descendus sous la
+> marche. Position 2 : sur la pointe des pieds, talons montés le plus haut
+> possible, le coussin soulevé. Muscles en noir : mollets.
+
+### 10. `plank` : planche
+
+> L'exercice : planche sur les avant-bras, au sol, sur un tapis. Position 1 :
+> à genoux, avant-bras au sol, coudes sous les épaules. Position 2 : jambes
+> tendues sur la pointe des pieds, le corps droit de la tête aux talons, les
+> fesses ni hautes ni basses. Muscles en noir : abdominaux.
+
+### 11. `side-plank` : planche latérale
+
+> L'exercice : planche latérale sur l'avant-bras, sur un tapis. Position 1 :
+> allongée sur le côté, en appui sur l'avant-bras (coude sous l'épaule), les
+> jambes l'une sur l'autre, la hanche au sol. Position 2 : les hanches
+> montées, le corps droit de la tête aux pieds. Muscles en noir : obliques,
+> extérieur de la hanche.
 
 ## Ce qu'il faut regarder avant de garder une image
 

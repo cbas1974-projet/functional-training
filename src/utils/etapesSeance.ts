@@ -501,6 +501,18 @@ function construireEtapesHorloge(seance: Seance): Etape[] {
   return etapes;
 }
 
+/** Les marches du fermier : à deux, elles enchaînent leurs tours, sans pause
+ *  entre deux (décision de Sébastien, 13 octobre 2026). */
+const SANS_PAUSE_ENTRE_LES_TOURS = new Set(['farmers-walk', 'kb-farmers-walk']);
+
+/** Un exercice fait seul, à deux sur un seul téléphone : une pause à lancer
+ *  d'un toucher entre deux tours — la sienne, une minute, une minute trente à
+ *  la trap bar —, en plus de celle de la fin. Tous, sauf la marche du
+ *  fermier. */
+export function pauseEntreLesTours(exercice: Pick<Exercice, 'id'>): boolean {
+  return !SANS_PAUSE_ENTRE_LES_TOURS.has(exercice.id);
+}
+
 /** Les exercices d'une séance sur un seul téléphone, groupe par groupe — un
  *  exercice seul, ou les deux d'une paire —, numérotés comme le `groupe` de
  *  ses étapes : l'écran de la séance les liste dans cet ordre. */
@@ -521,9 +533,12 @@ export function groupesUnTelephone(seance: Seance): BlocSeries[][] {
  *    siège) : à deux, jamais en même temps — chacun son tour, celui qui
  *    commence d'abord, puis l'autre exercice, ensemble (audit du 13 octobre
  *    2026).
- *  - Un exercice seul, à deux : chacun son tour, celui qui commence d'abord —
- *    la série de l'un est le repos de l'autre. Seul, sans l'autre, la pause
- *    vient entre deux séries.
+ *  - Un exercice seul, à deux : chacun son tour, celui qui commence d'abord,
+ *    puis une pause à lancer entre deux tours (`pauseEntreLesTours`) — ce
+ *    sont les gros exercices du jour, et la série de l'autre ne suffit pas à
+ *    leur repos (décision du 13 octobre 2026) ; la marche du fermier, elle,
+ *    enchaîne ses tours. Seul, sans l'autre, la pause vient entre deux
+ *    séries.
  *  - La pause, à la fin d'un exercice ou d'une paire, attend qu'on la lance
  *    (`a-lancer`), puis compte sa minute (`pause`) et repart d'elle-même vers
  *    l'exercice suivant. Pas de mise en place en plus : on s'installe pendant
@@ -602,14 +617,22 @@ function construireEtapesUnTelephone(seance: Seance): Etape[] {
         }
       }
     }
+    // Un exercice seul, à deux : une pause à lancer entre deux tours, quand
+    // les deux ont fait leur série.
+    const entreLesTours = seul && aDeux && pauseEntreLesTours(exerciceDeSeance(groupe[0].exerciceId));
     travaux.forEach((travail, i) => {
       const dernier = i === travaux.length - 1;
+      const finDeTour = entreLesTours && !dernier && travaux[i + 1].serie !== travail.serie;
       // Le temps de passer à la série qui suit : à l'autre personne — céder
-      // la place —, ou à l'autre exercice de la paire. Seul, la pause en
-      // tient lieu.
+      // la place —, ou à l'autre exercice de la paire. Seul, ou avant une
+      // pause, la pause en tient lieu.
       const memeBloc = travaux[i + 1]?.bloc === travail.bloc;
       const passage =
-        dernier || (seul && !aDeux) ? 0 : seul || memeBloc ? CHANGEMENT_SEC : (travail.bloc.transitionSec ?? CHANGEMENT_SEC);
+        dernier || finDeTour || (seul && !aDeux)
+          ? 0
+          : seul || memeBloc
+            ? CHANGEMENT_SEC
+            : (travail.bloc.transitionSec ?? CHANGEMENT_SEC);
       etapes.push({
         type: 'serie',
         exerciceId: travail.bloc.exerciceId,
@@ -621,7 +644,7 @@ function construireEtapesUnTelephone(seance: Seance): Etape[] {
         ...(aDeux ? { qui: travail.qui } : {}),
         manuelle: true,
       });
-      if (seul && !aDeux && !dernier) poserPause(travail.bloc.exerciceId, travail.bloc.reposSec, g);
+      if ((seul && !aDeux && !dernier) || finDeTour) poserPause(travail.bloc.exerciceId, travail.bloc.reposSec, g);
     });
     // La pause de l'exercice ou de la paire : celle de son dernier bloc. Pas
     // après le dernier : les étirements suivent.

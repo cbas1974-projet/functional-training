@@ -55,6 +55,8 @@ export const EXERCICES_KETTLEBELL: Exercice[] = [
     muscles: 'Pectoraux, triceps, épaules, gainage',
     musclesPrincipaux: ['pectoraux', 'triceps'],
     musclesSecondaires: ['epaules', 'abdominaux'],
+    // Les cloches servent de poignées : la charge, c'est le poids du corps.
+    appuiSeulement: true,
     pattern: 'poussee-horizontale',
     niveauMin: 2,
     cotes: 'bilateral',

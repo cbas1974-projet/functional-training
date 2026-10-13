@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { basculerDouleur, chargeDeDouleur, douleurDe, lireDouleurs } from './douleurs';
+import { EXERCICES_PAR_ID } from '../data/exercices';
+import { chargesDeLaSerie } from './charges';
+import { basculerDouleur, basculerDouleurDe, chargeDeDouleur, douleurDe, douleursDe, lireDouleurs } from './douleurs';
+import type { QuiDouleur } from './douleurs';
 
 const ONZE = new Date('2026-10-11T12:00:00.000Z');
 
@@ -37,5 +40,24 @@ describe('« J’ai mal à cet exercice »', () => {
         e: 'oui',
       }),
     ).toEqual({ a: { depuis: 'x', charge: 100, unite: 'lb' }, b: { depuis: 'x' }, c: { depuis: 'x' } });
+  });
+
+  it('à deux sur un téléphone : la douleur de Big Max ne touche que ses charges ; celles de Speedy suivent leur cours', () => {
+    // Big Max a mal au développé couché, à 100 lb.
+    const etat = basculerDouleurDe({ douleurs: {} }, 'autre', 'bench-press', 100, 'lb', ONZE);
+    expect(etat).toEqual({ douleursAutre: { 'bench-press': { depuis: ONZE.toISOString(), charge: 100, unite: 'lb' } } });
+    const charges = (qui: QuiDouleur, passees: number[], serie: number) =>
+      chargesDeLaSerie({
+        exercice: EXERCICES_PAR_ID['bench-press'],
+        saisies: [],
+        passees,
+        serie,
+        unite: 'lb',
+        douleur: douleurDe(douleursDe(etat, qui), 'bench-press'),
+      });
+    // Lui : 70 % de ses 100 lb, à chaque série.
+    for (const serie of [1, 2, 3]) expect(charges('autre', [100, 100, 100], serie)).toMatchObject({ pleine: 100, proposee: 70 });
+    // Speedy, au même exercice : sa charge, entière.
+    for (const serie of [1, 2, 3]) expect(charges('moi', [135, 135, 135], serie)).toMatchObject({ pleine: 135, proposee: 135 });
   });
 });

@@ -1,9 +1,12 @@
-// Le ressenti : après la dernière série d'un exercice, on dit si la charge
-// était lourde, correcte ou légère. Un seul toucher, facultatif. Comme on ne
-// monte pas les charges à chaque séance, c'est ce qui dit quand le faire — et
-// c'est la seule règle de progression du programme : léger assez de fois de
-// suite (trois pour Speedy, deux pour Big Max), on propose un cran de plus ;
-// lourd deux fois de suite, un cran de moins. Une douleur signalée sur un
+// Le ressenti : sur la dernière série d'un exercice, on dit si la charge
+// était facile (😊, « léger »), correcte (😐) ou difficile (☹️, « lourd »). Un
+// seul toucher, facultatif. Comme on ne monte pas les charges à chaque
+// séance, c'est ce qui dit quand le faire — et c'est la seule règle de
+// progression du programme : léger assez de fois de suite (deux pour Speedy,
+// une pour Big Max, décision du 13 octobre 2026), on propose un cran de
+// plus ; lourd deux fois de suite, un cran de moins. Le compte se fait par
+// exercice, quel que soit le jour : un 😊 le lundi et un le mardi, au même
+// exercice et à la même charge, font deux. Une douleur signalée sur un
 // exercice (`douleurs.ts`) coupe la montée, jamais la descente.
 //
 // Tout est pur et se recalcule depuis l'historique : rien n'est stocké en
@@ -16,16 +19,37 @@ import { CRAN_CHARGE, SUFFIXE_UNITE, convertirPoids, poidsDe, uniteDeSeance } fr
 
 export const RESSENTIS: readonly Ressenti[] = ['lourd', 'correct', 'leger'];
 
-/** Le mot du bouton. */
+/** Le mot, pour l'historique et le détail d'une séance. */
 export const NOM_RESSENTI: Record<Ressenti, string> = { lourd: 'Lourd', correct: 'Correct', leger: 'Léger' };
 
-/** Ce que veut dire chaque bouton, en répétitions qu'on aurait encore pu
- *  faire : écrit sous « Comment était la charge ? ». */
-export const SENS_RESSENTI: Record<Ressenti, string> = {
-  lourd: '0 ou 1, ou la forme lâche (dos rond, genou qui fait mal)',
-  correct: '2 ou 3 en réserve',
-  leger: 'j’en avais encore 4',
+/** Les boutons du ressenti, de gauche à droite : facile, correct, difficile
+ *  (décision de Sébastien, 13 octobre 2026). Ils remplacent les mots Lourd,
+ *  Correct, Léger ; la donnée reste la même. */
+export const ORDRE_EMOJIS: readonly Ressenti[] = ['leger', 'correct', 'lourd'];
+
+/** Le visage de chaque bouton. */
+export const EMOJI_RESSENTI: Record<Ressenti, string> = { leger: '😊', correct: '😐', lourd: '☹️' };
+
+/** Ce que dit chaque visage, pour le lecteur d'écran. */
+export const SENS_EMOJI: Record<Ressenti, string> = {
+  leger: 'Facile (léger)',
+  correct: 'Correct',
+  lourd: 'Difficile (lourd)',
 };
+
+/** L'aide, avec les visages : ce que doit être une dernière série. */
+export const AIDE_RESSENTI = 'La dernière série doit être dure : 1 à 3 répétitions en réserve.';
+
+/** « 😊 facile · 😐 correct · ☹️ difficile » : la légende des visages. */
+export const LEGENDE_VISAGES = '😊 facile · 😐 correct · ☹️ difficile';
+
+/** Sur un seul téléphone, les visages vont sur la ligne de la dernière série
+ *  de chacun — jamais sur les premières —, dès qu'elle commence : on les
+ *  touche juste après la série, ou pendant la pause qui suit. `place` : la
+ *  place de cette série dans les étapes ; `index` : l'étape en cours. */
+export function ressentiSurLaSerie(serie: number, series: number, place: number | undefined, index: number): boolean {
+  return series > 0 && serie === series && place !== undefined && place <= index;
+}
 
 /** Le mot en petit, pour l'historique : « léger ». */
 export const motRessenti = (ressenti: Ressenti): string => NOM_RESSENTI[ressenti].toLowerCase();
@@ -43,9 +67,11 @@ export function lireRessentis(brut: unknown): Record<string, Ressenti> {
 // ------------------------------------------------------------- Quand changer la charge
 
 /** Combien de « léger » de suite, au même poids, avant de proposer un cran de
- *  plus. Speedy : trois — avec le jiu-jitsu le soir, il reste léger plus
- *  longtemps. Big Max : deux. */
-export const RESSENTIS_POUR_MONTER: Record<Personne, number> = { sebastien: 3, max: 2 };
+ *  plus (décision de Sébastien, 13 octobre 2026 : une progression plus
+ *  rapide). Speedy : deux — avec le jiu-jitsu le soir, il reste léger plus
+ *  longtemps. Big Max : un seul. Les séances comptent toutes, quel que soit
+ *  le jour : le même exercice revient dans la semaine. */
+export const RESSENTIS_POUR_MONTER: Record<Personne, number> = { sebastien: 2, max: 1 };
 /** Combien de « lourd » de suite, au même poids, avant de proposer un cran de
  *  moins : deux, pour les deux. */
 export const RESSENTIS_POUR_DESCENDRE: Record<Personne, number> = { sebastien: 2, max: 2 };
@@ -101,9 +127,10 @@ function passagesDe(historique: SeanceRealisee[], exerciceId: string, unite: Uni
 }
 
 /** Ce que le ressenti propose pour un exercice, d'après l'historique de la
- *  personne : un cran de plus après assez de « léger » de suite (trois pour
- *  Speedy, deux pour Big Max), un cran de moins après deux « lourd » de
- *  suite, sinon rien.
+ *  personne — toutes ses séances où l'exercice revient, quel que soit le
+ *  jour : un cran de plus après assez de « léger » de suite (deux pour
+ *  Speedy, un pour Big Max), un cran de moins après deux « lourd » de suite,
+ *  sinon rien.
  *
  *  Les ressentis comptent à partir du dernier, tant que la charge est la même :
  *  dès qu'elle a changé — on a monté, ou descendu — le compte repart de zéro,
@@ -192,8 +219,11 @@ export function libelleCran(ajout: number, unite: UnitePoids): string {
   return `${ajout < 0 ? '−' : '+'}${nombreFr(Math.abs(ajout))} ${SUFFIXE_UNITE[unite]}`;
 }
 
-/** La phrase de la séance guidée, sous la saisie du poids : « Léger les 3
- *  dernières fois : on monte de 5 lb ». */
+/** « les 2 dernières fois », « la dernière fois ». */
+const dernieresFois = (fois: number): string => (fois > 1 ? `les ${fois} dernières fois` : 'la dernière fois');
+
+/** La phrase de la séance guidée, sous la saisie du poids : « Léger les 2
+ *  dernières fois : on monte de 5 lb », « Léger la dernière fois : … ». */
 export function phraseRessenti(
   motif: 'leger' | 'lourd',
   ajout: number,
@@ -203,8 +233,8 @@ export function phraseRessenti(
   const cran = `${nombreFr(Math.abs(ajout))} ${SUFFIXE_UNITE[unite]}`;
   const seuils = seuilsRessenti(personne);
   return motif === 'leger'
-    ? `Léger les ${seuils.monter} dernières fois : on monte de ${cran}`
-    : `Lourd les ${seuils.descendre} dernières fois : on redescend de ${cran}`;
+    ? `Léger ${dernieresFois(seuils.monter)} : on monte de ${cran}`
+    : `Lourd ${dernieresFois(seuils.descendre)} : on redescend de ${cran}`;
 }
 
 /** La petite ligne de l'accueil : « ↑ +5 lb proposé », « ↓ −5 lb proposé ». */
@@ -212,10 +242,12 @@ export function ligneProposition(motif: 'leger' | 'lourd', ajout: number, unite:
   return `${motif === 'leger' ? '↑' : '↓'} ${libelleCran(ajout, unite)} proposé`;
 }
 
-/** Pourquoi, en quelques mots : « léger 3 fois de suite ». */
+/** Pourquoi, en quelques mots : « léger 2 fois de suite », « léger la
+ *  dernière fois ». */
 export function raisonProposition(motif: 'leger' | 'lourd', personne?: Personne | null): string {
   const seuils = seuilsRessenti(personne);
-  return motif === 'leger' ? `léger ${seuils.monter} fois de suite` : `lourd ${seuils.descendre} fois de suite`;
+  const fois = motif === 'leger' ? seuils.monter : seuils.descendre;
+  return `${motif === 'leger' ? 'léger' : 'lourd'} ${fois > 1 ? `${fois} fois de suite` : 'la dernière fois'}`;
 }
 
 // ------------------------------------------------------------- Dans la séance guidée
@@ -223,8 +255,10 @@ export function raisonProposition(motif: 'leger' | 'lourd', personne?: Personne 
 /** Les exercices dont on peut dire le ressenti à cette étape : ceux dont la
  *  dernière série vient d'être faite, dans le dernier groupe travaillé — un
  *  exercice seul, ou les deux d'une paire. On le demande pendant la pause qui
- *  suit, ou, pour le tout dernier exercice, aux étirements. Rien pendant un
- *  circuit, qui n'a pas de charge à noter. */
+ *  suit, ou, pour le tout dernier exercice, aux étirements. Sur un seul
+ *  téléphone, les visages sont déjà sur la ligne de la dernière série
+ *  (`ressentiSurLaSerie`) : seuls les étirements les redemandent, pour le
+ *  dernier exercice. Rien pendant un circuit, qui n'a pas de charge à noter. */
 export function exercicesAEvaluer(etapes: readonly Etape[], index: number): string[] {
   const etape = etapes[index];
   if (!etape || (etape.type !== 'repos' && etape.type !== 'retourCalme')) return [];

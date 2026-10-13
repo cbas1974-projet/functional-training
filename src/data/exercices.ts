@@ -1128,6 +1128,8 @@ export const EXERCICES: Exercice[] = [
     musclesPrincipaux: ['pectoraux', 'triceps'],
     musclesSecondaires: ['epaules', 'abdominaux'],
     materiel: 'halteres',
+    // Les haltères servent de poignées : la charge, c'est le poids du corps.
+    appuiSeulement: true,
     pattern: 'poussee-horizontale',
     niveauMin: 2,
     cotes: 'bilateral',

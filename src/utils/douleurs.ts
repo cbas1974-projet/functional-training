@@ -1,13 +1,41 @@
-// « J'ai mal à cet exercice » : une douleur signalée sur un exercice, par
-// celui qui s'entraîne sur ce téléphone. Tant qu'elle est là : un repère sur
-// l'exercice, aucune charge en plus proposée (« léger » n'y fait plus monter ;
-// « lourd » fait toujours redescendre), et chaque série pré-remplie à 70 % de
-// la charge de travail. On l'enlève : tout redevient comme avant.
+// « J'ai mal à cet exercice » : une douleur signalée sur un exercice, pour
+// une personne. Tant qu'elle est là : un repère sur l'exercice, aucune charge
+// en plus proposée (« léger » n'y fait plus monter ; « lourd » fait toujours
+// redescendre), et chaque série pré-remplie à 70 % de la charge de travail.
+// On l'enlève : tout redevient comme avant.
 //
-// Elle reste sur ce téléphone, hors de l'historique : rien ne part vers le
-// serveur ni vers l'autre.
-import type { Douleur, UnitePoids } from '../types';
+// Sur un seul téléphone, à deux, chacun a les siennes (13 octobre 2026) :
+// celles de la personne du téléphone (`douleurs`, où sont restées celles
+// d'avant), celles de l'autre à part (`douleursAutre`). La douleur de l'un ne
+// touche jamais les charges de l'autre. Elles restent sur ce téléphone, hors
+// de l'historique : rien ne part vers le serveur ni vers l'autre téléphone.
+import type { Douleur, EntrainementState, UnitePoids } from '../types';
 import { convertirPoids } from './statistiques';
+
+/** De qui est la douleur : la personne du téléphone, ou l'autre. */
+export type QuiDouleur = 'moi' | 'autre';
+
+/** Le champ de la sauvegarde où vivent les douleurs de chacun. */
+const CHAMP: Record<QuiDouleur, 'douleurs' | 'douleursAutre'> = { moi: 'douleurs', autre: 'douleursAutre' };
+
+/** Les douleurs de l'un ou de l'autre. */
+export const douleursDe = (
+  etat: Pick<EntrainementState, 'douleurs' | 'douleursAutre'>,
+  qui: QuiDouleur,
+): Record<string, Douleur> => etat[CHAMP[qui]] ?? {};
+
+/** Signale la douleur de l'un ou de l'autre, ou l'enlève : ce qui change dans
+ *  l'état. Celles de l'autre personne ne bougent pas. */
+export function basculerDouleurDe(
+  etat: Pick<EntrainementState, 'douleurs' | 'douleursAutre'>,
+  qui: QuiDouleur,
+  exerciceId: string,
+  charge: number,
+  unite: UnitePoids,
+  maintenant: Date = new Date(),
+): Pick<EntrainementState, 'douleurs' | 'douleursAutre'> {
+  return { [CHAMP[qui]]: basculerDouleur(etat[CHAMP[qui]], exerciceId, charge, unite, maintenant) };
+}
 
 const estUnite = (valeur: unknown): valeur is UnitePoids => valeur === 'lb' || valeur === 'kg';
 

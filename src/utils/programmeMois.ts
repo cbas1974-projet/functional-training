@@ -1,16 +1,18 @@
 // Programme du mois : l'application compose les séances elle-même, dans la
 // bibliothèque des posters, à partir d'objectifs musculaires — bas du dos,
-// épaules, extérieur et intérieur de cuisse par défaut. Trois matins par
-// semaine : le lundi, tout le corps (pas de jiu-jitsu le soir), la trap bar en
-// tête ; le mardi, le haut du corps, le développé couché en tête ; le jeudi,
-// les jambes, modéré, le swing en tête. Les trois jours alternent d'une
-// semaine à l'autre : mêmes muscles, autres exercices. Huit exercices par
-// séance : le premier et le dernier, les plus lourds, se font seuls, chacun
-// son tour ; les six autres vont par paires, jamais deux exercices de la même
-// zone (le haut du corps, le bas du corps, le tronc). Une paire se fait A, B,
-// A, B sans pause entre les tours ; la pause vient à la fin, une minute — une
-// minute trente après la trap bar. Les deux s'entraînent avec un seul
-// téléphone : celui qui le tient note pour les deux.
+// épaules, extérieur et intérieur de cuisse par défaut —, et seulement parmi
+// des exercices classiques le premier mois (`EXERCICES_CLASSIQUES`). Trois
+// matins par semaine : le lundi, tout le corps (pas de jiu-jitsu le soir), la
+// trap bar en tête ; le mardi, le haut du corps, le développé couché en
+// tête ; le jeudi, les jambes, modéré, le swing en tête. Les trois jours
+// alternent d'une semaine à l'autre : mêmes muscles, autres exercices. Huit
+// exercices par séance : le premier et le dernier, les plus lourds, se font
+// seuls, chacun son tour, avec une pause d'un toucher entre les tours ; les
+// six autres vont par paires, jamais deux exercices de la même zone (le haut
+// du corps, le bas du corps, le tronc). Une paire se fait A, B, A, B sans
+// pause entre les tours ; la pause vient à la fin, une minute — une minute
+// trente après la trap bar. Les deux s'entraînent avec un seul téléphone :
+// celui qui le tient note pour les deux.
 import type {
   BlocSeries,
   Exercice,
@@ -20,6 +22,7 @@ import type {
   ParametresSeance,
   PatternMoteur,
   Personne,
+  PointFaible,
   ProgrammeMois,
   ReglagesDuo,
   Seance,
@@ -48,9 +51,6 @@ const estConnu = (id: unknown): id is string =>
 
 export interface ProfilPersonne {
   id: Personne;
-  /** Une série de plus aux exercices de poussée — pectoraux, épaules,
-   *  triceps : le haut du corps est son point faible. */
-  seriePlusPoussee: boolean;
   /** Du jiu-jitsu le soir, le dimanche, le mardi et le jeudi : ces jours-là,
    *  moins de répétitions, pour garder du jus pour le cours
    *  (`repsDuJour`). */
@@ -74,17 +74,15 @@ export const PERSONNES: ProfilPersonne[] = [
   // avant debout — elle fatigue son bas du dos — mais avec les mollets.
   {
     id: 'sebastien',
-    seriePlusPoussee: false,
     jiuJitsu: true,
     etirementsPause: ['etir-rachis-debout', 'etir-mollet-mur', 'etir-inclinaison-tronc'],
     repsMaxSouleve: REPS_MAX_SOULEVE,
   },
-  // Des jambes très fortes, le haut du corps moins ; les genoux demandent
-  // d'étirer les cuisses, les mollets et l'arrière des cuisses — pas de fente,
-  // dure pour le genou.
+  // Des jambes très fortes, le haut du corps moins (ses points faibles par
+  // défaut) ; les genoux demandent d'étirer les cuisses, les mollets et
+  // l'arrière des cuisses — pas de fente, dure pour le genou.
   {
     id: 'max',
-    seriePlusPoussee: true,
     jiuJitsu: false,
     etirementsPause: ['etir-quadriceps-debout', 'etir-mollet-mur', 'etir-ischios-debout'],
   },
@@ -139,6 +137,106 @@ const COMMENCE: Personne = 'max';
 export const etirementsPauseDe = (personne: Personne): string[] =>
   PROFILS[personne].etirementsPause.filter(estConnu);
 
+// ------------------------------------------------------------- Points faibles
+
+/** Les points faibles qu'on peut cocher pour chacun, dans l'ordre des
+ *  Réglages : les jambes, le tronc, le haut du corps. Chacun coché donne une
+ *  série de plus aux exercices dont c'est le groupe principal (réglage
+ *  demandé par Sébastien le 13 octobre 2026 ; il remplace la série de plus
+ *  aux poussées de Big Max). */
+export const POINTS_FAIBLES: readonly PointFaible[] = [
+  'avant-cuisse',
+  'arriere-cuisse',
+  'fessiers',
+  'interieur-cuisse',
+  'exterieur-cuisse',
+  'mollets',
+  'abdos',
+  'bas-du-dos',
+  'haut-du-dos',
+  'epaules',
+  'pecs',
+  'biceps',
+  'triceps',
+];
+
+export const NOM_POINT_FAIBLE: Record<PointFaible, string> = {
+  'avant-cuisse': 'Avant de cuisse',
+  'arriere-cuisse': 'Arrière de cuisse',
+  fessiers: 'Fessiers',
+  'interieur-cuisse': 'Intérieur de cuisse',
+  'exterieur-cuisse': 'Extérieur de cuisse',
+  mollets: 'Mollets',
+  abdos: 'Abdos',
+  'bas-du-dos': 'Bas du dos',
+  'haut-du-dos': 'Haut du dos',
+  epaules: 'Épaules',
+  pecs: 'Pecs',
+  biceps: 'Biceps',
+  triceps: 'Triceps',
+};
+
+/** Par défaut : Big Max, le haut du corps — pecs, épaules, biceps, triceps ;
+ *  Speedy, rien. Dans l'ordre de `POINTS_FAIBLES`. */
+export const POINTS_FAIBLES_PAR_DEFAUT: Record<Personne, PointFaible[]> = {
+  sebastien: [],
+  max: ['epaules', 'pecs', 'biceps', 'triceps'],
+};
+
+/** Le groupe principal d'un exercice, parmi les points faibles : un seul par
+ *  exercice. Un développé couché travaille les pecs, les épaules et les
+ *  triceps, mais c'est un exercice des pecs : une série de plus au plus,
+ *  jamais trois. Il se lit dans le groupe musculaire de la fiche (`groupe`) :
+ *  un oiseau ou une rotation externe sont des épaules. Deux précisions, pour
+ *  ce que la fiche ne nomme pas : un exercice qui vise l'extérieur de la
+ *  hanche est de l'extérieur de cuisse (la planche latérale), un exercice qui
+ *  vise le bas du dos est du bas du dos (le Superman) ; et le groupe
+ *  « ischios-fessiers » de la fiche se partage d'après le premier de ses
+ *  muscles principaux — l'arrière de cuisse, ou les fessiers. Null pour tout
+ *  le corps (la marche du fermier) : aucun point faible. */
+export function pointFaibleDe(exercice: Pick<Exercice, 'groupe' | 'musclesPrincipaux'>): PointFaible | null {
+  const principaux = exercice.musclesPrincipaux ?? [];
+  if (principaux.includes('abducteurs')) return 'exterieur-cuisse';
+  if (principaux.includes('lombaires')) return 'bas-du-dos';
+  switch (exercice.groupe) {
+    case 'quadriceps':
+      return 'avant-cuisse';
+    case 'ischios-fessiers':
+      return principaux.find((muscle) => muscle === 'ischios' || muscle === 'fessiers') === 'fessiers'
+        ? 'fessiers'
+        : 'arriere-cuisse';
+    case 'adducteurs':
+      return 'interieur-cuisse';
+    case 'mollets':
+      return 'mollets';
+    case 'abdominaux':
+    case 'obliques':
+      return 'abdos';
+    case 'dorsaux':
+    case 'trapezes':
+      return 'haut-du-dos';
+    case 'epaules':
+      return 'epaules';
+    case 'pectoraux':
+      return 'pecs';
+    case 'biceps':
+    case 'avant-bras':
+      return 'biceps';
+    case 'triceps':
+      return 'triceps';
+    case 'corps-entier':
+      return null;
+  }
+}
+
+/** Une série de plus à cet exercice pour qui a ces points faibles : son
+ *  groupe principal en est un. Une au plus, quel que soit le nombre de
+ *  muscles qu'il travaille. */
+export function serieDePlus(pointsFaibles: readonly PointFaible[], exercice: Exercice): boolean {
+  const groupe = pointFaibleDe(exercice);
+  return groupe !== null && pointsFaibles.includes(groupe);
+}
+
 // ------------------------------------------------------------- Réglages
 
 /** Les faiblesses déclarées : c'est autour d'elles que le programme se bâtit. */
@@ -168,6 +266,11 @@ export const nombreExercicesDe = (programme: Pick<ProgrammeMois, 'duo'>): number
 export const tempoDuProgramme = (programme: Pick<ProgrammeMois, 'duo'>): Tempo =>
   programme.duo?.tempo ?? TEMPO_PROGRAMME;
 
+/** Les points faibles de chacun, pour ce programme : ceux cochés dans les
+ *  Réglages, sinon ceux par défaut. Les mêmes sur les deux téléphones. */
+export const pointsFaiblesDe = (programme: Pick<ProgrammeMois, 'duo'>): Record<Personne, PointFaible[]> =>
+  programme.duo?.pointsFaibles ?? POINTS_FAIBLES_PAR_DEFAUT;
+
 /** Version de la composition. Un programme plus ancien est recomposé, avec
  *  la même graine : 3 = le bas du corps le lundi, le haut le mardi, la séance
  *  de référence le jeudi ; 4 = des paires d'exercices opposés tous les jours,
@@ -178,8 +281,11 @@ export const tempoDuProgramme = (programme: Pick<ProgrammeMois, 'duo'>): Tempo =
  *  et B, et les fentes de retour ; 7 = le ventre sans plier le dos, le
  *  Superman sans poids, la planche de Copenhague le jeudi (l'audit) ; 8 = un
  *  seul téléphone : huit exercices les trois jours, le premier et le dernier
- *  seuls, trois paires de deux zones différentes entre les deux. */
-export const VERSION_PROGRAMME = 8;
+ *  seuls, trois paires de deux zones différentes entre les deux ; 9 = le
+ *  premier mois en exercices classiques (`EXERCICES_CLASSIQUES`), la machine à
+ *  mollets assis, la marche du fermier le lundi, les pompes pour finir le
+ *  mardi. */
+export const VERSION_PROGRAMME = 9;
 
 /** La durée inscrite dans les réglages d'une séance du programme ; la vraie
  *  est celle de ses étapes. */
@@ -187,12 +293,14 @@ const DUREE_REFERENCE_MIN = 60;
 /** Garde-fou : une séance ne dépasse pas deux heures et demie. Au-delà, elle
  *  perd ses dernières paires — même à dix exercices, on n'y arrive pas. */
 export const DUREE_MAXI_SEC = 150 * 60;
-/** Trois séries par exercice ; Max en fait une de plus aux poussées. */
+/** Trois séries par exercice ; une de plus sur les points faibles de chacun
+ *  (`serieDePlus`). */
 export const SERIES_PROGRAMME = 3;
-/** La pause après un exercice fait seul : une minute, quel qu'il soit
- *  (décision du 12 octobre 2026). À deux, chacun son tour, la série de l'un
- *  est le repos de l'autre : la pause ne vient qu'à la fin de l'exercice, et
- *  elle se lance d'un clic. Seul, elle vient entre deux séries. */
+/** La pause d'un exercice fait seul : une minute, quel qu'il soit (décision
+ *  du 12 octobre 2026). À deux, chacun son tour : elle se propose d'un
+ *  toucher entre deux tours — la série de l'autre ne suffit pas au repos d'un
+ *  gros exercice — et à la fin ; la marche du fermier ne l'a qu'à la fin
+ *  (décision du 13 octobre 2026). Seul, elle vient entre deux séries. */
 export const REPOS_SEC = 60;
 /** Sauf à la trap bar, la plus lourde : une minute trente. */
 export const REPOS_TRAP_BAR_SEC = 90;
@@ -231,6 +339,40 @@ const MEILLEURS = 3;
  *  vide). */
 export const EXERCICES_MIS_DE_COTE: string[] = [];
 
+// ------------------------------------------------------------- Des classiques
+
+/** Le premier mois, des exercices classiques seulement (décision de
+ *  Sébastien, 13 octobre 2026) : ceux qu'on connaît déjà, pour apprivoiser
+ *  l'application plutôt que des mouvements. Rien d'inhabituel — ni bouche
+ *  d'incendie, ni moulin à vent, ni bûcheron, ni mollet sur une jambe lesté,
+ *  ni tour de taille, ni relevé turc. Le programme ne pioche que dans cette
+ *  liste, « Changer » aussi (`candidatsProgramme`) ; la bibliothèque et la
+ *  séance libre gardent tout. Pour l'élargir : y ajouter des identifiants. */
+export const EXERCICES_CLASSIQUES: readonly string[] = [
+  // Haltères et banc : le haut du corps.
+  'bench-press', 'incline-bench-press', 'chest-fly', 'dumbbell-push-up', 'dumbbell-pullover',
+  'shoulder-press', 'arnold-press', 'side-raise', 'alternating-front-raise', 'reverse-fly', 'no-money-curl',
+  'shoulder-shrug', 'single-arm-row', 'tripod-row', 'incline-row', 'bent-over-row', 'seesaw-row',
+  'hammer-curl', 'grip-curl', 'alternating-curl', 'concentration-curl', 'seated-incline-curl',
+  'tricep-kickback', 'tricep-extension', 'single-arm-tricep-extension', 'skull-crusher',
+  // Haltères : les jambes, et porter.
+  'squat', 'goblet-squat', 'sumo-squat', 'romanian-deadlift', 'glute-bridge', 'reverse-lunge', 'side-lunge',
+  'calf-raise', 'farmers-walk',
+  // Le kettlebell de base : le swing, le squat gobelet, les rowings…
+  'kb-double-arm-swing', 'kb-goblet-squat', 'kb-deadlift', 'kb-lunge', 'kb-side-lunge', 'kb-single-arm-row',
+  'kb-bent-over-row', 'kb-push-up', 'kb-chest-press', 'kb-shoulder-press', 'kb-side-raise', 'kb-front-raise',
+  'kb-rear-fly', 'kb-alternating-curl', 'kb-concentration-curl', 'kb-incline-curl', 'kb-tricep-extension',
+  'kb-tricep-kickback', 'kb-farmers-walk',
+  // Le poids du corps : la planche, le gainage — et, choisis par Sébastien, le
+  // Superman sans poids et la planche de Copenhague.
+  'plank', 'side-plank', 'superman', 'copenhagen-plank',
+  // Les machines de la salle.
+  'trap-bar-deadlift', 'leg-press', 'hack-squat', 'leg-extension-machine', 'leg-curl-machine', 'traineau',
+  'seated-calf-raise',
+];
+
+const CLASSIQUES = new Set(EXERCICES_CLASSIQUES);
+
 // ------------------------------------------------------------- Emplacements
 
 /** Une place dans une séance : les muscles qu'elle doit travailler. */
@@ -244,13 +386,15 @@ interface Emplacement {
   /** Quand elle est donnée, seuls ces exercices peuvent remplir la place. */
   parmi?: string[];
   /** Le muscle de cette place n'a que peu d'exercices directs — le bas du
-   *  dos, l'extérieur et l'intérieur de cuisse : la semaine B peut y reprendre
-   *  celui de la semaine A quand elle n'en trouve pas d'autre, plutôt que de
-   *  laisser l'objectif sans exercice. Les autres exercices de la semaine A
-   *  restent interdits. */
+   *  dos, l'extérieur et l'intérieur de cuisse, le ventre (deux planches au
+   *  premier mois) : la semaine B peut y reprendre celui de la semaine A
+   *  quand elle n'en trouve pas d'autre, plutôt que de laisser l'objectif sans
+   *  exercice. Les autres exercices de la semaine A restent interdits. */
   reprise?: boolean;
   /** Quand il y en a, ces exercices passent devant les autres. */
   preferer?: (exercice: Exercice) => boolean;
+  /** Ces exercices n'y entrent jamais : ils ont leur place ailleurs. */
+  sans?: (exercice: Exercice) => boolean;
   /** Les machines de la salle y ont leur place ; ailleurs, elles attendent
    *  la fin de la séance. */
   salle?: boolean;
@@ -287,6 +431,11 @@ const TRONC: PatternMoteur[] = ['anti-rotation', 'flexion-tronc', 'rotation', 'f
  *  latérale, le tour de taille. Sinon, un bûcheron ou une flexion latérale,
  *  debout ; jamais un exercice qui plie le dos (`plieLeDos`). */
 const DOS_IMMOBILE: PatternMoteur[] = ['anti-rotation'];
+/** Le gainage qui vise aussi l'extérieur de la hanche — la planche latérale :
+ *  il a sa place à l'extérieur de cuisse, pas à celle du ventre, qui garde la
+ *  planche. Sans quoi le ventre la prendrait, et l'extérieur de cuisse
+ *  resterait vide. */
+const gainageDeHanche = (exercice: Exercice): boolean => (exercice.musclesPrincipaux ?? []).includes('abducteurs');
 
 const principauxDe = (exercice: Exercice): Muscle[] => exercice.musclesPrincipaux ?? [];
 
@@ -299,6 +448,11 @@ const CHARNIERE_LIBRE: Emplacement = { cle: 'charniere', muscles: ['ischios', 'f
 /** Sans les machines, le lundi garde aussi un squat, à deux jambes, avec le
  *  haut du corps. */
 const SQUAT_LOURD: Emplacement = { cle: 'jambes', muscles: ['quadriceps', 'fessiers'], principal: ['quadriceps', 'fessiers'], patterns: ['squat'], preferer: (e) => e.cotes === 'bilateral', avec: ['epaules', 'poussee', 'tirage', 'oiseau'] };
+/** Avec les machines, le lundi pousse aussi à la presse ou au hack squat,
+ *  après ses objectifs : en paire avec le haut du corps — la machine chacun
+ *  son tour —, la marche du fermier finissant la séance (décision de
+ *  Sébastien, 13 octobre 2026). */
+const PRESSE_DU_LUNDI: Emplacement = { cle: 'presse', muscles: ['quadriceps', 'fessiers'], principal: ['quadriceps'], patterns: ['squat'], salle: true, favoris: ['leg-press', 'hack-squat'], avec: ['poussee', 'tirage', 'oiseau', 'epaules', 'dorsaux'] };
 /** Le développé couché : il ouvre le mardi, chaque semaine. */
 export const DEVELOPPE_DU_MARDI = 'bench-press';
 /** Le mardi s'ouvre sur le développé couché, le gros exercice du haut du
@@ -331,10 +485,11 @@ const BASE: Record<Gabarit, Emplacement[]> = {
   // pour partenaires.
   dure: [
     // On tire, sans charger le bas du dos — la trap bar l'a déjà fait : un
-    // rowing poitrine contre le banc plutôt que buste penché.
-    { cle: 'tirage', muscles: ['dorsaux', 'trapezes', 'biceps'], principal: ['dorsaux'], patterns: ['tirage-horizontal', 'tirage-vertical'], preferer: (e) => !chargeLeBasDuDos(e), avec: ['tronc', 'abducteurs', 'mollets'] },
+    // rowing poitrine contre le banc plutôt que buste penché. Un rowing
+    // plutôt qu'un pull-over : le mardi et le jeudi le reprennent.
+    { cle: 'tirage', muscles: ['dorsaux', 'trapezes', 'biceps'], principal: ['dorsaux'], patterns: ['tirage-horizontal', 'tirage-vertical'], preferer: (e) => !chargeLeBasDuDos(e) && e.pattern === 'tirage-horizontal', avec: ['tronc', 'abducteurs', 'mollets'] },
     // Le ventre, le dos immobile : avec le haut du corps.
-    { cle: 'tronc', muscles: ['abdominaux', 'obliques'], principal: ['abdominaux', 'obliques'], patterns: DOS_IMMOBILE, avec: ['tirage', 'poussee', 'epaules', 'dorsaux'] },
+    { cle: 'tronc', muscles: ['abdominaux', 'obliques'], principal: ['abdominaux', 'obliques'], patterns: DOS_IMMOBILE, reprise: true, sans: gainageDeHanche, avec: ['tirage', 'poussee', 'epaules', 'dorsaux'] },
     // On pousse une charge : un développé sur banc avant les pompes — un autre
     // que le développé couché, qui ouvre le mardi, le lendemain.
     { cle: 'poussee', muscles: ['pectoraux', 'triceps', 'epaules'], principal: ['pectoraux'], patterns: ['poussee-horizontale'], preferer: (e) => e.materiel === 'banc' && e.id !== DEVELOPPE_DU_MARDI, avec: ['bas-du-dos', 'tronc', 'mollets', 'abducteurs'] },
@@ -347,7 +502,8 @@ const BASE: Record<Gabarit, Emplacement[]> = {
     { cle: 'jambes', muscles: ['quadriceps', 'fessiers'], principal: ['quadriceps'], patterns: ['squat', 'fente'], preferer: (e) => e.cotes === 'bilateral', avec: ['coiffe', 'epaules', 'oiseau', 'tirage'] },
     { cle: 'coiffe', muscles: ['coiffe-rotateurs', 'epaules'], principal: ['coiffe-rotateurs'], avec: ['jambes', 'mollets', 'tronc'] },
     { cle: 'bas-du-dos', muscles: ['lombaires', 'fessiers'], principal: ['lombaires'], preferer: (e) => !principauxDe(e).includes('ischios'), avec: ['poussee', 'epaules', 'tirage'] },
-    { cle: 'mollets', muscles: ['mollets'], principal: ['mollets'], avec: ['tirage', 'epaules', 'poussee', 'coiffe', 'biceps', 'triceps'] },
+    // Les mollets : aux haltères, ou à la machine assise (`salle`).
+    { cle: 'mollets', muscles: ['mollets'], principal: ['mollets'], salle: true, avec: ['tirage', 'epaules', 'poussee', 'coiffe', 'biceps', 'triceps'] },
     { cle: 'abducteurs', muscles: ['abducteurs'], principal: ['abducteurs'], patterns: ['isolation'], avec: ['epaules', 'tirage', 'poussee'] },
   ],
   // Le jeudi, les jambes, modéré : jiu-jitsu le soir. Ni trap bar, ni presse,
@@ -362,7 +518,7 @@ const BASE: Record<Gabarit, Emplacement[]> = {
     // le leg curl aux haltères.
     { cle: 'cuisse-avant', muscles: ['quadriceps'], principal: ['quadriceps'], patterns: ['isolation'], favoris: ['leg-extension-machine'], avec: ['tronc', 'tirage-leger', 'tirage-leger-bis'] },
     { cle: 'cuisse-arriere', muscles: ['ischios'], principal: ['ischios'], patterns: ['isolation'], favoris: ['leg-curl-machine'], avec: ['tirage-leger', 'tirage-leger-bis', 'tronc'] },
-    { cle: 'tronc', muscles: ['abdominaux', 'obliques'], principal: ['abdominaux', 'obliques'], patterns: DOS_IMMOBILE, avec: ['cuisse-avant', 'cuisse-arriere', 'adducteurs', 'abducteurs', 'fente', 'squat', 'fessiers'] },
+    { cle: 'tronc', muscles: ['abdominaux', 'obliques'], principal: ['abdominaux', 'obliques'], patterns: DOS_IMMOBILE, reprise: true, sans: gainageDeHanche, avec: ['cuisse-avant', 'cuisse-arriere', 'adducteurs', 'abducteurs', 'fente', 'squat', 'fessiers'] },
     // Les partenaires des jambes : un tirage léger du haut du corps, l'arrière
     // des épaules ou un rowing appuyé — rien qui charge le bas du dos ni qui
     // coupe le souffle.
@@ -383,8 +539,9 @@ const BASE: Record<Gabarit, Emplacement[]> = {
   haut: [
     { cle: 'tirage', muscles: ['dorsaux', 'trapezes'], principal: ['dorsaux'], patterns: ['tirage-horizontal', 'tirage-vertical'], avec: ['mollets', 'tronc', 'abducteurs'] },
     { cle: 'biceps', muscles: ['biceps', 'avant-bras'], principal: ['biceps'], avec: ['abducteurs', 'tronc', 'mollets'] },
-    { cle: 'tronc', muscles: ['abdominaux', 'obliques'], principal: ['abdominaux', 'obliques'], patterns: DOS_IMMOBILE, avec: ['epaules', 'tirage', 'biceps', 'triceps', 'dorsaux', 'coiffe'] },
-    { cle: 'mollets', muscles: ['mollets'], principal: ['mollets'], avec: ['tirage', 'epaules', 'biceps', 'triceps', 'dorsaux', 'coiffe'] },
+    { cle: 'tronc', muscles: ['abdominaux', 'obliques'], principal: ['abdominaux', 'obliques'], patterns: DOS_IMMOBILE, reprise: true, sans: gainageDeHanche, avec: ['epaules', 'tirage', 'biceps', 'triceps', 'dorsaux', 'coiffe'] },
+    // Les mollets : aux haltères, ou à la machine assise (`salle`), légère.
+    { cle: 'mollets', muscles: ['mollets'], principal: ['mollets'], salle: true, avec: ['tirage', 'epaules', 'biceps', 'triceps', 'dorsaux', 'coiffe'] },
     { cle: 'abducteurs', muscles: ['abducteurs'], principal: ['abducteurs'], patterns: ['isolation'], avec: ['biceps', 'triceps', 'tirage', 'epaules', 'dorsaux', 'coiffe'] },
     { cle: 'triceps', muscles: ['triceps'], principal: ['triceps'], avec: ['tronc', 'mollets', 'abducteurs'] },
     { cle: 'epaules', muscles: ['epaules', 'coiffe-rotateurs'], principal: ['epaules'], patterns: ['poussee-verticale', 'isolation'], avec: ['tronc', 'mollets', 'abducteurs'] },
@@ -448,7 +605,7 @@ const PAR_OBJECTIF: Record<
   // Le ventre, le dos immobile : avec le haut du corps ou une jambe, tous les
   // jours.
   tronc: {
-    emplacement: { cle: 'tronc', muscles: ['abdominaux', 'obliques'], principal: ['abdominaux', 'obliques'], patterns: DOS_IMMOBILE, avec: ['tirage', 'poussee', 'epaules', 'biceps', 'cuisse-avant', 'cuisse-arriere', 'adducteurs'] },
+    emplacement: { cle: 'tronc', muscles: ['abdominaux', 'obliques'], principal: ['abdominaux', 'obliques'], patterns: DOS_IMMOBILE, reprise: true, sans: gainageDeHanche, avec: ['tirage', 'poussee', 'epaules', 'biceps', 'cuisse-avant', 'cuisse-arriere', 'adducteurs'] },
     gabarits: ['bas', 'dure', 'haut'],
   },
   jambes: {
@@ -463,24 +620,67 @@ const PAR_OBJECTIF: Record<
   },
 };
 
+/** Combien d'exercices du haut du corps du lundi chaque mardi reprend : les
+ *  gros exercices reviennent dans la semaine (décision de Sébastien, 13
+ *  octobre 2026) — un développé, un rowing. */
+const REPRISES_DU_MARDI = 2;
+
+/** Une place pour un exercice du lundi que le mardi reprend : lui seul la
+ *  remplit, avec un partenaire léger — le ventre, un mollet, l'extérieur de
+ *  cuisse —, chaque semaine (`favoris`). */
+const placeDeReprise = (exercice: Exercice): Emplacement => ({
+  cle: `reprise-${exercice.id}`,
+  muscles: principauxDe(exercice),
+  principal: principauxDe(exercice),
+  parmi: [exercice.id],
+  favoris: [exercice.id],
+  avec: ['tronc', 'mollets', 'abducteurs'],
+});
+
 /** Les places d'une séance, dans l'ordre où on les remplit : l'ouverture
  *  d'abord, seule — le lundi, la trap bar, fraîche ; le mardi, le développé
  *  couché ; le jeudi, le swing (un squat sans kettlebell) —, puis les
- *  objectifs, puis les places de base. */
-function emplacementsDe(gabarit: Gabarit, objectifs: string[], materiels: Materiel[]): Emplacement[] {
+ *  objectifs, puis les places de base. Avec, les reprises du lundi (les gros
+ *  exercices reviennent dans la semaine) :
+ *  - le lundi, après ses objectifs, la presse (ou le hack squat), en paire ;
+ *  - le mardi, après ses objectifs, ses deux premiers exercices du haut du
+ *    corps qui ont leur place ce jour-là, chacun avec un partenaire léger ;
+ *    les places dont ils servent déjà les muscles laissent leur tour aux
+ *    autres (les épaules et le dos servis, viennent les bras) ;
+ *  - le jeudi, son premier tirage léger devient le favori de la place du
+ *    tirage léger, partenaire des jambes — à défaut, son gainage, celui de
+ *    la place du ventre. Jamais la trap bar, la presse ni le hack squat, qui
+ *    n'ont pas leur place un jeudi modéré. */
+function emplacementsDe(gabarit: Gabarit, objectifs: string[], materiels: Materiel[], duLundi: Exercice[] = []): Emplacement[] {
   const parObjectif = objectifs
     .map((id) => PAR_OBJECTIF[id])
     .filter((o) => o !== undefined && o.gabarits.includes(gabarit))
     .map((o) => ({ ...o.emplacement, ...o.surcharge?.[gabarit] }));
+  // Le mardi : les exercices du haut du lundi qu'il reprend, et les muscles
+  // qu'ils servent déjà.
+  const repris =
+    gabarit === 'haut' ? duLundi.filter((e) => partieDe(e) === 'haut' && DANS_LE_JOUR.haut(e)).slice(0, REPRISES_DU_MARDI) : [];
+  const servis = new Set(repris.flatMap(principauxDe));
+  const servie = (place: Emplacement) => (place.principal ?? []).some((muscle) => servis.has(muscle));
+  // Le jeudi : l'exercice du lundi qui devient le favori d'une place de
+  // partenaire.
+  const tirage = gabarit === 'bas' ? duLundi.find((e) => estTirageLeger(e) && DANS_LE_JOUR.bas(e)) : undefined;
+  const gainage =
+    gabarit === 'bas'
+      ? duLundi.find((e) => partieDe(e) === 'tronc' && DOS_IMMOBILE.includes(e.pattern) && !grandesZonesDe(e).includes('bas'))
+      : undefined;
+  const reprise = tirage ? { cle: 'tirage-leger', id: tirage.id } : gainage ? { cle: 'tronc', id: gainage.id } : null;
+
   const resultat: Emplacement[] = [];
   const cles = new Set<string>();
   const ajouter = (emplacement: Emplacement) => {
-    if (cles.has(emplacement.cle)) return;
+    // L'ouverture reste toujours : le développé couché ouvre chaque mardi.
+    if (cles.has(emplacement.cle) || (!emplacement.seul && servie(emplacement))) return;
     cles.add(emplacement.cle);
-    resultat.push(emplacement);
+    resultat.push(reprise?.cle === emplacement.cle ? { ...emplacement, favoris: [reprise.id] } : emplacement);
   };
+  const machines = materiels.includes('salle');
   if (gabarit === 'dure') {
-    const machines = materiels.includes('salle');
     ajouter(machines ? CHARNIERE_TRAP_BAR : CHARNIERE_LIBRE);
     if (!machines) ajouter(SQUAT_LOURD);
   }
@@ -490,6 +690,11 @@ function emplacementsDe(gabarit: Gabarit, objectifs: string[], materiels: Materi
     ajouter(SQUAT_DU_JEUDI);
   }
   parObjectif.forEach(ajouter);
+  repris.map(placeDeReprise).forEach((place) => {
+    cles.add(place.cle);
+    resultat.push(place);
+  });
+  if (gabarit === 'dure' && machines) ajouter(PRESSE_DU_LUNDI);
   BASE[gabarit].forEach(ajouter);
   return resultat;
 }
@@ -512,14 +717,16 @@ export const plieLeDos = (exercice: Exercice): boolean =>
   exercice.pattern === 'flexion-tronc' ||
   (exercice.pattern === 'rotation' && /^(assis|allongé)/i.test(exercice.position));
 
-/** Les exercices dont on peut composer un programme : musculation, avec le
- *  matériel de la salle, sans mouvement explosif ni niveau avancé, rien qui
- *  plie le dos (`plieLeDos`), et sans ceux qu'on a mis de côté
- *  (`EXERCICES_MIS_DE_COTE`, `HORS_PROGRAMME`). */
+/** Les exercices dont on peut composer un programme : des classiques
+ *  (`EXERCICES_CLASSIQUES`), de musculation, avec le matériel de la salle,
+ *  sans mouvement explosif ni niveau avancé, rien qui plie le dos
+ *  (`plieLeDos`), et sans ceux qu'on a mis de côté (`EXERCICES_MIS_DE_COTE`,
+ *  `HORS_PROGRAMME`). */
 export function candidatsProgramme(materiels: Materiel[]): Exercice[] {
   const possedes = new Set<Materiel>(['aucun', ...materiels]);
   return EXERCICES.filter(
     (e) =>
+      CLASSIQUES.has(e.id) &&
       familleDe(e) === 'musculation' &&
       possedes.has(e.materiel) &&
       e.niveauMin <= 2 &&
@@ -584,7 +791,8 @@ function classer(
       !preferences.exclus.has(cleMouvement(e)) &&
       (!preferences.reserves?.has(cleMouvement(e)) || siens.has(cleMouvement(e))) &&
       (e.materiel !== 'salle' || emplacement.salle || emplacement.favoris?.includes(e.id)) &&
-      (!emplacement.parmi || emplacement.parmi.includes(e.id)),
+      (!emplacement.parmi || emplacement.parmi.includes(e.id)) &&
+      !emplacement.sans?.(e),
   );
   const filtres: ((e: Exercice) => boolean)[] = [
     (e) => (!emplacement.patterns || emplacement.patterns.includes(e.pattern)) && viseLePrincipal(e, emplacement.principal),
@@ -696,9 +904,11 @@ const estTirageLeger = (e: Exercice) =>
   !chargeLeBasDuDos(e);
 
 /** Une jambe légère, partenaire du haut du corps le mardi : un exercice
- *  d'isolation des jambes aux haltères — le mollet, l'extérieur de cuisse —,
- *  rien qui coupe le souffle. Les machines restent au jeudi. */
-const jambeLegere = (e: Exercice) => partieDe(e) === 'bas' && e.pattern === 'isolation' && e.materiel !== 'salle';
+ *  d'isolation des jambes — le mollet, l'extérieur de cuisse —, rien qui
+ *  coupe le souffle. Les machines des cuisses restent au jeudi ; celle des
+ *  mollets, assise et légère, y a sa place. */
+const jambeLegere = (e: Exercice) =>
+  partieDe(e) === 'bas' && e.pattern === 'isolation' && (e.materiel !== 'salle' || vise(e, 'mollets'));
 
 /** Ce qui a sa place chaque jour : le lundi, tout, mais le haut du corps
  *  sans charger le bas du dos — la trap bar l'a déjà fait ; le mardi, le haut
@@ -923,18 +1133,25 @@ export function refairePaires(programme: ProgrammeMois, seanceId: string): Progr
 
 // ------------------------------------------------------------- Pour finir
 
-/** Le dernier exercice de chaque séance, seul. Le lundi, une machine lourde
- *  pour les jambes : la presse ou le hack squat. Le mardi, la marche du
- *  fermier : un bon cardio (on peut aussi porter un sac de sable sur
- *  l'épaule). Le jeudi, jiu-jitsu le soir : le traîneau, pas de machine
- *  lourde. Jamais la trap bar, qui se fait fraîche, en tête du lundi. */
+/** La marche du fermier : un bon cardio, qui use la poigne. */
+const MARCHES_DU_FERMIER = ['farmers-walk', 'kb-farmers-walk'];
+
+/** Le dernier exercice de chaque séance, seul (décisions de Sébastien, 13
+ *  octobre 2026). Le lundi, sans jiu-jitsu le soir : la marche du fermier —
+ *  la presse ou le hack squat y vont en paire (`PRESSE_DU_LUNDI`). Le mardi,
+ *  jiu-jitsu le soir : des pompes, qui gardent la poigne pour les prises du
+ *  kimono. Le jeudi, jiu-jitsu aussi : le traîneau, pas de machine lourde.
+ *  Jamais la trap bar, qui se fait fraîche, en tête du lundi. Sans les
+ *  machines de la salle, la marche du fermier finit les jours qui n'ont plus
+ *  la leur. */
 const FINALES: Record<Gabarit, string[]> = {
-  dure: ['leg-press', 'hack-squat'],
+  dure: MARCHES_DU_FERMIER,
   bas: ['traineau'],
-  haut: ['farmers-walk', 'kb-farmers-walk'],
+  haut: ['dumbbell-push-up', 'kb-push-up'],
 };
-/** Sans les machines de la salle : la marche du fermier, tous les jours. */
-const FINALES_SANS_MACHINE = ['farmers-walk', 'kb-farmers-walk'];
+/** Les autres fins de séance que « Changer » propose : celles des trois
+ *  jours, et les machines lourdes des jambes. */
+const AUTRES_FINALES = ['leg-press', 'hack-squat'];
 
 /** Un aller-retour de traîneau : pousser, puis tirer à reculons. */
 const TRAINEAU_SEC = 30;
@@ -1080,23 +1297,27 @@ export function genererProgramme(options: OptionsProgramme = {}): ProgrammeMois 
   const candidats = candidatsProgramme(materiels);
   // Le swing du jeudi : le seul mouvement explosif du programme, s'il y a des
   // kettlebells.
-  const swing = materiels.includes(EXERCICES_PAR_ID[SWING_DU_JEUDI].materiel) ? [EXERCICES_PAR_ID[SWING_DU_JEUDI]] : [];
+  const swing =
+    CLASSIQUES.has(SWING_DU_JEUDI) && materiels.includes(EXERCICES_PAR_ID[SWING_DU_JEUDI].materiel)
+      ? [EXERCICES_PAR_ID[SWING_DU_JEUDI]]
+      : [];
   const dejaPris = new Set<string>();
 
   /** Les exercices d'une séance, sans le dernier : l'ouverture, seule — le
    *  lundi la trap bar, le mardi le développé couché, le jeudi le swing —,
-   *  puis les paires, jusqu'au nombre du jour, les objectifs d'abord. Chaque
-   *  place prend son exercice, puis lui cherche un partenaire d'une autre
-   *  zone (`accordPaire`) : dans les places qu'elle suggère, puis dans les
+   *  puis les paires, jusqu'au nombre du jour : les objectifs d'abord, les
+   *  reprises du lundi (`emplacementsDe`), puis le reste. Chaque place prend son
+   *  exercice, puis lui cherche un partenaire d'une autre zone
+   *  (`accordPaire`) : dans les places qu'elle suggère, puis dans les
    *  suivantes. Sans partenaire possible, la place est laissée. */
-  const composer = (gabarit: Gabarit, interdits: Exercice[] = []): Exercice[] => {
+  const composer = (gabarit: Gabarit, interdits: Exercice[] = [], duLundi: Exercice[] = []): Exercice[] => {
     // Le nombre du jour compte le dernier exercice, choisi à part (`finaleDe`).
     const voulus = nombre - 1;
     // Le mardi, jiu-jitsu le soir : rien qui charge le bas du dos ; le jeudi,
     // les jambes, et le swing.
     const duJour = [...candidats, ...(gabarit === 'bas' ? swing : [])].filter(DANS_LE_JOUR[gabarit]);
     const bonsAvec = (exercice: Exercice) => duJour.filter((e) => accordPaire(exercice, e).accord === 'bon');
-    const places = emplacementsDe(gabarit, objectifs, materiels);
+    const places = emplacementsDe(gabarit, objectifs, materiels, duLundi);
     const reserves = new Set(
       places.flatMap((p) => p.favoris ?? []).filter(estConnu).map((id) => cleMouvement(EXERCICES_PAR_ID[id])),
     );
@@ -1174,9 +1395,9 @@ export function genererProgramme(options: OptionsProgramme = {}): ProgrammeMois 
 
     // La semaine B prend d'autres exercices que la semaine A — sauf ceux qui
     // visent un muscle à peine servi (`reprise`), quand elle n'en trouve pas
-    // d'autre, et les favoris du duo (`favoris` : la trap bar et le Superman
-    // du lundi, le swing, la planche de Copenhague et les deux machines des
-    // cuisses du jeudi), qui reviennent chaque semaine.
+    // d'autre, et les favoris (`favoris` : le développé couché du mardi, le
+    // swing, la planche de Copenhague et les deux machines des cuisses du
+    // jeudi, et les reprises du lundi), qui reviennent chaque semaine.
     const reprenable = (e: Exercice) =>
       places.some((p) => (p.reprise && p.principal && viseLePrincipal(e, p.principal)) || p.favoris?.includes(e.id));
     remplir([...places], new Set(interdits.filter((e) => !reprenable(e)).map(cleMouvement)));
@@ -1198,7 +1419,7 @@ export function genererProgramme(options: OptionsProgramme = {}): ProgrammeMois 
         .filter(estConnu)
         .map((id) => EXERCICES_PAR_ID[id])
         .filter((e) => candidats.includes(e) && !dansLaSeance.has(cleMouvement(e)));
-    const pool = possibles(FINALES[gabarit]).length > 0 ? possibles(FINALES[gabarit]) : possibles(FINALES_SANS_MACHINE);
+    const pool = possibles(FINALES[gabarit]).length > 0 ? possibles(FINALES[gabarit]) : possibles(MARCHES_DU_FERMIER);
     if (pool.length === 0) return undefined;
     const nouvelles = pool.filter((e) => !dejaPris.has(cleMouvement(e)));
     const choix = nouvelles.length > 0 ? nouvelles : pool;
@@ -1239,23 +1460,25 @@ export function genererProgramme(options: OptionsProgramme = {}): ProgrammeMois 
     return seance;
   };
 
-  /** Les trois jours : le lundi, tout le corps, la grosse séance ; le mardi,
-   *  le haut ; le jeudi, les jambes. */
-  const JOURS_DU_PROGRAMME: {
-    gabarit: Gabarit;
-    entete: (semaine: 'A' | 'B' | undefined) => Pick<SeanceDuMois, 'id' | 'nom' | 'jour' | 'semaine' | 'type' | 'partie'>;
-  }[] = [
-    { gabarit: 'dure', entete: (semaine) => enteteDe('lundi', 'tout le corps', 1, semaine, 'dure', 'complet') },
-    { gabarit: 'haut', entete: (semaine) => enteteDe('mardi', 'le haut', 2, semaine, 'facile', 'haut') },
-    { gabarit: 'bas', entete: (semaine) => enteteDe('jeudi', 'les jambes', 4, semaine, 'facile', 'bas') },
-  ];
-  // Le lundi d'abord : c'est la grosse séance ; les autres prennent d'autres
-  // exercices. Puis la semaine B, si les jours alternent.
-  const semaineA = JOURS_DU_PROGRAMME.map((j) => composer(j.gabarit));
-  const semaineB = alternance ? JOURS_DU_PROGRAMME.map((j, i) => composer(j.gabarit, semaineA[i])) : [];
+  /** Le mardi, le haut ; le jeudi, les jambes : en semaines A et B quand les
+   *  jours alternent. */
+  const mardi = (semaine: 'A' | 'B' | undefined) => enteteDe('mardi', 'le haut', 2, semaine, 'facile', 'haut');
+  const jeudi = (semaine: 'A' | 'B' | undefined) => enteteDe('jeudi', 'les jambes', 4, semaine, 'facile', 'bas');
+  // Le lundi d'abord : la séance de référence, tout le corps, où l'on pousse
+  // et suit ses charges — la même chaque semaine (décision de Sébastien, 13
+  // octobre 2026). Le mardi et le jeudi reprennent de ses exercices
+  // (`emplacementsDe`), prennent d'autres exercices pour le reste, puis
+  // alternent : la semaine B change ce qu'elle peut.
+  const lundi = composer('dure');
+  const semaineA = alternance ? 'A' : undefined;
+  const mardiA = composer('haut', [], lundi);
+  const jeudiA = composer('bas', [], lundi);
+  const semaineB = alternance ? { mardi: composer('haut', mardiA, lundi), jeudi: composer('bas', jeudiA, lundi) } : null;
   const seances: SeanceDuMois[] = [
-    ...JOURS_DU_PROGRAMME.map((j, i) => seanceDe(j.entete(alternance ? 'A' : undefined), j.gabarit, semaineA[i])),
-    ...semaineB.map((exercices, i) => seanceDe(JOURS_DU_PROGRAMME[i].entete('B'), JOURS_DU_PROGRAMME[i].gabarit, exercices)),
+    seanceDe(enteteDe('lundi', 'tout le corps', 1, undefined, 'dure', 'complet'), 'dure', lundi),
+    seanceDe(mardi(semaineA), 'haut', mardiA),
+    seanceDe(jeudi(semaineA), 'bas', jeudiA),
+    ...(semaineB ? [seanceDe(mardi('B'), 'haut', semaineB.mardi), seanceDe(jeudi('B'), 'bas', semaineB.jeudi)] : []),
   ];
 
   return {
@@ -1346,6 +1569,24 @@ export function avecTempo(programme: ProgrammeMois, tempo: Tempo): ProgrammeMois
   return { ...programme, duo: { ...programme.duo, tempo: { ...tempo } } };
 }
 
+/** Les points faibles d'une personne, cochés ou décochés dans les Réglages :
+ *  les mêmes exercices, d'autres séries. Rangés dans l'ordre de la liste ;
+ *  revenus à ceux par défaut, ils ne sont plus notés — le lien « Envoyer à
+ *  Big Max » ne les transporte que s'ils changent. */
+export function avecPointsFaibles(
+  programme: ProgrammeMois,
+  personne: Personne,
+  liste: readonly PointFaible[],
+): ProgrammeMois {
+  const tous = { ...pointsFaiblesDe(programme), [personne]: POINTS_FAIBLES.filter((point) => liste.includes(point)) };
+  const duo: ReglagesDuo = { ...programme.duo };
+  if (memeContenu(tous, POINTS_FAIBLES_PAR_DEFAUT)) delete duo.pointsFaibles;
+  else duo.pointsFaibles = tous;
+  const suivant: ProgrammeMois = { ...programme, duo };
+  if (Object.keys(duo).length === 0) delete suivant.duo;
+  return suivant;
+}
+
 // ------------------------------------------------------------- La séance de chacun
 
 /** Ce qui fait la séance du jour, au-delà des réglages du téléphone. */
@@ -1372,17 +1613,9 @@ export interface ContexteSeance {
   /** Sur un seul téléphone, à deux : les mêmes, pour l'autre, d'après ce que
    *  ce téléphone a noté pour lui (`historiqueDe`). */
   ressentisAutre?: Record<string, 'leger' | 'lourd'>;
-}
-
-const PATTERNS_POUSSEE: PatternMoteur[] = ['poussee-horizontale', 'poussee-verticale'];
-const GROUPES_POUSSEE: string[] = ['pectoraux', 'epaules', 'triceps'];
-
-/** Un exercice de poussée : développés, pompes, et l'isolation des
- *  pectoraux, des épaules et des triceps. Un oiseau, qui tire, n'en est pas. */
-export function estPoussee(exercice: Exercice): boolean {
-  if (PATTERNS_POUSSEE.includes(exercice.pattern)) return true;
-  if (exercice.pattern === 'tirage-horizontal' || exercice.pattern === 'tirage-vertical') return false;
-  return GROUPES_POUSSEE.includes(exercice.groupe);
+  /** Les points faibles de chacun (`pointsFaiblesDe`) : une série de plus aux
+   *  exercices dont c'est le groupe principal. Absents, ceux par défaut. */
+  pointsFaibles?: Record<Personne, PointFaible[]>;
 }
 
 /** La pause d'un exercice fait seul : une minute, une minute trente à la
@@ -1445,10 +1678,12 @@ export function notePlafond(
  *  au temps, mais la cloche ou l'haltère reste une charge qu'on monte ou qu'on
  *  baisse, comme avant. Pas les portages, le traîneau ni les tenues : là,
  *  c'est le temps qui compte ; ni le poids du corps, sur le tapis ou sans
- *  matériel (le Superman sans poids) : rien à charger. */
+ *  matériel (le Superman sans poids, les planches), ni quand le matériel ne
+ *  sert que d'appui (les pompes sur haltères) : rien à charger. */
 export const chargeReglable = (exercice: Exercice): boolean =>
   exercice.materiel !== 'tapis' &&
   exercice.materiel !== 'aucun' &&
+  exercice.appuiSeulement !== true &&
   (exercice.unite === 'reps' || exercice.mouvement === 'circulaire' || exercice.explosif === true);
 
 /** La séance du programme, mise aux réglages de la personne : c'est elle que
@@ -1475,10 +1710,12 @@ export function seancePourPersonne(
       : {};
   // Les répétitions du jour : le lundi, Speedy en fait autant que Big Max.
   const repsDeChacun = { ...repsDuJour({}, seanceMois.jour), ...contexte.reps };
+  const pointsFaibles = contexte.pointsFaibles ?? POINTS_FAIBLES_PAR_DEFAUT;
 
-  /** Séries et répétitions d'une personne sur un exercice. */
+  /** Séries et répétitions d'une personne sur un exercice : trois séries, une
+   *  de plus quand son groupe principal est un point faible de la personne. */
   const volumeDe = (qui: Personne | null, exercice: Exercice, finale: boolean) => {
-    const series = SERIES_PROGRAMME + (qui && PROFILS[qui].seriePlusPoussee && estPoussee(exercice) ? 1 : 0);
+    const series = SERIES_PROGRAMME + (qui && serieDePlus(pointsFaibles[qui], exercice) ? 1 : 0);
     // Speedy : 8 au plus aux soulevés de terre lourds, même le lundi.
     const habituelles = qui
       ? repsA(qui, exercice, repsDeChacun[qui])
@@ -1731,7 +1968,12 @@ export function alternatives(
     Number(ailleurs.has(cleMouvement(a))) - Number(ailleurs.has(cleMouvement(b)));
 
   if (exerciceId === seance.finale) {
-    const finales = new Set(Object.values(FINALES).flat());
+    // Une autre fin de séance — la marche du fermier seulement le lundi : les
+    // soirs de jiu-jitsu, on garde la poigne pour le kimono.
+    const jiuJitsu = JOURS_JIU_JITSU.includes(seance.jour);
+    const finales = new Set(
+      [...Object.values(FINALES).flat(), ...AUTRES_FINALES].filter((id) => !(jiuJitsu && MARCHES_DU_FERMIER.includes(id))),
+    );
     return libres.filter((e) => finales.has(e.id)).sort(nouveautesDAbord).slice(0, maxi);
   }
   const muscles = (actuel.musclesPrincipaux ?? []).length > 0 ? actuel.musclesPrincipaux! : musclesDe(actuel);
@@ -1956,14 +2198,33 @@ function lireLiens(brut: unknown[], recus: unknown[], exercices: string[]): stri
   return liens;
 }
 
+/** Les points faibles lisibles : les deux personnes, chacune une liste de
+ *  points connus, rangée dans l'ordre de la liste ; sinon rien. */
+function lirePointsFaibles(brut: unknown): Record<Personne, PointFaible[]> | undefined {
+  if (typeof brut !== 'object' || brut === null) return undefined;
+  const lu = brut as Partial<Record<Personne, unknown>>;
+  const liste = (valeur: unknown): PointFaible[] | null =>
+    Array.isArray(valeur) ? POINTS_FAIBLES.filter((point) => valeur.includes(point)) : null;
+  const sebastien = liste(lu.sebastien);
+  const max = liste(lu.max);
+  return sebastien && max ? { sebastien, max } : undefined;
+}
+
 /** Les réglages du duo qu'on peut lire : les répétitions, si les deux sont
  *  lisibles ; celles du lundi de Speedy ; un tempo de la liste ; un nombre
- *  d'exercices qu'on peut choisir. Un lien d'une version plus ancienne se lit
- *  pareil : ce qu'il n'a pas prend sa valeur par défaut, ce qu'on ne peut
- *  plus choisir (dix exercices) est écarté. */
+ *  d'exercices qu'on peut choisir ; les points faibles des deux. Un lien
+ *  d'une version plus ancienne se lit pareil : ce qu'il n'a pas prend sa
+ *  valeur par défaut, ce qu'on ne peut plus choisir (dix exercices) est
+ *  écarté. */
 function lireDuo(brut: unknown): ProgrammeMois['duo'] {
   const duo = brut as
-    | { reps?: Partial<Record<Personne, unknown>>; repsLundi?: unknown; tempo?: unknown; exercices?: unknown }
+    | {
+        reps?: Partial<Record<Personne, unknown>>;
+        repsLundi?: unknown;
+        tempo?: unknown;
+        exercices?: unknown;
+        pointsFaibles?: unknown;
+      }
     | null
     | undefined;
   const lire = (n: unknown) => (typeof n === 'number' && Number.isInteger(n) && n >= 1 && n <= 30 ? n : null);
@@ -1976,11 +2237,13 @@ function lireDuo(brut: unknown): ProgrammeMois['duo'] {
       ? TEMPOS.find((t) => memeTempo(t.tempo, tempoLu as Tempo))?.tempo
       : undefined;
   const exercices = nombreValide(duo?.exercices);
+  const pointsFaibles = lirePointsFaibles(duo?.pointsFaibles);
   const lu: ReglagesDuo = {
     ...(sebastien !== null && max !== null ? { reps: { sebastien, max } } : {}),
     ...(repsLundi !== null ? { repsLundi } : {}),
     ...(tempo ? { tempo: { ...tempo } } : {}),
     ...(exercices ? { exercices } : {}),
+    ...(pointsFaibles ? { pointsFaibles } : {}),
   };
   return Object.keys(lu).length > 0 ? lu : undefined;
 }
@@ -2147,6 +2410,8 @@ export function encoderEnEntier(programme: ProgrammeMois): string {
 //   a  les jours n'alternent pas (trois séances) ;
 //   r  les répétitions de Speedy puis de Big Max ; l  celles du lundi ;
 //   t  le tempo (montée, descente, arrêt) ; n  le nombre d'exercices ;
+//   f  les points faibles de Speedy puis de Big Max, séparés par « ~ » : un
+//      nombre en base 36 chacun, un bit par point, dans l'ordre de la liste ;
 //   e  le code d'équipe (vide : celui tiré de la graine et du premier lundi) ;
 //   s  le serveur en https (vide : celui du site), h  en http (sur ce poste) ;
 //   0 à 9  les retouches d'une séance, par sa place dans le programme, en
@@ -2193,6 +2458,16 @@ function auxPlaces(texte: string, liste: string[]): string[] | null {
   const ids = [...texte].map((c) => liste[lireBase36(c)]);
   return ids.every((id) => id !== undefined) ? ids : null;
 }
+
+/** Des points faibles en un nombre : un bit par point, dans l'ordre de la
+ *  liste. */
+const masqueDe = (liste: readonly PointFaible[]): number =>
+  POINTS_FAIBLES.reduce((masque, point, i) => (liste.includes(point) ? masque | (1 << i) : masque), 0);
+/** Les points faibles d'un nombre ; null s'il ne se lit pas. */
+const pointsDuMasque = (masque: number): PointFaible[] | null =>
+  Number.isInteger(masque) && masque >= 0 && masque < 2 ** POINTS_FAIBLES.length
+    ? POINTS_FAIBLES.filter((_, i) => (masque & (1 << i)) !== 0)
+    : null;
 
 const joursDepuis1970 = (iso: string): number => {
   const [annee, mois, jour] = iso.split('-').map(Number);
@@ -2344,6 +2619,9 @@ function encoderCourt(programme: ProgrammeMois, serveurDuSite: string | null): s
   if (duo?.repsLundi !== undefined) champs.push(`l${chiffre(duo.repsLundi)}`);
   if (duo?.tempo) champs.push(`t${chiffre(duo.tempo.monteeSec)}${chiffre(duo.tempo.descenteSec)}${chiffre(duo.tempo.pauseSec ?? 0)}`);
   if (duo?.exercices !== undefined) champs.push(`n${chiffre(duo.exercices)}`);
+  if (duo?.pointsFaibles) {
+    champs.push(`f${masqueDe(duo.pointsFaibles.sebastien).toString(36)}~${masqueDe(duo.pointsFaibles.max).toString(36)}`);
+  }
   if (programme.equipe !== undefined) {
     champs.push(`e${programme.equipe === equipeDe({ graine, debut }) ? '' : programme.equipe}`);
   }
@@ -2418,6 +2696,12 @@ function decoderCourt(code: string, serveurDuSite: string | null, dejaComposees?
       case 'n':
         duo.exercices = nombres[0];
         break;
+      case 'f': {
+        const [sebastien, max] = valeur.split('~').map((partie) => pointsDuMasque(lireBase36(partie)));
+        if (!sebastien || !max) return null;
+        duo.pointsFaibles = { sebastien, max };
+        break;
+      }
       case 'e':
         equipe = valeur || equipeDe({ graine, debut });
         break;

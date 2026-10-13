@@ -56,7 +56,10 @@ const ZONE_DU_MUSCLE: Record<Muscle, GrandeZone> = {
  *  - Le corps entier prend les zones de ses muscles principaux : un swing, le
  *    bas ; un thruster, le haut et le bas ; un bûcheron, le tronc.
  *  Et un exercice qui vise le bas du dos est toujours aussi du tronc, où que
- *  la fiche le range : le good morning est du bas et du tronc. */
+ *  la fiche le range : le good morning est du bas et du tronc. De même, un
+ *  exercice qui vise l'extérieur de la hanche est toujours aussi du bas : la
+ *  planche latérale est du tronc et du bas — elle ne va qu'avec le haut du
+ *  corps, jamais avec la planche de Copenhague. */
 export function grandesZonesDe(exercice: Pick<Exercice, 'zone' | 'musclesPrincipaux'>): GrandeZone[] {
   const principaux = exercice.musclesPrincipaux ?? [];
   const zones = new Set<GrandeZone>();
@@ -80,6 +83,7 @@ export function grandesZonesDe(exercice: Pick<Exercice, 'zone' | 'musclesPrincip
       break;
   }
   if (principaux.includes('lombaires')) zones.add('tronc');
+  if (principaux.includes('abducteurs')) zones.add('bas');
   return GRANDES_ZONES.filter((zone) => zones.has(zone));
 }
 

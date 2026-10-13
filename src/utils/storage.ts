@@ -13,7 +13,7 @@ import { PARAMETRES_PAR_DEFAUT, TOUTES_LES_ZONES } from '../data/parametres';
 import { uniteDeSeance } from './statistiques';
 import { estRessenti, lireRessentis } from './ressenti';
 import { IDENTIFIANT_MESURE, lireMesures } from './mesures';
-import { validerProgramme } from './programmeMois';
+import { VERSION_PROGRAMME, validerProgramme } from './programmeMois';
 import { lireRoutineSoir } from './routineSoir';
 import { lireDouleurs } from './douleurs';
 
@@ -158,35 +158,55 @@ const identifiants = (brut: unknown): string[] =>
 const identifiantsDeMesures = (brut: unknown): string[] =>
   identifiants(brut).filter((id) => IDENTIFIANT_MESURE.test(id));
 
-const migrer = (sauvegarde: Partial<EntrainementState>): EntrainementState => ({
-  ...ETAT_PAR_DEFAUT,
-  ...sauvegarde,
-  parametres: migrerParametres(sauvegarde.parametres ?? {}),
-  enCours: migrerProgression(sauvegarde.enCours ?? null),
-  historique: migrerHistorique(sauvegarde.historique ?? []),
+/** La version d'un programme sauvegardé qui vient d'être recomposé — plus
+ *  ancienne que celle de l'application —, ou celle qu'on n'a pas encore dite
+ *  à l'écran ; sinon rien. */
+function recomposeDepuis(sauvegarde: Partial<EntrainementState>, programme: EntrainementState['programme']): number | undefined {
+  if (typeof sauvegarde.programmeRecomposeDepuis === 'number') return sauvegarde.programmeRecomposeDepuis;
+  if (!programme || !sauvegarde.programme) return undefined;
+  const version = typeof sauvegarde.programme.version === 'number' ? sauvegarde.programme.version : 1;
+  return version < VERSION_PROGRAMME ? version : undefined;
+}
+
+const migrer = (sauvegarde: Partial<EntrainementState>): EntrainementState => {
   // Un programme illisible (exercices disparus, sauvegarde abîmée) est
-  // écarté : l'application en compose un nouveau.
-  programme: sauvegarde.programme ? validerProgramme(sauvegarde.programme) : null,
-  personne: sauvegarde.personne === 'sebastien' || sauvegarde.personne === 'max' ? sauvegarde.personne : null,
-  programmeARenvoyer: sauvegarde.programmeARenvoyer === true,
-  // À deux par défaut : c'est l'habitude.
-  aDeux: sauvegarde.aDeux !== false,
-  aEnvoyer: identifiants(sauvegarde.aEnvoyer),
-  aEffacer: identifiants(sauvegarde.aEffacer),
-  historiqueEnvoyeA: typeof sauvegarde.historiqueEnvoyeA === 'string' ? sauvegarde.historiqueEnvoyeA : undefined,
-  // Les mensurations : une sauvegarde d'avant n'en a pas, une abîmée perd
-  // seulement les mesures qui ne se lisent plus.
-  mesures: lireMesures(sauvegarde.mesures),
-  mesuresAEnvoyer: identifiantsDeMesures(sauvegarde.mesuresAEnvoyer),
-  mesuresAEffacer: identifiantsDeMesures(sauvegarde.mesuresAEffacer),
-  mesuresEnvoyeesA: typeof sauvegarde.mesuresEnvoyeesA === 'string' ? sauvegarde.mesuresEnvoyeesA : undefined,
-  // La routine du soir : une sauvegarde d'avant n'en a pas, une abîmée perd
-  // seulement ce qui ne se lit plus. Elle reste sur ce téléphone.
-  routineSoir: lireRoutineSoir(sauvegarde.routineSoir),
-  // « J'ai mal à cet exercice » : une sauvegarde d'avant n'en a pas, une
-  // abîmée perd seulement celles qui ne se lisent plus.
-  douleurs: douleursLues(sauvegarde.douleurs),
-});
+  // écarté : l'application en compose un nouveau. Un programme d'une version
+  // plus ancienne est recomposé, avec la même graine (`validerProgramme`) :
+  // l'accueil le dit une fois.
+  const programme = sauvegarde.programme ? validerProgramme(sauvegarde.programme) : null;
+  const depuis = recomposeDepuis(sauvegarde, programme);
+  return {
+    ...ETAT_PAR_DEFAUT,
+    ...sauvegarde,
+    parametres: migrerParametres(sauvegarde.parametres ?? {}),
+    enCours: migrerProgression(sauvegarde.enCours ?? null),
+    historique: migrerHistorique(sauvegarde.historique ?? []),
+    programme,
+    programmeRecomposeDepuis: depuis,
+    personne: sauvegarde.personne === 'sebastien' || sauvegarde.personne === 'max' ? sauvegarde.personne : null,
+    programmeARenvoyer: sauvegarde.programmeARenvoyer === true,
+    // À deux par défaut : c'est l'habitude.
+    aDeux: sauvegarde.aDeux !== false,
+    aEnvoyer: identifiants(sauvegarde.aEnvoyer),
+    aEffacer: identifiants(sauvegarde.aEffacer),
+    historiqueEnvoyeA: typeof sauvegarde.historiqueEnvoyeA === 'string' ? sauvegarde.historiqueEnvoyeA : undefined,
+    // Les mensurations : une sauvegarde d'avant n'en a pas, une abîmée perd
+    // seulement les mesures qui ne se lisent plus.
+    mesures: lireMesures(sauvegarde.mesures),
+    mesuresAEnvoyer: identifiantsDeMesures(sauvegarde.mesuresAEnvoyer),
+    mesuresAEffacer: identifiantsDeMesures(sauvegarde.mesuresAEffacer),
+    mesuresEnvoyeesA: typeof sauvegarde.mesuresEnvoyeesA === 'string' ? sauvegarde.mesuresEnvoyeesA : undefined,
+    // La routine du soir : une sauvegarde d'avant n'en a pas, une abîmée perd
+    // seulement ce qui ne se lit plus. Elle reste sur ce téléphone.
+    routineSoir: lireRoutineSoir(sauvegarde.routineSoir),
+    // « J'ai mal à cet exercice » : une sauvegarde d'avant n'en a pas, une
+    // abîmée perd seulement celles qui ne se lisent plus. Celles d'avant le 13
+    // octobre 2026 restent à la personne du téléphone ; celles de l'autre sont
+    // à part.
+    douleurs: douleursLues(sauvegarde.douleurs),
+    douleursAutre: douleursLues(sauvegarde.douleursAutre),
+  };
+};
 
 /** Les douleurs relues ; aucune, pas de champ. */
 function douleursLues(brut: unknown): EntrainementState['douleurs'] {

@@ -4,20 +4,23 @@
 // chacun son tour ; la pause se lance d'un clic à la fin — une minute, une
 // minute trente après la trap bar.
 import { describe, expect, it } from 'vitest';
-import type { ParametresSeance, SeanceDuMois } from '../types';
+import type { ParametresSeance, Ressenti, SeanceDuMois } from '../types';
 import { PARAMETRES_PAR_DEFAUT } from '../data/parametres';
+import { EXERCICES_PAR_ID } from '../data/exercices';
 import {
   agregerRealisation,
   construireEtapes,
   dureeTotaleSec,
   indexApresExercice,
   indexEtapePrecedente,
+  pauseEntreLesTours,
 } from './etapesSeance';
 import type { Etape } from './etapesSeance';
 import { raccourcirPourEssai } from './essai';
 import { avecRessentis, exercicesAEvaluer, ressentisQuiChangent } from './ressenti';
 import {
   REPOS_PAIRE_SEC,
+  REPOS_SEC,
   REPOS_TRAP_BAR_SEC,
   chargesPassees,
   genererProgramme,
@@ -141,7 +144,7 @@ describe('un seul téléphone : la séance guidée', () => {
     }
   });
 
-  it('un exercice seul, à deux : chacun son tour, Big Max d’abord — la série de l’un est le repos de l’autre', () => {
+  it('un exercice seul, à deux : chacun son tour, Big Max d’abord, et une pause d’un toucher entre les tours', () => {
     // Sur le téléphone de Speedy : Big Max (l'autre) commence.
     expect(series(etapesDe(SEB), 0)).toEqual([
       ['trap-bar-deadlift', 1, 'autre'],
@@ -156,8 +159,46 @@ describe('un seul téléphone : la séance guidée', () => {
     // Speedy 8 à la trap bar, Big Max 10.
     const trapBar = etapesDe(SEB).filter((e): e is Serie => e.type === 'serie' && e.groupe === 0);
     expect(trapBar.map((e) => e.reps)).toEqual([10, 8, 10, 8, 10, 8]);
-    // Pas de pause entre deux séries : seulement après la dernière.
-    expect(etapesDuGroupe(etapesDe(SEB), 0).map((e) => e.type)).toEqual([...Array(6).fill('serie'), 'repos', 'repos']);
+    // Quand les deux ont fait leur série, une pause à lancer d'un toucher — une
+    // minute trente à la trap bar —, puis la même à la fin : un gros exercice
+    // demande plus de repos que la série de l'autre (décision du 13 octobre
+    // 2026).
+    const tour = ['serie', 'serie', 'a-lancer 0', `pause ${REPOS_TRAP_BAR_SEC}`];
+    expect(etapesDuGroupe(etapesDe(SEB), 0).map((e) => (e.type === 'repos' ? `${e.motif} ${e.dureeSec}` : e.type))).toEqual([
+      ...tour,
+      ...tour,
+      ...tour,
+    ]);
+    // Chaque pause entre deux tours annonce la série qui suit, du même exercice.
+    const pauses = etapesDuGroupe(etapesDe(SEB), 0).filter((e): e is Extract<Etape, { type: 'repos' }> => e.type === 'repos' && e.motif === 'pause');
+    expect(pauses.map((e) => (e.suivant.type === 'serie' ? `${e.suivant.exerciceId} ${e.suivant.serie}` : e.suivant.type))).toEqual([
+      'trap-bar-deadlift 2',
+      'trap-bar-deadlift 3',
+      'superman 1',
+    ]);
+  });
+
+  it('la marche du fermier, seule, enchaîne ses tours : pas de pause entre deux — tous les autres exercices seuls en ont une', () => {
+    const lundiFermier: SeanceDuMois = { ...LUNDI_A, finale: 'farmers-walk', tour: ['trap-bar-deadlift'] };
+    const etapes = etapesDe(SEB, lundiFermier);
+    const fermier = etapesDuGroupe(etapes, 4);
+    expect(fermier.every((e) => e.type === 'serie')).toBe(true);
+    expect(fermier.map((e) => (e.type === 'serie' ? `${e.serie} ${e.qui}` : ''))).toEqual(['1 autre', '1 moi', '2 autre', '2 moi', '3 autre', '3 moi']);
+    expect(pauseEntreLesTours(EXERCICES_PAR_ID['farmers-walk'])).toBe(false);
+    expect(pauseEntreLesTours(EXERCICES_PAR_ID['kb-farmers-walk'])).toBe(false);
+    // Les autres exercices seuls du programme ont la leur : le développé
+    // couché, les pompes, le swing, le traîneau, la presse…
+    for (const id of ['trap-bar-deadlift', 'bench-press', 'dumbbell-push-up', 'kb-double-arm-swing', 'traineau', 'leg-press']) {
+      expect(pauseEntreLesTours(EXERCICES_PAR_ID[id]), id).toBe(true);
+    }
+    // Seul, sans l'autre, rien ne change : une pause entre deux séries.
+    const seul = etapesDuGroupe(etapesDe(SEUL, lundiFermier), 0).map((e) => e.type);
+    expect(seul).toEqual(['serie', 'repos', 'repos', 'serie', 'repos', 'repos', 'serie', 'repos', 'repos']);
+    // « Sans pause » saute la pause à lancer et la pause elle-même : on passe
+    // tout de suite au tour suivant (`naviguer(index + 2)`).
+    const index = etapes.findIndex((e) => e.type === 'repos' && e.motif === 'a-lancer' && e.groupe === 0);
+    expect(etapes[index + 1]).toMatchObject({ type: 'repos', motif: 'pause' });
+    expect(etapes[index + 2]).toMatchObject({ type: 'serie', exerciceId: 'trap-bar-deadlift', serie: 2 });
   });
 
   it('une machine dans une paire (un seul siège) : jamais les deux en même temps — chacun son tour, puis l’autre exercice ensemble', () => {
@@ -212,24 +253,28 @@ describe('un seul téléphone : la séance guidée', () => {
     ]);
   });
 
-  it('la pause se lance d’un clic, à la fin d’une paire ou d’un exercice : 1 min, 1 min 30 après la trap bar ; pas après le dernier', () => {
+  it('la pause se lance d’un clic, à la fin d’une paire ou d’un exercice — et entre les tours d’un exercice seul : 1 min, 1 min 30 à la trap bar ; pas après le dernier', () => {
     const etapes = etapesDe(SEB);
     const repos = etapes.filter((e): e is Extract<Etape, { type: 'repos' }> => e.type === 'repos');
-    // Quatre pauses : après la trap bar et après chaque paire ; la presse, la
-    // dernière, mène aux étirements.
+    const lancer = (groupe: number, sec: number) => [
+      [groupe, 'a-lancer', 0, true],
+      [groupe, 'pause', sec, false],
+    ];
+    // La trap bar : entre ses trois tours, et à la fin ; chaque paire, à la
+    // fin ; la presse, la dernière, entre ses tours — puis les étirements.
     expect(repos.map((e) => [e.groupe, e.motif, e.dureeSec, e.manuel === true])).toEqual([
-      [0, 'a-lancer', 0, true],
-      [0, 'pause', REPOS_TRAP_BAR_SEC, false],
-      [1, 'a-lancer', 0, true],
-      [1, 'pause', REPOS_PAIRE_SEC, false],
-      [2, 'a-lancer', 0, true],
-      [2, 'pause', REPOS_PAIRE_SEC, false],
-      [3, 'a-lancer', 0, true],
-      [3, 'pause', REPOS_PAIRE_SEC, false],
+      ...lancer(0, REPOS_TRAP_BAR_SEC),
+      ...lancer(0, REPOS_TRAP_BAR_SEC),
+      ...lancer(0, REPOS_TRAP_BAR_SEC),
+      ...lancer(1, REPOS_PAIRE_SEC),
+      ...lancer(2, REPOS_PAIRE_SEC),
+      ...lancer(3, REPOS_PAIRE_SEC),
+      ...lancer(4, REPOS_SEC),
+      ...lancer(4, REPOS_SEC),
     ]);
-    expect([REPOS_TRAP_BAR_SEC, REPOS_PAIRE_SEC]).toEqual([90, 60]);
-    // Chaque pause annonce la série qui la suit.
-    const apresTrapBar = repos[1];
+    expect([REPOS_TRAP_BAR_SEC, REPOS_PAIRE_SEC, REPOS_SEC]).toEqual([90, 60, 60]);
+    // Chaque pause annonce la série qui la suit : après la trap bar, le Superman.
+    const apresTrapBar = repos[5];
     expect(apresTrapBar.suivant).toMatchObject({ type: 'serie', exerciceId: 'superman', serie: 1 });
     // Après la dernière série de la presse : les étirements.
     const derniere = etapes.map((e) => e.type).lastIndexOf('serie');
@@ -371,8 +416,8 @@ describe('un seul téléphone : ce qu’on note pour les deux', () => {
     expect(sien[0].partenaire).toBeUndefined();
     expect(chargesPassees(sien, ['shoulder-press'], 'lb')).toEqual({ 'shoulder-press': [50, 55, 55, 55] });
     expect(chargesPassees(historique, ['shoulder-press'], 'lb')).toEqual({ 'shoulder-press': [40, 45, 45] });
-    // Léger deux fois de suite pour Big Max : un cran de plus, proposé dans sa
-    // colonne.
+    // Léger pour Big Max (une fois suffit depuis le 13 octobre 2026) : un cran
+    // de plus, proposé dans sa colonne.
     const ressentisAutre = ressentisQuiChangent(sien, ['shoulder-press'], 'lb', 'max');
     expect(ressentisAutre).toEqual({ 'shoulder-press': 'leger' });
     const suivante = seancePourPersonne(LUNDI_A, PARAMETRES, { ...SEB, ressentisAutre }, LUNDI);
@@ -382,6 +427,39 @@ describe('un seul téléphone : ce qu’on note pour les deux', () => {
     // Sur deux téléphones, chacun le sien : rien pour l'autre.
     const deuxTelephones = seancePourPersonne(LUNDI_A, PARAMETRES, { ...SEB, unTelephone: false, ressentisAutre }, LUNDI);
     expect(deuxTelephones.blocs.find((b) => b.exerciceId === 'shoulder-press')?.autre?.ajustementRessenti).toBeUndefined();
+  });
+
+  it('les visages de la dernière série font la progression : un 😊 suffit à Big Max, il en faut deux à Speedy — par exercice, quel que soit le jour', () => {
+    const fois = (n: number, ressentis: Record<string, Ressenti>, ressentisAutre: Record<string, Ressenti>) => {
+      const realisee = agregerRealisation(
+        seance,
+        etapes,
+        temps,
+        { 'shoulder-press': [40, 45, 45] },
+        0,
+        true,
+        { faites: faitesPaire, poidsAutre: { 'shoulder-press': [50, 55, 55, 55] } },
+      );
+      return { ...avecRessentis(realisee, ressentis, ressentisAutre), id: `v${n}`, date: new Date(2026, 9, n).toISOString() };
+    };
+    // Le lundi, un 😊 chacun sur sa dernière série : « léger ».
+    const lundi = [fois(12, { 'shoulder-press': 'leger' }, { 'shoulder-press': 'leger' })];
+    const pourMoi = ressentisQuiChangent(lundi, ['shoulder-press'], 'lb', 'sebastien');
+    const pourLui = ressentisQuiChangent(historiqueDe(lundi, 'max', 'sebastien'), ['shoulder-press'], 'lb', 'max');
+    expect(pourMoi).toEqual({});
+    expect(pourLui).toEqual({ 'shoulder-press': 'leger' });
+    const suivante = seancePourPersonne(LUNDI_A, PARAMETRES, { ...SEB, ressentis: pourMoi, ressentisAutre: pourLui }, LUNDI);
+    const bloc = suivante.blocs.find((b) => b.exerciceId === 'shoulder-press')!;
+    expect(bloc.autre?.ajustementRessenti).toBe(5);
+    expect(bloc.ajustementRessenti).toBeUndefined();
+    // Le mardi, un autre 😊 pour Speedy au même exercice, à la même charge :
+    // deux de suite, il monte aussi.
+    const mardi = [{ ...fois(13, { 'shoulder-press': 'leger' }, {}), titre: 'Mardi A — le haut' }, ...lundi];
+    expect(ressentisQuiChangent(mardi, ['shoulder-press'], 'lb', 'sebastien')).toEqual({ 'shoulder-press': 'leger' });
+    // ☹️ deux fois de suite : un cran de moins, pour les deux.
+    const lourds = [fois(14, { 'shoulder-press': 'lourd' }, { 'shoulder-press': 'lourd' }), fois(13, { 'shoulder-press': 'lourd' }, { 'shoulder-press': 'lourd' })];
+    expect(ressentisQuiChangent(lourds, ['shoulder-press'], 'lb', 'sebastien')).toEqual({ 'shoulder-press': 'lourd' });
+    expect(ressentisQuiChangent(historiqueDe(lourds, 'max', 'sebastien'), ['shoulder-press'], 'lb', 'max')).toEqual({ 'shoulder-press': 'lourd' });
   });
 
   it('seul, ou sur deux téléphones, rien n’est noté pour l’autre', () => {

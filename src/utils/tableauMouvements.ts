@@ -279,6 +279,7 @@ const NOTES: Record<string, string> = {
   'leg-extension': 'Ni tenu jambes tendues non plus, comme à la machine : les genoux de Big Max (avant : TIENS 1 s jambes tendues).',
   'upright-row': 'Tenu en haut, il pincerait l’épaule.',
   'kb-single-leg-calf-raise': 'Le talon sous la marche étire le mollet sous la charge.',
+  'seated-calf-raise': 'Tenu en bas, comme le mollet sur une marche : les talons sous la marche, le mollet s’étire sous la charge.',
 };
 
 const cellule = (texte: string) => texte.replace(/\|/g, '\\|');
@@ -417,10 +418,10 @@ export const AU_TEMPS_OU_AU_TEMPO: AvisAuTemps[] = [
     pourquoi: `Décidé par Sébastien : « pas fuir un exercice, pouvoir un jour le faire sans douleur — donc mettre moins de poids ». Un swing ou un saut en 3 s / 3 s n’est plus un swing ni un saut : on les fait au temps, chacun à son rythme, avec une charge légère, un décompte et pas de métronome. ${BALISTIQUE_SEC} s par série pour les swings, les arrachés, l’épaulé, le tirage haut et les balanciers — ${BALISTIQUE_SEC} s de chaque côté, avec CHANGE DE CÔTÉ ${CHANGER_DE_COTE_SEC} s (« +${CHANGER_DE_COTE_SEC} s » si besoin), pour les versions à un bras ; ${SAUT_SEC} s pour les sauts et le burpee. Le poids se note et se règle comme avant (lourd, correct, léger). Ils ne sortent qu’avec l’option « explosifs », jamais dans le programme — sauf le swing à deux mains, qui ouvre le jeudi, léger (« Ce sont les fesses qui lancent, pas le dos »), avec un tirage léger du haut du corps pour partenaire. Ils restent déconseillés au dos de Speedy et aux genoux de Big Max : raison de plus d’y aller léger. Avant : DESCENDS 3 s → MONTE 3 s, ou MONTE 3 s → DESCENDS 3 s, sans arrêt.`,
   },
   {
-    ids: ['kb-isometric-crunch', 'copenhagen-plank', 'farmers-walk', 'kb-farmers-walk', 'traineau'],
+    ids: ['kb-isometric-crunch', 'copenhagen-plank', 'plank', 'side-plank', 'farmers-walk', 'kb-farmers-walk', 'traineau'],
     recommandation: 'Rien à changer.',
     decision: 'deja',
-    pourquoi: 'Une tenue, un portage, un aller-retour de traîneau : c’est le temps qui compte, pas les répétitions. La planche de Copenhague, courte, se tient 15 s de chaque côté.',
+    pourquoi: 'Une tenue, un portage, un aller-retour de traîneau : c’est le temps qui compte, pas les répétitions. La planche de Copenhague, courte, se tient 15 s de chaque côté ; la planche et la planche latérale, classiques, 30 s (de chaque côté pour la latérale).',
   },
 ];
 

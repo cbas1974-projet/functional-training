@@ -2,7 +2,8 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import type { EntrainementState } from '../types';
 import { PARAMETRES_PAR_DEFAUT } from '../data/parametres';
 import { chargerEtat, enregistrerEtat } from './storage';
-import { genererProgramme } from './programmeMois';
+import { VERSION_PROGRAMME, genererProgramme } from './programmeMois';
+import { basculerDouleurDe, douleursDe } from './douleurs';
 
 const CLE = 'functional-training';
 
@@ -367,6 +368,60 @@ describe('« J’ai mal à cet exercice », dans la sauvegarde', () => {
     expect(chargerEtat().douleurs).toEqual(douleurs);
     localStorage.setItem(CLE, JSON.stringify({ ...ANCIENNE_SAUVEGARDE, douleurs: ['leg-press'] }));
     expect(chargerEtat().douleurs).toBeUndefined();
+  });
+
+  it('chacun les siennes : celles d’avant restent au propriétaire du téléphone, celles de l’autre sont à part', () => {
+    // Une sauvegarde d'avant le 13 octobre 2026, sur le téléphone de Speedy :
+    // ses douleurs sont à lui, l'autre n'en a aucune.
+    const anciennes = { 'leg-press': { depuis: '2026-10-11T12:00:00.000Z', charge: 200, unite: 'lb' as const } };
+    localStorage.setItem(CLE, JSON.stringify({ ...ANCIENNE_SAUVEGARDE, personne: 'sebastien', douleurs: anciennes }));
+    const avant = chargerEtat();
+    expect(douleursDe(avant, 'moi')).toEqual(anciennes);
+    expect(douleursDe(avant, 'autre')).toEqual({});
+    expect(avant.douleursAutre).toBeUndefined();
+    // Big Max signale la sienne, au développé couché : celle de Speedy ne bouge pas.
+    const quand = new Date('2026-10-13T12:00:00.000Z');
+    const apres = { ...avant, ...basculerDouleurDe(avant, 'autre', 'bench-press', 50, 'lb', quand) };
+    expect(douleursDe(apres, 'moi')).toEqual(anciennes);
+    expect(douleursDe(apres, 'autre')).toEqual({ 'bench-press': { depuis: quand.toISOString(), charge: 50, unite: 'lb' } });
+    // Aller-retour : chacun retrouve les siennes, à la séance suivante.
+    enregistrerEtat(apres);
+    const relu = chargerEtat();
+    expect(relu.douleurs).toEqual(anciennes);
+    expect(relu.douleursAutre).toEqual({ 'bench-press': { depuis: quand.toISOString(), charge: 50, unite: 'lb' } });
+    // Il l'éteint : plus rien pour lui ; Speedy garde la sienne.
+    const eteinte = { ...relu, ...basculerDouleurDe(relu, 'autre', 'bench-press', 0, 'lb') };
+    expect(douleursDe(eteinte, 'autre')).toEqual({});
+    expect(douleursDe(eteinte, 'moi')).toEqual(anciennes);
+    // Abîmées : écartées, sans toucher aux autres.
+    localStorage.setItem(CLE, JSON.stringify({ ...ANCIENNE_SAUVEGARDE, douleurs: anciennes, douleursAutre: ['bench-press'] }));
+    expect(chargerEtat().douleursAutre).toBeUndefined();
+    expect(chargerEtat().douleurs).toEqual(anciennes);
+  });
+});
+
+describe('un programme d’une version plus ancienne, dans la sauvegarde', () => {
+  beforeEach(() => localStorage.clear());
+
+  it('est recomposé avec la même graine, et l’accueil le dit une fois : on peut l’oublier', () => {
+    const actuel = genererProgramme({ graine: 5, aujourdhui: new Date(2026, 9, 5) });
+    const ancien = { ...actuel, version: 8 };
+    localStorage.setItem(CLE, JSON.stringify({ ...ANCIENNE_SAUVEGARDE, programme: ancien }));
+    const etat = chargerEtat();
+    expect(etat.programme?.version).toBe(VERSION_PROGRAMME);
+    expect(etat.programme?.seances).toEqual(actuel.seances);
+    expect(etat.programmeRecomposeDepuis).toBe(8);
+    // Tant qu'on ne l'a pas oublié, le message reste, même après un rechargement.
+    enregistrerEtat(etat);
+    expect(chargerEtat().programmeRecomposeDepuis).toBe(8);
+    // « Compris » : il ne revient plus.
+    enregistrerEtat({ ...chargerEtat(), programmeRecomposeDepuis: undefined });
+    expect(chargerEtat().programmeRecomposeDepuis).toBeUndefined();
+    // Un programme de cette version, ou pas de programme : rien à dire.
+    localStorage.setItem(CLE, JSON.stringify({ ...ANCIENNE_SAUVEGARDE, programme: actuel }));
+    expect(chargerEtat().programmeRecomposeDepuis).toBeUndefined();
+    localStorage.setItem(CLE, JSON.stringify(ANCIENNE_SAUVEGARDE));
+    expect(chargerEtat().programmeRecomposeDepuis).toBeUndefined();
   });
 });
 

@@ -19,6 +19,60 @@ Claude, de son côté :
 4. Résume en quelques lignes simples ce qui attend, propose par quoi
    commencer, et attend le feu vert de Sébastien avant les gros changements.
 
+## Séance du 13 octobre 2026
+
+- **Version 1.2.0, programme version 9** (même graine : les anciens liens
+  s'ouvrent, recomposés). L'accueil prévient une fois, avec « Compris » : un
+  exercice changé ou une paire refaite à la main est à refaire, les charges
+  restent (il ne sait pas s'il y avait des retouches : il prévient toujours).
+- **Le ressenti** : 😊 facile, 😐 correct, ☹️ difficile, sur la **dernière
+  série de chacun** (Speedy la 3e, Big Max la 4e), facultatif, la même donnée
+  qu'avant (`ressenti`). **On monte plus vite** : Speedy après deux 😊, Big Max
+  après un ; ☹️ deux fois pour redescendre ; compté par exercice, quel que soit
+  le jour.
+- **« J'ai mal » pour chacun** (`douleursAutre`) : un petit bouton par
+  colonne ; 70 % et pas de montée pour celui qui a mal seulement, jusqu'à ce
+  qu'on l'éteigne. Les douleurs d'avant sont à la personne du téléphone.
+- **Points faibles** (Réglages, 13 cases) : une série de plus aux exercices
+  dont c'est le groupe principal, une au plus par exercice. Par défaut, Big
+  Max : pecs, épaules, biceps, triceps ; Speedy : aucun. Les groupes de la
+  bibliothèque, regroupés : quadriceps → avant de cuisse ; ischios-fessiers →
+  arrière de cuisse ou fessiers (selon le premier muscle principal) ;
+  adducteurs → intérieur ; abducteurs → extérieur (la planche latérale) ;
+  abdominaux et obliques → abdos ; lombaires → bas du dos (le Superman) ;
+  dorsaux et trapèzes → haut du dos ; avant-bras → biceps ; l'oiseau →
+  épaules ; tout le corps (la marche du fermier) → rien.
+- **Des classiques seulement, le premier mois** (`EXERCICES_CLASSIQUES`,
+  `src/utils/programmeMois.ts`, programme et « Changer ») : développés,
+  rowings, curls, extensions, élévations, squats, soulevé roumain, pont,
+  fentes, mollets, marche du fermier, le kettlebell de base, la planche et la
+  planche latérale (ajoutées), le Superman sans poids, la Copenhague, les sept
+  machines. Dehors : bouche d'incendie, moulin à vent, bûcherons, mollet sur
+  une jambe lesté, tour de taille, relevé turc, halo…
+- **Le programme** : le lundi pareil chaque semaine (la presse ou le hack
+  squat en paire, la marche du fermier pour finir) ; le mardi A et B reprend
+  deux exercices du haut du lundi et finit sur des pompes ; le jeudi A et B
+  en reprend au moins un. **Mollets assis** (nouvelle machine, `salle.ts`) un
+  mardi sur deux, à la place du mollet sur une jambe. Une pause d'un toucher
+  entre les tours d'un exercice seul à deux, sauf la marche du fermier.
+  Durées (graine 1, à deux) : lundi 1 h 03, mardi 1 h 05 / 1 h 09, jeudi
+  59 min / 1 h 02.
+- **Tranché par Claude** : aux mollets assis, la seconde tenue est en bas,
+  talons sous la marche, là où le métronome s'arrête ; la séance libre a aussi
+  les visages. **À savoir** : peu de classiques et les reprises du lundi, donc
+  le mardi B ne change souvent que deux exercices du mardi A, et le rowing
+  incliné revient les trois jours.
+- **Vérifié à 375 px** (Playwright) : une séance à deux, les visages des deux,
+  la douleur de Big Max seul, la séance suivante (charges et douleur gardées),
+  « Séance d'essai » sous la carte du jour, le bandeau de recomposition.
+  **Non vérifié** : le son et la vibration sur un vrai téléphone, une vraie
+  séance à la salle.
+- **À tester à la salle** :
+  1. Les visages sous la dernière série de chacun : assez gros, rien avant.
+  2. « J'ai mal » de Big Max : 70 % pour lui seul, encore là la fois d'après.
+  3. La pause d'un toucher entre les tours du développé couché (1 min 30 à la
+     trap bar) ; la marche du fermier du lundi, elle, enchaîne.
+
 ## Séance du 12 octobre 2026
 
 - **Audit du 13 octobre** ([docs/audit-2026-10-13.md](docs/audit-2026-10-13.md)) : les 5 points importants et les mineurs 7, 8, 10 corrigés ; 6 et 9 laissés.
