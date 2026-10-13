@@ -398,6 +398,12 @@ export interface Seance {
   echauffement?: MouvementGuide[];
   /** Étirements de fin, avec leur image ; absents, ceux d'usage. */
   retourCalme?: MouvementGuide[];
+  /** La finale, juste avant les étirements : dix minutes au chrono, pour se
+   *  vider (décision de Sébastien, 13 octobre 2026) — la marche du fermier le
+   *  lundi, le sac de sable le mardi, le traîneau le jeudi, proposés ; on
+   *  choisit au moment de la finale (`CHOIX_FINALE`). Sur un seul téléphone
+   *  seulement ; absente : pas de finale (séance libre, séance d'avant). */
+  finaleChrono?: { exerciceId: string; dureeSec: number };
   /** Séance du programme : l'horloge attend « Go » à chaque nouvel exercice,
    *  et à deux elle est commune aux deux téléphones. Absente pour une séance
    *  libre. */
@@ -503,6 +509,9 @@ export interface ProgressionSeance {
    *  téléphone : une séance de la version 1.2.0, série par série, relue au
    *  chargement (`versLeDerouleParExercice`). */
   deroule?: 'par-exercice';
+  /** La finale choisie, quand ce n'est pas celle proposée : le traîneau, la
+   *  marche du fermier ou le sac de sable. */
+  finale?: string;
   demarreeLe: string;
   /** Dernière sauvegarde (ISO), pour le bandeau de reprise. */
   sauvegardeeLe?: string;
@@ -552,6 +561,13 @@ export interface EntrainementState {
   /** Sur un seul téléphone, à deux : celles de l'autre, notées ici, à part —
    *  la douleur de l'un ne touche jamais les charges de l'autre. */
   douleursAutre?: Record<string, Douleur>;
+  /** 👎 « Pas aimé », par exercice — quand on l'a dit (ISO) : sur ce
+   *  téléphone seulement, pour la personne des réglages. La fois suivante où
+   *  l'exercice revient, l'accueil propose de le changer. Rien n'est bloqué.
+   *  Absent des sauvegardes d'avant. */
+  pasAimes?: Record<string, string>;
+  /** Sur un seul téléphone, à deux : ceux de l'autre, à part. */
+  pasAimesAutre?: Record<string, string>;
   /** Le programme sauvegardé vient d'être recomposé : il était de cette
    *  version-là, plus ancienne. L'accueil le dit une fois — un exercice changé
    *  ou une paire refaite à la main est à refaire —, puis l'oublie. */
@@ -637,9 +653,9 @@ export interface SeanceDuMois {
   /** Identifiants d'exercices de la bibliothèque, dans l'ordre de la séance :
    *  les deux exercices d'une paire côte à côte. */
   exercices: string[];
-  /** Le dernier exercice : la marche du fermier le lundi (la presse ou le
-   *  hack squat passent dans une paire), les pompes le mardi, le traîneau le
-   *  jeudi. Seul, en séries, après les paires. */
+  /** Le dernier exercice : la presse ou le hack squat le lundi, les pompes
+   *  le mardi, les mollets le jeudi. Seul, en séries, après les paires. (La
+   *  finale de dix minutes, elle, est celle du jour : `Seance.finaleChrono`.) */
   finale?: string;
   /** La partie du corps du jour : tout le corps le lundi (type 'dure'), le
    *  haut le mardi, le bas le jeudi. */
@@ -686,7 +702,7 @@ export interface ReglagesDuo {
    *  deux de plus le lundi.) */
   exercices?: number;
   /** Les points faibles de chacun, cochés dans les Réglages ; absents, ceux
-   *  par défaut — Big Max : pecs, épaules, biceps, triceps ; Speedy : aucun
+   *  par défaut — aucun, pour les deux, depuis le 13 octobre 2026
    *  (`POINTS_FAIBLES_PAR_DEFAUT`). Toujours les deux, dans l'ordre de la
    *  liste. */
   pointsFaibles?: Record<Personne, PointFaible[]>;

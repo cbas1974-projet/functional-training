@@ -25,14 +25,15 @@ du dos, épaules, extérieur et intérieur de cuisse. Rien à taper.
 - **La semaine** : trois matins, et du jiu-jitsu le soir pour Speedy le
   mardi et le jeudi (et le dimanche).
 
-  | | Lundi — tout le corps | Mardi — le haut | Jeudi — les jambes, modéré |
+  | | Lundi — tout le corps | Mardi — surtout le haut | Jeudi — surtout les jambes |
   | --- | --- | --- | --- |
   | Le soir | pas de jiu-jitsu | jiu-jitsu | jiu-jitsu (souvent un cours privé le vendredi matin) |
-  | Exercices | **8** : le premier seul, 3 paires, le dernier seul, ≈ 1 h 03 — **le même chaque semaine** | **8** : le premier seul, 3 paires, le dernier seul, ≈ 1 h 05 à 1 h 09 | **8** : le premier seul, 3 paires, le dernier seul, ≈ 1 h |
+  | Exercices | **8** : le premier seul, 3 paires, le dernier seul, puis la finale, ≈ 1 h 11 (1 h 20 au plus) — **le même chaque semaine** | **8** : ≈ 60 % de haut du corps, ≈ 40 % de jambes légères, puis la finale, ≈ 1 h 10 à 1 h 13 | **8** : ≈ 60 % de jambes, ≈ 40 % de dos et d'épaules, puis la finale, ≈ 1 h 12 |
   | Répétitions | Speedy **10** (**8 à la trap bar**), Big Max **10** | Speedy 8, Big Max 10 | Speedy 8, Big Max 10 |
   | En tête, seul | la **trap bar**, le dos frais | le **développé couché aux haltères** | le **swing à deux mains** |
-  | Les 3 paires, deux zones différentes | le bas du dos (le **Superman, sans poids**), la **presse** ou le **hack squat** (la machine chacun son tour), le ventre ou une jambe légère, chacun avec le haut du corps : tirer, un développé au-dessus de la tête, pousser | **deux exercices du haut repris du lundi**, puis les bras, chacun avec le ventre (la planche, la planche latérale) ou les mollets (à la machine assise, ou aux haltères) | la **planche de Copenhague courte** et les **deux machines des cuisses**, chacune avec le ventre ou un tirage léger du haut du corps — **au moins un exercice repris du lundi** |
-  | Pour finir, seul | la **marche du fermier** (un bon cardio ; un sac de sable sur l'épaule, au choix) | des **pompes** (sur haltères ou kettlebells) : la poigne reste pour le kimono du soir | le **traîneau** |
+  | Les 3 paires, deux zones différentes | le bas du dos (le **Superman, sans poids**), l'**extérieur de cuisse** (la planche latérale) et l'**intérieur de cuisse** (une fente latérale), chacun avec le haut du corps : un rowing, un développé au-dessus de la tête, un développé | **deux exercices du haut repris du lundi** (un développé, un rowing), puis les bras, chacun avec **une jambe légère** : les mollets (à la machine assise, ou aux haltères), le pont fessier, la planche de Copenhague | la **planche de Copenhague courte** et les **deux machines des cuisses**, chacune avec **le dos ou les épaules** : le rowing du lundi, un oiseau, une élévation |
+  | Le dernier, seul | la **presse ou le hack squat** (la machine chacun son tour) | des **pompes** (sur haltères ou kettlebells) : la poigne reste pour le kimono du soir | les **mollets** (à la machine assise, ou aux haltères) |
+  | La finale, 10 min au chrono | la **marche du fermier** aux haltères | le **sac de sable** sur l'épaule (marche, escaliers permis) | le **traîneau** |
 
 - **Chaque séance** commence par **5 minutes de tapis ou de rameur** et
   quatre mouvements légers choisis pour le jour (le lundi, un good morning à
@@ -42,14 +43,14 @@ du dos, épaules, extérieur et intérieur de cuisse. Rien à taper.
   ceux des jambes** : le mollet contre le mur, l'avant de la cuisse sur le
   côté, l'arrière de la cuisse et le fessier sur le dos, puis une torsion
   allongée. Trente secondes de chaque côté, et 5 s pour changer de côté
-  (5 min 25 s en tout). Juste avant, **le dernier
-  exercice**, seul, chacun son tour : la marche du fermier le lundi, des
-  pompes le mardi, le traîneau le jeudi.
+  (5 min 25 s en tout). Juste avant, **la finale** (voir plus bas) : dix
+  minutes au chrono, pour se vider ; et avant elle, **le dernier exercice**,
+  seul, chacun son tour : la presse ou le hack squat le lundi, des pompes le
+  mardi, les mollets le jeudi.
 - **Le premier et le dernier seuls, trois paires entre les deux**, les trois
   jours (décision du 12 octobre 2026). Un exercice seul se fait **chacun son
   tour** : Big Max, puis Speedy, puis **une pause d'un toucher** (« Pause ·
-  1 min », quand on veut) avant le tour suivant — sauf la marche du fermier,
-  qui enchaîne ses tours (13 octobre 2026). Une
+  1 min », quand on veut) avant le tour suivant. Une
   paire réunit **deux exercices de zones différentes** — le haut du corps, le
   bas du corps, le tronc (le ventre et le bas du dos) : **A, B, A, B, les deux
   ensemble, sans pause entre les tours** (15 secondes pour passer de l'un à
@@ -71,13 +72,13 @@ du dos, épaules, extérieur et intérieur de cuisse. Rien à taper.
   choisi avant le 12 octobre — il valait pour le mardi et le jeudi, le lundi
   en avait deux de plus — repart à huit, pareil sur les deux téléphones ; un
   ancien lien qui demandait dix exercices s'ouvre avec huit.
-- **Combien de temps**, à deux sur un téléphone : le lundi **1 h 03**,
-  chaque semaine ; le mardi **1 h 05 à 1 h 09** (Big Max fait une série de
-  plus sur ses points faibles : les pecs, les épaules, les bras) ; le jeudi
-  environ **1 h** (59 min la semaine A, 1 h 02 la semaine B) : ses deux
-  machines se font chacun son tour, un seul siège. Avec 6 exercices : 49 min,
-  55 à 58 min et 46 min ; avec 4 : 40, 46 et 36 min. **C'est une estimation** : une série se finit sur « Série
-  terminée », pas au bout d'un chrono. L'application compte la série au
+- **Combien de temps**, à deux sur un téléphone, la finale comprise : le
+  lundi **1 h 11**, chaque semaine (1 h 20 au plus, décision du 13 octobre
+  2026) ; le mardi **1 h 10 à 1 h 13** — un mardi sur deux, la machine à
+  mollets d'une paire se fait chacun son tour ; le jeudi **1 h 12** : ses
+  deux machines se font chacun son tour, un seul siège. Le lundi n'est donc
+  pas plus long à l'horloge : il est le plus lourd. **C'est une estimation** : un exercice se finit sur « Exercice
+  terminé », pas au bout d'un chrono. L'application compte la série au
   tempo — la plus longue des deux quand on la fait ensemble —, 15 s pour
   passer à la suivante, la pause à la fin de chaque paire ou exercice
   seul, et celle entre les tours d'un exercice seul. Les exercices du dos et des genoux, sans arrêt en
@@ -88,7 +89,9 @@ du dos, épaules, extérieur et intérieur de cuisse. Rien à taper.
   passerait deux heures et demie perdrait ses dernières paires.
 - **Les objectifs, au bon jour** : le bas du dos le lundi (le jeudi, le swing
   travaille déjà l'arrière du corps), les épaules le mardi (et un développé
-  le lundi), l'extérieur et l'intérieur de cuisse le jeudi.
+  le lundi), l'extérieur de cuisse le lundi, l'intérieur de cuisse le lundi
+  (une fente latérale) et le jeudi (la planche de Copenhague). Même sans ces
+  objectifs, le lundi garde l'intérieur et l'extérieur de cuisse.
 - **Lundi, tout le corps, la grosse séance** : pas de jiu-jitsu le soir. Le
   **soulevé de terre à la trap bar en premier**, quand le dos est frais,
   seul, chacun son tour — **Speedy y fait 8 répétitions** (10
@@ -97,12 +100,15 @@ du dos, épaules, extérieur et intérieur de cuisse. Rien à taper.
   plafond vaut pour les autres soulevés de terre lourds, debout à deux mains
   (roumain, au kettlebell, good morning), et l'accueil le dit : « Speedy : 8
   à la trap bar, 10 ailleurs — pour le bas du dos. » Puis trois paires,
-  chacune avec le haut du corps — un tirage, un développé au-dessus de la
-  tête, un développé — : le **Superman, sans poids** (le bas du dos), la
-  **presse ou le hack squat** (la machine chacun son tour), le ventre ou une
-  jambe légère ; rien en haut du corps qui charge le bas du dos, la trap bar
-  l'a déjà fait. Enfin la **marche du fermier**, seule, chacun son tour, sans
-  pause entre les tours : pas de jiu-jitsu le soir, la poigne peut y aller.
+  chacune avec le haut du corps — un rowing, un développé au-dessus de la
+  tête, un développé — : le **Superman, sans poids** (le bas du dos),
+  l'**extérieur de cuisse** (la planche latérale) et l'**intérieur de
+  cuisse** (une **fente latérale**, aux haltères ou au kettlebell) ; rien en
+  haut du corps qui charge le bas du dos, la trap bar l'a déjà fait. Enfin la
+  **presse ou le hack squat**, seule, chacun son tour, avec une pause d'un
+  toucher entre les tours ; puis la finale, la **marche du fermier** : pas de
+  jiu-jitsu le soir, la poigne peut y aller. Le plus de jambes de la semaine
+  — la trap bar, la fente latérale, la presse —, et rien d'autre de lourd.
   **Le lundi est le même chaque semaine** (13 octobre 2026) : ses charges se
   suivent d'une semaine à l'autre. Le Superman y est : allongé, il ménage le dos de
   Speedy mieux qu'un good morning après la trap bar, et **sans poids** — une
@@ -115,25 +121,30 @@ du dos, épaules, extérieur et intérieur de cuisse. Rien à taper.
   V), que McGill déconseille à un dos qui fatigue vite, surtout le matin. Ces
   exercices restent dans la bibliothèque et la séance libre ; « Changer » ne
   les propose pas au programme.
-- **Mardi, le haut** : jiu-jitsu le soir, rien qui charge le bas du dos. Le
+- **Mardi, surtout le haut** (≈ 60 %, et ≈ 40 % de jambes légères, après la
+  séance du 13 octobre 2026 : « quasi que du haut du corps, une seule
+  jambe ») : jiu-jitsu le soir, rien qui charge le bas du dos. Le
   **développé couché aux haltères** en premier, seul, chacun son tour ; puis
-  **deux exercices du haut repris du lundi** (13 octobre 2026 : leurs charges
-  se suivent d'un jour à l'autre), les épaules, tirer, les bras — mais jamais
-  deux exercices du haut ensemble : chacun va avec le ventre (la planche, la
-  planche latérale) ou **une jambe légère** (les mollets, à la machine assise
-  ou aux haltères), qui laisse souffler le haut du corps sans voler les
-  jambes du jiu-jitsu du soir. **Des pompes pour finir**, sur haltères ou
-  kettlebells : la marche du fermier userait la poigne avant les prises du
-  kimono.
-- **Jeudi, les jambes, modéré** : jiu-jitsu le soir, ni trap bar, ni presse,
-  ni hack squat. Le **swing à deux mains en premier**, au temps (30 s), léger
+  **deux exercices du haut repris du lundi** (leurs charges se suivent d'un
+  jour à l'autre : le développé épaules, le rowing), puis les bras — mais
+  jamais deux exercices du haut ensemble : chacun va avec **une jambe
+  légère** — les mollets (à la machine assise ou aux haltères), le **pont
+  fessier**, allongé, la **planche de Copenhague** —, qui laisse souffler le
+  haut du corps sans voler les jambes du jiu-jitsu du soir. Les paires sont
+  donc toutes haut + bas, et un tirage du dos y est chaque mardi. **Des
+  pompes pour finir**, sur haltères ou kettlebells, puis la finale au **sac
+  de sable** sur l'épaule.
+- **Jeudi, surtout les jambes** (≈ 60 %, et ≈ 40 % de dos et d'épaules) : un
+  peu plus intense — trois jours sans salle après —, mais jiu-jitsu le soir :
+  ni trap bar, ni presse, ni hack squat, ni au programme ni dans « Changer ».
+  Le **swing à deux mains en premier**, au temps (30 s), léger
   : « Ce sont les fesses qui lancent, pas le dos. Commencer léger. Si le dos
   tire : Lourd. » Il se fait **seul, chacun son tour**. Puis trois paires,
   jamais deux exercices des jambes ensemble : la **planche de Copenhague
   courte** (l'intérieur de la cuisse), l'**extension des jambes** (l'avant de
-  la cuisse) et la **flexion des jambes couché** (l'arrière), chacune avec le
-  ventre (du gainage) ou un **tirage léger du haut du corps** (un oiseau, un
-  rowing appuyé). Les deux machines sont les préférées du duo : elles
+  la cuisse) et la **flexion des jambes couché** (l'arrière), chacune avec
+  **le dos ou les épaules** : un **tirage léger** (le rowing appuyé du lundi,
+  un oiseau) ou une **élévation des épaules**. Les deux machines sont les préférées du duo : elles
   reviennent chaque jeudi à huit exercices, mais plus ensemble. Un seul
   siège : même en paire, chacun son tour, Big Max d'abord, puis l'autre
   exercice ensemble. À quatre,
@@ -141,9 +152,10 @@ du dos, épaules, extérieur et intérieur de cuisse. Rien à taper.
   les genoux de Big Max, à l'extension : « Genoux sensibles : de 90° jusqu'à
   presque tendu, sans verrouiller ni tenir en haut » — aucun arrêt, ni genoux
   pliés, ni jambes tendues, là où la rotule est la plus chargée ; une charge
-  modérée. Le traîneau pour finir. Au moins un exercice du lundi y revient,
-  qui va avec un jeudi modéré (jamais la trap bar, la presse ni le hack
-  squat) : le plus souvent, son tirage.
+  modérée. Les **mollets** pour finir, seuls, chacun son tour, puis la
+  finale au **traîneau**. Au moins un exercice du lundi y revient, qui va
+  avec un jeudi sans machine lourde (jamais la trap bar, la presse ni le hack
+  squat) : son rowing.
 - **La planche de Copenhague courte**, chaque jeudi, semaines A et B : une
   planche sur le côté, sur l'avant-bras, **le genou du dessus posé sur le
   banc**, la jambe du dessous libre ; on monte les hanches et on tient
@@ -151,7 +163,7 @@ du dos, épaules, extérieur et intérieur de cuisse. Rien à taper.
   Elle travaille l'intérieur de la cuisse : la meilleure protection de l'aine
   pour le hockey de Big Max, et la garde de Speedy. La version longue (le
   pied sur le banc) viendra plus tard. Sans banc, une fente latérale prend
-  sa place.
+  sa place. Le mardi, elle peut aussi venir en jambe légère.
 - **Semaines A et B, le mardi et le jeudi** : ils alternent d'une semaine à
   l'autre — mêmes muscles, autres exercices : Big Max aime changer. **Le
   lundi, lui, est le même chaque semaine** (13 octobre 2026). Ce qui compte
@@ -159,8 +171,10 @@ du dos, épaules, extérieur et intérieur de cuisse. Rien à taper.
   développé couché et les deux reprises du lundi le mardi, le swing, la
   planche de Copenhague et les deux machines le jeudi. Le premier mois, avec
   les seuls classiques, le mardi B ne change souvent que deux exercices du
-  mardi A. La marche du fermier se fait aux haltères ou au kettlebell, les
-  pompes sur haltères ou kettlebells. Le programme dure quatre semaines, puis l'application
+  mardi A ; le pont fessier et la planche de Copenhague, seules jambes
+  légères de leur muscle, reviennent les deux mardis. Les pompes se font sur
+  haltères ou kettlebells. **Cette semaine du 13 octobre est un rodage** : le
+  programme est figé un mois à partir du lundi 19 octobre. Le programme dure quatre semaines, puis l'application
   propose d'en refaire un. Commencé un vendredi ou un week-end, il part du
   lundi suivant.
 - **Plus de semaine dure** (le jeudi B à deux répétitions de plus), **ni de
@@ -179,11 +193,42 @@ du dos, épaules, extérieur et intérieur de cuisse. Rien à taper.
   exercice : il compte, sonne et vibre, sans changer d'exercice —
   l'application ne sait plus quand un tour finit. Il remplace la pause d'un
   toucher qui venait entre les tours d'un exercice seul, à deux (la série de
-  l'autre ne suffisait pas) ; la **marche du fermier**, elle, enchaîne ses
-  tours. La durée annoncée compte toujours ces pauses. La pause de fin reste,
+  l'autre ne suffisait pas). La durée annoncée compte toujours ces pauses. La pause de fin reste,
   même quand on passe à d'autres muscles. Rien après le dernier exercice :
-  les étirements suivent. Seul, sans l'autre, pareil : « Pause · 1 min »
+  la finale suit. Seul, sans l'autre, pareil : « Pause · 1 min »
   entre deux séries. L'accueil écrit sous chaque paire la pause qui la suit.
+- **La finale, dix minutes au chrono** (13 octobre 2026), chaque jour, juste
+  avant les étirements : pour se vider, **en durée, pas en tours**. Le lundi,
+  la **marche du fermier** aux haltères ; le mardi, le **sac de sable** sur
+  l'épaule (marche, escaliers permis : « Sac sur une épaule, changer d'épaule
+  à chaque tour ; marcher droit, gainé ») ; le jeudi, le **traîneau**. Au
+  moment de la finale, un sélecteur simple — **Traîneau, Fermier, Sac de
+  sable** — prend l'une des trois. L'écran : un **gros décompte, 10:00**,
+  lisible de loin, qui attend **« Démarrer »** ; « Pause » l'arrête,
+  « Reprendre » le relance, « Terminer » finit plus tôt ; à la fin, **un son
+  et une vibration**, puis les étirements. Le poids de chacun, **si on
+  veut** (celui de la dernière fois en gris, sans le noter) ; pas de visage,
+  pas de montée de charge. Elle compte comme un exercice de plus, une
+  « série » de dix minutes, faite quand on en a passé la moitié. La marche du
+  fermier et le traîneau ne sont plus des exercices du programme ni de
+  « Changer ». L'essai la ramène à 30 secondes. Sur deux téléphones (la
+  séance commune, cachée), pas de finale.
+- **👎 « Pas aimé »** (13 octobre 2026), facultatif, par personne et par
+  exercice : un petit bouton discret dans la carte de l'exercice, à côté de
+  « J'ai mal », un toucher pour basculer. Il reste sur ce téléphone, comme
+  les douleurs. **La fois suivante** où l'exercice revient, l'accueil le dit
+  sous l'exercice — « 👎 Pas aimé par Big Max · Changer ? » — et « Changer ? »
+  ouvre le « Changer » de cet exercice (des remplaçants qui vont avec le
+  partenaire, la règle des zones) ; « Garder » retire le 👎. Rien n'est
+  bloqué, aucun toucher n'est demandé.
+- **Big Max et le devant de ses épaules** (13 octobre 2026) : jamais d'appui
+  sur les mains ou les coudes derrière soi, ventre vers le ciel — la
+  **planche inversée**, les dips au sol, le chameau, la roue, le héros
+  couché. Ni au programme (ils y font les mêmes exercices, à deux), ni dans
+  « Changer », ni dans sa routine du soir, ni dans sa séance libre quand le
+  téléphone est le sien (`ProfilPersonne.aEviter`, `aEviterPar`). Ses autres
+  exercices d'épaules, la planche, la planche latérale et la planche de
+  Copenhague restent.
 - **Sans arrêt en bas** pour les exercices où la position basse fatigue le dos
   ou le genou. Pour le dos : les soulevés de terre (trap bar, roumain,
   kettlebell, sur une jambe), le good morning, les rowings buste penché, les
@@ -276,7 +321,7 @@ du dos, épaules, extérieur et intérieur de cuisse. Rien à taper.
   Le relevé turc, fait au temps, change de côté de la même façon ; une
   position de yoga ou un étirement enchaîne ses deux côtés.
 - **Le tableau des mouvements**, [docs/mouvements.md](docs/mouvements.md) :
-  pour chacun des 156 exercices de musculation, ce que dit le métronome
+  pour chacun des 157 exercices de musculation, ce que dit le métronome
   pendant une répétition (« MONTE 3 s → DESCENDS 3 s → TIENS 1 s ») ou, au
   temps, le décompte (« 30 s dans un sens → « Change de sens ! » → 30 s dans
   l'autre »), comment se font les côtés, la durée d'une série de 8, et
@@ -290,9 +335,10 @@ du dos, épaules, extérieur et intérieur de cuisse. Rien à taper.
   mouvements. Le programme et « Changer » ne piochent que dans la liste
   `EXERCICES_CLASSIQUES` (`src/utils/programmeMois.ts`) : développés, rowings,
   curls, extensions, élévations, squats, soulevés de terre, ponts, fentes,
-  mollets, la marche du fermier, le kettlebell de base (swing, gobelet,
-  rowings), la planche et la planche latérale, le Superman sans poids et la
-  planche de Copenhague, et les sept machines. Plus de bouche d'incendie, de
+  mollets, le kettlebell de base (swing, gobelet, rowings), la planche et la
+  planche latérale, le Superman sans poids et la planche de Copenhague, et
+  les machines — la marche du fermier, le traîneau et le sac de sable
+  seulement pour la finale. Plus de bouche d'incendie, de
   moulin à vent, de bûcheron, de mollet sur une jambe lesté, de tour de
   taille ni de relevé turc au programme : ils restent dans la bibliothèque et
   la séance libre. Pour l'élargir : ajouter des identifiants à la liste, puis
@@ -327,8 +373,8 @@ du dos, épaules, extérieur et intérieur de cuisse. Rien à taper.
   seulement le matériel de la salle : haltères, kettlebells, banc, tapis, et
   sept machines — trap bar, presse à cuisses, hack squat, traîneau, extension
   et flexion des jambes, et les **mollets assis** (deux jambes ensemble,
-  l'arrêt en bas, talons sous la marche, comme au mollet sur une marche).
-  Elles ne
+  l'arrêt en bas, talons sous la marche, comme au mollet sur une marche) —,
+  et le **sac de sable** de la finale. Ils ne
   sont sur aucun poster : leur image est un dessin simple, à remplacer par une
   photo du même nom dans `public/exercices/`.
 - **Ensemble ou chacun son tour** : sur un seul téléphone (par défaut),
@@ -348,7 +394,9 @@ du dos, épaules, extérieur et intérieur de cuisse. Rien à taper.
   sur l'une, Speedy sur l'autre, puis on échange. Un toucher change la façon de faire,
   et la durée de la séance suit.
 - **Toucher une image** l'ouvre en grand, avec les consignes : pour voir le
-  détail du mouvement avant de commencer.
+  détail du mouvement avant de commencer — et **pendant la séance aussi**
+  (13 octobre 2026) : l'exercice en cours, ceux de la liste, la finale, les
+  étirements. La séance continue derrière.
 - **Changer** un exercice ouvre la liste des exercices des mêmes muscles, avec
   leur image : le même geste d'abord, et ce que le programme ne fait pas déjà
   avant ce qui revient un autre jour. Dans une paire, seulement ceux qui vont
@@ -410,13 +458,14 @@ quinzaine de secondes de repos en plus.
 extérieur de cuisse, mollets, abdos, bas du dos, haut du dos, épaules, pecs,
 biceps, triceps. Chaque case cochée donne **une série de plus** aux exercices
 dont c'est le groupe principal — une au plus par exercice, même s'il
-travaille plusieurs de ces muscles. Par défaut, **Big Max : pecs, épaules,
-biceps, triceps** (le haut du corps est son point faible) ; **Speedy :
-aucun**. Le groupe principal d'un exercice est celui de la bibliothèque :
+travaille plusieurs de ces muscles. Par défaut, **aucun, pour les deux :
+trois séries chacun** (13 octobre 2026, après la séance). Un programme d'avant
+qui portait encore l'ancien défaut de Big Max (pecs, épaules, biceps,
+triceps) repart à vide ; une liste changée à la main reste. Le groupe principal d'un exercice est celui de la bibliothèque :
 l'oiseau compte pour les épaules, le haussement d'épaules et les tirages pour
 le haut du dos, les avant-bras pour les biceps, le Superman pour le bas du
-dos, la planche latérale pour l'extérieur de cuisse ; la marche du fermier,
-de tout le corps, n'en a pas.
+dos, la planche latérale pour l'extérieur de cuisse ; la marche du fermier
+et le sac de sable, de tout le corps, n'en ont pas.
 
 Dans *Réglages*, « Répétitions par série » le dit en trois lignes : **Speedy ·
 lundi** (10), **Speedy · mardi et jeudi (jiu-jitsu le soir)** (8), **Big Max ·
@@ -475,7 +524,7 @@ de quelqu'un, elle ne raccourcit que les attentes.**
 
 **Envoyer à Big Max** (ou à Speedy) partage un **lien court**, une
 soixantaine de caractères
-(`https://sgtraining.netlify.app/#programme=8.9ix.g02.cl44`) : il ne
+(`https://sgtraining.netlify.app/#programme=a.9ix.g02.cl44`) : il ne
 contient que la recette du programme — la version de la composition, la
 graine du tirage, le premier lundi, et seulement les réglages qui ne sont pas
 ceux par défaut (objectifs, matériel, alternance, répétitions de chacun,
@@ -737,7 +786,10 @@ exercice par un autre de la même zone.
   tours sans changer d'exercice ; le métronome (MONTE, TIENS, DESCENDS) ne
   vient que si on touche « Tempo », en petit sur chaque exercice. « Passer
   cet exercice » (ou « cette paire ») est petit, sous la carte, et demande
-  avant : ses séries ne comptent pas.
+  avant : ses séries ne comptent pas. À côté de « J'ai mal », pour chacun,
+  **👎 « Pas aimé »**. Après le dernier exercice, **la finale** (« Finale ·
+  10 min » dans la liste) : le gros décompte, le choix des trois, « Démarrer »,
+  puis les étirements. **Toucher une image** l'ouvre en grand.
 - En séance libre (et avec la séance commune) : échauffement articulaire
   puis, pour chaque série, un compte à rebours « Préparez-vous ».
 - **Métronome de tempo** : affichage MONTE / DESCENDS / TIENS avec les
@@ -908,13 +960,13 @@ y prend au plus 1,5 million de caractères (plus de 700 séances), bien en
 dessous des 5 Mo qu'un navigateur donne à un site. Au-delà, les plus
 vieilles séances ne restent que sur le serveur.
 
-La bibliothèque présente les **265 exercices** classés par zone, avec les
+La bibliothèque présente les **266 exercices** classés par zone, avec les
 six posters d'origine consultables en entier. Un filtre sépare les trois
 familles :
 
 | Famille | Nombre | Comment ça se travaille |
 | --- | --- | --- |
-| Musculation | 156 | Répétitions au tempo, avec une charge — 77 aux haltères, 68 au kettlebell, 7 machines de la salle, 4 au poids du corps |
+| Musculation | 157 | Répétitions au tempo, avec une charge — 77 aux haltères, 68 au kettlebell, 7 machines de la salle et le sac de sable, 4 au poids du corps |
 | Yoga | 57 | Postures tenues au temps, sans charge |
 | Étirements | 52 | Positions tenues au temps, sans charge |
 
@@ -1289,7 +1341,8 @@ src/
 │   ├── RoutineGuidee.tsx         # La routine du soir guidée plein écran : installation, tenue, changement de côté
 │   ├── CarteRoutineSoir.tsx      # Sa carte sur l'accueil, et les sept derniers soirs en points
 │   ├── FicheExercice.tsx         # Vignette et nom d'un exercice
-│   ├── ImageEnGrand.tsx          # L'image d'un exercice en grand, avec ses consignes
+│   ├── ImageEnGrand.tsx          # L'image d'un exercice en grand, avec ses consignes (l'accueil, la séance)
+│   ├── PasAime.tsx               # 👎 « Pas aimé » : le bouton dans la séance, le bandeau de l'accueil
 │   ├── PaceurTempo.tsx           # La bille qui monte et descend au tempo (ou tourne, ou va et vient)
 │   ├── BoutonsRessenti.tsx       # Les trois visages du ressenti : 😊 facile, 😐 correct, ☹️ difficile
 │   ├── HistoriqueEntrainement.tsx
@@ -1299,7 +1352,7 @@ src/
 │   └── BibliothequeExercices.tsx
 ├── data/
 │   ├── exercices.ts              # Les 77 exercices et leurs points d'attention
-│   ├── salle.ts                  # Les machines : trap bar, presse, hack squat, traîneau, extension et flexion des jambes, mollets assis
+│   ├── salle.ts                  # Les machines : trap bar, presse, hack squat, traîneau, extension et flexion des jambes, mollets assis ; le sac de sable
 │   ├── poidsDuCorps.ts           # Le Superman sans poids, la planche de Copenhague courte, la planche et la planche latérale, dessinés
 │   └── parametres.ts             # Durées, tempos, niveaux, formats, zones
 ├── utils/
@@ -1308,7 +1361,8 @@ src/
 │   ├── parExercice.ts            # Exercice par exercice : les visages qui manquent, les charges notées d'office, la pause d'un toucher entre les tours
 │   ├── charges.ts                # La charge de chaque série : pré-remplie, 70 % et 100 %, la douleur, les séries allégées
 │   ├── tableauMouvements.ts      # Le tableau des mouvements (docs/mouvements.md), lu dans le métronome, et « Au temps ou au tempo ? »
-│   ├── programmeMois.ts          # Composition du programme par paires, les classiques, les points faibles, calendrier A/B, charges, lien
+│   ├── programmeMois.ts          # Composition du programme par paires, les classiques, les points faibles, la finale, ce que chacun évite, calendrier A/B, charges, lien
+│   ├── pasAimes.ts               # 👎 « Pas aimé » : chacun les siens, sur ce téléphone
 │   ├── zones.ts                  # Les trois grandes zones — le haut, le bas, le tronc : jamais deux de la même en paire
 │   ├── routineSoir.ts            # La routine du soir : les quatre parties, listes de départ, étapes, durées (dix minutes au plus), soirs faits
 │   ├── essai.ts                  # La séance d'essai : la séance du jour en dix minutes, sans rien garder, et sa séance commune numérotée

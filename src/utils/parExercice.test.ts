@@ -36,7 +36,14 @@ const MARDI: SeanceDuMois = {
     ['superman', 'arnold-press'],
   ],
 };
-const seance = seancePourPersonne(MARDI, PARAMETRES, { personne: 'sebastien', aDeux: true, unTelephone: true }, new Date(2026, 9, 13));
+// Big Max a coché les épaules et les pecs : quatre séries au développé
+// couché et au développé Arnold.
+const seance = seancePourPersonne(
+  MARDI,
+  PARAMETRES,
+  { personne: 'sebastien', aDeux: true, unTelephone: true, pointsFaibles: { sebastien: [], max: ['epaules', 'pecs'] } },
+  new Date(2026, 9, 13),
+);
 const groupes = groupesUnTelephone(seance);
 const etapes = construireEtapes(seance);
 const COLONNES: Qui[] = ['moi', 'autre'];

@@ -23,6 +23,7 @@ import type { Etape } from './etapesSeance';
 import { raccourcirPourEssai } from './essai';
 import { avecRessentis, exercicesAEvaluer, ressentisQuiChangent } from './ressenti';
 import {
+  ANCIENS_POINTS_FAIBLES_DE_BIG_MAX,
   REPOS_PAIRE_SEC,
   REPOS_SEC,
   REPOS_TRAP_BAR_SEC,
@@ -57,10 +58,10 @@ const LUNDI_A: SeanceDuMois = {
   tour: ['trap-bar-deadlift', 'leg-press'],
 };
 
-/** Un jeudi à huit exercices (la graine 1) : le swing seul, la planche de
- *  Copenhague avec le ventre, les deux machines des cuisses chacune avec un
- *  tirage léger, le traîneau seul. Une machine, un seul siège : chacun son
- *  tour. */
+/** Un jeudi à huit exercices : le swing seul, la planche de Copenhague avec
+ *  le ventre, les deux machines des cuisses chacune avec un tirage léger, les
+ *  mollets assis seuls (le traîneau est passé à la finale). Une machine, un
+ *  seul siège : chacun son tour. */
 const JEUDI_A: SeanceDuMois = {
   id: 'jeudi-a',
   nom: 'Jeudi A — les jambes',
@@ -78,18 +79,22 @@ const JEUDI_A: SeanceDuMois = {
     'leg-curl-machine',
     'kb-single-arm-row',
   ],
-  finale: 'traineau',
+  finale: 'seated-calf-raise',
   liens: [
     ['copenhagen-plank', 'kb-half-turkish-get-up'],
     ['leg-extension-machine', 'reverse-fly'],
     ['leg-curl-machine', 'kb-single-arm-row'],
   ],
-  tour: ['leg-extension-machine', 'leg-curl-machine', 'traineau'],
+  tour: ['leg-extension-machine', 'leg-curl-machine', 'seated-calf-raise'],
 };
 
-const SEB: ContexteSeance = { personne: 'sebastien', aDeux: true, unTelephone: true };
-const MAX: ContexteSeance = { personne: 'max', aDeux: true, unTelephone: true };
-const SEUL: ContexteSeance = { personne: 'sebastien', unTelephone: true };
+/** Big Max a coché les pecs, les épaules, les biceps et les triceps (son
+ *  ancien défaut) : une série de plus à ces exercices — ces tests suivent sa
+ *  quatrième série. */
+const FAIBLES: ContexteSeance['pointsFaibles'] = { sebastien: [], max: [...ANCIENS_POINTS_FAIBLES_DE_BIG_MAX] };
+const SEB: ContexteSeance = { personne: 'sebastien', aDeux: true, unTelephone: true, pointsFaibles: FAIBLES };
+const MAX: ContexteSeance = { personne: 'max', aDeux: true, unTelephone: true, pointsFaibles: FAIBLES };
+const SEUL: ContexteSeance = { personne: 'sebastien', unTelephone: true, pointsFaibles: FAIBLES };
 
 const seanceDe = (contexte: ContexteSeance, seanceMois = LUNDI_A) => seancePourPersonne(seanceMois, PARAMETRES, contexte, LUNDI);
 const etapesDe = (contexte: ContexteSeance, seanceMois = LUNDI_A) => construireEtapes(seanceDe(contexte, seanceMois));
@@ -309,9 +314,14 @@ describe('un seul téléphone : la séance guidée', () => {
     for (const pause of repos) expect(etapes[etapes.indexOf(pause) - 1]).toMatchObject({ type: 'exercice', groupe: pause.groupe });
     // Elle annonce l'exercice d'après : après la trap bar, le Superman.
     expect(repos[0].suivant).toMatchObject({ type: 'serie', exerciceId: 'superman', serie: 1 });
-    // Après la presse, la dernière : les étirements, sans pause.
+    // Après la presse, la dernière : la finale, sans pause — on s'installe,
+    // puis dix minutes au chrono —, puis les étirements.
     const derniere = etapes.map((e) => e.type).lastIndexOf('exercice');
-    expect(etapes[derniere + 1].type).toBe('retourCalme');
+    expect(etapes.slice(derniere + 1, derniere + 4).map((e) => [e.type, e.dureeSec])).toEqual([
+      ['finale', 60],
+      ['finale', 600],
+      ['retourCalme', 325],
+    ]);
   });
 
   it('seul, sans l’autre : un exercice à la fois aussi — la pause entre deux séries d’un toucher, comptée dans la durée', () => {
@@ -343,9 +353,10 @@ describe('un seul téléphone : la séance guidée', () => {
         const [seb, max] = [seanceDe(SEB, s), seanceDe(MAX, s)];
         expect(seb.dureeEstimeeSec).toBe(dureeTotaleSec(construireEtapes(seb)));
         expect(max.dureeEstimeeSec).toBe(seb.dureeEstimeeSec);
-        // Une heure environ, à deux.
-        expect(seb.dureeEstimeeSec / 60, `${graine} · ${s.id}`).toBeGreaterThan(45);
-        expect(seb.dureeEstimeeSec / 60, `${graine} · ${s.id}`).toBeLessThan(80);
+        // Une heure dix environ, à deux, avec la finale — un peu plus ici,
+        // avec les séries de plus de Big Max.
+        expect(seb.dureeEstimeeSec / 60, `${graine} · ${s.id}`).toBeGreaterThan(55);
+        expect(seb.dureeEstimeeSec / 60, `${graine} · ${s.id}`).toBeLessThan(90);
       }
     }
   });
@@ -510,10 +521,14 @@ describe('un seul téléphone : un seul appui par exercice', () => {
       // Les seuls appuis qui comptent : un par exercice ou par paire.
       const appuis = etapes.flatMap((e, i) => (e.type === 'exercice' ? [i] : []));
       expect(appuis).toHaveLength(5);
-      const realisee = agregerRealisation(seance, etapes, etapes.map(() => 60), {}, 3600, true, { faites: appuis, poidsAutre: {} });
+      // Les dix minutes de la finale, faites jusqu'au bout.
+      const temps = etapes.map((e) => (e.type === 'finale' && e.chrono ? e.dureeSec : 60));
+      const realisee = agregerRealisation(seance, etapes, temps, {}, 3600, true, { faites: appuis, poidsAutre: {} });
       for (const exo of realisee.exercices) expect(exo.seriesFaites, `${s.id} · ${exo.exerciceId}`).toBe(exo.seriesPrevues);
       for (const exo of realisee.partenaire?.exercices ?? []) expect(exo.seriesFaites, `${s.id} · Big Max · ${exo.exerciceId}`).toBe(exo.seriesPrevues);
-      expect(realisee.partenaire?.exercices).toHaveLength(8);
+      // Les huit exercices, et la finale du jour.
+      expect(realisee.partenaire?.exercices).toHaveLength(9);
+      expect(realisee.exercices.at(-1)).toMatchObject({ exerciceId: seance.finaleChrono?.exerciceId, seriesPrevues: 1, seriesFaites: 1, dureeSec: 600 });
       // Le temps de chaque étape d'exercice va à ses exercices, pour les deux.
       expect(realisee.exercices.every((exo) => exo.dureeSec > 0)).toBe(true);
       // Un exercice passé (sans « Exercice terminé ») ne compte pas.

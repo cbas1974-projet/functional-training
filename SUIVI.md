@@ -19,6 +19,51 @@ Claude, de son côté :
 4. Résume en quelques lignes simples ce qui attend, propose par quoi
    commencer, et attend le feu vert de Sébastien avant les gros changements.
 
+## 13 octobre 2026 (après la séance)
+
+**Rodage cette semaine ; programme figé un mois à partir du lundi 19
+octobre.** Version **1.4.0**, programme **version 10** (même graine : les
+anciens liens s'ouvrent, recomposés ; les charges notées restent).
+
+- **La composition retenue** (8 exercices : le premier et le dernier seuls,
+  3 paires de deux zones — qui va avec qui dépend du tirage —, un tirage du
+  dos chaque jour ; puis la finale de 10 min et les étirements) :
+  - **Lundi** (chaque semaine) : trap bar seule · Superman, rowing,
+    développé épaules, fente latérale (intérieur de cuisse), planche
+    latérale (extérieur), développé incliné · presse ou hack squat seule ·
+    finale marche du fermier. ≈ 1 h 11.
+  - **Mardi A** : développé couché seul · développé épaules et rowing (du
+    lundi), un curl, chacun avec une jambe légère : mollets, pont fessier,
+    Copenhague · pompes seules · finale sac de sable. ≈ 1 h 10 à 1 h 13.
+  - **Mardi B** : pareil, un autre curl ; les mollets à la machine une
+    semaine, aux haltères l'autre.
+  - **Jeudi A** : swing seul · Copenhague, extension et flexion à la
+    machine, chacune avec le rowing (du lundi), une élévation, l'oiseau ou
+    la rotation externe · mollets seuls · finale traîneau. ≈ 1 h 12.
+  - **Jeudi B** : pareil, d'autres élévations, les autres mollets.
+- **3 séries pour les deux** : points faibles vides par défaut ; un programme
+  qui portait l'ancien défaut de Big Max tel quel repart à vide, une liste
+  changée reste. **Big Max** : jamais d'appui sur les mains ou les coudes
+  derrière soi (planche inversée, dips au sol, chameau, roue, héros couché) —
+  programme, « Changer », routine du soir, sa séance libre. **👎 « Pas
+  aimé »** à côté de « J'ai mal » ; l'accueil le dit la fois suivante,
+  « Changer ? » ou « Garder ». **L'image d'un exercice s'agrandit** en séance.
+- **Tranché par Claude** : la fente latérale le lundi (plus de vraies
+  jambes), la Copenhague le jeudi et en jambe légère le mardi ; la planche
+  latérale reste l'extérieur de cuisse ; le pont fessier, allongé, ne compte
+  plus comme chargeant le bas du dos ; les mollets finissent le jeudi ; le
+  sac de sable, nouvel exercice classique (un dessin simple, ajouté à
+  IMAGES_A_FAIRE) ; la finale : 1 min d'installation comptée, un poids
+  facultatif (la dernière fois en gris), faite à la moitié du temps, 30 s
+  dans l'essai, absente sur deux téléphones ; jamais de machine lourde dans
+  « Changer » le mardi et le jeudi. **À savoir** : le lundi n'est pas le
+  plus long à l'horloge (le jeudi, ses machines chacun son tour).
+- **Vérifié à 375 px** (Playwright) : un mardi à deux jusqu'à la finale
+  (10:00, Démarrer, Pause, Terminer) et aux étirements, un 👎 et son bandeau
+  au jeudi, l'image en grand, l'essai jusqu'à la fin de sa finale.
+  **Non vérifié** : le son et la vibration sur un vrai téléphone, une vraie
+  séance à la salle.
+
 ## Séance du 13 octobre 2026
 
 - **Version 1.3.0, exercice par exercice** (retour de Sébastien en pleine

@@ -45,8 +45,8 @@ Element.prototype.scrollTo = function scrollTo() {};
 const PARAMETRES: ParametresSeance = { ...PARAMETRES_PAR_DEFAUT, unitePoids: 'lb' };
 
 /** Le mardi de ce matin, sur le téléphone de Speedy : le développé couché
- *  aux haltères seul (Big Max en fait quatre séries, Speedy trois), puis le
- *  curl avec les mollets. */
+ *  aux haltères seul (Big Max en fait quatre séries, Speedy trois — les pecs
+ *  cochés pour lui, l'ancien défaut), puis le curl avec les mollets. */
 const MARDI: SeanceDuMois = {
   id: 'mardi',
   nom: 'Mardi — le haut',
@@ -58,7 +58,12 @@ const MARDI: SeanceDuMois = {
   finale: 'dumbbell-push-up',
   liens: [['alternating-curl', 'calf-raise']],
 };
-const SEANCE: Seance = seancePourPersonne(MARDI, PARAMETRES, { personne: 'sebastien', aDeux: true, unTelephone: true }, new Date(2026, 9, 13));
+const SEANCE: Seance = seancePourPersonne(
+  MARDI,
+  PARAMETRES,
+  { personne: 'sebastien', aDeux: true, unTelephone: true, pointsFaibles: { sebastien: [], max: ['pecs'] } },
+  new Date(2026, 9, 13),
+);
 
 /** Ce que l'accueil passe à la séance : les douleurs vivent au-dessus d'elle,
  *  chacun les siennes. */

@@ -2,8 +2,15 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import type { EntrainementState } from '../types';
 import { PARAMETRES_PAR_DEFAUT } from '../data/parametres';
 import { chargerEtat, enregistrerEtat } from './storage';
-import { VERSION_PROGRAMME, genererProgramme, seancePourPersonne } from './programmeMois';
+import {
+  ANCIENS_POINTS_FAIBLES_DE_BIG_MAX,
+  VERSION_PROGRAMME,
+  genererProgramme,
+  pointsFaiblesDe,
+  seancePourPersonne,
+} from './programmeMois';
 import { basculerDouleurDe, douleursDe } from './douleurs';
+import { basculerPasAimeDe, pasAimesDe } from './pasAimes';
 import { construireEtapes, construireEtapesParSerie } from './etapesSeance';
 
 const CLE = 'functional-training';
@@ -401,6 +408,50 @@ describe('« J’ai mal à cet exercice », dans la sauvegarde', () => {
   });
 });
 
+describe('👎 « Pas aimé », dans la sauvegarde', () => {
+  beforeEach(() => localStorage.clear());
+
+  it('chacun les siens, sur ce téléphone ; une sauvegarde d’avant n’en a pas ; les abîmés sont écartés', () => {
+    localStorage.setItem(CLE, JSON.stringify(ANCIENNE_SAUVEGARDE));
+    const avant = chargerEtat();
+    expect([avant.pasAimes, avant.pasAimesAutre]).toEqual([undefined, undefined]);
+    // Big Max n'a pas aimé le développé couché, Speedy le curl.
+    const quand = new Date('2026-10-13T12:00:00.000Z');
+    let etat: EntrainementState = { ...avant, personne: 'sebastien' };
+    etat = { ...etat, ...basculerPasAimeDe(etat, 'autre', 'bench-press', quand) };
+    etat = { ...etat, ...basculerPasAimeDe(etat, 'moi', 'hammer-curl', quand) };
+    enregistrerEtat(etat);
+    const relu = chargerEtat();
+    expect(pasAimesDe(relu, 'autre')).toEqual({ 'bench-press': quand.toISOString() });
+    expect(pasAimesDe(relu, 'moi')).toEqual({ 'hammer-curl': quand.toISOString() });
+    // Retiré : plus de champ.
+    expect({ ...relu, ...basculerPasAimeDe(relu, 'autre', 'bench-press') }.pasAimesAutre).toBeUndefined();
+    // Abîmés : écartés, sans toucher aux autres.
+    localStorage.setItem(CLE, JSON.stringify({ ...ANCIENNE_SAUVEGARDE, pasAimes: { curl: 3, 'hammer-curl': 'hier' }, pasAimesAutre: ['bench-press'] }));
+    expect([chargerEtat().pasAimes, chargerEtat().pasAimesAutre]).toEqual([{ 'hammer-curl': 'hier' }, undefined]);
+  });
+});
+
+describe('les points faibles d’un programme de la version 9, dans la sauvegarde', () => {
+  beforeEach(() => localStorage.clear());
+
+  it('l’ancien défaut de Big Max, tel quel, repart à vide : trois séries pour les deux ; une liste changée reste', () => {
+    const actuel = genererProgramme({ graine: 5, aujourdhui: new Date(2026, 9, 5) });
+    const ancien = (max: string[]) => ({ ...actuel, version: 9, duo: { pointsFaibles: { sebastien: [], max } } });
+    localStorage.setItem(CLE, JSON.stringify({ ...ANCIENNE_SAUVEGARDE, programme: ancien([...ANCIENS_POINTS_FAIBLES_DE_BIG_MAX]) }));
+    const etat = chargerEtat();
+    expect(etat.programme?.version).toBe(VERSION_PROGRAMME);
+    expect(etat.programme?.duo).toBeUndefined();
+    expect(pointsFaiblesDe(etat.programme!)).toEqual({ sebastien: [], max: [] });
+    expect(etat.programmeRecomposeDepuis).toBe(9);
+    // Changée à la main (les pecs seulement) : elle reste, même relue.
+    localStorage.setItem(CLE, JSON.stringify({ ...ANCIENNE_SAUVEGARDE, programme: ancien(['pecs']) }));
+    expect(pointsFaiblesDe(chargerEtat().programme!).max).toEqual(['pecs']);
+    enregistrerEtat(chargerEtat());
+    expect(pointsFaiblesDe(chargerEtat().programme!).max).toEqual(['pecs']);
+  });
+});
+
 describe('un programme d’une version plus ancienne, dans la sauvegarde', () => {
   beforeEach(() => localStorage.clear());
 
@@ -518,5 +569,11 @@ describe('un seul téléphone, dans la sauvegarde', () => {
     );
     expect(chargerEtat().enCours?.allegees).toEqual({ 'bench-press': [2] });
     expect(chargerEtat().enCours?.allegeesAutre).toBeUndefined();
+    // La finale choisie se garde, si c'en est une qu'on peut prendre.
+    const avecFinale = { ...enCours, deroule: 'par-exercice' as const, finale: 'traineau' };
+    localStorage.setItem(CLE, JSON.stringify({ ...ANCIENNE_SAUVEGARDE, enCours: avecFinale }));
+    expect(chargerEtat().enCours?.finale).toBe('traineau');
+    localStorage.setItem(CLE, JSON.stringify({ ...ANCIENNE_SAUVEGARDE, enCours: { ...avecFinale, finale: 'bench-press' } }));
+    expect(chargerEtat().enCours?.finale).toBeUndefined();
   });
 });

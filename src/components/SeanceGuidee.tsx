@@ -9,7 +9,7 @@
 // par défaut, mode clair suivant le système) et la classe `.chiffres` sur
 // tout ce qui se compte. Chaque phase a sa couleur d'ambiance, reconnaissable
 // d'un coup d'œil à bout de bras.
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import type { ChangeEvent, CSSProperties, ReactNode, Ref } from 'react';
 import type {
   BlocSeries,
@@ -68,7 +68,7 @@ import {
 } from '../utils/generateurSeance';
 import { libelleTempo } from '../utils/formatage';
 import type { Essai } from '../utils/essai';
-import { NOM_PERSONNE, autrePersonne, chargeLeBasDuDos, etirementsPauseDe } from '../utils/programmeMois';
+import { CHOIX_FINALE, NOM_FINALE, NOM_PERSONNE, autrePersonne, chargeLeBasDuDos, etirementsPauseDe } from '../utils/programmeMois';
 import {
   chargeAllegee,
   chargesDeLaSerie,
@@ -80,6 +80,7 @@ import {
 import type { ChargesSerie } from '../utils/charges';
 import { douleurDe } from '../utils/douleurs';
 import type { QuiDouleur } from '../utils/douleurs';
+import type { QuiPasAime } from '../utils/pasAimes';
 import {
   lancerPauseTour,
   phraseVisageManquant,
@@ -111,7 +112,9 @@ import type { ConfigSynchro } from '../hooks/useSeanceCommune';
 import { useVerrouEcran } from '../hooks/useVerrouEcran';
 import BoutonDouleur, { BoutonDouleurCompact, ReperDouleur } from './BoutonDouleur';
 import BoutonsRessenti, { VisagesRessenti } from './BoutonsRessenti';
+import ImageEnGrand from './ImageEnGrand';
 import PaceurTempo from './PaceurTempo';
+import { BoutonPasAime } from './PasAime';
 import type { LectureTempo } from './PaceurTempo';
 
 export interface SeanceGuideeProps {
@@ -156,6 +159,12 @@ export interface SeanceGuideeProps {
    *  `charge` : sa charge de travail du moment (100 %), 0 si on ne la connaît
    *  pas. */
   onBasculerDouleur?: (qui: QuiDouleur, exerciceId: string, charge: number, unite: UnitePoids) => void;
+  /** 👎 « Pas aimé », par exercice, pour la personne du téléphone (la date,
+   *  ISO) ; sur un seul téléphone, à deux, ceux de l'autre à part. */
+  pasAimes?: Record<string, string>;
+  pasAimesAutre?: Record<string, string>;
+  /** Dit 👎 pour l'un ou l'autre, ou le retire. Absent : pas de bouton. */
+  onBasculerPasAime?: (qui: QuiPasAime, exerciceId: string) => void;
 }
 
 // ------------------------------------------------------------- Réglages
@@ -249,16 +258,39 @@ interface VignetteProps {
   className?: string;
 }
 
+/** Toucher l'image d'un exercice pendant la séance l'agrandit, comme dans
+ *  l'aperçu de l'accueil (`ImageEnGrand`, décision de Sébastien, 13 octobre
+ *  2026) : la séance donne cette action à toutes ses vignettes. Sans elle
+ *  (la liste du programme montrée seule), une simple image. */
+const AgrandirImage = createContext<((exerciceId: string) => void) | null>(null);
+
 /** Vignette d'exercice. Les dessins sont noirs sur fond blanc : sur le thème
- *  sombre il leur faut toujours une plaque blanche, jamais le fond de l'écran. */
+ *  sombre il leur faut toujours une plaque blanche, jamais le fond de l'écran.
+ *  Dans la séance, un toucher l'agrandit. */
 function Vignette({ exerciceId, alt, className = '' }: VignetteProps) {
-  return (
+  const agrandir = useContext(AgrandirImage);
+  const image = (
     <img
       src={cheminImage(exerciceId)}
       alt={alt}
-      className={`object-contain ${className}`}
+      className={`object-contain ${agrandir ? 'block w-full' : className}`}
       style={{ background: '#ffffff', aspectRatio: '3 / 2' }}
     />
+  );
+  if (!agrandir) return image;
+  return (
+    <button
+      type="button"
+      onClick={(evenement) => {
+        evenement.stopPropagation();
+        agrandir(exerciceId);
+      }}
+      aria-label={`Voir ${exerciceDeSeance(exerciceId).nomFr} en grand`}
+      className={`block cursor-zoom-in touch-manipulation overflow-hidden p-0 ${className}`}
+      style={{ background: '#ffffff' }}
+    >
+      {image}
+    </button>
   );
 }
 
@@ -286,6 +318,11 @@ function ambianceEtape(etape: Etape): Ambiance {
     case 'echauffement':
     case 'pret':
       return { couleur: 'var(--accent)', fond: 'var(--fond)' };
+    // La finale : on s'installe, puis on travaille.
+    case 'finale':
+      return etape.chrono
+        ? { couleur: 'var(--montee)', fond: 'var(--montee-fond)' }
+        : { couleur: 'var(--accent)', fond: 'var(--fond)' };
   }
 }
 
@@ -362,6 +399,8 @@ function libellePhase(etape: Etape, mobilite: boolean): string {
       return 'Circuit';
     case 'reposTour':
       return 'Repos entre les tours';
+    case 'finale':
+      return 'Finale';
     case 'retourCalme':
       return 'Retour au calme';
     case 'fin':
@@ -412,6 +451,8 @@ function decrireEtape(etape: Etape): string {
       return `pendant le circuit (tour ${etape.tour} / ${etape.tours}, ${nom})`;
     case 'reposTour':
       return 'entre deux tours de circuit';
+    case 'finale':
+      return 'pendant la finale';
     case 'retourCalme':
       return 'pendant le retour au calme';
     case 'fin':
@@ -503,6 +544,8 @@ function ensuiteDansLaListe(seance: Seance, etapes: Etape[], etape: Etape): stri
   if (groupe === undefined) return null;
   const suivant = groupesUnTelephone(seance)[groupe + 1];
   if (suivant) return suivant.map((bloc) => exerciceDeSeance(bloc.exerciceId).nomFr).join(' + ');
+  const finale = etapes.find((e) => e.type === 'finale' && e.chrono);
+  if (finale) return `Finale · ${formaterDureeCourte(finale.dureeSec)}`;
   return etapes.some((e) => e.type === 'retourCalme') ? 'Étirements' : null;
 }
 
@@ -529,6 +572,9 @@ export default function SeanceGuidee({
   douleurs = {},
   douleursAutre = {},
   onBasculerDouleur,
+  pasAimes = {},
+  pasAimesAutre = {},
+  onBasculerPasAime,
 }: SeanceGuideeProps) {
   // La progression proposée à la reprise est figée à l'ouverture : les
   // sauvegardes que nous envoyons ensuite reviennent dans cette même prop.
@@ -569,6 +615,11 @@ export default function SeanceGuidee({
   });
   /** La question en cours (quitter, passer l'exercice…), dans l'application. */
   const [dialogue, setDialogue] = useState<DialogueOuvert | null>(null);
+  /** La finale choisie au moment de la finale ; null : celle du jour. */
+  const [finaleChoisie, setFinaleChoisie] = useState<string | null>(null);
+  /** L'exercice dont l'image est ouverte en grand. */
+  const [enGrand, setEnGrand] = useState<string | null>(null);
+  const fermerImage = useCallback(() => setEnGrand(null), []);
 
   const etapes = useMemo(() => construireEtapes(seanceActive), [seanceActive]);
   const dureeTotale = useMemo(() => dureeTotaleSec(etapes), [etapes]);
@@ -741,8 +792,13 @@ export default function SeanceGuidee({
       bellSound.unlock();
       const destination = etapes[Math.max(0, Math.min(cible, etapes.length - 1))];
       // Un exercice d'un seul téléphone ne sonne pas : on vient de toucher
-      // l'écran, ou la fin de la pause a déjà sonné.
-      if ((destination.type === 'serie' && !destination.manuelle) || destination.type === 'station') {
+      // l'écran, ou la fin de la pause a déjà sonné. Le départ de la finale,
+      // si.
+      if (
+        (destination.type === 'serie' && !destination.manuelle) ||
+        destination.type === 'station' ||
+        (destination.type === 'finale' && destination.chrono)
+      ) {
         bellSound.playBell('start');
       }
       allerA(cible, now);
@@ -762,7 +818,7 @@ export default function SeanceGuidee({
 
     // Trois derniers bips d'une préparation ou d'un repos. La prolongation
     // fait partie de la clé : après « +15 s », les bips doivent rejouer.
-    if (etape.type === 'pret' || etape.type === 'repos' || etape.type === 'reposTour') {
+    if (etape.type === 'pret' || etape.type === 'repos' || etape.type === 'reposTour' || (etape.type === 'finale' && etape.chrono)) {
       const secondes = Math.ceil(reste);
       if (secondes >= 1 && secondes <= 3) {
         const cle = `${prefixe}${prolongation}:${secondes}`;
@@ -844,8 +900,9 @@ export default function SeanceGuidee({
     // séance attend « Go », ou une pause qu'on lance d'un clic.
     const attendGo = etape.type === 'repos' && etape.manuel === true;
     // Sur un seul téléphone, un exercice se finit sur « Exercice terminé »,
-    // jamais au bout du temps.
-    const attendFin = etape.type === 'exercice' || (etape.type === 'serie' && etape.manuelle === true);
+    // jamais au bout du temps ; la finale attend « Démarrer ».
+    const attendFin =
+      etape.type === 'exercice' || (etape.type === 'serie' && etape.manuelle === true) || (etape.type === 'finale' && !etape.chrono);
     // À deux, l'étape suit l'horloge commune d'elle-même.
     if (!enCommun && ecoule >= dureeEff && ev.avance !== visite && !attendGo && !attendFin) {
       ev.avance = visite;
@@ -854,6 +911,12 @@ export default function SeanceGuidee({
       // vibre — on l'entend, ou on le sent dans la poche.
       if (etape.type === 'repos' && etape.motif === 'pause') {
         bellSound.playBell('start');
+        vibrer();
+      }
+      // La fin des dix minutes de la finale : la cloche de fin et la
+      // vibration, puis les étirements.
+      if (etape.type === 'finale' && etape.chrono) {
+        bellSound.playBell('end');
         vibrer();
       }
       const finPrevueMs = etat.debutEtapeMs + dureeEff * 1000;
@@ -908,8 +971,8 @@ export default function SeanceGuidee({
   /** Ce qui a été saisi depuis la dernière sauvegarde : un changement la
    *  déclenche. */
   const saisiesActuelles = useMemo(
-    () => ({ poids, ressentis, poidsAutre, ressentisAutre, faites, allegees, allegeesAutre }),
-    [poids, ressentis, poidsAutre, ressentisAutre, faites, allegees, allegeesAutre],
+    () => ({ poids, ressentis, poidsAutre, ressentisAutre, faites, allegees, allegeesAutre, finaleChoisie }),
+    [poids, ressentis, poidsAutre, ressentisAutre, faites, allegees, allegeesAutre, finaleChoisie],
   );
   const sauvegardeRef = useRef<{
     visite: number;
@@ -939,6 +1002,7 @@ export default function SeanceGuidee({
           deroule: 'par-exercice' as const,
         }
       : {}),
+    ...(finaleChoisie ? { finale: finaleChoisie } : {}),
     demarreeLe: debut,
     sauvegardeeLe: new Date(quand).toISOString(),
   });
@@ -968,7 +1032,7 @@ export default function SeanceGuidee({
     poidsInitial: Record<string, number[]>,
     debut: string,
     ressentisInitiaux: Record<string, Ressenti> = {},
-    reprise: Pick<ProgressionSeance, 'poidsAutre' | 'ressentisAutre' | 'faites' | 'allegees' | 'allegeesAutre'> = {},
+    reprise: Pick<ProgressionSeance, 'poidsAutre' | 'ressentisAutre' | 'faites' | 'allegees' | 'allegeesAutre' | 'finale'> = {},
   ) => {
     // Geste utilisateur : on en profite pour débloquer l'audio et l'écran.
     bellSound.unlock();
@@ -982,6 +1046,7 @@ export default function SeanceGuidee({
     setFaites(reprise.faites ?? []);
     setAllegees(reprise.allegees ?? {});
     setAllegeesAutre(reprise.allegeesAutre ?? {});
+    setFinaleChoisie(reprise.finale ?? null);
     setDemarreeLe(debut);
     // À deux : on commence la séance commune, ou on la rejoint.
     if (enCommun) commune.envoyer({ type: 'commencer' });
@@ -1011,6 +1076,7 @@ export default function SeanceGuidee({
         faites: sauvee.faites,
         allegees: sauvee.allegees,
         allegeesAutre: sauvee.allegeesAutre,
+        finale: sauvee.finale,
       },
     );
   };
@@ -1121,6 +1187,10 @@ export default function SeanceGuidee({
       demanderPasserExercice();
       return;
     }
+    if (etape.type === 'finale') {
+      demanderPasserFinale();
+      return;
+    }
     if (etape.type !== 'serie' && etape.type !== 'station') {
       suivant();
       return;
@@ -1142,6 +1212,16 @@ export default function SeanceGuidee({
       texte: etape.type === 'exercice' ? 'Ses séries ne compteront pas.' : 'Les séries qui restent ne seront pas faites.',
       oui: paire ? 'Passer la paire' : 'Passer l’exercice',
       action: passerExercice,
+    });
+  };
+  /** « Passer la finale » : tout droit aux étirements ; on demande. */
+  const demanderPasserFinale = () => {
+    const apres = etapes.findIndex((e, i) => i > index && e.type !== 'finale');
+    confirmer({
+      titre: 'Passer la finale ?',
+      texte: 'Les étirements suivent.',
+      oui: 'Passer la finale',
+      action: () => naviguer(apres < 0 ? etapes.length - 1 : apres),
     });
   };
   const prolongerRepos = () =>
@@ -1376,7 +1456,10 @@ export default function SeanceGuidee({
         poids,
         tempsTotalEcoule,
         terminee,
-        unTelephone ? { faites, poidsAutre } : {},
+        {
+          ...(unTelephone ? { faites, poidsAutre } : {}),
+          ...(finaleChoisie ? { finale: finaleChoisie } : {}),
+        },
       ),
       ressentis,
       ressentisAutre,
@@ -1636,6 +1719,28 @@ export default function SeanceGuidee({
       );
       break;
     }
+    case 'finale': {
+      // La finale du jour, ou celle qu'on a choisie : son poids, facultatif,
+      // se note en série 1, pour chacun.
+      const choisie = finaleChoisie ?? etape.proposee;
+      const chrono = etapes.find((e) => e.type === 'finale' && e.chrono === true);
+      const derniere = (charges: number[] | undefined) =>
+        (charges ?? []).reduce((plus, charge) => (charge > 0 ? charge : plus), 0);
+      corps = (
+        <CorpsFinale
+          chrono={etape.chrono === true}
+          resteSec={etape.chrono ? reste : (chrono?.dureeSec ?? etape.dureeSec)}
+          choisie={choisie}
+          onChoisir={(id) => setFinaleChoisie(id === etape.proposee ? null : id)}
+          colonnes={colonnes}
+          unitePoids={unitePoids}
+          poidsDe={(qui) => (qui === 'moi' ? poids : poidsAutre)[choisie]?.[0] ?? 0}
+          derniereFois={(qui) => derniere((qui === 'moi' ? chargesPassees : chargesPasseesAutre)[choisie])}
+          onPoids={(qui, charge) => changerCharge(qui, choisie, 1, charge)}
+        />
+      );
+      break;
+    }
     case 'fin':
       corps = (
         <CorpsFin
@@ -1686,6 +1791,10 @@ export default function SeanceGuidee({
         ressentiDe={ressentiDe}
         douleur={douleurDeColonne}
         onBasculerDouleur={onBasculerDouleur ? basculerDouleurDe : undefined}
+        pasAime={(qui, exerciceId) =>
+          Object.prototype.hasOwnProperty.call(qui === 'moi' ? pasAimes : pasAimesAutre, exerciceId)
+        }
+        onBasculerPasAime={onBasculerPasAime}
         onCharge={changerCharge}
         onRessenti={choisirRessentiDe}
         guide={serieGuidee && guide ? { exerciceId: serieGuidee.exerciceId, noeud: guide } : null}
@@ -1746,6 +1855,19 @@ export default function SeanceGuidee({
             </Bouton>
           </>
         );
+      break;
+    case 'finale':
+      // On s'installe, puis « Démarrer » ; pendant le décompte, « Pause »
+      // à côté, et « Terminer » pour finir plus tôt.
+      actions = etape.chrono ? (
+        <Bouton variante="accent" taille="vedette" onClick={suivant} className="flex-[1.6]">
+          Terminer
+        </Bouton>
+      ) : (
+        <Bouton variante="montee" taille="vedette" onClick={suivant} className="flex-[2]">
+          Démarrer
+        </Bouton>
+      );
       break;
     case 'retourCalme':
       actions = (
@@ -1836,6 +1958,7 @@ export default function SeanceGuidee({
   const ensuite = enListe ? ensuiteDansLaListe(seanceActive, etapes, etape) : null;
 
   return (
+    <AgrandirImage.Provider value={setEnGrand}>
     <div
       className="fixed inset-0 z-50 flex flex-col transition-colors duration-500"
       // La hauteur visible, barre du navigateur ôtée : la barre d'actions
@@ -1845,7 +1968,13 @@ export default function SeanceGuidee({
       <EnTete
         phase={libellePhase(etape, mobilite)}
         position={libellePosition(etapes, index, ordreExercices)}
-        exercice={etape.exerciceId ? exerciceDeSeance(etape.exerciceId).nomFr : undefined}
+        exercice={
+          etape.type === 'finale'
+            ? exerciceDeSeance(finaleChoisie ?? etape.proposee).nomFr
+            : etape.exerciceId
+              ? exerciceDeSeance(etape.exerciceId).nomFr
+              : undefined
+        }
         couleur={ambiance.couleur}
         avancement={
           dureeTotale <= 0 ? 0 : enCommun ? 1 - tempsRestant / dureeTotale : tempsTotalEcoule / dureeTotale
@@ -1910,14 +2039,19 @@ export default function SeanceGuidee({
           )}
           <div className="mx-auto flex max-w-md gap-2">
             {/* Sur un seul téléphone, la liste n'a pas de chrono à arrêter —
-                sauf pour reprendre une pause demandée plus tôt. */}
-            {(!enListe || enPause) && boutonPause}
+                sauf pour reprendre une pause demandée plus tôt. Avant la
+                finale non plus : son chrono part sur « Démarrer ». */}
+            {(!enListe || enPause) && !(etape.type === 'finale' && !etape.chrono && !enPause) && boutonPause}
             {actions}
           </div>
         </footer>
       )}
       {dialogue && <Dialogue dialogue={dialogue} onFermer={fermerDialogue} />}
+      {/* Une image touchée : en grand, avec ses consignes ; la séance continue
+          derrière. */}
+      {enGrand && <ImageEnGrand exercice={exerciceDeSeance(enGrand)} onFermer={fermerImage} />}
     </div>
+    </AgrandirImage.Provider>
   );
 }
 
@@ -3032,6 +3166,104 @@ function CorpsRepos({ etape, resteSec, partenaire, charge, etirement, ressenti }
   );
 }
 
+interface CorpsFinaleProps {
+  /** Le décompte est lancé ; sinon, on s'installe et on choisit. */
+  chrono: boolean;
+  /** Ce qu'il reste ; tout le temps de la finale tant qu'on s'installe. */
+  resteSec: number;
+  /** La finale choisie : celle du jour, ou une autre. */
+  choisie: string;
+  onChoisir: (exerciceId: string) => void;
+  /** Une colonne chacun : le poids de chacun, facultatif. */
+  colonnes: ColonneDuo[];
+  unitePoids: UnitePoids;
+  /** Le poids noté pour une colonne ; 0 : rien. */
+  poidsDe: (qui: QuiColonne) => number;
+  /** Celui de la dernière fois, en indice ; 0 : aucun. */
+  derniereFois: (qui: QuiColonne) => number;
+  onPoids: (qui: QuiColonne, charge: number | null) => void;
+}
+
+/** La finale : un gros décompte, lisible de loin — dix minutes, au repos tant
+ *  qu'on n'a pas touché « Démarrer » —, le choix du traîneau, de la marche du
+ *  fermier ou du sac de sable, et le poids de chacun, si on veut. Pas de
+ *  visage, pas de montée de charge. */
+function CorpsFinale({ chrono, resteSec, choisie, onChoisir, colonnes, unitePoids, poidsDe, derniereFois, onPoids }: CorpsFinaleProps) {
+  const exercice = exerciceDeSeance(choisie);
+  const [consigne] = consignesDe(exercice);
+  const dernieres = colonnes
+    .filter((colonne) => derniereFois(colonne.qui) > 0)
+    .map((colonne) => `${colonnes.length > 1 ? `${nomColonne(colonne)} ` : ''}${derniereFois(colonne.qui)}`);
+  return (
+    <div className="space-y-4 text-center">
+      <div className="text-xs font-bold uppercase tracking-[0.18em]" style={{ color: chrono ? 'var(--montee)' : 'var(--accent)' }}>
+        {chrono ? 'Dix minutes pour se vider' : 'On s’installe, puis « Démarrer »'}
+      </div>
+      {/* Le gros décompte : on le lit de loin, le sac sur l'épaule. */}
+      <div
+        className="chiffres font-bold leading-none"
+        style={{ ...ARCHIVO, fontSize: 'min(30vw, 9rem)', color: chrono ? couleurCompte(resteSec, 'var(--texte)') : 'var(--texte)' }}
+      >
+        {formaterMmSs(Math.ceil(resteSec))}
+      </div>
+      <div role="group" aria-label="La finale" className="grid grid-cols-3 gap-2">
+        {CHOIX_FINALE.map((id) => (
+          <button
+            key={id}
+            type="button"
+            aria-pressed={id === choisie}
+            onClick={() => onChoisir(id)}
+            className={`${BOUTON_COMMUN} min-h-12 rounded-xl px-1 text-sm`}
+            style={id === choisie ? STYLES_BOUTON.accent : STYLES_BOUTON.neutre}
+          >
+            {NOM_FINALE[id] ?? exerciceDeSeance(id).nomFr}
+          </button>
+        ))}
+      </div>
+      <div className="flex items-center gap-3 rounded-2xl p-3 text-left" style={{ background: 'var(--surface)' }}>
+        <Vignette exerciceId={exercice.id} alt={exercice.nomFr} className="w-28 shrink-0 rounded-xl" />
+        <div className="min-w-0">
+          <div className="font-bold leading-tight">{exercice.nomFr}</div>
+          {consigne && (
+            <p className="text-sm" style={{ color: 'var(--texte-discret)' }}>
+              {consigne}
+            </p>
+          )}
+        </div>
+      </div>
+      {seCharge(exercice) && (
+        <div className="space-y-2 rounded-2xl p-3 text-left" style={{ background: 'var(--surface)' }}>
+          <div className="text-xs font-bold uppercase tracking-[0.14em]" style={{ color: 'var(--texte-discret)' }}>
+            Poids ({SUFFIXE_UNITE[unitePoids]}), si vous voulez
+          </div>
+          <div className="grid gap-2" style={{ gridTemplateColumns: `repeat(${colonnes.length}, minmax(0, 1fr))` }}>
+            {colonnes.map((colonne) => (
+              <div key={colonne.qui} className="space-y-1">
+                {colonnes.length > 1 && <div className="truncate text-center text-xs font-bold">{nomColonne(colonne)}</div>}
+                <CaseCharge
+                  valeur={poidsDe(colonne.qui)}
+                  proposee={0}
+                  indice={derniereFois(colonne.qui) > 0 ? String(derniereFois(colonne.qui)) : undefined}
+                  unitePoids={unitePoids}
+                  choisie={false}
+                  libelle={`Poids de la finale, ${nomColonne(colonne)} (${SUFFIXE_UNITE[unitePoids]})`}
+                  onChoisir={() => {}}
+                  onCharge={(charge) => onPoids(colonne.qui, charge)}
+                />
+              </div>
+            ))}
+          </div>
+          {dernieres.length > 0 && (
+            <p className="chiffres text-xs" style={{ color: 'var(--texte-discret)' }}>
+              La dernière fois : {dernieres.join(' · ')} {SUFFIXE_UNITE[unitePoids]}
+            </p>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 interface CorpsFinProps {
   realisee: SeanceRealisee;
   chargeDerniereFois?: number;
@@ -3260,6 +3492,10 @@ export interface ListeProgrammeProps {
   douleur: (qui: QuiColonne, exerciceId: string) => boolean;
   /** Absent : on ne peut pas le signaler d'ici. */
   onBasculerDouleur?: (qui: QuiColonne, exerciceId: string) => void;
+  /** 👎 « Pas aimé », pour l'une ou l'autre colonne ; absent : rien. */
+  pasAime?: (qui: QuiColonne, exerciceId: string) => boolean;
+  /** Absent : pas de bouton 👎. */
+  onBasculerPasAime?: (qui: QuiColonne, exerciceId: string) => void;
   /** Note la charge d'une série ; `allegee` : à 70 % d'un toucher. */
   onCharge: (qui: QuiColonne, exerciceId: string, serie: number, charge: number | null, allegee?: boolean) => void;
   onRessenti: (qui: QuiColonne, exerciceId: string, ressenti: Ressenti) => void;
@@ -3305,6 +3541,9 @@ export function ListeProgramme(props: ListeProgrammeProps) {
 
   const echauffement = etapes.findIndex((e) => e.type === 'echauffement');
   const retourCalme = etapes.findIndex((e) => e.type === 'retourCalme');
+  // La finale : son installation, puis son décompte.
+  const finale = etapes.findIndex((e) => e.type === 'finale');
+  const chrono = etapes.findIndex((e) => e.type === 'finale' && e.chrono === true);
   const statut = (debut: number, fin: number): StatutLigne =>
     index > fin ? 'fait' : index < debut ? 'a-venir' : 'en-cours';
   // Les paires sont numérotées ; un exercice seul ne l'est pas.
@@ -3339,8 +3578,15 @@ export function ListeProgramme(props: ListeProgrammeProps) {
           />
         );
       })}
+      {finale >= 0 && chrono >= 0 && (
+        <LigneEtape
+          nom={`Finale · ${formaterDureeCourte(etapes[chrono].dureeSec)}`}
+          statut={statut(finale, chrono)}
+          ensuite={ensuite === groupes.length}
+        />
+      )}
       {retourCalme >= 0 && (
-        <LigneEtape nom="Étirements" statut={statut(retourCalme, retourCalme)} ensuite={ensuite === groupes.length} />
+        <LigneEtape nom="Étirements" statut={statut(retourCalme, retourCalme)} ensuite={finale < 0 && ensuite === groupes.length} />
       )}
     </ol>
   );
@@ -3477,10 +3723,11 @@ function CarteGroupe({ ref, ...props }: CarteGroupeProps) {
       ? `Chacun son tour : ${quiCommence} commence${entreLesTours ? '' : ', sans pause entre les tours'}`
       : 'Toutes tes séries';
   const pause = groupe[groupe.length - 1].reposSec;
+  const avecFinale = etapes.some((e) => e.type === 'finale');
   const consigne = [
     entreLesTours && pause > 0 ? 'Entre les tours : « Pause », en bas, quand vous voulez' : null,
     dernier
-      ? 'Pas de pause à la fin : les étirements suivent'
+      ? `Pas de pause à la fin : ${avecFinale ? 'la finale suit' : 'les étirements suivent'}`
       : `À la fin : ${dureePause(pause)} de pause, lancée par « ${paire ? 'Paire terminée' : 'Exercice terminé'} »`,
   ]
     .filter(Boolean)
@@ -3526,6 +3773,8 @@ function BlocDuProgramme({
   ressentiDe,
   douleur,
   onBasculerDouleur,
+  pasAime,
+  onBasculerPasAime,
   onCharge,
   onRessenti,
   guide,
@@ -3592,6 +3841,8 @@ function BlocDuProgramme({
         onRessenti={onRessenti}
         douleur={douleur}
         onBasculerDouleur={posture ? undefined : onBasculerDouleur}
+        pasAime={pasAime}
+        onBasculerPasAime={posture ? undefined : onBasculerPasAime}
         manquants={manquants}
         cellule={cellule}
         onCellule={onCellule}
@@ -3633,12 +3884,24 @@ function TableauSeries({
   onRessenti,
   douleur,
   onBasculerDouleur,
+  pasAime,
+  onBasculerPasAime,
   manquants,
   cellule,
   onCellule,
 }: Pick<
   ListeProgrammeProps,
-  'colonnes' | 'unitePoids' | 'saisies' | 'charges' | 'onCharge' | 'ressentiDe' | 'onRessenti' | 'douleur' | 'onBasculerDouleur'
+  | 'colonnes'
+  | 'unitePoids'
+  | 'saisies'
+  | 'charges'
+  | 'onCharge'
+  | 'ressentiDe'
+  | 'onRessenti'
+  | 'douleur'
+  | 'onBasculerDouleur'
+  | 'pasAime'
+  | 'onBasculerPasAime'
 > & {
   bloc: BlocSeries;
   exercice: Exercice;
@@ -3671,18 +3934,32 @@ function TableauSeries({
           ))}
         </div>
       ) : null}
-      {/* « J'ai mal » : un par personne, la douleur de l'un ne touche pas l'autre. */}
-      {onBasculerDouleur && (
+      {/* « J'ai mal » : un par personne, la douleur de l'un ne touche pas
+          l'autre ; à côté, 👎 « Pas aimé », facultatif — l'accueil le
+          rappellera la fois suivante. */}
+      {(onBasculerDouleur || onBasculerPasAime) && (
         <div className="grid items-center gap-2" style={grille}>
           <span />
           {colonnes.map((colonne) => (
-            <BoutonDouleurCompact
-              key={colonne.qui}
-              actif={douleur(colonne.qui, exercice.id)}
-              avecCharge={avecCharge}
-              nom={nomColonne(colonne)}
-              onBasculer={() => onBasculerDouleur(colonne.qui, exercice.id)}
-            />
+            <div key={colonne.qui} className="flex min-w-0 items-center gap-1">
+              {onBasculerDouleur && (
+                <div className="min-w-0 flex-1">
+                  <BoutonDouleurCompact
+                    actif={douleur(colonne.qui, exercice.id)}
+                    avecCharge={avecCharge}
+                    nom={nomColonne(colonne)}
+                    onBasculer={() => onBasculerDouleur(colonne.qui, exercice.id)}
+                  />
+                </div>
+              )}
+              {onBasculerPasAime && (
+                <BoutonPasAime
+                  actif={pasAime?.(colonne.qui, exercice.id) ?? false}
+                  nom={nomColonne(colonne)}
+                  onBasculer={() => onBasculerPasAime(colonne.qui, exercice.id)}
+                />
+              )}
+            </div>
           ))}
         </div>
       )}
@@ -3809,6 +4086,7 @@ function chargeTapee(texte: string): number {
 function CaseCharge({
   valeur,
   proposee,
+  indice,
   unitePoids,
   choisie,
   libelle,
@@ -3820,6 +4098,9 @@ function CaseCharge({
   /** Celle qu'on propose tant qu'on n'a rien noté ; 0 pour un exercice fini :
    *  la case dit alors ce qui est enregistré. */
   proposee: number;
+  /** En gris, tant que rien n'est noté ni proposé : la finale y montre le
+   *  poids de la dernière fois, sans le noter. */
+  indice?: string;
   unitePoids: UnitePoids;
   /** La case touchée en dernier : ses raccourcis sont dessous. */
   choisie: boolean;
@@ -3837,7 +4118,7 @@ function CaseCharge({
       inputMode="decimal"
       min="0"
       step={unitePoids === 'lb' ? '1' : '0.5'}
-      placeholder="—"
+      placeholder={indice ?? '—'}
       aria-label={libelle}
       value={affiche}
       onFocus={(evenement) => {

@@ -107,9 +107,9 @@ describe('consignes de précaution', () => {
       const texte = COMPOSANTS[`../components/${nom}.tsx`];
       expect(texte, nom).toContain('consignesDe(');
     }
-    // La séance guidée : la préparation, la série, et la liste du programme
-    // sur un seul téléphone.
-    expect(COMPOSANTS['../components/SeanceGuidee.tsx'].match(/consignesDe\(/g)).toHaveLength(3);
+    // La séance guidée : la préparation, la série, la liste du programme sur
+    // un seul téléphone, et la finale.
+    expect(COMPOSANTS['../components/SeanceGuidee.tsx'].match(/consignesDe\(/g)).toHaveLength(4);
   });
 });
 
@@ -224,11 +224,11 @@ describe('où se tient l’arrêt du tempo', () => {
 });
 
 describe('machines de la salle', () => {
-  it('compte sept machines, chacune avec son dessin', () => {
+  it('compte sept machines et le sac de sable de la finale, chacun avec son dessin', () => {
     const machines = EXERCICES.filter((e) => e.materiel === 'salle').map((e) => e.id);
     expect(machines).toEqual([
       'trap-bar-deadlift', 'leg-press', 'hack-squat', 'traineau', 'leg-extension-machine', 'leg-curl-machine',
-      'seated-calf-raise',
+      'seated-calf-raise', 'sandbag-carry',
     ]);
     for (const id of machines) expect(FICHIERS.has(`${id}.png`), id).toBe(true);
   });

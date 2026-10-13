@@ -1112,8 +1112,10 @@ function taillesRotation(parametres: ParametresSeance): number[] {
   return parametres.tailleRotation ? [parametres.tailleRotation] : TAILLES_ROTATION_AUTO;
 }
 
-/** Génère une séance complète qui tient dans la durée demandée. */
-export function genererSeance(parametres: ParametresSeance, graine?: number): Seance {
+/** Génère une séance complète qui tient dans la durée demandée. `aEviter` :
+ *  ce que la personne du téléphone ne fait pas — Big Max, rien en appui sur
+ *  les mains derrière soi (`aEviterPar`, 13 octobre 2026). */
+export function genererSeance(parametres: ParametresSeance, graine?: number, aEviter: readonly string[] = []): Seance {
   const graineUtilisee = (graine ?? Date.now()) >>> 0;
   const alea = creerAleatoire(graineUtilisee);
   const reglages = reglagesEffectifs(parametres);
@@ -1123,7 +1125,7 @@ export function genererSeance(parametres: ParametresSeance, graine?: number): Se
     : echauffementSec(parametres.dureeMinutes);
   const retourCalme = retourCalmeSec(parametres.dureeMinutes);
   const budget = Math.max(0, parametres.dureeMinutes * 60 - echauffement - retourCalme);
-  const candidats = exercicesDisponibles(parametres);
+  const candidats = exercicesDisponibles(parametres).filter((exercice) => !aEviter.includes(exercice.id));
   const cycle = cycleZones(parametres);
 
   let blocs: BlocSeries[] = [];
@@ -1228,8 +1230,9 @@ function adapterReps(
   return remplacant.unite === 'secondes' ? reglages.tenueSec : (reglages.repsPreferees ?? reglages.reps[0]);
 }
 
-/** Remplace un exercice (bloc ou station) par un autre de la même zone. */
-export function remplacerExercice(seance: Seance, exerciceId: string, graine?: number): Seance {
+/** Remplace un exercice (bloc ou station) par un autre de la même zone —
+ *  jamais un de ceux que la personne évite (`aEviter`). */
+export function remplacerExercice(seance: Seance, exerciceId: string, graine?: number, aEviter: readonly string[] = []): Seance {
   const actuel = EXERCICES_PAR_ID[exerciceId];
   if (!actuel) return seance;
 
@@ -1243,7 +1246,7 @@ export function remplacerExercice(seance: Seance, exerciceId: string, graine?: n
   // ce qui garde la séance équilibrée, quel que soit le matériel utilisé. À
   // défaut, on retombe sur la même zone.
   const libres = exercicesDisponibles(seance.parametres).filter(
-    (exercice) => !utilises.has(exercice.id),
+    (exercice) => !utilises.has(exercice.id) && !aEviter.includes(exercice.id),
   );
   const alternatives = premierNonVide(
     libres.filter((e) => e.pattern === actuel.pattern && e.zone === actuel.zone),

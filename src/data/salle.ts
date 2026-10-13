@@ -4,10 +4,10 @@
 //
 // Une seule machine pour deux : ces exercices se font chacun son tour. Les
 // machines des cuisses (extension et flexion des jambes) ne vont plus
-// ensemble : chacune a son partenaire, du ventre ou un tirage léger, le
-// jeudi. La machine à mollets assis (13 octobre 2026) remplace au programme
-// le mollet sur une jambe au kettlebell : les deux jambes ensemble, plus
-// simple et plus rapide.
+// ensemble : chacune a son partenaire, le dos ou les épaules, le jeudi. La
+// machine à mollets assis (13 octobre 2026) remplace au programme le mollet
+// sur une jambe au kettlebell : les deux jambes ensemble, plus simple et plus
+// rapide. Le traîneau et le sac de sable servent à la finale de dix minutes.
 
 import type { Exercice } from '../types';
 
@@ -188,5 +188,31 @@ export const EXERCICES_SALLE: Exercice[] = [
       'Les deux jambes ensemble : plus simple et plus rapide qu’une jambe à la fois.',
     ],
     interetJjb: 'Des chevilles et des tendons d’Achille solides pour les appuis et les relevés.',
+  },
+  // Le sac de sable de la salle (13 octobre 2026) : une des trois finales de
+  // dix minutes, avec le traîneau et la marche du fermier — celle du mardi.
+  // Ce matin-là, le duo en avait fait douze tours de gym de lui-même. Au
+  // temps, chargé : on note son poids, si on veut.
+  {
+    id: 'sandbag-carry',
+    nomFr: 'Sac de sable sur l’épaule',
+    nomEn: 'Sandbag Shoulder Carry',
+    zone: 'complet',
+    groupe: 'corps-entier',
+    muscles: 'Tout le corps : gainage sur le côté, trapèzes, jambes',
+    musclesPrincipaux: ['obliques', 'trapezes'],
+    musclesSecondaires: ['abdominaux', 'epaules', 'quadriceps', 'fessiers', 'mollets', 'avant-bras'],
+    materiel: 'salle',
+    pattern: 'portage',
+    niveauMin: 1,
+    cotes: 'bilateral',
+    unite: 'secondes',
+    position: 'Debout, le sac de sable sur une épaule',
+    pointsAttention: [
+      'Sac sur une épaule, changer d’épaule à chaque tour.',
+      'Marcher droit, gainé.',
+      'Les escaliers sont permis : une main sur la rampe.',
+    ],
+    interetJjb: 'Porter lourd et de travers sans plier : le corps de quelqu’un qui pèse sur l’épaule.',
   },
 ];

@@ -11,7 +11,7 @@ import {
   secondesParRep,
 } from './generateurSeance';
 import {
-  POINTS_FAIBLES_PAR_DEFAUT,
+  ANCIENS_POINTS_FAIBLES_DE_BIG_MAX,
   TRANSITION_LIEN_SEC,
   basculerTour,
   delierDansProgramme,
@@ -972,10 +972,11 @@ describe('l’horloge des séances du programme', () => {
   });
 
   it('Max fait sa série de plus sur ses points faibles : Sébastien a un repos prolongé', () => {
-    const seance = seancePourPersonne(lundiSeul, parametres, SEB);
-    // Les pecs, les épaules, les biceps, les triceps : ses points faibles par
-    // défaut.
-    const poussee = seance.blocs.find((b) => serieDePlus(POINTS_FAIBLES_PAR_DEFAUT.max, EXERCICES_PAR_ID[b.exerciceId]) && !b.tour)!;
+    // Les pecs, les épaules, les biceps, les triceps, cochés pour lui (son
+    // ancien défaut ; aucun par défaut depuis le 13 octobre 2026).
+    const faibles: ContexteSeance = { ...SEB, pointsFaibles: { sebastien: [], max: [...ANCIENS_POINTS_FAIBLES_DE_BIG_MAX] } };
+    const seance = seancePourPersonne(lundiSeul, parametres, faibles);
+    const poussee = seance.blocs.find((b) => serieDePlus(ANCIENS_POINTS_FAIBLES_DE_BIG_MAX, EXERCICES_PAR_ID[b.exerciceId]) && !b.tour)!;
     expect(poussee.autre?.series).toBe(poussee.series + 1);
     const prolonge = construireEtapes(seance).find(
       (e) => e.type === 'repos' && e.motif === 'serie-de-plus' && e.exerciceId === poussee.exerciceId,
@@ -987,7 +988,7 @@ describe('l’horloge des séances du programme', () => {
     const saSerie = DUREE_PRET_SEC + serieDe(poussee.exerciceId, poussee.autre!.reps);
     expect(prolonge?.dureeSec).toBe(saSerie - maSerie + poussee.reposSec + saSerie);
     // En paire aussi, Sébastien attend la quatrième série de Max.
-    const enPaire = construireEtapes(seancePourPersonne(lundiMois, parametres, SEB));
+    const enPaire = construireEtapes(seancePourPersonne(lundiMois, parametres, faibles));
     expect(enPaire.some((e) => e.type === 'repos' && e.motif === 'serie-de-plus')).toBe(true);
   });
 

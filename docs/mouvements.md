@@ -29,13 +29,13 @@ Au temps seulement quand c’est clairement mieux, sans contrepartie ; le reste,
 | Moulin à vent (`kb-windmill`) | DESCENDS 3 s → TIENS 1 s → MONTE 3 s | Garder le tempo. | Tempo gardé | Lent par nature, bras chargé vertical ; plus vite, c’est le bas du dos qui prend. Avancé : hors programme. |
 | Chaise au mur et développé (`kb-wall-squat-press`) | MONTE 3 s → DESCENDS 3 s | Garder le tempo. | Tempo gardé | La chaise se tient pendant que le développé suit le tempo : déjà 48 s de chaise, assez pour les genoux de Big Max (pas plus bas que l’angle droit). |
 | Squat sauté (`jump-squat`), Swing avec haltère (`swing`), Burpee avec haltères (`dumbbell-burpee`), Tirage haut explosif (`high-pull`), Arraché avec haltère (`dumbbell-snatch`), Balancier latéral (`kb-side-swing`), Swing à deux mains (`kb-double-arm-swing`), Swing à un bras (`kb-single-arm-swing`), Arraché au kettlebell (`kb-snatch`), Épaulé (`kb-clean`), Swing du golfeur (`kb-golfer-swing`), Squat sauté au kettlebell (`kb-jump-squat`), Saut de grenouille (`kb-frog-jump`), Relevé sauté (`kb-power-jump-squat`), Patineur (`kb-speed-skater`), Saut de bûche (`kb-log-jump`) | au temps : 20 s ; ou au temps : 30 s ; ou au temps : 30 s de chaque côté, CHANGE DE CÔTÉ 5 s | Au temps, sans métronome : 30 s par série (20 s pour les sauts et le burpee), à son rythme, léger — la qualité avant la vitesse. | **Au temps : fait** | Décidé par Sébastien : « pas fuir un exercice, pouvoir un jour le faire sans douleur — donc mettre moins de poids ». Un swing ou un saut en 3 s / 3 s n’est plus un swing ni un saut : on les fait au temps, chacun à son rythme, avec une charge légère, un décompte et pas de métronome. 30 s par série pour les swings, les arrachés, l’épaulé, le tirage haut et les balanciers — 30 s de chaque côté, avec CHANGE DE CÔTÉ 5 s (« +5 s » si besoin), pour les versions à un bras ; 20 s pour les sauts et le burpee. Le poids se note et se règle comme avant (lourd, correct, léger). Ils ne sortent qu’avec l’option « explosifs », jamais dans le programme — sauf le swing à deux mains, qui ouvre le jeudi, léger (« Ce sont les fesses qui lancent, pas le dos »), avec un tirage léger du haut du corps pour partenaire. Ils restent déconseillés au dos de Speedy et aux genoux de Big Max : raison de plus d’y aller léger. Avant : DESCENDS 3 s → MONTE 3 s, ou MONTE 3 s → DESCENDS 3 s, sans arrêt. |
-| Crunch isométrique (`kb-isometric-crunch`), Planche de Copenhague (courte) (`copenhagen-plank`), Planche (`plank`), Planche latérale (`side-plank`), Marche du fermier (`farmers-walk`), Marche du fermier au kettlebell (`kb-farmers-walk`), Traîneau : pousser, puis tirer (`traineau`) | au temps : un décompte ; ou au temps : 15 s de chaque côté, CHANGE DE CÔTÉ 5 s ; ou au temps, de chaque côté, CHANGE DE CÔTÉ 5 s | Rien à changer. | Déjà au temps | Une tenue, un portage, un aller-retour de traîneau : c’est le temps qui compte, pas les répétitions. La planche de Copenhague, courte, se tient 15 s de chaque côté ; la planche et la planche latérale, classiques, 30 s (de chaque côté pour la latérale). |
+| Crunch isométrique (`kb-isometric-crunch`), Planche de Copenhague (courte) (`copenhagen-plank`), Planche (`plank`), Planche latérale (`side-plank`), Marche du fermier (`farmers-walk`), Marche du fermier au kettlebell (`kb-farmers-walk`), Traîneau : pousser, puis tirer (`traineau`), Sac de sable sur l’épaule (`sandbag-carry`) | au temps : un décompte ; ou au temps : 15 s de chaque côté, CHANGE DE CÔTÉ 5 s ; ou au temps, de chaque côté, CHANGE DE CÔTÉ 5 s | Rien à changer. | Déjà au temps | Une tenue, un portage, un aller-retour de traîneau : c’est le temps qui compte, pas les répétitions. La planche de Copenhague, courte, se tient 15 s de chaque côté ; la planche et la planche latérale, classiques, 30 s (de chaque côté pour la latérale). La marche du fermier, le traîneau et le sac de sable font la finale de dix minutes. |
 
 Tous les autres montent et descendent : le tempo est leur geste, on le garde.
 
 ## Le métronome, exercice par exercice
 
-Ce que dit le métronome de la séance guidée pour chacun des 156 exercices de musculation,
+Ce que dit le métronome de la séance guidée pour chacun des 157 exercices de musculation,
 au tempo par défaut (3 s / 3 s + 1 s), sur une série de 8 répétitions
 (8 de chaque côté pour un exercice unilatéral). Chaque ligne est lue dans le vrai métronome :
 les mots, leurs secondes, le changement de côté et la durée de la série sont ceux de l’application.
@@ -48,7 +48,7 @@ les mots, leurs secondes, le changement de côté et la durée de la série sont
   `russian-twist`, `v-sit-cross-jab`, `hollow-body-sweeper`, `kb-russian-twist`, `kb-plank-oblique-pull-through`.
 - **Unilatéral** (43) : tout le côté droit, CHANGE DE CÔTÉ 5 s (« +5 s »
   en donne cinq de plus), puis le côté gauche — au tempo comme au temps. La durée annoncée compte les 5 s.
-- **Au temps** (11) : un décompte, pas de métronome. `farmers-walk`, `kb-around-the-body`, `kb-turkish-get-up`, `kb-farmers-walk`, `kb-isometric-crunch`, `kb-halo`, `kb-around-the-world`, `traineau`, `copenhagen-plank`, `plank`, `side-plank`.
+- **Au temps** (12) : un décompte, pas de métronome. `farmers-walk`, `kb-around-the-body`, `kb-turkish-get-up`, `kb-farmers-walk`, `kb-isometric-crunch`, `kb-halo`, `kb-around-the-world`, `traineau`, `sandbag-carry`, `copenhagen-plank`, `plank`, `side-plank`.
 - **Explosifs** (16), **au temps** : seulement quand l’option est cochée ; 30 s par série (20 s pour les
   sauts et le burpee), de chaque côté avec CHANGE DE CÔTÉ 5 s pour un seul bras ; à son rythme, léger, un décompte
   et pas de métronome. `jump-squat`, `swing`, `dumbbell-burpee`, `high-pull`, `dumbbell-snatch`, `kb-side-swing`, `kb-double-arm-swing`, `kb-single-arm-swing`, `kb-snatch`, `kb-clean`, `kb-golfer-swing`, `kb-jump-squat`, `kb-frog-jump`, `kb-power-jump-squat`, `kb-speed-skater`, `kb-log-jump`.
@@ -201,7 +201,7 @@ les mots, leurs secondes, le changement de côté et la durée de la série sont
 | `seated-calf-raise` | Mollets assis, à la machine | MONTE 3 s → DESCENDS 3 s → TIENS 1 s | 8 rép. | 56 s | Tenu en bas, comme le mollet sur une marche : les talons sous la marche, le mollet s’étire sous la charge. |
 | `copenhagen-plank` | Planche de Copenhague (courte) | — (au temps, de chaque côté : un décompte, pas de métronome) | côté droit → CHANGE DE CÔTÉ 5 s (« +5 s » si besoin) → côté gauche | 35 s | Au temps, de chaque côté : un décompte, pas de métronome. |
 
-## Corps entier (28)
+## Corps entier (29)
 
 | id | Nom | Une répétition | Côtés, sur une série de 8 | Série | Pourquoi |
 |---|---|---|---|---|---|
@@ -233,3 +233,4 @@ les mots, leurs secondes, le changement de côté et la durée de la série sont
 | `kb-speed-skater` | Patineur | — au temps : 20 s à son rythme, sans métronome | en alternant, un côté après l’autre | 20 s | Explosif, au temps (seulement avec l’option) : à son rythme, léger, la qualité avant la vitesse. |
 | `kb-log-jump` | Saut de bûche | — au temps : 20 s à son rythme, sans métronome | en alternant, un côté après l’autre | 20 s | Explosif, au temps (seulement avec l’option) : à son rythme, léger, la qualité avant la vitesse. |
 | `traineau` | Traîneau : pousser, puis tirer | — (tenu au temps : un décompte, pas de métronome) | les deux ensemble | au temps | Tenu au temps : un décompte, pas de métronome. |
+| `sandbag-carry` | Sac de sable sur l’épaule | — (tenu au temps : un décompte, pas de métronome) | les deux ensemble | au temps | Tenu au temps : un décompte, pas de métronome. |

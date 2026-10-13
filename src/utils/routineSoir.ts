@@ -13,7 +13,7 @@ import type { Exercice, PartieRoutine, Personne, RoutineSoirLocale } from '../ty
 import { EXERCICES_PAR_ID } from '../data/exercices';
 import { EXERCICES_ETIREMENTS } from '../data/etirements';
 import { CHANGER_DE_COTE_SEC } from './generateurSeance';
-import { depuisIso, isoDate } from './programmeMois';
+import { aEviterPar, depuisIso, isoDate } from './programmeMois';
 
 // ------------------------------------------------------------- Durées
 
@@ -137,7 +137,9 @@ export const NOTE_ROUTINE: Record<Personne, string> = {
  *  - Speedy : jamais de flexion avant debout (le dos fatigue), ni d'équilibre
  *    sur une jambe (l'une d'elles lâche parfois).
  *  - Big Max : jamais de fente, de squat ni de position à genoux ou genoux très
- *    pliés (les genoux font mal). */
+ *    pliés (les genoux font mal) ; ni rien de ce qu'il évite partout — ventre
+ *    vers le ciel en appui sur les mains ou les coudes, comme la planche
+ *    inversée (`aEviterPar`, le devant des épaules). */
 export const A_EVITER: Record<Personne, string[]> = {
   sebastien: [
     'etir-ischios-debout',
@@ -158,13 +160,14 @@ export const A_EVITER: Record<Personne, string[]> = {
     'yoga-coeur-fondant',
     'yoga-demi-pigeon',
     'yoga-bebe-heureux',
+    ...aEviterPar('max'),
   ],
 };
 
 /** Ce que dit la feuille de choix, en bas : ce qu'elle ne propose pas. */
 export const NOTE_A_EVITER: Record<Personne, string> = {
   sebastien: 'Pas proposés : les flexions avant debout et l’équilibre sur une jambe.',
-  max: 'Pas proposés : les fentes et les positions à genoux ou genoux très pliés.',
+  max: 'Pas proposés : les fentes, les positions à genoux ou genoux très pliés, et les appuis sur les mains derrière soi (planche inversée).',
 };
 
 /** Les postures de yoga qu'on peut choisir pour le soir : au sol, calmes. Les

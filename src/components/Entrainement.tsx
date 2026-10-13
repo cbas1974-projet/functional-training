@@ -53,7 +53,7 @@ import {
 } from '../utils/formatage';
 import { frequencesParExercice, libelleFrequenceCourte, uniteDeSeance } from '../utils/statistiques';
 import type { FrequenceExercice } from '../utils/statistiques';
-import { chargesPassees } from '../utils/programmeMois';
+import { aEviterPar, chargesPassees } from '../utils/programmeMois';
 import { avecSeanceFaite, sansSeance } from '../utils/enLigne';
 import { basculerDouleurDe } from '../utils/douleurs';
 import SeanceGuidee from './SeanceGuidee';
@@ -292,7 +292,8 @@ export default function Entrainement({ etat, onChange }: EntrainementProps) {
 
   const genererNouvelleSeance = (nouvelleGraine?: number) => {
     try {
-      const seance = genererSeance(parametres, nouvelleGraine);
+      // Big Max : jamais d'appui sur les mains derrière soi (`aEviterPar`).
+      const seance = genererSeance(parametres, nouvelleGraine, aEviterPar(etat.personne));
       setErreurGeneration(null);
       setMessageRemplacement({});
       onChange((prec) => ({ ...prec, seanceCourante: seance }));
@@ -304,7 +305,7 @@ export default function Entrainement({ etat, onChange }: EntrainementProps) {
   const remplacerDansSeance = (exerciceId: string) => {
     if (!seanceCourante) return;
     try {
-      const nouvelle = remplacerExercice(seanceCourante, exerciceId, graineAleatoire());
+      const nouvelle = remplacerExercice(seanceCourante, exerciceId, graineAleatoire(), aEviterPar(etat.personne));
       const identique = JSON.stringify(nouvelle) === JSON.stringify(seanceCourante);
       if (identique) {
         setMessageRemplacement((prec) => ({

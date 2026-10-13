@@ -163,6 +163,21 @@ export type Etape =
       /** Ses séries, dans l'ordre où elles se font. */
       series: SerieDeLExercice[];
     }
+  | {
+      /** La finale, sur un seul téléphone (décision de Sébastien, 13 octobre
+       *  2026) : dix minutes au chrono, juste avant les étirements, pour se
+       *  vider. D'abord on choisit et on s'installe — l'étape attend
+       *  « Démarrer » —, puis le décompte (`chrono`) : « Pause » l'arrête, et
+       *  il finit sur la cloche et une vibration, puis les étirements. */
+      type: 'finale';
+      /** La finale du jour, proposée : on peut prendre l'une des autres au
+       *  moment de la finale (`CHOIX_FINALE`). */
+      proposee: string;
+      dureeSec: number;
+      /** Le décompte ; absent, l'installation, qui attend « Démarrer ». */
+      chrono?: boolean;
+      exerciceId?: undefined;
+    }
   | { type: 'retourCalme'; dureeSec: number; exerciceId?: undefined }
   | { type: 'fin'; dureeSec: 0; exerciceId?: undefined };
 
@@ -344,6 +359,10 @@ export function positionBille(phase: PhaseTempo, progression: number, pauseEnHau
 /** Installation comptée à chaque nouvel exercice : changer les poids,
  *  régler la machine. La séance attend « Go » pour repartir. */
 export const INSTALLATION_SEC = 30;
+/** Avant la finale : le temps de la choisir, de prendre les haltères, le sac
+ *  ou le traîneau, avant « Démarrer ». Il compte dans la durée annoncée ;
+ *  l'essai le raccourcit comme les autres mises en place. */
+export const INSTALLATION_FINALE_SEC = 60;
 /** Chacun son tour : le temps de céder la place. */
 export const CHANGEMENT_SEC = 15;
 
@@ -698,9 +717,22 @@ export function construireEtapesParSerie(seance: Seance): Etape[] {
       etapes[i] = { ...etape, suivant: cible };
     }
   }
+  etapes.push(...etapesDeLaFinale(seance));
   if (seance.retourCalmeSec > 0) etapes.push({ type: 'retourCalme', dureeSec: seance.retourCalmeSec });
   etapes.push({ type: 'fin', dureeSec: 0 });
   return etapes;
+}
+
+/** La finale, après le dernier exercice : l'installation, qui attend
+ *  « Démarrer », puis le décompte. Rien sans finale. */
+function etapesDeLaFinale(seance: Seance): Etape[] {
+  const finale = seance.finaleChrono;
+  if (!finale || finale.dureeSec <= 0) return [];
+  const installationSec = Math.min(INSTALLATION_FINALE_SEC, seance.horloge?.installationSec ?? INSTALLATION_FINALE_SEC);
+  return [
+    { type: 'finale', proposee: finale.exerciceId, dureeSec: installationSec },
+    { type: 'finale', proposee: finale.exerciceId, dureeSec: finale.dureeSec, chrono: true },
+  ];
 }
 
 /** Les étapes série par série, regroupées par exercice : un exercice seul ou
@@ -999,6 +1031,9 @@ function estDebutUnite(etapes: Etape[], index: number): boolean {
     case 'retourCalme':
     case 'fin':
       return true;
+    // La finale : « Précédent » ramène à son installation.
+    case 'finale':
+      return etape.chrono !== true;
     case 'station':
       return etapes[index - 1]?.type !== 'pret';
     // Sur un seul téléphone, un exercice ; série par série (version 1.2.0),
@@ -1365,6 +1400,8 @@ export interface OptionsRealisation {
   faites?: readonly number[];
   /** À deux : les charges notées pour l'autre, par exercice et par série. */
   poidsAutre?: Record<string, number[]>;
+  /** La finale choisie, quand ce n'est pas celle proposée. */
+  finale?: string;
 }
 
 /** Agrège le temps passé sur chaque étape en un compte rendu par exercice.
@@ -1404,6 +1441,23 @@ export function agregerRealisation(
     circuit.stations.forEach((exerciceId) => prevoir(parExercice, exerciceId, circuit.tours, circuit.travailSec));
   }
   const faites = options.faites ? new Set(options.faites) : null;
+
+  // La finale : un exercice de plus, une seule « série » de dix minutes, faite
+  // quand on en a passé au moins la moitié — le poids, s'il a été noté, est
+  // celui de chacun. Pas de ressenti, pas de montée de charge.
+  const finale = etapes.findIndex((etape) => etape.type === 'finale' && etape.chrono === true);
+  if (finale >= 0) {
+    const chrono = etapes[finale];
+    const choisie = options.finale ?? (chrono.type === 'finale' ? chrono.proposee : '');
+    const temps = tempsParEtapeSec[finale] ?? 0;
+    const faite = chrono.dureeSec > 0 && temps >= chrono.dureeSec / 2;
+    for (const dans of lui ? [parExercice, pourLui] : [parExercice]) {
+      prevoir(dans, choisie, 1, chrono.dureeSec);
+      const realise = dans.get(choisie)!;
+      realise.dureeSec += temps;
+      if (faite) realise.seriesFaites += 1;
+    }
+  }
 
   etapes.forEach((etape, index) => {
     // Sur un seul téléphone, un exercice ou une paire en une étape : fini sur

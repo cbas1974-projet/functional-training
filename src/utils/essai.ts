@@ -26,6 +26,9 @@ export const INSTALLATION_ESSAI_SEC = 10;
 export const MOUVEMENTS_ESSAI_SEC = 30;
 /** Ces deux phases ne gardent que leurs premiers mouvements. */
 const MOUVEMENTS_GARDES = 2;
+/** La finale de dix minutes, ramenée à une demi-minute : on voit son écran,
+ *  son décompte et sa fin, sans y passer dix minutes. */
+export const FINALE_ESSAI_SEC = 30;
 
 /** Les premiers mouvements d'une phase, et le changement de côté qui sépare
  *  les deux côtés d'un même étirement : il fait partie de ce qu'on essaie. */
@@ -65,10 +68,11 @@ function raccourcirPhase(
 
 /** La séance, version d'essai : une seule série par exercice, un tiers de
  *  répétitions en moins, des repos de 15 s au plus, une mise en place courte,
- *  une demi-minute d'échauffement et autant d'étirements. Les exercices, les
- *  paires, chacun son tour et le tempo ne changent pas : seuls la longueur
- *  des séries et les attentes se raccourcissent. Une dizaine de minutes seul,
- *  un peu plus à deux, où l'horloge suit le plus lent des deux. */
+ *  une demi-minute d'échauffement, autant de finale et autant d'étirements.
+ *  Les exercices, les paires, chacun son tour et le tempo ne changent pas :
+ *  seuls la longueur des séries et les attentes se raccourcissent. Une
+ *  dizaine de minutes seul, un peu plus à deux, où l'horloge suit le plus
+ *  lent des deux. */
 export function raccourcirPourEssai(seance: Seance): Seance {
   const blocs = seance.blocs.map(
     (bloc): BlocSeries => ({
@@ -90,6 +94,9 @@ export function raccourcirPourEssai(seance: Seance): Seance {
     retourCalmeSec: retourCalme.dureeSec,
     ...(echauffement.mouvements ? { echauffement: echauffement.mouvements } : {}),
     ...(retourCalme.mouvements ? { retourCalme: retourCalme.mouvements } : {}),
+    ...(seance.finaleChrono
+      ? { finaleChrono: { ...seance.finaleChrono, dureeSec: Math.min(seance.finaleChrono.dureeSec, FINALE_ESSAI_SEC) } }
+      : {}),
     ...(seance.horloge ? { horloge: { ...seance.horloge, installationSec: INSTALLATION_ESSAI_SEC } } : {}),
   };
   return { ...courte, dureeEstimeeSec: dureeTotaleSec(construireEtapes(courte)) };

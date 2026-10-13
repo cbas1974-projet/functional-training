@@ -13,9 +13,10 @@ import { PARAMETRES_PAR_DEFAUT, TOUTES_LES_ZONES } from '../data/parametres';
 import { uniteDeSeance } from './statistiques';
 import { estRessenti, lireRessentis } from './ressenti';
 import { IDENTIFIANT_MESURE, lireMesures } from './mesures';
-import { VERSION_PROGRAMME, validerProgramme } from './programmeMois';
+import { CHOIX_FINALE, VERSION_PROGRAMME, validerProgramme } from './programmeMois';
 import { lireRoutineSoir } from './routineSoir';
 import { lireDouleurs } from './douleurs';
+import { lirePasAimes } from './pasAimes';
 import { versLeDerouleParExercice } from './etapesSeance';
 
 const CLE_STOCKAGE = 'functional-training';
@@ -137,6 +138,9 @@ const migrerProgression = (enCours: ProgressionSeance | null): ProgressionSeance
   if (allegees) migree.allegees = allegees;
   const allegeesAutre = seriesLues(enCours.allegeesAutre);
   if (allegeesAutre) migree.allegeesAutre = allegeesAutre;
+  // La finale choisie, si c'en est une qu'on peut prendre.
+  delete migree.finale;
+  if (typeof enCours.finale === 'string' && CHOIX_FINALE.includes(enCours.finale)) migree.finale = enCours.finale;
   // Une séance commencée série par série (version 1.2.0) reprend exercice par
   // exercice, avec ses charges.
   return versLeDerouleParExercice(migree);
@@ -232,6 +236,9 @@ const migrer = (sauvegarde: Partial<EntrainementState>): EntrainementState => {
     // à part.
     douleurs: douleursLues(sauvegarde.douleurs),
     douleursAutre: douleursLues(sauvegarde.douleursAutre),
+    // 👎 « Pas aimé » : pareil, chacun les siens, sur ce téléphone.
+    pasAimes: lirePasAimes(sauvegarde.pasAimes),
+    pasAimesAutre: lirePasAimes(sauvegarde.pasAimesAutre),
   };
 };
 

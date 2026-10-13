@@ -28,6 +28,7 @@ import { formaterDateFr, graineAleatoire, memeTempo } from '../utils/formatage';
 import { SUFFIXE_UNITE, chargeTotale, uniteDeSeance } from '../utils/statistiques';
 import { bellSound } from '../utils/sounds';
 import {
+  CHOIX_FINALE,
   JOURS,
   NOMBRES_EXERCICES,
   NOM_PERSONNE,
@@ -94,8 +95,11 @@ import FicheExercice from './FicheExercice';
 import BoutonDouleur, { BoutonDouleurCompact, ReperDouleur } from './BoutonDouleur';
 import { basculerDouleurDe, douleurDe } from '../utils/douleurs';
 import type { QuiDouleur } from '../utils/douleurs';
+import { basculerPasAimeDe, quiNAimePas } from '../utils/pasAimes';
+import type { QuiPasAime } from '../utils/pasAimes';
 import { seCharge } from '../utils/charges';
 import ImageEnGrand from './ImageEnGrand';
+import { BandeauPasAime } from './PasAime';
 import SeanceGuidee from './SeanceGuidee';
 import CarteRoutineSoir from './CarteRoutineSoir';
 import { Bascule, CIBLE, Choix, Feuille, Groupe, Pastille } from './Feuille';
@@ -273,6 +277,8 @@ function LigneExercice({
   onBasculerTour,
   onBasculerDouleur,
   onImage,
+  pasAimePar,
+  onGarder,
 }: {
   bloc: BlocSeries;
   exercice: Exercice;
@@ -299,6 +305,11 @@ function LigneExercice({
   onBasculerTour: () => void;
   onBasculerDouleur: (qui: QuiDouleur) => void;
   onImage: () => void;
+  /** 👎 : ceux qui ne l'ont pas aimé la dernière fois (leurs noms ; vide pour
+   *  la personne du téléphone sans nom). Absent : personne. */
+  pasAimePar?: string[];
+  /** « Garder » : le 👎 s'en va. */
+  onGarder?: () => void;
 }) {
   const tour = bloc.tour === true;
   // Sur un seul téléphone, à deux : un « J'ai mal » chacun, Speedy d'abord.
@@ -459,6 +470,9 @@ function LigneExercice({
             </>
           ))}
       </FicheExercice>
+      {/* 👎 la dernière fois : on propose de le changer, sans rien bloquer —
+          sous la fiche, sur toute la largeur. */}
+      {pasAimePar && onGarder && <BandeauPasAime noms={pasAimePar} onChanger={onChanger} onGarder={onGarder} />}
     </li>
   );
 }
@@ -596,7 +610,7 @@ function FeuilleReglages({
         </div>
       </Groupe>
 
-      <Groupe titre="Points faibles" aide="Une série de plus sur ces muscles.">
+      <Groupe titre="Points faibles" aide="Une série de plus sur ces muscles. Aucun par défaut : trois séries pour les deux.">
         <div className="space-y-3">
           {PERSONNES.map((p) => (
             <div key={p.id} role="group" aria-label={`Points faibles de ${NOM_PERSONNE[p.id]}`}>
@@ -976,6 +990,10 @@ export default function Accueil({
    *  téléphone, ou pour l'autre ; sur ce téléphone. */
   const basculerDouleurIci = (qui: QuiDouleur, exerciceId: string, charge: number, uniteCharge: UnitePoids) =>
     onChange((prec) => ({ ...prec, ...basculerDouleurDe(prec, qui, exerciceId, charge, uniteCharge) }));
+  /** 👎 « Pas aimé » : dit, ou retiré — pour la personne du téléphone, ou
+   *  pour l'autre ; sur ce téléphone. */
+  const basculerPasAimeIci = (qui: QuiPasAime, exerciceId: string) =>
+    onChange((prec) => ({ ...prec, ...basculerPasAimeDe(prec, qui, exerciceId) }));
   const unite = uniteDeSeance(parametres);
 
   /** Séance choisie dans la semaine ; null = celle que propose le calendrier. */
@@ -1056,13 +1074,14 @@ export default function Accueil({
     const precedente = historiqueAutre.find((h) => h.titre === active.seance.titre);
     return precedente ? chargeTotale(precedente, uniteDeSeance(active.seance.parametres)) : undefined;
   }, [active, historiqueAutre]);
-  // Dans l'aperçu, c'est l'écran de l'autre : nos charges n'y ont pas leur place.
+  // Dans l'aperçu, c'est l'écran de l'autre : nos charges n'y ont pas leur
+  // place. Celles de la finale servent d'indice, quelle qu'elle soit.
   const chargesActives = useMemo(
     () =>
       active && active.essai?.genre !== 'apercu'
         ? chargesPassees(
             historique,
-            active.seance.blocs.map((bloc) => bloc.exerciceId),
+            [...active.seance.blocs.map((bloc) => bloc.exerciceId), ...CHOIX_FINALE],
             uniteDeSeance(active.seance.parametres),
           )
         : {},
@@ -1073,7 +1092,7 @@ export default function Accueil({
       active && active.essai?.genre !== 'apercu' && lAutre
         ? chargesPassees(
             historiqueAutre,
-            active.seance.blocs.map((bloc) => bloc.exerciceId),
+            [...active.seance.blocs.map((bloc) => bloc.exerciceId), ...CHOIX_FINALE],
             uniteDeSeance(active.seance.parametres),
           )
         : {},
@@ -1110,6 +1129,8 @@ export default function Accueil({
   const pairesRetouchees = useMemo(() => !pairesAutomatiques(seanceMois), [seanceMois]);
   const echauffement = seance.echauffement ?? [];
   const etirements = [...new Set((seance.retourCalme ?? []).map((m) => m.exerciceId).filter(estUnExercice))];
+  // La finale du jour : dix minutes au chrono, juste avant les étirements.
+  const finale = seance.finaleChrono && estUnExercice(seance.finaleChrono.exerciceId) ? seance.finaleChrono : undefined;
   const avecTrapBar = seance.blocs.some((bloc) => bloc.exerciceId === 'trap-bar-deadlift');
   // Un exercice seul, à deux, sans pause entre les tours : la marche du fermier.
   const avecFermier = groupesDeBlocs(seance.blocs).some(
@@ -1174,8 +1195,29 @@ export default function Accueil({
           )
         }
         onImage={() => setEnGrand(bloc.exerciceId)}
+        {...pasAimeDe(bloc.exerciceId)}
       />
     );
+  };
+
+  /** Le 👎 de la dernière fois sur un exercice : qui ne l'a pas aimé, parmi
+   *  ceux qui s'entraînent ici, et « Garder », qui le retire. */
+  const pasAimeDe = (exerciceId: string): { pasAimePar?: string[]; onGarder?: () => void } => {
+    const qui = quiNAimePas(etat, exerciceId, personne, lAutre);
+    if (qui.length === 0) return {};
+    return {
+      pasAimePar: qui.flatMap((p) => (p ? [NOM_PERSONNE[p]] : [])),
+      onGarder: () =>
+        onChange((prec) => {
+          let suivant = prec;
+          for (const q of lAutre ? (['moi', 'autre'] as const) : (['moi'] as const)) {
+            if (Object.prototype.hasOwnProperty.call((q === 'moi' ? prec.pasAimes : prec.pasAimesAutre) ?? {}, exerciceId)) {
+              suivant = { ...suivant, ...basculerPasAimeDe(suivant, q, exerciceId) };
+            }
+          }
+          return suivant;
+        }),
+    };
   };
 
   const semaineDuMois = semainesEcoulees(programme, maintenant);
@@ -1416,8 +1458,8 @@ export default function Accueil({
         {etat.programmeRecomposeDepuis !== undefined && (
           <Bandeau couleur="var(--accent)">
             <p className="text-sm font-semibold" style={{ color: 'var(--texte)' }}>
-              Nouvelle version du programme : des exercices classiques ce mois-ci, et le lundi pareil chaque
-              semaine.
+              Nouvelle version du programme : plus de jambes le lundi et le jeudi, des jambes légères le mardi, un
+              tirage chaque jour, et 10 minutes de finale pour se vider.
             </p>
             <p className="text-xs" style={{ color: 'var(--texte-discret)' }}>
               Il a été recomposé avec la même graine, pareil sur les deux téléphones. Un exercice changé ou une
@@ -1452,8 +1494,8 @@ export default function Accueil({
               Qui s’entraîne sur ce téléphone ?
             </p>
             <p className="text-xs" style={{ color: 'var(--texte-discret)' }}>
-              Le mardi et le jeudi, {NOM_PERSONNE.max} fait deux répétitions de plus ; il fait une série de plus
-              sur ses points faibles (pecs, épaules, biceps, triceps — à changer dans les Réglages).
+              Le mardi et le jeudi, {NOM_PERSONNE.max} fait deux répétitions de plus. Trois séries chacun ; une
+              de plus sur les points faibles qu’on coche dans les Réglages.
             </p>
             <div className="mt-2 grid grid-cols-2 gap-2">
               {PERSONNES.map((p) => (
@@ -1580,7 +1622,7 @@ export default function Accueil({
             </p>
             <p className="mt-2 text-sm" style={{ color: 'var(--texte-discret)' }}>
               {unTelephone
-                ? `Le premier et le dernier exercice se font seuls${aDeux ? `, chacun son tour, avec une pause d’un toucher entre les tours${avecFermier ? ' (pas à la marche du fermier)' : ''}` : ''}. Une paire : A, B, A, B, sans pause entre les tours${machineEnPaire ? ' — sa machine, chacun son tour' : ''}. Un seul « Exercice terminé » par exercice, puis la pause part toute seule : 1 min${avecTrapBar ? ', 1 min 30 après la trap bar' : ''}.`
+                ? `Le premier et le dernier exercice se font seuls${aDeux ? `, chacun son tour, avec une pause d’un toucher entre les tours${avecFermier ? ' (pas à la marche du fermier)' : ''}` : ''}. Une paire : A, B, A, B, sans pause entre les tours${machineEnPaire ? ' — sa machine, chacun son tour' : ''}. Un seul « Exercice terminé » par exercice, puis la pause part toute seule : 1 min${avecTrapBar ? ', 1 min 30 après la trap bar' : ''}.${finale ? ` Pour finir, ${Math.round(finale.dureeSec / 60)} min au chrono pour se vider, puis les étirements.` : ''}`
                 : avecPaires
                   ? `Par paires : les deux exercices à la suite, puis 1 min de pause${avecTrapBar ? ' (1 min 30 après la trap bar)' : ''}. À chaque nouvel exercice, on installe, puis on repart sur « Go ».`
                   : `Pauses : 1 min${avecTrapBar ? ', 1 min 30 à la trap bar' : ''}. À chaque nouvel exercice, on installe, puis on repart sur « Go ».`}
@@ -1709,12 +1751,48 @@ export default function Accueil({
             {blocFinal && (
               <div className="mt-3">
                 <p className="mb-2 text-sm font-bold" style={{ color: 'var(--texte)' }}>
-                  Pour finir, seul{aDeux && unTelephone ? ', chacun son tour' : ''}
+                  Le dernier, seul{aDeux && unTelephone ? ', chacun son tour' : ''}
                   {aDeux && unTelephone && pauseEntreLesTours({ id: blocFinal.exerciceId })
                     ? ` · pause entre les tours : ${dureeCourte(blocFinal.reposSec)}`
                     : ''}
                 </p>
                 <ul className="space-y-2">{ligne(blocFinal)}</ul>
+              </div>
+            )}
+
+            {/* La finale : dix minutes au chrono, pour se vider ; on choisit au
+                moment de la finale. */}
+            {finale && (
+              <div className="mt-3">
+                <p className="mb-2 text-sm font-bold" style={{ color: 'var(--texte)' }}>
+                  Finale · <span className="chiffres">{Math.round(finale.dureeSec / 60)} min</span> au chrono, pour se vider
+                </p>
+                <div className="flex items-center gap-3 rounded-xl p-3" style={{ background: 'var(--surface-haute)' }}>
+                  <button
+                    type="button"
+                    onClick={() => setEnGrand(finale.exerciceId)}
+                    aria-label={`Voir ${EXERCICES_PAR_ID[finale.exerciceId].nomFr} en grand`}
+                    className="w-24 shrink-0 cursor-zoom-in overflow-hidden p-0.5"
+                    style={{ background: '#ffffff', border: '1px solid var(--bordure)', borderRadius: 10 }}
+                  >
+                    <img
+                      src={cheminImage(finale.exerciceId)}
+                      alt={EXERCICES_PAR_ID[finale.exerciceId].nomFr}
+                      loading="lazy"
+                      className="w-full"
+                      style={{ aspectRatio: '3 / 2', objectFit: 'contain' }}
+                    />
+                  </button>
+                  <div className="min-w-0">
+                    <p className="font-semibold" style={{ color: 'var(--texte)' }}>
+                      {EXERCICES_PAR_ID[finale.exerciceId].nomFr}
+                    </p>
+                    <p className="text-xs" style={{ color: 'var(--texte-discret)' }}>
+                      Ou une autre, au moment de la finale : traîneau, marche du fermier, sac de sable. Le poids,
+                      si on veut.
+                    </p>
+                  </div>
+                </div>
               </div>
             )}
 
@@ -1923,6 +2001,10 @@ export default function Accueil({
           douleurs={active.essai?.genre === 'apercu' ? undefined : douleurs}
           douleursAutre={active.essai?.genre === 'apercu' ? undefined : douleursAutre}
           onBasculerDouleur={active.essai?.genre === 'apercu' ? undefined : basculerDouleurIci}
+          // 👎 « Pas aimé », comme « J'ai mal » : chacun les siens, sur ce téléphone.
+          pasAimes={active.essai?.genre === 'apercu' ? undefined : etat.pasAimes}
+          pasAimesAutre={active.essai?.genre === 'apercu' ? undefined : etat.pasAimesAutre}
+          onBasculerPasAime={active.essai?.genre === 'apercu' ? undefined : basculerPasAimeIci}
           onProgression={(progression) => {
             // Un essai ne laisse aucune trace : ni reprise, ni séance interrompue effacée.
             if (!active.essai) onChange((prec) => ({ ...prec, enCours: progression }));

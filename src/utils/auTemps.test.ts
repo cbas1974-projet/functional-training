@@ -139,8 +139,8 @@ describe('les cercles au programme', () => {
     expect([curl.reps, curl.autre?.reps]).toEqual([8, 10]);
   });
 
-  it('garde la série de plus de Big Max aux poussées : le halo travaille les épaules', () => {
-    const duo = seancePourPersonne(MARDI, PARAMETRES, DUO_SEB, LUNDI);
+  it('une série de plus pour Big Max quand il coche les épaules : le halo travaille les épaules', () => {
+    const duo = seancePourPersonne(MARDI, PARAMETRES, { ...DUO_SEB, pointsFaibles: { sebastien: [], max: ['epaules'] } }, LUNDI);
     const bloc = duo.blocs.find((b) => b.exerciceId === 'kb-halo')!;
     expect([bloc.series, bloc.autre?.series]).toEqual([3, 4]);
     // Le tour de taille (gainage) : trois séries chacun.

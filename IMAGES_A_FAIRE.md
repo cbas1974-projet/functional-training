@@ -1,8 +1,9 @@
 # Images à faire avec Gemini (Nano Banana)
 
-Sept machines et quatre exercices au poids du corps (le Superman sans poids,
-la planche de Copenhague, la planche, la planche latérale) n'ont qu'un dessin
-simple dans l'application. On les refait dans le style des autres exercices.
+Sept machines, quatre exercices au poids du corps (le Superman sans poids,
+la planche de Copenhague, la planche, la planche latérale) et le sac de sable
+de la finale n'ont qu'un dessin simple dans l'application. On les refait dans
+le style des autres exercices.
 
 ## Comment faire
 
@@ -117,6 +118,13 @@ Gemini s'en inspire très bien. Joins-la en plus du modèle et ajoute
 > jambes l'une sur l'autre, la hanche au sol. Position 2 : les hanches
 > montées, le corps droit de la tête aux pieds. Muscles en noir : obliques,
 > extérieur de la hanche.
+
+### 12. `sandbag-carry` : sac de sable sur l'épaule
+
+> L'exercice : marche avec un sac de sable sur l'épaule. Position 1 : elle
+> marche droit, gainée, le sac de sable couché sur l'épaule droite, contre le
+> cou, une main qui le tient. Position 2 : le sac sur l'épaule gauche, elle
+> monte un escalier. Muscles en noir : obliques, trapèzes.
 
 ## Ce qu'il faut regarder avant de garder une image
 

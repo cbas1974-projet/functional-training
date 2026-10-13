@@ -22,7 +22,8 @@ const PARAMETRES: ParametresSeance = { ...PARAMETRES_PAR_DEFAUT, unitePoids: 'lb
 
 /** Un lundi à deux, sur le téléphone de Speedy : la trap bar seule, puis le
  *  Superman (sans charge) avec le développé épaules — Big Max en fait quatre
- *  séries, Speedy trois. */
+ *  séries (ses épaules cochées), Speedy trois —, la marche du fermier pour
+ *  finir (un lundi d'avant la finale), puis la finale. */
 const LUNDI: SeanceDuMois = {
   id: 'lundi',
   nom: 'Lundi — tout le corps',
@@ -35,7 +36,12 @@ const LUNDI: SeanceDuMois = {
   liens: [['superman', 'shoulder-press']],
   tour: ['trap-bar-deadlift'],
 };
-const seance = seancePourPersonne(LUNDI, PARAMETRES, { personne: 'sebastien', aDeux: true, unTelephone: true }, new Date(2026, 9, 12));
+const seance = seancePourPersonne(
+  LUNDI,
+  PARAMETRES,
+  { personne: 'sebastien', aDeux: true, unTelephone: true, pointsFaibles: { sebastien: [], max: ['epaules'] } },
+  new Date(2026, 9, 12),
+);
 const etapes = construireEtapes(seance);
 const COLONNES: ColonneDuo[] = [
   { qui: 'moi', personne: 'sebastien' },
@@ -104,11 +110,13 @@ describe('la liste du programme : tout l’exercice d’un coup', () => {
     expect(lignes).toContain('Chacun son tour : Big Max commence');
     expect(lignes).toContain('Entre les tours : « Pause », en bas, quand vous voulez');
     expect(lignes).toContain('À la fin : 1 min 30 de pause, lancée par « Exercice terminé »');
-    // La marche du fermier, la dernière : elle enchaîne ses tours, puis les étirements.
+    // La marche du fermier, la dernière : elle enchaîne ses tours, puis la
+    // finale — et après elle, les étirements.
     const fermier = texte(rendre(exercice(2)));
     expect(fermier).toContain('sans pause entre les tours');
     expect(fermier).not.toContain('Entre les tours');
-    expect(fermier).toContain('Pas de pause à la fin : les étirements suivent');
+    expect(fermier).toContain('Pas de pause à la fin : la finale suit');
+    expect(fermier).toMatch(/Ensuite Finale · 10 min\s+Étirements/);
   });
 
   it('les charges pré-remplies dans chaque case ; les raccourcis 70 % et 100 % attendent qu’on touche une case', () => {
