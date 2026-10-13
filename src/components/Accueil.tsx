@@ -989,6 +989,9 @@ export default function Accueil({
   // Les paires, et les exercices seuls.
   const groupes = groupesDeBlocs(principaux);
   const avecPaires = groupes.some((groupe) => groupe.length > 1);
+  // À deux, une machine dans une paire (le jeudi) : un seul siège, chacun son
+  // tour — jamais les deux en même temps.
+  const machineEnPaire = aDeux && groupes.some((groupe) => groupe.length > 1 && groupe.some((bloc) => bloc.tour));
   // Les paires ont été retouchées : on peut remettre les automatiques.
   const pairesRetouchees = useMemo(() => !pairesAutomatiques(seanceMois), [seanceMois]);
   const echauffement = seance.echauffement ?? [];
@@ -1415,7 +1418,7 @@ export default function Accueil({
             </p>
             <p className="mt-2 text-sm" style={{ color: 'var(--texte-discret)' }}>
               {unTelephone
-                ? `Le premier et le dernier exercice se font seuls${aDeux ? ', chacun son tour' : ''}. Une paire : A, B, A, B, sans pause entre les tours. La pause se lance d’un toucher à la fin : 1 min${avecTrapBar ? ', 1 min 30 après la trap bar' : ''}.`
+                ? `Le premier et le dernier exercice se font seuls${aDeux ? ', chacun son tour' : ''}. Une paire : A, B, A, B, sans pause entre les tours${machineEnPaire ? ' — sa machine, chacun son tour' : ''}. La pause se lance d’un toucher à la fin : 1 min${avecTrapBar ? ', 1 min 30 après la trap bar' : ''}.`
                 : avecPaires
                   ? `Par paires : les deux exercices à la suite, puis 1 min de pause${avecTrapBar ? ' (1 min 30 après la trap bar)' : ''}. À chaque nouvel exercice, on installe, puis on repart sur « Go ».`
                   : `Pauses : 1 min${avecTrapBar ? ', 1 min 30 à la trap bar' : ''}. À chaque nouvel exercice, on installe, puis on repart sur « Go ».`}
@@ -1483,8 +1486,10 @@ export default function Accueil({
                 const [a, b] = groupe.map((bloc) => EXERCICES_PAR_ID[bloc.exerciceId]);
                 const accord = a && b ? accordPaire(a, b) : null;
                 const bonne = accord?.accord === 'bon';
-                // À deux, une machine dans la paire : chacun commence par un exercice.
-                const croisee = aDeux && groupe.some((bloc) => bloc.tour);
+                // À deux, une machine dans la paire : sur un seul téléphone,
+                // chacun son tour sur la machine ; sur deux, chacun commence
+                // par un exercice, et on se croise.
+                const machine = aDeux && groupe.some((bloc) => bloc.tour);
                 return (
                   <div
                     key={groupe[0].exerciceId}
@@ -1499,7 +1504,7 @@ export default function Accueil({
                         {accord && (
                           <p className="text-xs font-semibold" style={{ color: bonne ? 'var(--montee)' : 'var(--alerte)' }}>
                             {bonne ? phrase(accord.raison) : `À éviter : ${accord.raison}`}
-                            {croisee ? ' · à deux, on se croise' : ''}
+                            {machine ? (unTelephone ? ' · la machine, chacun son tour' : ' · à deux, on se croise') : ''}
                           </p>
                         )}
                         {/* La pause de la paire : 1 min, à la fin de tous ses tours. */}

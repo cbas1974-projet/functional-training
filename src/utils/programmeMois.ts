@@ -1209,7 +1209,8 @@ export function genererProgramme(options: OptionsProgramme = {}): ProgrammeMois 
 
   /** Une séance du programme : ses exercices par paires, puis le dernier,
    *  seul. Les machines se font chacun son tour, une pour deux — dans une
-   *  paire, on se croise. */
+   *  paire aussi : sur un seul téléphone, l'un puis l'autre ; sur deux, on se
+   *  croise. */
   const seanceDe = (
     entete: Pick<SeanceDuMois, 'id' | 'nom' | 'jour' | 'semaine' | 'type' | 'partie'>,
     gabarit: Gabarit,
@@ -1699,10 +1700,19 @@ export function prochaineDate(
 /** Tous les exercices d'une séance, le dernier compris. */
 const idsDe = (seance: SeanceDuMois) => [...seance.exercices, ...(seance.finale ? [seance.finale] : [])];
 
+/** Le partenaire d'un exercice dans sa paire, s'il en a un. */
+function partenaireDans(seance: Pick<SeanceDuMois, 'liens'>, exerciceId: string): Exercice | undefined {
+  const autre = (seance.liens ?? []).find((paire) => paire.includes(exerciceId))?.find((id) => id !== exerciceId);
+  return estConnu(autre) ? EXERCICES_PAR_ID[autre] : undefined;
+}
+
 /** Les remplaçants d'un exercice : ceux qui travaillent les mêmes muscles,
  *  hors de ceux déjà dans la séance. Le même schéma de mouvement d'abord, et
- *  ce qu'on ne fait pas déjà un autre jour avant ce qui revient. Le dernier
- *  exercice, lui, se remplace par une autre fin de séance pour les jambes. */
+ *  ce qu'on ne fait pas déjà un autre jour avant ce qui revient. Dans une
+ *  paire, seulement ceux qui vont avec le partenaire — une autre zone, et la
+ *  règle des paires (`accordPaire`) ; s'il n'y en a aucun, tous : le choisi
+ *  se fera seul (`remplacerDansProgramme`). Le dernier exercice, lui, se
+ *  remplace par une autre fin de séance pour les jambes. */
 export function alternatives(
   programme: ProgrammeMois,
   seanceId: string,
@@ -1726,13 +1736,19 @@ export function alternatives(
   }
   const muscles = (actuel.musclesPrincipaux ?? []).length > 0 ? actuel.musclesPrincipaux! : musclesDe(actuel);
   const rang = (e: Exercice) => (e.pattern === actuel.pattern ? 0 : 2) + (ailleurs.has(cleMouvement(e)) ? 1 : 0);
-  return exercicesPourMuscles(libres, muscles)
-    .sort((a, b) => rang(a) - rang(b))
-    .slice(0, maxi);
+  const proposes = exercicesPourMuscles(libres, muscles).sort((a, b) => rang(a) - rang(b));
+  // Dans une paire : jamais deux exercices de la même zone (audit du 13
+  // octobre 2026), ni rien que la règle des paires refuse.
+  const partenaire = partenaireDans(seance, exerciceId);
+  const vontAvec = partenaire ? proposes.filter((e) => accordPaire(e, partenaire).accord === 'bon') : proposes;
+  return (vontAvec.length > 0 ? vontAvec : proposes).slice(0, maxi);
 }
 
 /** Change un exercice d'une séance. Le nouveau se fait chacun son tour s'il
- *  est sur machine, en même temps sinon. */
+ *  est sur machine, en même temps sinon. Dans une paire, s'il ne va pas avec
+ *  le partenaire (`accordPaire` : la même zone, les mêmes muscles…), la paire
+ *  est séparée : chacun se fait seul. Le lien court le dit par ses paires
+ *  (`retouchesDe`) : un ancien lien se relit comme avant. */
 export function remplacerDansProgramme(
   programme: ProgrammeMois,
   seanceId: string,
@@ -1741,8 +1757,19 @@ export function remplacerDansProgramme(
 ): ProgrammeMois {
   return {
     ...programme,
-    seances: programme.seances.map((s) => (s.id === seanceId ? remplacerDansSeance(s, ancienId, nouveauId) : s)),
+    seances: programme.seances.map((s) =>
+      s.id === seanceId ? sansPaireBancale(remplacerDansSeance(s, ancienId, nouveauId), nouveauId) : s,
+    ),
   };
+}
+
+/** La séance, sans la paire de cet exercice s'il ne va pas avec son
+ *  partenaire. */
+function sansPaireBancale(s: SeanceDuMois, exerciceId: string): SeanceDuMois {
+  const partenaire = partenaireDans(s, exerciceId);
+  if (!partenaire || !estConnu(exerciceId)) return s;
+  if (accordPaire(EXERCICES_PAR_ID[exerciceId], partenaire).accord === 'bon') return s;
+  return rangee({ ...s, liens: (s.liens ?? []).filter((paire) => !paire.includes(exerciceId)) });
 }
 
 /** Change un exercice d'une séance : le lien court rejoue ainsi un

@@ -6,9 +6,9 @@ import { EXERCICES_PAR_ID } from '../data/exercices';
 import { formaterDuree } from '../utils/generateurSeance';
 import { calculerStatistiques, formaterDateFr, libelleZones } from '../utils/formatage';
 import { SUFFIXE_UNITE, chargeTotale, libellePoidsParSerie, uniteDeSeance } from '../utils/statistiques';
-import { chargerHistoriquePartage } from '../utils/enLigne';
+import { avecSeancesDuPartenaire, chargerHistoriquePartage } from '../utils/enLigne';
 import { motRessenti } from '../utils/ressenti';
-import type { Partage } from '../utils/enLigne';
+import type { Partage, SeanceDeQuelquun } from '../utils/enLigne';
 import { rappelMesure } from '../utils/mesures';
 import { NOM_PERSONNE } from '../utils/programmeMois';
 import FicheExercice from './FicheExercice';
@@ -140,18 +140,25 @@ export default function HistoriqueEntrainement({
     locale: true,
     ...(partage ? { personne: partage.personne } : {}),
   }));
-  // Les deux : celles du serveur, et les miennes qu'il n'a pas encore.
+  // Les deux : celles du serveur, et les miennes qu'il n'a pas encore — et,
+  // pour une séance faite à deux sur un seul téléphone, celle de l'autre,
+  // telle qu'on l'a notée pour lui (audit du 13 octobre 2026).
+  const versLigne = (s: SeanceDeQuelquun): Ligne => ({
+    realisee: s.realisation,
+    personne: s.personne,
+    // Celle de l'autre, notée ici, part avec la sienne : pas de « Supprimer »
+    // à part.
+    locale: !s.noteeParLAutre && historique.some((h) => h.id === s.realisation.id),
+  });
   const lignes: Ligne[] =
     lesDeux && duServeur
       ? [
-          ...duServeur
-            .filter((s) => !supprimees.includes(s.realisation.id))
-            .map((s) => ({
-              realisee: s.realisation,
-              personne: s.personne,
-              locale: historique.some((h) => h.id === s.realisation.id),
-            })),
-          ...miennes.filter((m) => !duServeur.some((s) => s.realisation.id === m.realisee.id)),
+          ...avecSeancesDuPartenaire(duServeur.filter((s) => !supprimees.includes(s.realisation.id))).map(versLigne),
+          ...miennes
+            .filter((m) => !duServeur.some((s) => s.realisation.id === m.realisee.id))
+            .flatMap((m) =>
+              m.personne ? avecSeancesDuPartenaire([{ personne: m.personne, realisation: m.realisee }]).map(versLigne) : [m],
+            ),
         ]
       : miennes;
   const stats = calculerStatistiques(lignes.map((l) => l.realisee));
@@ -159,9 +166,13 @@ export default function HistoriqueEntrainement({
     (a, b) => new Date(b.realisee.date).getTime() - new Date(a.realisee.date).getTime()
   );
 
-  /** Les séances de l'autre seulement : ce que la progression y ajoute. */
+  /** Les séances de l'autre seulement : ce que la progression y ajoute — ce
+   *  qu'il a noté sur son téléphone, et ce qu'on a noté pour lui sur le
+   *  nôtre. */
   const seancesAutre = duServeur
-    ? duServeur.filter((s) => s.personne !== partage?.personne).map((s) => s.realisation)
+    ? avecSeancesDuPartenaire(duServeur)
+        .filter((s) => s.personne !== partage?.personne)
+        .map((s) => s.realisation)
     : null;
   const rappel = progression ? rappelMesure(progression.mesures) : null;
 

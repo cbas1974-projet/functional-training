@@ -411,10 +411,11 @@ export interface Seance {
     /** La séance se mène sur un seul téléphone : celui qui le tient note pour
      *  les deux (décision du 12 octobre 2026). Pas de minuteur pendant une
      *  série, qui se finit sur « Série terminée » ; une paire se fait A, B,
-     *  A, B sans pause entre les tours, un exercice seul chacun son tour ; la
-     *  pause, à la fin, se lance d'un clic. Absent : l'horloge d'avant, qui
-     *  déroule les séries au tempo — celle de la séance commune sur deux
-     *  téléphones (`SEANCE_COMMUNE`). Voir `construireEtapes`. */
+     *  A, B sans pause entre les tours — sa machine chacun son tour —, un
+     *  exercice seul chacun son tour ; la pause, à la fin, se lance d'un
+     *  clic. Absent : l'horloge d'avant, qui déroule les séries au tempo —
+     *  celle de la séance commune sur deux téléphones (`SEANCE_COMMUNE`).
+     *  Voir `construireEtapes`. */
     unTelephone?: boolean;
   };
   blocs: BlocSeries[];

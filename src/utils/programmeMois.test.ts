@@ -425,7 +425,7 @@ describe('genererProgramme', () => {
     }
   });
 
-  it('par défaut, huit exercices les trois jours, le dernier compris, au tempo 3 s / 3 s + 1 s en bas : environ 1 h 05 le lundi, 1 h 05 le mardi, 55 min le jeudi, à deux sur un téléphone', () => {
+  it('par défaut, huit exercices les trois jours, le dernier compris, au tempo 3 s / 3 s + 1 s en bas : environ 1 h 05 le lundi, 1 h 05 le mardi, 1 h le jeudi, à deux sur un téléphone', () => {
     expect(EXERCICES_PAR_DEFAUT).toBe(8);
     expect(TEMPO_PROGRAMME).toEqual({ monteeSec: 3, descenteSec: 3, pauseSec: 1 });
     const durees: Record<number, number[]> = { 1: [], 2: [], 4: [] };
@@ -459,11 +459,14 @@ describe('genererProgramme', () => {
     // Le mardi, environ 1 h 05 — Big Max fait une série de plus aux poussées.
     expect(Math.min(...durees[2])).toBeGreaterThan(56);
     expect(Math.max(...durees[2])).toBeLessThan(72);
-    // Le jeudi, 55 minutes, sans machine lourde — jusqu'à une heure quand
-    // ses tirages légers se font d'un bras puis de l'autre.
-    expect(Math.min(...durees[4])).toBeGreaterThan(46);
-    expect(Math.max(...durees[4])).toBeLessThan(63);
-    expect(moyenne(durees[4])).toBeLessThan(58);
+    // Le jeudi, environ une heure, sans machine lourde : ses deux machines,
+    // un seul siège, se font chacun son tour (audit du 13 octobre 2026) —
+    // jusqu'à 1 h 08 quand ses tirages légers se font d'un bras puis de
+    // l'autre.
+    expect(Math.min(...durees[4])).toBeGreaterThan(52);
+    expect(Math.max(...durees[4])).toBeLessThan(70);
+    expect(moyenne(durees[4])).toBeGreaterThan(58);
+    expect(moyenne(durees[4])).toBeLessThan(65);
   });
 
   it('seul, la séance ne dure pas plus qu’à deux : sans l’autre, une pause entre deux séries d’un exercice seul, au lieu de sa série', () => {
@@ -986,7 +989,7 @@ describe('la séance de chacun', () => {
     const bascule = basculerTour(p, 'lundi-a', finale);
     expect(seanceNommee(bascule, 'lundi-a').tour).not.toContain(finale);
     // Sur un seul téléphone, un exercice seul se fait toujours chacun son
-    // tour, une paire toujours ensemble : la durée ne bouge pas.
+    // tour : la durée ne bouge pas.
     expect(dureeSec(seanceNommee(bascule, 'lundi-a'))).toBe(dureeSec(lundi));
     // Sur deux téléphones (la séance commune, cachée), côte à côte va plus
     // vite.
@@ -1257,6 +1260,80 @@ describe('changer un exercice', () => {
     expect(seanceNommee(modifie, 'lundi-a').exercices[0]).toBe(nouveau.id);
     expect(modifie.seances.filter((s) => s.id !== 'lundi-a')).toEqual(p.seances.filter((s) => s.id !== 'lundi-a'));
     expect(seanceNommee(p, 'lundi-a').exercices[0]).toBe(actuel.id);
+  });
+
+  it('dans une paire, ne propose que des partenaires possibles : jamais deux exercices de la même zone (audit du 13 octobre 2026)', () => {
+    // Le lundi A de l'audit : la bouche d'incendie, jumelée au développé
+    // couché serré — la feuille proposait des exercices du haut du corps.
+    let essais = 0;
+    for (const programme of programmes) {
+      for (const s of programme.seances) {
+        for (const [a, b] of s.liens ?? []) {
+          for (const [change, reste] of [
+            [a, b],
+            [b, a],
+          ]) {
+            const partenaire = EXERCICES_PAR_ID[reste];
+            const choix = alternatives(programme, s.id, change);
+            expect(choix.length, `${programme.graine} · ${s.id} · ${change}`).toBeGreaterThan(0);
+            for (const e of choix) {
+              essais += 1;
+              const cas = `${programme.graine} · ${s.id} · ${change} → ${e.id}, avec ${reste}`;
+              expect(memeZone(e, partenaire), cas).toBe(false);
+              expect(accordPaire(e, partenaire).accord, cas).toBe('bon');
+            }
+          }
+        }
+      }
+    }
+    expect(essais).toBeGreaterThan(5000);
+  });
+
+  it('le remplaçant d’un exercice en paire garde la paire ; s’il ne va pas avec le partenaire, chacun se fait seul', () => {
+    const lundi = seanceNommee(p, 'lundi-a');
+    const [a, b] = lundi.liens![0];
+    // Un remplaçant proposé : la paire reste.
+    const bon = alternatives(p, 'lundi-a', a)[0];
+    expect(seanceNommee(remplacerDansProgramme(p, 'lundi-a', a, bon.id), 'lundi-a').liens![0]).toEqual([bon.id, b]);
+    // Un exercice de la même zone que le partenaire : la paire est séparée,
+    // les deux se font seuls ; les autres paires restent.
+    const dansLaSeance = [...lundi.exercices, lundi.finale];
+    const deLaMemeZone = candidatsProgramme(MATERIELS_PROGRAMME).find(
+      (e) => memeZone(e, EXERCICES_PAR_ID[b]) && !dansLaSeance.includes(e.id),
+    )!;
+    const change = remplacerDansProgramme(p, 'lundi-a', a, deLaMemeZone.id);
+    const separee = seanceNommee(change, 'lundi-a');
+    expect(separee.exercices).toContain(deLaMemeZone.id);
+    expect(separee.liens).toEqual(lundi.liens!.slice(1));
+    // Le lien redonne exactement la séance retouchée, sur l'autre téléphone.
+    expect(programmeDansLien(new URL(lienDePartage(change, 'https://sgtraining.netlify.app/')).hash)).toEqual(change);
+  });
+
+  it('sans aucun remplaçant qui aille avec le partenaire, propose quand même les mêmes muscles ; le choisi se fait seul', () => {
+    // Une paire déjà bancale — deux exercices des biceps, d'un ancien lien :
+    // aucun exercice des biceps ne va avec un autre exercice des biceps.
+    const mardi: SeanceDuMois = {
+      id: 'mardi-a',
+      nom: 'Mardi A — le haut',
+      jour: 2,
+      semaine: 'A',
+      type: 'facile',
+      partie: 'haut',
+      format: 'series',
+      exercices: ['bench-press', 'hammer-curl', 'concentration-curl', 'incline-row', 'calf-raise'],
+      finale: 'farmers-walk',
+      liens: [
+        ['hammer-curl', 'concentration-curl'],
+        ['incline-row', 'calf-raise'],
+      ],
+    };
+    const programme: ProgrammeMois = { ...p, seances: [mardi] };
+    const choix = alternatives(programme, 'mardi-a', 'hammer-curl');
+    expect(choix.length).toBeGreaterThan(0);
+    expect(choix.every((e) => accordPaire(e, EXERCICES_PAR_ID['concentration-curl']).accord !== 'bon')).toBe(true);
+    const apres = seanceNommee(remplacerDansProgramme(programme, 'mardi-a', 'hammer-curl', choix[0].id), 'mardi-a');
+    expect(apres.exercices).toContain(choix[0].id);
+    expect(apres.liens).toEqual([['incline-row', 'calf-raise']]);
   });
 });
 
@@ -2233,17 +2310,18 @@ describe('les décisions de Sébastien sur l’audit (11 octobre 2026)', () => {
       }
     }
     // Graine 1, par défaut — huit exercices —, à deux sur un seul téléphone :
-    // lundi A 1 h 02 min 39 s, mardi A 1 h 01 min 03 s, jeudi A 58 min 10 s ;
-    // lundi B 1 h 10 min 39 s, mardi B 1 h 07 min 33 s, jeudi B 52 min 10 s.
-    // Une estimation : les séries se finissent sur « Série terminée ».
+    // lundi A 1 h 02 min 39 s, mardi A 1 h 01 min 03 s, jeudi A 1 h 04 min
+    // 52 s ; lundi B 1 h 10 min 39 s, mardi B 1 h 07 min 33 s, jeudi B 58 min
+    // 52 s — les machines du jeudi chacun son tour. Une estimation : les
+    // séries se finissent sur « Série terminée ».
     const graine1 = programmeCompose(8, undefined, 1);
     expect(graine1.seances.map((s) => [s.id, dureeSec(s)])).toEqual([
       ['lundi-a', 3759],
       ['mardi-a', 3663],
-      ['jeudi-a', 3490],
+      ['jeudi-a', 3892],
       ['lundi-b', 4239],
       ['mardi-b', 4053],
-      ['jeudi-b', 3130],
+      ['jeudi-b', 3532],
     ]);
   }, 30_000);
 });

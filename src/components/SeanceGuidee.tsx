@@ -83,7 +83,7 @@ import {
   motRessenti,
   phraseRessenti,
 } from '../utils/ressenti';
-import { ajouterTemps, useMoteurEtapes } from '../hooks/useMoteurEtapes';
+import { ajouterTemps, appuiAccepte, useMoteurEtapes } from '../hooks/useMoteurEtapes';
 import { useMoteurCommun } from '../hooks/useMoteurCommun';
 import { useSeanceCommune } from '../hooks/useSeanceCommune';
 import type { ConfigSynchro } from '../hooks/useSeanceCommune';
@@ -949,7 +949,14 @@ export default function SeanceGuidee({
     // À deux, on ne revient pas en arrière : l'horloge est commune.
     if (!enCommun) naviguer(indexEtapePrecedente(etapes, index));
   };
-  const suivant = () => (enCommun ? decider(decisionSuivant) : naviguer(index + 1));
+  /** Un appui qui fait avancer la séance : ignoré juste après un changement
+   *  d'étape — c'est le second toucher d'un double toucher, qui validait la
+   *  série suivante (`appuiAccepte`). À deux, l'horloge commune décide. */
+  const appuiCompte = () => enCommun || appuiAccepte(etat, Date.now());
+  const suivant = () => {
+    if (enCommun) decider(decisionSuivant);
+    else if (appuiCompte()) naviguer(index + 1);
+  };
   const passerExercice = () =>
     enCommun ? decider(decisionPasserExercice) : naviguer(indexApresExercice(etapes, index));
   /** « Suivant », en haut : pendant une série, il ne la saute pas sans le dire. */
@@ -960,7 +967,11 @@ export default function SeanceGuidee({
     }
     confirmer({
       titre: etape.type === 'serie' ? 'Sauter cette série ?' : 'Sauter cette station ?',
-      texte: 'Elle ne compte que si tu en as fait au moins la moitié. Pour la finir, c’est le bouton du bas.',
+      // Sur un seul téléphone, seule « Série terminée » fait compter une série.
+      texte:
+        etape.type === 'serie' && etape.manuelle
+          ? 'Elle ne comptera pas. Pour la finir, c’est le bouton du bas.'
+          : 'Elle ne compte que si tu en as fait au moins la moitié. Pour la finir, c’est le bouton du bas.',
       oui: etape.type === 'serie' ? 'Sauter la série' : 'Sauter la station',
       action: suivant,
     });
@@ -1094,9 +1105,11 @@ export default function SeanceGuidee({
   };
 
   /** « Série terminée » : la série compte, et la charge pré-remplie de ceux
-   *  qui l'ont faite est notée telle quelle — on ne tape que si elle change. */
+   *  qui l'ont faite est notée telle quelle — on ne tape que si elle change.
+   *  Le second toucher d'un double toucher ne compte pas : il ne valide pas
+   *  la série suivante. */
   const terminerSerie = () => {
-    if (etape.type !== 'serie') return;
+    if (etape.type !== 'serie' || !appuiCompte()) return;
     const { exerciceId, serie } = etape;
     if (seCharge(exerciceDeSeance(exerciceId))) {
       for (const qui of colonnesDeLaSerie(etape.qui)) {
@@ -1534,7 +1547,14 @@ export default function SeanceGuidee({
       const pauseSec = etapes[index + 1]?.dureeSec ?? 0;
       actions = (
         <>
-          <Bouton variante="neutre" taille="etroit" onClick={() => naviguer(index + 2)} className="flex-1">
+          <Bouton
+            variante="neutre"
+            taille="etroit"
+            onClick={() => {
+              if (appuiCompte()) naviguer(index + 2);
+            }}
+            className="flex-1"
+          >
             Sans pause
           </Bouton>
           <Bouton variante="accent" taille="vedette" onClick={suivant} className="flex-[2]">
@@ -3059,6 +3079,7 @@ function ListeProgramme(props: ListeProgrammeProps) {
             groupe={groupe}
             numero={numeros[g]}
             places={places}
+            dernier={g === groupes.length - 1}
           />
         ) : (
           <LigneGroupe
@@ -3068,6 +3089,7 @@ function ListeProgramme(props: ListeProgrammeProps) {
             colonnes={colonnes}
             statut={statut(bornes[g].debut, bornes[g].fin)}
             ensuite={g === ensuite}
+            dernier={g === groupes.length - 1}
           />
         ),
       )}
@@ -3113,12 +3135,15 @@ function LigneGroupe({
   colonnes,
   statut,
   ensuite,
+  dernier,
 }: {
   groupe: BlocSeries[];
   numero: number;
   colonnes: ColonneDuo[];
   statut: StatutLigne;
   ensuite: boolean;
+  /** Le dernier exercice : pas de pause après, les étirements suivent. */
+  dernier: boolean;
 }) {
   const fait = statut === 'fait';
   const exercices = groupe.map((bloc) => exerciceDeSeance(bloc.exerciceId));
@@ -3150,8 +3175,8 @@ function LigneGroupe({
         </div>
         {!fait && (
           <div className="chiffres text-xs" style={{ color: 'var(--texte-discret)' }}>
-            {groupe.length > 1 ? `${series} tours` : volumeCourt(exercices[0], series, reps)} · pause{' '}
-            {dureePause(groupe[groupe.length - 1].reposSec)}
+            {groupe.length > 1 ? `${series} tours` : volumeCourt(exercices[0], series, reps)}
+            {dernier ? '' : ` · pause ${dureePause(groupe[groupe.length - 1].reposSec)}`}
           </div>
         )}
       </div>
@@ -3163,27 +3188,35 @@ interface CarteGroupeProps extends ListeProgrammeProps {
   groupe: BlocSeries[];
   numero: number;
   places: Map<string, number>;
+  /** Le dernier exercice : pas de pause après, les étirements suivent. */
+  dernier: boolean;
   ref: Ref<HTMLLIElement>;
 }
 
 /** L'exercice ou la paire en cours, déroulé : chaque exercice, ses séries,
  *  les charges des deux, puis lourd, correct ou léger. */
 function CarteGroupe({ ref, ...props }: CarteGroupeProps) {
-  const { groupe, numero, colonnes, etapes, index } = props;
+  const { groupe, numero, colonnes, etapes, index, dernier } = props;
   const etape = etapes[index];
   const paire = groupe.length > 1;
   const aDeux = colonnes.length > 1;
+  // À deux, la machine d'une paire — un seul siège — se fait chacun son tour.
+  const machine = paire && aDeux ? groupe.find((bloc) => bloc.tour) : undefined;
   // Chacun son tour : qui commence.
   const premiere = etapes.find(
-    (e): e is Extract<Etape, { type: 'serie' }> => e.type === 'serie' && e.exerciceId === groupe[0].exerciceId,
+    (e): e is Extract<Etape, { type: 'serie' }> =>
+      e.type === 'serie' && e.exerciceId === (machine ?? groupe[0]).exerciceId,
   );
   const commence = colonnes.find((colonne) => colonne.qui === (premiere?.qui === 'autre' ? 'autre' : 'moi'));
+  const quiCommence = commence ? nomColonne(commence) : 'l’un';
   const explication = paire
     ? aDeux
-      ? 'A, B, A, B, les deux, sans pause entre les tours'
+      ? machine
+        ? `la machine chacun son tour (${quiCommence} commence), l’autre ensemble, sans pause entre les tours`
+        : 'A, B, A, B, les deux, sans pause entre les tours'
       : 'A, B, A, B, sans pause entre les tours'
     : aDeux
-      ? `Chacun son tour : ${commence ? nomColonne(commence) : 'l’un'} commence`
+      ? `Chacun son tour : ${quiCommence} commence`
       : 'Une pause entre deux séries';
   const pause = groupe[groupe.length - 1].reposSec;
   return (
@@ -3199,7 +3232,9 @@ function CarteGroupe({ ref, ...props }: CarteGroupeProps) {
         <div className="chiffres text-xs" style={{ color: 'var(--texte-discret)' }}>
           {etape.type === 'repos' && etape.motif === 'pause'
             ? 'Pause en cours'
-            : `Pause à la fin${paire ? ' de la paire' : ''} : ${dureePause(pause)}, lancée d’un toucher`}
+            : dernier
+              ? 'Pas de pause à la fin : les étirements suivent'
+              : `Pause à la fin${paire ? ' de la paire' : ''} : ${dureePause(pause)}, lancée d’un toucher`}
         </div>
       </div>
       {groupe.map((bloc) => (
@@ -3384,6 +3419,10 @@ function TableauSeries({
                 const place = places.get(`${exercice.id}|${serie}|${colonne.qui}`);
                 const faite = place !== undefined && faites.includes(place);
                 const ici = place === index;
+                // Une série faite, ou passée sans « Série terminée » : la case
+                // dit ce qui est noté, rien d'autre — pas la charge proposée.
+                const passee = place !== undefined && place < index;
+                const proposee = faite || passee ? 0 : charges(colonne.qui, exercice.id, serie).proposee;
                 if (!avecCharge) {
                   return (
                     <span
@@ -3403,7 +3442,7 @@ function TableauSeries({
                   <CaseCharge
                     key={colonne.qui}
                     valeur={saisies(colonne.qui, exercice.id)[serie - 1] ?? 0}
-                    proposee={charges(colonne.qui, exercice.id, serie).proposee}
+                    proposee={proposee}
                     unitePoids={unitePoids}
                     ici={ici}
                     faite={faite}
@@ -3459,7 +3498,8 @@ function CaseCharge({
 }: {
   /** La charge notée ; 0 : pas encore. */
   valeur: number;
-  /** Celle qu'on propose tant qu'on n'a rien noté. */
+  /** Celle qu'on propose tant qu'on n'a rien noté ; 0 pour une série faite
+   *  ou passée : la case dit alors ce qui est enregistré. */
   proposee: number;
   unitePoids: UnitePoids;
   /** La série en cours. */

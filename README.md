@@ -28,7 +28,7 @@ du dos, épaules, extérieur et intérieur de cuisse. Rien à taper.
   | | Lundi — tout le corps | Mardi — le haut | Jeudi — les jambes, modéré |
   | --- | --- | --- | --- |
   | Le soir | pas de jiu-jitsu | jiu-jitsu | jiu-jitsu (souvent un cours privé le vendredi matin) |
-  | Exercices | **8** : le premier seul, 3 paires, le dernier seul, ≈ 1 h 05 | **8** : le premier seul, 3 paires, le dernier seul, ≈ 1 h 05 | **8** : le premier seul, 3 paires, le dernier seul, ≈ 55 min |
+  | Exercices | **8** : le premier seul, 3 paires, le dernier seul, ≈ 1 h 05 | **8** : le premier seul, 3 paires, le dernier seul, ≈ 1 h 05 | **8** : le premier seul, 3 paires, le dernier seul, ≈ 1 h |
   | Répétitions | Speedy **10** (**8 à la trap bar**), Big Max **10** | Speedy 8, Big Max 10 | Speedy 8, Big Max 10 |
   | En tête, seul | la **trap bar**, le dos frais | le **développé couché aux haltères** | le **swing à deux mains** |
   | Les 3 paires, deux zones différentes | le bas du dos (le **Superman, sans poids**), le ventre (du gainage, le dos immobile) ou une jambe légère, chacun avec le haut du corps : un développé au-dessus de la tête, tirer, pousser | chaque exercice du haut — les épaules (objectif), tirer, les bras — avec le ventre ou une jambe légère (mollets, bouche d'incendie…) | la **planche de Copenhague courte** et les **deux machines des cuisses**, chacune avec le ventre ou un tirage léger du haut du corps |
@@ -51,7 +51,9 @@ du dos, épaules, extérieur et intérieur de cuisse. Rien à taper.
   paire réunit **deux exercices de zones différentes** — le haut du corps, le
   bas du corps, le tronc (le ventre et le bas du dos) : **A, B, A, B, les deux
   ensemble, sans pause entre les tours** (15 secondes pour passer de l'un à
-  l'autre), trois tours. Chaque muscle se repose quand même : l'autre
+  l'autre), trois tours. Sauf une machine, un seul siège (le jeudi) : même
+  dans une paire, **chacun son tour** — Big Max, puis Speedy, puis l'autre
+  exercice, ensemble (audit du 13 octobre 2026). Chaque muscle se repose quand même : l'autre
   exercice de la paire lui sert de repos. **La pause vient à la fin de la
   paire ou de l'exercice seul, et se lance d'un toucher** (voir « Les
   pauses », plus bas). La façon dont les paires sont formées est expliquée
@@ -70,9 +72,9 @@ du dos, épaules, extérieur et intérieur de cuisse. Rien à taper.
 - **Combien de temps**, à deux sur un téléphone : le lundi environ
   **1 h 05** (de 1 h 03 à 1 h 11), le mardi environ **1 h 05** (de 59 min à
   1 h 09 : Big Max fait une série de plus aux poussées), le jeudi environ
-  **55 min** (de 49 min à 1 h, quand ses tirages légers se font d'un bras
-  puis de l'autre). Avec 6 exercices : 55, 55 et 45 min ; avec 4 : 40, 40 et
-  30 min. **C'est une estimation** : une série se finit sur « Série
+  **1 h** (de 56 min à 1 h 08, quand ses tirages légers se font d'un bras
+  puis de l'autre) : ses deux machines se font chacun son tour, un seul
+  siège. Avec 6 exercices : 55, 55 et 47 min ; avec 4 : 40, 40 et 30 min. **C'est une estimation** : une série se finit sur « Série
   terminée », pas au bout d'un chrono. L'application compte la série au
   tempo — la plus longue des deux quand on la fait ensemble —, 15 s pour
   passer à la suivante, et la pause à la fin de chaque paire ou exercice
@@ -124,7 +126,9 @@ du dos, épaules, extérieur et intérieur de cuisse. Rien à taper.
   la cuisse) et la **flexion des jambes couché** (l'arrière), chacune avec le
   ventre (du gainage) ou un **tirage léger du haut du corps** (un oiseau, un
   rowing appuyé). Les deux machines sont les préférées du duo : elles
-  reviennent chaque jeudi à huit exercices, mais plus ensemble. À quatre,
+  reviennent chaque jeudi à huit exercices, mais plus ensemble. Un seul
+  siège : même en paire, chacun son tour, Big Max d'abord, puis l'autre
+  exercice ensemble. À quatre,
   les objectifs prennent toute la place. Pour
   les genoux de Big Max, à l'extension : « Genoux sensibles : de 90° jusqu'à
   presque tendu, sans verrouiller ni tenir en haut » — aucun arrêt, ni genoux
@@ -298,7 +302,8 @@ du dos, épaules, extérieur et intérieur de cuisse. Rien à taper.
   photo du même nom dans `public/exercices/`.
 - **Ensemble ou chacun son tour** : sur un seul téléphone (par défaut),
   c'est fixé — un exercice seul, chacun son tour, Big Max d'abord ; une
-  paire, les deux ensemble. Avec la séance commune sur deux téléphones
+  paire, les deux ensemble, sauf sa machine (un seul siège) : chacun son
+  tour, Big Max d'abord, puis l'autre exercice ensemble. Avec la séance commune sur deux téléphones
   (cachée, voir plus bas), chaque exercice porte deux lignes,
   « Ensemble » et « Chacun son tour », avec un crochet vert sur le choix du
   moment. Les poids libres, le kettlebell, **les bancs** (il y en a cinq ou
@@ -315,8 +320,10 @@ du dos, épaules, extérieur et intérieur de cuisse. Rien à taper.
   détail du mouvement avant de commencer.
 - **Changer** un exercice ouvre la liste des exercices des mêmes muscles, avec
   leur image : le même geste d'abord, et ce que le programme ne fait pas déjà
-  avant ce qui revient un autre jour. Le changement vaut pour chaque séance
-  de ce nom.
+  avant ce qui revient un autre jour. Dans une paire, seulement ceux qui vont
+  avec le partenaire — une autre zone, la règle des paires ; s'il n'y en a
+  aucun, la liste les propose tous, et le choisi se fait seul (la paire est
+  séparée). Le changement vaut pour chaque séance de ce nom.
 - **Objectifs** et **Refaire**, dans *Réglages* : choisir d'autres muscles,
   ou tirer un autre programme. L'historique, les charges, le nombre
   d'exercices et le tempo restent.
@@ -570,10 +577,10 @@ calme plutôt que perdu.
 Au format superset, les exercices ne sont pas appariés au hasard. Un
 enchaînement réunit des mouvements qui ne se gênent pas :
 
-- **des zones différentes** : jamais deux exercices de la même grande zone —
-  le haut du corps, le bas du corps, le tronc (`src/utils/zones.ts`), la même
-  règle que les paires du programme. Un enchaînement compte donc **trois
-  exercices au plus** ;
+- **schémas opposés** (poussée ↔ tirage, squat ↔ charnière de hanche) ou
+  **muscles antagonistes** (biceps ↔ triceps, pectoraux ↔ dorsaux) ; deux
+  zones différentes valent un peu mieux, sans être exigées — la règle stricte
+  des trois grandes zones ne vaut que pour les paires du programme du mois ;
 - **jamais deux fois le même muscle**, ni deux fois le même schéma ;
 - **au plus un mouvement essoufflant** par enchaînement (squat, charnière,
   fente, portage, corps entier) : sinon c'est la cage thoracique qui lâche
@@ -586,8 +593,8 @@ droite plutôt que d'être mal apparié.
 
 Un circuit à trois tours ne remplira jamais une heure : quatre stations de 40 s
 répétées trois fois, c'est douze minutes. L'enchaîné est donc construit comme un
-**superset sans repos** plutôt que comme un circuit — deux ou trois exercices
-d'affilée, de zones différentes, une vraie pause de 90 à 120 s, deux ou trois tours, puis un bloc
+**superset sans repos** plutôt que comme un circuit — trois ou quatre exercices
+d'affilée, une vraie pause de 90 à 120 s, deux ou trois tours, puis un bloc
 suivant avec d'autres exercices. Le modèle du superset sait aligner plusieurs
 blocs ; celui du circuit n'en connaît qu'un.
 
@@ -672,7 +679,8 @@ exercice par un autre de la même zone.
   remplit l'écran. Pour l'exercice en cours : une ligne par série, **la
   charge de Speedy et celle de Big Max côte à côte**, pré-remplies avec
   celles de la dernière fois ; « ▶ Série 2 — Big Max » dit qui la fait
-  (« les deux » dans une paire). Pas de case de poids pour un exercice sans
+  (« les deux » dans une paire, sauf sur sa machine : chacun son tour). Une
+  série faite, ou sautée, montre ce qui est noté — pas la charge proposée. Pas de case de poids pour un exercice sans
   charge : un crochet quand la série est faite. **Pas de minuteur pendant
   une série** : « Série terminée » (avec « série ≈ 1 min », une estimation)
   passe à la suivante ; le métronome (MONTE, TIENS, DESCENDS) ne vient que si
@@ -704,7 +712,9 @@ exercice par un autre de la même zone.
   pas de chrono à arrêter pendant une série. « Précédent » et
   « Suivant » sont petits, en haut ; pendant une série, « Suivant » demande
   avant de la sauter. « Passer l'exercice » est petit, loin du gros bouton,
-  et demande aussi.
+  et demande aussi. **Un double toucher ne compte qu'une fois** : un second
+  appui moins de 0,6 s après le changement d'étape est ignoré — il validait
+  la série suivante, que personne n'avait faite.
 - **Poids saisi série par série**, en livres : le champ est pré-rempli avec la
   charge de la série précédente, sinon celle de la dernière fois ; il n'y a
   qu'à la corriger quand elle change. Dessous, deux raccourcis :
@@ -818,8 +828,11 @@ les charges des deux la fois d'après.
 Avec le serveur, chaque séance enregistrée part aussi dans **l'historique
 des deux**, et celles faites avant de brancher le serveur partent une fois.
 En haut de l'historique, **Moi** ou **Avec Big Max** : ses séances seules, ou
-celles des deux, chacune avec son nom. Une séance supprimée sur son
-téléphone disparaît aussi de l'historique des deux.
+celles des deux, chacune avec son nom. Une séance faite à deux sur un seul
+téléphone y apparaît pour chacun : celle de l'autre avec ses séries, ses
+charges et son ressenti, tels qu'on les a notés pour lui (`partenaire`) — sa
+courbe, dans « Progression », aussi. Une séance supprimée sur son téléphone
+disparaît aussi de l'historique des deux, celle de l'autre avec.
 
 Le serveur garde **tout l'historique, depuis le premier jour**, et « Avec
 Big Max » le montre en entier. Le téléphone en garde des années : l'historique

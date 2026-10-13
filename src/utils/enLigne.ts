@@ -2,7 +2,7 @@
 // séances faites et des mesures du corps, et l'historique des deux. Rien n'y
 // est indispensable : sans serveur ni réseau, l'application garde tout sur le
 // téléphone.
-import type { EntrainementState, Mesure, Personne, ProgrammeMois, SeanceRealisee } from '../types';
+import type { EntrainementState, ExerciceRealise, Mesure, Personne, ProgrammeMois, SeanceRealisee } from '../types';
 import { PARAMETRES_PAR_DEFAUT } from '../data/parametres';
 import { lireMesure, trierMesures } from './mesures';
 import { estRessenti } from './ressenti';
@@ -109,19 +109,19 @@ export async function effacerRealisation(partage: Partage, id: string): Promise<
 export interface SeanceDeQuelquun {
   personne: Personne;
   realisation: SeanceRealisee;
+  /** Notée sur le téléphone de l'autre, à deux sur un seul téléphone : tirée
+   *  de son `partenaire` (`avecSeancesDuPartenaire`). Elle s'efface avec la
+   *  sienne, jamais seule. */
+  noteeParLAutre?: boolean;
 }
 
 const estObjet = (x: unknown): x is Record<string, unknown> => typeof x === 'object' && x !== null && !Array.isArray(x);
+const estPersonne = (x: unknown): x is Personne => x === 'sebastien' || x === 'max';
+const nombre = (n: unknown) => (typeof n === 'number' && Number.isFinite(n) ? n : 0);
 
-/** Une séance reçue du serveur, remise d'aplomb : on n'affiche que ce qui se
- *  lit. */
-function lireSeanceDeQuelquun(brut: unknown): SeanceDeQuelquun | null {
-  if (!estObjet(brut) || (brut.personne !== 'sebastien' && brut.personne !== 'max')) return null;
-  const r = brut.realisation;
-  if (!estObjet(r) || typeof r.id !== 'string' || typeof r.date !== 'string' || Number.isNaN(Date.parse(r.date))) return null;
-  if (!Array.isArray(r.exercices)) return null;
-  const nombre = (n: unknown) => (typeof n === 'number' && Number.isFinite(n) ? n : 0);
-  const exercices = r.exercices.filter(estObjet).filter((e) => typeof e.exerciceId === 'string').map((e) => ({
+/** Les exercices d'une séance reçue, remis d'aplomb. */
+const lireExercices = (bruts: unknown[]): ExerciceRealise[] =>
+  bruts.filter(estObjet).filter((e) => typeof e.exerciceId === 'string').map((e) => ({
     exerciceId: e.exerciceId as string,
     seriesPrevues: nombre(e.seriesPrevues),
     seriesFaites: nombre(e.seriesFaites),
@@ -131,6 +131,21 @@ function lireSeanceDeQuelquun(brut: unknown): SeanceDeQuelquun | null {
     ...(Array.isArray(e.poidsParSerie) ? { poidsParSerie: e.poidsParSerie.map(nombre) } : {}),
     ...(estRessenti(e.ressenti) ? { ressenti: e.ressenti } : {}),
   }));
+
+/** Une séance reçue du serveur, remise d'aplomb : on n'affiche que ce qui se
+ *  lit. Sur un seul téléphone, à deux, ce qu'on y a noté pour l'autre
+ *  (`partenaire`) est gardé — l'historique « Les deux » le montre (audit du
+ *  13 octobre 2026). */
+function lireSeanceDeQuelquun(brut: unknown): SeanceDeQuelquun | null {
+  if (!estObjet(brut) || !estPersonne(brut.personne)) return null;
+  const r = brut.realisation;
+  if (!estObjet(r) || typeof r.id !== 'string' || typeof r.date !== 'string' || Number.isNaN(Date.parse(r.date))) return null;
+  if (!Array.isArray(r.exercices)) return null;
+  const p = r.partenaire;
+  const partenaire =
+    estObjet(p) && estPersonne(p.personne) && p.personne !== brut.personne && Array.isArray(p.exercices)
+      ? { personne: p.personne, exercices: lireExercices(p.exercices) }
+      : null;
   return {
     personne: brut.personne,
     realisation: {
@@ -140,10 +155,28 @@ function lireSeanceDeQuelquun(brut: unknown): SeanceDeQuelquun | null {
       parametres: { ...PARAMETRES_PAR_DEFAUT, ...(estObjet(r.parametres) ? r.parametres : {}) },
       dureePrevueSec: nombre(r.dureePrevueSec),
       dureeReelleSec: nombre(r.dureeReelleSec),
-      exercices,
+      exercices: lireExercices(r.exercices),
       terminee: r.terminee !== false,
+      ...(partenaire ? { partenaire } : {}),
     },
   };
+}
+
+/** Les séances de chacun : celles-ci, et pour chaque séance faite à deux sur
+ *  un seul téléphone, celle de l'autre — ce que le téléphone a noté pour lui
+ *  (`partenaire`) : la même séance, ses exercices à lui. Pas en double quand
+ *  il l'a déjà de son côté. */
+export function avecSeancesDuPartenaire(seances: SeanceDeQuelquun[]): SeanceDeQuelquun[] {
+  return seances.flatMap((seance) => {
+    const { partenaire, ...realisation } = seance.realisation;
+    if (!partenaire || partenaire.personne === seance.personne) return [seance];
+    const dejaLa = seances.some((s) => s.personne === partenaire.personne && s.realisation.id === seance.realisation.id);
+    if (dejaLa) return [seance];
+    return [
+      seance,
+      { personne: partenaire.personne, realisation: { ...realisation, exercices: partenaire.exercices }, noteeParLAutre: true },
+    ];
+  });
 }
 
 /** Les séances des deux, du serveur ; null quand il ne répond pas. */

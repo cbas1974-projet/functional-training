@@ -7,6 +7,7 @@ import {
   avecMesure,
   avecMesuresAuBranchement,
   avecSeanceFaite,
+  avecSeancesDuPartenaire,
   chargerHistoriquePartage,
   chargerMesuresPartagees,
   effacerMesure,
@@ -427,5 +428,78 @@ describe('l’historique des deux, lu du serveur', () => {
     expect(exercices.map((e) => e.ressenti)).toEqual([undefined, undefined, undefined]);
     expect(exercices.map((e) => 'ressenti' in e)).toEqual([false, false, false]);
     expect(exercices[0].poidsParSerie).toEqual([25, 25, 25]);
+  });
+
+  /** Le serveur rend ces séances telles quelles. */
+  const serveurRend = (seances: object[]) =>
+    vi.stubGlobal('fetch', () => Promise.resolve(new Response(JSON.stringify({ seances }), { status: 200 })));
+
+  it('garde ce que le téléphone a noté pour l’autre, sur un seul téléphone : ses séries, ses charges, son ressenti (audit du 13 octobre 2026)', async () => {
+    serveurRend([
+      {
+        personne: 'sebastien',
+        realisation: {
+          ...seance,
+          exercices: [exo()],
+          partenaire: {
+            personne: 'max',
+            exercices: [exo({ seriesPrevues: 4, seriesFaites: 4, poids: 35, poidsParSerie: [30, 35, 35, 35], ressenti: 'leger' }), 'illisible'],
+          },
+        },
+      },
+    ]);
+    const [recue] = (await chargerHistoriquePartage(partage))!;
+    expect(recue.personne).toBe('sebastien');
+    expect(recue.realisation.exercices).toHaveLength(1);
+    expect(recue.realisation.partenaire).toEqual({
+      personne: 'max',
+      exercices: [
+        {
+          exerciceId: 'goblet-squat',
+          seriesPrevues: 4,
+          seriesFaites: 4,
+          reps: 8,
+          dureeSec: 300,
+          poids: 35,
+          poidsParSerie: [30, 35, 35, 35],
+          ressenti: 'leger',
+        },
+      ],
+    });
+  });
+
+  it('un partenaire illisible, ou la même personne, est écarté : la séance reste lisible', async () => {
+    for (const partenaire of [{ personne: 'quelquun', exercices: [exo()] }, { personne: 'max' }, 'max', { personne: 'sebastien', exercices: [exo()] }]) {
+      serveurRend([{ personne: 'sebastien', realisation: { ...seance, exercices: [exo()], partenaire } }]);
+      const [recue] = (await chargerHistoriquePartage(partage))!;
+      expect(recue.realisation.exercices).toHaveLength(1);
+      expect(recue.realisation.partenaire).toBeUndefined();
+    }
+  });
+
+  it('« Les deux » : une séance faite à deux sur un seul téléphone donne aussi celle de l’autre, ses charges à lui', () => {
+    const sien = [exo({ poids: 35, poidsParSerie: [30, 35, 35] })];
+    const faiteADeux: SeanceRealisee = { ...seance, exercices: [exo()], partenaire: { personne: 'max', exercices: sien } };
+    const seule: SeanceRealisee = { ...seance, id: 'mg1x2y4-seule' };
+    const lignes = avecSeancesDuPartenaire([
+      { personne: 'sebastien', realisation: faiteADeux },
+      { personne: 'sebastien', realisation: seule },
+    ]);
+    expect(lignes.map((l) => [l.personne, l.realisation.id, l.noteeParLAutre === true])).toEqual([
+      ['sebastien', seance.id, false],
+      ['max', seance.id, true],
+      ['sebastien', 'mg1x2y4-seule', false],
+    ]);
+    // Celle de Big Max : la même séance, avec ses exercices à lui.
+    const deMax = lignes[1].realisation;
+    expect(deMax.exercices).toEqual(sien);
+    expect(deMax.partenaire).toBeUndefined();
+    expect([deMax.date, deMax.titre, deMax.dureeReelleSec]).toEqual([faiteADeux.date, faiteADeux.titre, faiteADeux.dureeReelleSec]);
+    // Déjà là, de son côté (son téléphone l'a aussi envoyée) : pas en double.
+    const enDouble = avecSeancesDuPartenaire([
+      { personne: 'sebastien', realisation: faiteADeux },
+      { personne: 'max', realisation: { ...seance, exercices: sien } },
+    ]);
+    expect(enDouble.map((l) => l.personne)).toEqual(['sebastien', 'max']);
   });
 });

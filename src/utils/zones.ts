@@ -7,8 +7,9 @@
 // Ce n'est pas la `zone` de la fiche, qui range la bibliothèque en cinq
 // (haut, dos, gainage, bas, corps entier) : les trois grandes zones s'y
 // lisent, avec deux précisions — le « dos » de la fiche, et le corps entier.
-// La règle vaut pour les paires du programme du mois (`accordPaire`) comme
-// pour les enchaînements de la séance libre (`scoreCompagnon`).
+// La règle vaut pour les paires du programme du mois (`accordPaire`), et pour
+// ses remplaçants (`alternatives`) ; la séance libre garde ses enchaînements
+// d'avant, trios et rotations de quatre compris (audit du 13 octobre 2026).
 import type { Exercice, Muscle } from '../types';
 
 export type GrandeZone = 'haut' | 'bas' | 'tronc';

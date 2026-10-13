@@ -31,10 +31,10 @@ import {
   genererSeance,
   libelleBloc,
   remplacerExercice,
+  sontOpposes,
   secondesParRep,
   tempoPourExercice,
 } from './generateurSeance';
-import { grandesZonesDe } from './zones';
 
 /** Graine fixe : les tests doivent être reproductibles. */
 const GRAINE = 20240918;
@@ -526,7 +526,7 @@ describe('haltères et kettlebell ensemble', () => {
 
 describe('circuit enchaîné', () => {
   for (const dureeMinutes of DUREES_MINUTES) {
-    it(`${dureeMinutes} min : des blocs de trois exercices au plus, de trois zones, répétés deux ou trois fois`, () => {
+    it(`${dureeMinutes} min : des blocs de trois ou quatre exercices, répétés deux ou trois fois`, () => {
       const seance = genererSeance(
         avec({ dureeMinutes, format: 'circuit', styleCircuit: 'enchaine' }),
         GRAINE,
@@ -536,14 +536,12 @@ describe('circuit enchaîné', () => {
       expect(seance.blocs.length).toBeGreaterThan(0);
 
       const groupes = groupesDeBlocs(seance.blocs);
-      groupes.forEach((groupe) => {
-        // Jamais deux exercices de la même grande zone (12 octobre 2026) :
-        // trois au plus — le haut, le bas, le tronc. Faute de partenaire, un
-        // exercice reste seul.
-        expect(groupe.length).toBeLessThanOrEqual(3);
+      groupes.forEach((groupe, index) => {
+        // Le dernier bloc peut être incomplet : ce qui reste de budget ne fait
+        // pas toujours trois exercices de plus.
+        if (index < groupes.length - 1) expect(groupe.length).toBeGreaterThanOrEqual(3);
+        expect(groupe.length).toBeLessThanOrEqual(4);
         if (groupe.length === 1) return; // un exercice seul redevient une série droite
-        const zones = groupe.flatMap((bloc) => grandesZonesDe(EXERCICES_PAR_ID[bloc.exerciceId]));
-        expect(new Set(zones).size).toBe(zones.length);
         for (const bloc of groupe) {
           // Aucun repos entre deux exercices du même bloc.
           expect(bloc.transitionSec).toBe(0);
@@ -554,10 +552,10 @@ describe('circuit enchaîné', () => {
           expect(bloc.reposSec).toBeGreaterThanOrEqual(90);
         }
       });
-      // À partir de vingt minutes, au moins un bloc complet, des trois zones.
-      // En dessous, le budget ne le permet pas toujours : au tempo lent, trois
-      // exercices dont un unilatéral coûtent déjà huit minutes pour deux tours.
-      if (dureeMinutes >= 20) expect(groupes.some((g) => g.length === 3)).toBe(true);
+      // À partir d'un quart d'heure, au moins un bloc complet. En dessous, le
+      // budget ne le permet pas toujours : au tempo lent, trois exercices dont
+      // un unilatéral coûtent déjà huit minutes pour deux tours.
+      if (dureeMinutes >= 15) expect(groupes.some((g) => g.length >= 3)).toBe(true);
     });
   }
 
@@ -1003,12 +1001,11 @@ describe('analyserSeance', () => {
     );
     expect(analyserSeance(paires).ajustements.some((t) => t.startsWith('Superset'))).toBe(true);
 
-    // Une rotation compte trois exercices au plus : un par grande zone.
     const rotation = genererSeance(
-      avec({ dureeMinutes: 45, format: 'superset', tailleRotation: 3 }),
+      avec({ dureeMinutes: 45, format: 'superset', tailleRotation: 4 }),
       GRAINE,
     );
-    expect(analyserSeance(rotation).ajustements.some((t) => t.startsWith('Rotation de 3'))).toBe(true);
+    expect(analyserSeance(rotation).ajustements.some((t) => t.startsWith('Rotation de 4'))).toBe(true);
   });
 });
 
@@ -1026,9 +1023,6 @@ describe('composition des enchaînements', () => {
       // plus un enchaînement, c'est une série longue déguisée.
       const groupes = exercices.map((e) => e.groupe);
       expect(new Set(groupes).size).toBe(groupes.length);
-      // Jamais deux fois la même grande zone : le haut, le bas, le tronc.
-      const zones = exercices.flatMap((e) => grandesZonesDe(e));
-      expect(new Set(zones).size).toBe(zones.length);
       const schemas = exercices.filter((e) => e.pattern !== 'isolation').map((e) => e.pattern);
       expect(new Set(schemas).size).toBe(schemas.length);
     }
@@ -1046,16 +1040,15 @@ describe('composition des enchaînements', () => {
     }
   });
 
-  it('respecte la taille d’enchaînement demandée — trois au plus, une par grande zone', () => {
+  it('respecte la taille d’enchaînement demandée', () => {
     for (const taille of [2, 3, 4] as const) {
       const seance = genererSeance(
         avec({ dureeMinutes: 45, format: 'superset', tailleRotation: taille }),
         GRAINE,
       );
       const tailles = groupesDeBlocs(seance.blocs).map((g) => g.length);
-      const possible = Math.min(taille, 3);
-      expect(Math.max(...tailles)).toBeLessThanOrEqual(possible);
-      expect(tailles.some((t) => t === possible)).toBe(true);
+      expect(Math.max(...tailles)).toBeLessThanOrEqual(taille);
+      expect(tailles.some((t) => t === taille)).toBe(true);
     }
   });
 
@@ -1071,19 +1064,17 @@ describe('composition des enchaînements', () => {
     }
   });
 
-  it('jamais deux exercices de la même zone : le haut, le bas ou le tronc, comme les paires du programme', () => {
-    // Sur une séance longue en paires : chaque paire réunit deux grandes
-    // zones différentes ; un exercice sans partenaire d'une autre zone reste
-    // seul.
-    for (let graine = 1; graine <= 12; graine += 1) {
-      const seance = genererSeance(avec({ dureeMinutes: 45, format: 'superset', tailleRotation: 2 }), graine);
-      const paires = groupesDeBlocs(seance.blocs).filter((g) => g.length === 2);
-      expect(paires.length, `graine ${graine}`).toBeGreaterThan(0);
-      for (const [x, y] of paires) {
-        const zonesX = grandesZonesDe(EXERCICES_PAR_ID[x.exerciceId]);
-        expect(grandesZonesDe(EXERCICES_PAR_ID[y.exerciceId]).some((z) => zonesX.includes(z))).toBe(false);
-      }
-    }
+  it('préfère une vraie opposition quand elle existe', () => {
+    // Sur une séance longue en paires, au moins une paire doit opposer deux
+    // schémas ou deux muscles antagonistes, pas seulement deux zones.
+    const seance = genererSeance(
+      avec({ dureeMinutes: 45, format: 'superset', tailleRotation: 2 }),
+      GRAINE,
+    );
+    const vraies = groupesDeBlocs(seance.blocs)
+      .filter((g) => g.length === 2)
+      .filter(([x, y]) => sontOpposes(EXERCICES_PAR_ID[x.exerciceId], EXERCICES_PAR_ID[y.exerciceId]));
+    expect(vraies.length).toBeGreaterThan(0);
   });
 
   it('densifie franchement une séance de 20 minutes', () => {
@@ -1108,5 +1099,39 @@ describe('composition des enchaînements', () => {
     expect(nouveau.blocs.length).toBeGreaterThanOrEqual(3);
     expect(nouveau.blocs.every((bloc) => bloc.series === 3)).toBe(true);
     expect(nouveau.dureeEstimeeSec).toBeLessThanOrEqual(20 * 60);
+  });
+});
+
+describe('la séance libre garde ses enchaînements : la règle des zones ne vaut que pour le programme (audit du 13 octobre 2026)', () => {
+  it('le haut et le dos en superset : des paires, à chaque graine', () => {
+    for (let graine = 1; graine <= 20; graine += 1) {
+      const seance = genererSeance(avec({ dureeMinutes: 45, format: 'superset', zones: ['haut', 'dos'] }), graine);
+      const tailles = groupesDeBlocs(seance.blocs).map((g) => g.length);
+      expect(tailles.some((t) => t >= 2), `graine ${graine} : ${tailles.join(',')}`).toBe(true);
+    }
+  });
+
+  it('le haut et le dos en enchaîné : des blocs de trois ou quatre exercices — au plus un exercice seul, le dernier', () => {
+    // L'audit : six exercices seuls, et 90 s de repos entre leurs séries —
+    // l'inverse d'un enchaîné.
+    for (let graine = 1; graine <= 20; graine += 1) {
+      const seance = genererSeance(
+        avec({ dureeMinutes: 30, format: 'circuit', styleCircuit: 'enchaine', zones: ['haut', 'dos'] }),
+        graine,
+      );
+      const tailles = groupesDeBlocs(seance.blocs).map((g) => g.length);
+      const cas = `graine ${graine} : ${tailles.join(',')}`;
+      expect(tailles.slice(0, -1).every((t) => t >= 3), cas).toBe(true);
+      expect(tailles.filter((t) => t === 1).length, cas).toBeLessThanOrEqual(1);
+    }
+  });
+
+  it('tout le corps en enchaîné : des blocs de quatre exercices reviennent', () => {
+    const tailles = Array.from({ length: 20 }, (_, i) =>
+      groupesDeBlocs(genererSeance(avec({ dureeMinutes: 45, format: 'circuit', styleCircuit: 'enchaine' }), i + 1).blocs).map(
+        (g) => g.length,
+      ),
+    );
+    expect(tailles.flat().some((t) => t === 4)).toBe(true);
   });
 });

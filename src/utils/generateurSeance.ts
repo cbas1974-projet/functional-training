@@ -5,7 +5,6 @@
 // Les signatures exportées sont le contrat de l'onglet Entraînement ; elles ne
 // doivent pas changer sans mettre à jour les composants appelants.
 import { EXERCICES, EXERCICES_PAR_ID } from '../data/exercices';
-import { memeZone } from './zones';
 import type {
   BlocSeries,
   Circuit,
@@ -226,14 +225,14 @@ export function estExigeant(exercice: Exercice): boolean {
 const REFUS = -1;
 
 /** À quel point `candidat` ferait un bon partenaire pour un enchaînement
- *  déjà commencé. Négatif = incompatible. Jamais deux exercices de la même
- *  grande zone — le haut du corps, le bas du corps, le tronc (`memeZone`) —,
- *  comme dans les paires du programme : un enchaînement en compte donc trois
- *  au plus. */
+ *  déjà commencé. Négatif = incompatible. Deux zones différentes valent un
+ *  peu mieux, sans être exigées : la règle stricte des trois grandes zones
+ *  (`src/utils/zones.ts`) ne vaut que pour les paires du programme du mois —
+ *  la séance libre garde ses paires, trios et rotations de quatre (audit du
+ *  13 octobre 2026). */
 function scoreCompagnon(enchainement: Exercice[], candidat: Exercice): number {
   let score = 0;
   for (const membre of enchainement) {
-    if (memeZone(membre, candidat)) return REFUS;
     if (estExigeant(membre) && estExigeant(candidat)) return REFUS;
     // Même muscle, ou même schéma : ce n'est plus un enchaînement, c'est une
     // série longue déguisée. L'isolation fait exception, elle couvre des
@@ -242,7 +241,7 @@ function scoreCompagnon(enchainement: Exercice[], candidat: Exercice): number {
     if (membre.pattern === candidat.pattern && membre.pattern !== 'isolation') return REFUS;
     if (PATTERNS_OPPOSES[membre.pattern]?.includes(candidat.pattern)) score += 4;
     if (GROUPES_OPPOSES[membre.groupe]?.includes(candidat.groupe)) score += 4;
-    score += 1;
+    if (membre.zone !== candidat.zone) score += 1;
   }
   return score;
 }

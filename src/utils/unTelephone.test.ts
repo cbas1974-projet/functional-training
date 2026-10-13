@@ -50,6 +50,36 @@ const LUNDI_A: SeanceDuMois = {
   tour: ['trap-bar-deadlift', 'leg-press'],
 };
 
+/** Un jeudi à huit exercices (la graine 1) : le swing seul, la planche de
+ *  Copenhague avec le ventre, les deux machines des cuisses chacune avec un
+ *  tirage léger, le traîneau seul. Une machine, un seul siège : chacun son
+ *  tour. */
+const JEUDI_A: SeanceDuMois = {
+  id: 'jeudi-a',
+  nom: 'Jeudi A — les jambes',
+  jour: 4,
+  semaine: 'A',
+  type: 'facile',
+  partie: 'bas',
+  format: 'series',
+  exercices: [
+    'kb-double-arm-swing',
+    'copenhagen-plank',
+    'kb-half-turkish-get-up',
+    'leg-extension-machine',
+    'reverse-fly',
+    'leg-curl-machine',
+    'kb-single-arm-row',
+  ],
+  finale: 'traineau',
+  liens: [
+    ['copenhagen-plank', 'kb-half-turkish-get-up'],
+    ['leg-extension-machine', 'reverse-fly'],
+    ['leg-curl-machine', 'kb-single-arm-row'],
+  ],
+  tour: ['leg-extension-machine', 'leg-curl-machine', 'traineau'],
+};
+
 const SEB: ContexteSeance = { personne: 'sebastien', aDeux: true, unTelephone: true };
 const MAX: ContexteSeance = { personne: 'max', aDeux: true, unTelephone: true };
 const SEUL: ContexteSeance = { personne: 'sebastien', unTelephone: true };
@@ -128,6 +158,58 @@ describe('un seul téléphone : la séance guidée', () => {
     expect(trapBar.map((e) => e.reps)).toEqual([10, 8, 10, 8, 10, 8]);
     // Pas de pause entre deux séries : seulement après la dernière.
     expect(etapesDuGroupe(etapesDe(SEB), 0).map((e) => e.type)).toEqual([...Array(6).fill('serie'), 'repos', 'repos']);
+  });
+
+  it('une machine dans une paire (un seul siège) : jamais les deux en même temps — chacun son tour, puis l’autre exercice ensemble', () => {
+    // Le jeudi, sur le téléphone de Speedy : Big Max commence la machine,
+    // Speedy la fait ensuite, puis l'oiseau, ensemble. Big Max fait une
+    // série de plus à l'oiseau.
+    const etapes = etapesDe(SEB, JEUDI_A);
+    expect(series(etapes, 2)).toEqual([
+      ['leg-extension-machine', 1, 'autre'],
+      ['leg-extension-machine', 1, 'moi'],
+      ['reverse-fly', 1, 'les-deux'],
+      ['leg-extension-machine', 2, 'autre'],
+      ['leg-extension-machine', 2, 'moi'],
+      ['reverse-fly', 2, 'les-deux'],
+      ['leg-extension-machine', 3, 'autre'],
+      ['leg-extension-machine', 3, 'moi'],
+      ['reverse-fly', 3, 'les-deux'],
+      ['reverse-fly', 4, 'autre'],
+    ]);
+    // Sur celui de Big Max : c'est lui, « moi », qui commence la machine.
+    expect(
+      series(etapesDe(MAX, JEUDI_A), 3)
+        .filter(([id]) => id === 'leg-curl-machine')
+        .map(([, , qui]) => qui),
+    ).toEqual(['moi', 'autre', 'moi', 'autre', 'moi', 'autre']);
+    // Chaque série de la machine compte le temps d'une personne — Speedy 8
+    // répétitions, Big Max 10 —, plus le temps de céder la place : plus la
+    // plus longue des deux comme si on la faisait ensemble.
+    const machine = etapes.filter((e): e is Serie => e.type === 'serie' && e.exerciceId === 'leg-extension-machine');
+    expect(machine.map((e) => e.reps)).toEqual([10, 8, 10, 8, 10, 8]);
+    expect(machine[0].dureeSec).toBeGreaterThan(machine[1].dureeSec);
+    // Toutes les séances composées, sur les deux téléphones : jamais une
+    // machine (un seul siège) faite par les deux à la fois.
+    for (const graine of [1, 2, 3, 4, 5, 6]) {
+      for (const s of genererProgramme({ graine, aujourdhui: LUNDI }).seances) {
+        for (const contexte of [SEB, MAX]) {
+          const ensemble = etapesDe(contexte, s).filter(
+            (e): e is Serie => e.type === 'serie' && e.qui === 'les-deux' && (s.tour ?? []).includes(e.exerciceId),
+          );
+          expect(ensemble.map((e) => e.exerciceId), `${graine} · ${s.id}`).toEqual([]);
+        }
+      }
+    }
+    // Seul, sans l'autre : la paire reste A, B, A, B.
+    expect(series(etapesDe(SEUL, JEUDI_A), 2).map(([id, serie, qui]) => `${id} ${serie} ${qui ?? ''}`)).toEqual([
+      'leg-extension-machine 1 ',
+      'reverse-fly 1 ',
+      'leg-extension-machine 2 ',
+      'reverse-fly 2 ',
+      'leg-extension-machine 3 ',
+      'reverse-fly 3 ',
+    ]);
   });
 
   it('la pause se lance d’un clic, à la fin d’une paire ou d’un exercice : 1 min, 1 min 30 après la trap bar ; pas après le dernier', () => {

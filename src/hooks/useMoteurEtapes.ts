@@ -41,6 +41,19 @@ function ecouleEtapeMs(etat: EtatMoteur, now: number): number {
   return Math.max(0, fin - etat.debutEtapeMs);
 }
 
+/** Un double toucher : le second appui arrive moins de 600 ms après le début
+ *  de l'étape — celle que le premier vient d'ouvrir. Ce n'est pas une
+ *  décision : sans garde, il validait la série suivante, que personne n'avait
+ *  faite (audit du 13 octobre 2026). */
+export const ANTI_REBOND_MS = 600;
+
+/** Un appui qui fait avancer la séance — « Série terminée », « Pause »,
+ *  « Passer »… — compte-t-il ? Pas tant que l'étape en cours a commencé il y
+ *  a moins de `ANTI_REBOND_MS`, pauses exclues. */
+export function appuiAccepte(etat: EtatMoteur | null, now: number): boolean {
+  return etat !== null && ecouleEtapeMs(etat, now) >= ANTI_REBOND_MS;
+}
+
 /** Copie du tableau des temps avec `ajoutSec` de plus à l'index donné, en
  *  comblant par des zéros pour ne jamais laisser de trou. */
 export function ajouterTemps(temps: number[], index: number, ajoutSec: number): number[] {

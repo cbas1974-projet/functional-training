@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ajouterTemps, reducteurMoteur } from './useMoteurEtapes';
+import { ANTI_REBOND_MS, ajouterTemps, appuiAccepte, reducteurMoteur } from './useMoteurEtapes';
 import type { ActionMoteur, EtatMoteur } from './useMoteurEtapes';
 
 /** Instant de référence (en millisecondes). */
@@ -104,5 +104,33 @@ describe('reducteurMoteur', () => {
     const etat = derouler([{ type: 'demarrer', now: T0, index: 2, tempsParEtapeSec: [] }]);
     expect(reducteurMoteur(etat, { type: 'allerA', now: T0 + 5_000, index: 2 })).toBe(etat);
     expect(reducteurMoteur(etat, { type: 'reprendre', now: T0 + 5_000 })).toBe(etat);
+  });
+});
+
+describe('le double toucher (audit du 13 octobre 2026)', () => {
+  it('un second appui moins de 600 ms après le changement d’étape ne compte pas : la série suivante n’est pas validée', () => {
+    let etat = derouler([{ type: 'demarrer', now: T0, index: 4, tempsParEtapeSec: [] }]);
+    const validees: number[] = [];
+    /** « Série terminée », comme le bouton de la séance : la série compte, et
+     *  la suivante commence — sauf si l'appui ne compte pas. */
+    const toucher = (now: number) => {
+      if (!appuiAccepte(etat, now)) return;
+      validees.push(etat.index);
+      etat = reducteurMoteur(etat, { type: 'allerA', now, index: etat.index + 1 })!;
+    };
+    // La série 4 finie : deux touchers à 150 ms d'écart. Seule la 4 compte.
+    toucher(T0 + 45_000);
+    toucher(T0 + 45_150);
+    toucher(T0 + 45_000 + ANTI_REBOND_MS - 1);
+    expect(validees).toEqual([4]);
+    expect(etat.index).toBe(5);
+    // Plus d'une demi-seconde après : un vrai appui.
+    toucher(T0 + 45_000 + ANTI_REBOND_MS);
+    expect(validees).toEqual([4, 5]);
+    expect(ANTI_REBOND_MS).toBe(600);
+  });
+
+  it('rien ne compte avant le début de la séance', () => {
+    expect(appuiAccepte(null, T0)).toBe(false);
   });
 });

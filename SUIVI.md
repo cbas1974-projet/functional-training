@@ -21,6 +21,9 @@ Claude, de son côté :
 
 ## Séance du 12 octobre 2026
 
+- **Audit du 13 octobre** ([docs/audit-2026-10-13.md](docs/audit-2026-10-13.md)) : les 5 points importants et les mineurs 7, 8, 10 corrigés ; 6 et 9 laissés.
+- **Le jeudi, la machine d'une paire se fait chacun son tour** (Big Max, puis Speedy, puis l'autre exercice ensemble) : le jeudi dure ≈ 1 h (de 56 min à 1 h 08 ; graine 1 : 1 h 05 / 59 min). « Changer » ne casse plus la règle des zones ; « Les deux » montre Big Max ; la séance libre retrouve ses enchaînements ; un double toucher ne compte qu'une fois.
+- **À tester à la salle** : le jeudi, l'ordre de la machine et la durée ; un double toucher sur « Série terminée ».
 - **À tester demain matin, à la salle** (sur le téléphone de Speedy, « Avec
   Big Max ») :
   1. L'accueil annonce **8 exercices** : le premier et le dernier « Seul,

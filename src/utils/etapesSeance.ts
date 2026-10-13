@@ -517,7 +517,10 @@ export function groupesUnTelephone(seance: Seance): BlocSeries[][] {
  *    la série elle-même, au tempo — la plus longue des deux quand on la fait
  *    ensemble —, et le temps de passer à la suivante.
  *  - Une paire : A, B, A, B…, les deux ensemble, jusqu'au bout de toutes les
- *    séries, sans pause entre les tours.
+ *    séries, sans pause entre les tours. Sauf une machine (`tour` : un seul
+ *    siège) : à deux, jamais en même temps — chacun son tour, celui qui
+ *    commence d'abord, puis l'autre exercice, ensemble (audit du 13 octobre
+ *    2026).
  *  - Un exercice seul, à deux : chacun son tour, celui qui commence d'abord —
  *    la série de l'un est le repos de l'autre. Seul, sans l'autre, la pause
  *    vient entre deux séries.
@@ -556,20 +559,24 @@ function construireEtapesUnTelephone(seance: Seance): Etape[] {
     etapes.push({ type: 'repos', exerciceId, dureeSec, suivant: aRetourCalme, groupe, motif: 'pause' });
   };
 
+  /** Qui commence, quand c'est chacun son tour. Seul, soi. */
+  const ordre: ('moi' | 'autre')[] = !aDeux ? ['moi'] : jeCommence ? ['moi', 'autre'] : ['autre', 'moi'];
+  /** La série `k` d'un bloc, chacun son tour : celle de chacun qui l'a. */
+  const chacunSonTour = (bloc: BlocSeries, k: number, series: number): Travail[] =>
+    ordre
+      .filter((qui) => k <= (qui === 'moi' ? bloc.series : seriesAutre(bloc)))
+      .map((qui) => {
+        const reps = qui === 'moi' ? bloc.reps : repsAutre(bloc);
+        return { bloc, serie: k, series, qui, reps, sec: duree(bloc, reps) };
+      });
+
   groupes.forEach((groupe, g) => {
     const seul = groupe.length === 1;
     const travaux: Travail[] = [];
     if (seul) {
       const [bloc] = groupe;
       const tours = Math.max(bloc.series, seriesAutre(bloc));
-      const ordre: ('moi' | 'autre')[] = !aDeux ? ['moi'] : jeCommence ? ['moi', 'autre'] : ['autre', 'moi'];
-      for (let k = 1; k <= tours; k += 1) {
-        for (const qui of ordre) {
-          if (k > (qui === 'moi' ? bloc.series : seriesAutre(bloc))) continue;
-          const reps = qui === 'moi' ? bloc.reps : repsAutre(bloc);
-          travaux.push({ bloc, serie: k, series: tours, qui, reps, sec: duree(bloc, reps) });
-        }
-      }
+      for (let k = 1; k <= tours; k += 1) travaux.push(...chacunSonTour(bloc, k, tours));
     } else {
       const tours = Math.max(...groupe.map((bloc) => Math.max(bloc.series, seriesAutre(bloc))));
       for (let k = 1; k <= tours; k += 1) {
@@ -577,10 +584,17 @@ function construireEtapesUnTelephone(seance: Seance): Etape[] {
           const moi = k <= bloc.series;
           const lui = k <= seriesAutre(bloc);
           if (!moi && !lui) continue;
+          const series = Math.max(bloc.series, seriesAutre(bloc));
+          // Une machine, un seul siège : à deux, chacun son tour, jamais
+          // ensemble — puis l'autre exercice de la paire.
+          if (aDeux && bloc.tour) {
+            travaux.push(...chacunSonTour(bloc, k, series));
+            continue;
+          }
           travaux.push({
             bloc,
             serie: k,
-            series: Math.max(bloc.series, seriesAutre(bloc)),
+            series,
             qui: moi && lui ? 'les-deux' : moi ? 'moi' : 'autre',
             reps: Math.max(moi ? bloc.reps : 0, lui ? repsAutre(bloc) : 0),
             sec: Math.max(moi ? duree(bloc, bloc.reps) : 0, lui ? duree(bloc, repsAutre(bloc)) : 0),
@@ -590,10 +604,12 @@ function construireEtapesUnTelephone(seance: Seance): Etape[] {
     }
     travaux.forEach((travail, i) => {
       const dernier = i === travaux.length - 1;
-      // Le temps de passer à la série qui suit : à l'autre exercice de la
-      // paire, ou à l'autre personne. Seul, la pause en tient lieu.
+      // Le temps de passer à la série qui suit : à l'autre personne — céder
+      // la place —, ou à l'autre exercice de la paire. Seul, la pause en
+      // tient lieu.
+      const memeBloc = travaux[i + 1]?.bloc === travail.bloc;
       const passage =
-        dernier || (seul && !aDeux) ? 0 : seul ? CHANGEMENT_SEC : (travail.bloc.transitionSec ?? CHANGEMENT_SEC);
+        dernier || (seul && !aDeux) ? 0 : seul || memeBloc ? CHANGEMENT_SEC : (travail.bloc.transitionSec ?? CHANGEMENT_SEC);
       etapes.push({
         type: 'serie',
         exerciceId: travail.bloc.exerciceId,
