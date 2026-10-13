@@ -47,9 +47,9 @@ du dos, épaules, extérieur et intérieur de cuisse. Rien à taper.
   pompes le mardi, le traîneau le jeudi.
 - **Le premier et le dernier seuls, trois paires entre les deux**, les trois
   jours (décision du 12 octobre 2026). Un exercice seul se fait **chacun son
-  tour** : Big Max, puis Speedy, puis **une pause lancée d'un toucher** avant
-  le tour suivant — sauf la marche du fermier, qui enchaîne ses tours
-  (13 octobre 2026). Une
+  tour** : Big Max, puis Speedy, puis **une pause d'un toucher** (« Pause ·
+  1 min », quand on veut) avant le tour suivant — sauf la marche du fermier,
+  qui enchaîne ses tours (13 octobre 2026). Une
   paire réunit **deux exercices de zones différentes** — le haut du corps, le
   bas du corps, le tronc (le ventre et le bas du dos) : **A, B, A, B, les deux
   ensemble, sans pause entre les tours** (15 secondes pour passer de l'un à
@@ -57,9 +57,9 @@ du dos, épaules, extérieur et intérieur de cuisse. Rien à taper.
   dans une paire, **chacun son tour** — Big Max, puis Speedy, puis l'autre
   exercice, ensemble (audit du 13 octobre 2026). Chaque muscle se repose quand même : l'autre
   exercice de la paire lui sert de repos. **La pause vient à la fin de la
-  paire ou de l'exercice seul, et se lance d'un toucher** (voir « Les
-  pauses », plus bas). La façon dont les paires sont formées est expliquée
-  plus bas.
+  paire ou de l'exercice seul, et part toute seule sur « Exercice
+  terminé »** (voir « Les pauses », plus bas). La façon dont les paires sont
+  formées est expliquée plus bas.
 - **Le nombre d'exercices** : dans *Réglages*, on choisit 4, 6 ou 8
   exercices, **les trois jours**, le premier et le dernier compris — une,
   deux ou trois paires entre les deux. Par défaut : **8**. Le tempo par défaut
@@ -169,20 +169,21 @@ du dos, épaules, extérieur et intérieur de cuisse. Rien à taper.
   [Lourd, correct ou léger ?](#lourd-correct-ou-léger-).
 - **Les pauses** : **1 min pour tous les exercices, 1 min 30 pour la trap
   bar**, à la fin d'une paire comme d'un exercice seul — une seule fois, plus
-  de pause d'installation par-dessus. **Elle se lance d'un toucher**
-  (« Pause · 1 min ») quand tout le monde est prêt, ou se saute (« Sans
-  pause ») ; à la fin, un son et une vibration (sur Android : l'iPhone ne
-  vibre pas depuis le navigateur), et la séance repart d'elle-même sur
-  l'exercice suivant. **Pas de pause entre les tours d'une paire** : l'autre
-  exercice sert de repos. **Un exercice seul, à deux : une pause d'un toucher
-  entre les tours** (1 min, 1 min 30 à la trap bar), quand les deux ont fait
-  leur série — la série de l'autre ne suffisait pas (13 octobre 2026) —, sauf
-  la **marche du fermier**, qui enchaîne ses tours. La pause de fin reste,
-  même quand on passe à d'autres muscles.
-  Rien après le dernier exercice : les étirements suivent. Seul, sans
-  l'autre, une pause entre deux séries d'un exercice seul, à lancer d'un
-  toucher elle aussi. L'accueil écrit sous chaque paire la pause qui la
-  suit.
+  de pause d'installation par-dessus. **Elle part toute seule sur « Exercice
+  terminé »** (ou « Paire terminée », version 1.3.0, 13 octobre 2026), avec
+  « +15 s » et « Passer » ; à la fin, un son et une vibration (sur Android :
+  l'iPhone ne vibre pas depuis le navigateur), et l'exercice suivant
+  s'ouvre. **Pas de pause entre les tours d'une paire** : l'autre exercice
+  sert de repos. **Entre les tours, quand on veut : « Pause · 1 min »**
+  (1 min 30 à la trap bar), un petit bouton toujours là pendant un
+  exercice : il compte, sonne et vibre, sans changer d'exercice —
+  l'application ne sait plus quand un tour finit. Il remplace la pause d'un
+  toucher qui venait entre les tours d'un exercice seul, à deux (la série de
+  l'autre ne suffisait pas) ; la **marche du fermier**, elle, enchaîne ses
+  tours. La durée annoncée compte toujours ces pauses. La pause de fin reste,
+  même quand on passe à d'autres muscles. Rien après le dernier exercice :
+  les étirements suivent. Seul, sans l'autre, pareil : « Pause · 1 min »
+  entre deux séries. L'accueil écrit sous chaque paire la pause qui la suit.
 - **Sans arrêt en bas** pour les exercices où la position basse fatigue le dos
   ou le genou. Pour le dos : les soulevés de terre (trap bar, roumain,
   kettlebell, sur une jambe), le good morning, les rowings buste penché, les
@@ -713,25 +714,30 @@ exercice par un autre de la même zone.
 
 ### Séance guidée (plein écran)
 - **Au programme du mois, sur un seul téléphone** (seul ou à deux) : pendant
-  les séries et les pauses, l'écran est **la liste de tout le programme du
-  jour** — l'échauffement coché, l'exercice ou la paire en cours déroulé,
+  les exercices et leurs pauses, l'écran est **la liste de tout le programme
+  du jour** — l'échauffement coché, l'exercice ou la paire en cours déroulé,
   **le suivant mis en avant (« Ensuite »)**, le reste en une ligne. Le
   suivant est aussi rappelé au-dessus des boutons, même quand une paire
-  remplit l'écran. Pour l'exercice en cours : une ligne par série, **la
-  charge de Speedy et celle de Big Max côte à côte**, pré-remplies avec
-  celles de la dernière fois ; « ▶ Série 2 — Big Max » dit qui la fait
-  (« les deux » dans une paire, sauf sur sa machine : chacun son tour). Une
-  série faite, ou sautée, montre ce qui est noté — pas la charge proposée. Pas de case de poids pour un exercice sans
-  charge : un crochet quand la série est faite. **Pas de minuteur pendant
-  une série** : « Série terminée » (avec « série ≈ 1 min », une estimation)
-  passe à la suivante ; le métronome (MONTE, TIENS, DESCENDS) ne vient que si
-  on touche « Tempo ». Sous la **dernière série de chacun**, trois gros
-  visages, 😊 😐 ☹️ (voir plus bas). À la fin d'un exercice ou d'une paire,
-  et entre les tours d'un exercice seul : **« Pause · 1 min »** (1 min 30 à
-  la trap bar) ou « Sans pause ». La pause compte, avec « +15 s » et
-  « Passer » ; à la fin, un son et une vibration, et la séance repart sur
-  l'exercice suivant. « Passer cet exercice » (ou « cette paire ») est petit,
-  sous la carte, et demande avant.
+  remplit l'écran. **Un exercice à la fois, pas une série à la fois**
+  (version 1.3.0, 13 octobre 2026 : toucher « Série terminée » à chaque
+  série, c'était de trop) : l'exercice en cours — ou la paire — s'affiche
+  d'un coup, **toutes les séries des deux**, une ligne par série, la charge
+  de Speedy et celle de Big Max côte à côte, pré-remplies avec celles de la
+  dernière fois, modifiables ; en gras ce qui est noté. La carte dit qui
+  commence (« Chacun son tour : Big Max commence »). Pas de case de poids
+  pour un exercice sans charge : ce qu'il y a à faire (« 10 rép. »,
+  « 30 s »). Sous la **dernière série de chacun**, trois gros visages, 😊 😐
+  ☹️ — **obligatoires** : tant qu'il en manque un, le gros bouton du bas est
+  grisé et dit lequel (« Choisis un visage : Big Max, Curl alterné » ; le
+  toucher y ramène et l'entoure). **Un seul « Exercice terminé »** (« Paire
+  terminée ») : toutes les séries comptent, les charges affichées sont
+  notées telles quelles, et la pause de fin part toute seule (voir « Les
+  pauses »). **Pas de minuteur** : la durée de l'exercice, en petit sous le
+  bouton (« ≈ 7 min ») ; « Pause · 1 min », à côté, pour souffler entre deux
+  tours sans changer d'exercice ; le métronome (MONTE, TIENS, DESCENDS) ne
+  vient que si on touche « Tempo », en petit sur chaque exercice. « Passer
+  cet exercice » (ou « cette paire ») est petit, sous la carte, et demande
+  avant : ses séries ne comptent pas.
 - En séance libre (et avec la séance commune) : échauffement articulaire
   puis, pour chaque série, un compte à rebours « Préparez-vous ».
 - **Métronome de tempo** : affichage MONTE / DESCENDS / TIENS avec les
@@ -748,20 +754,27 @@ exercice par un autre de la même zone.
 - Bips de montée, de descente et de pause, cloche de fin de série.
 - Repos chronométré avec aperçu de l'exercice suivant et bouton « +15 s ».
 - **Une barre fixe en bas**, toujours visible, sous le pouce : le gros bouton
-  de l'étape (« Démarrer », « Série terminée », « Pause · 1 min », « Go » ou
-  « Passer » avec « +15 s », « Étirements finis ») et « Pause » à côté — sur
-  un seul téléphone, « Tempo » ou « Sans pause » à la place, puisqu'il n'y a
-  pas de chrono à arrêter pendant une série. « Précédent » et
-  « Suivant » sont petits, en haut ; pendant une série, « Suivant » demande
-  avant de la sauter. « Passer l'exercice » est petit, loin du gros bouton,
-  et demande aussi. **Un double toucher ne compte qu'une fois** : un second
-  appui moins de 0,6 s après le changement d'étape est ignoré — il validait
-  la série suivante, que personne n'avait faite.
+  de l'étape (« Démarrer », « Série terminée », « Exercice terminé », « Go »
+  ou « Passer » avec « +15 s », « Étirements finis ») et « Pause » à côté —
+  sur un seul téléphone, « Pause · 1 min » à la place, puisqu'il n'y a pas de
+  chrono à arrêter pendant un exercice. « Précédent » et « Suivant » sont
+  petits, en haut ; pendant une série, « Suivant » demande avant de la
+  sauter ; sur un exercice d'un seul téléphone, il demande avant de le
+  passer. « Passer l'exercice » est petit, loin du gros bouton, et demande
+  aussi. **Un double toucher ne compte qu'une fois** : un second appui moins
+  de 0,6 s après le changement d'étape est ignoré — il validait l'étape
+  suivante (la série d'après ; aujourd'hui, il sauterait la pause).
 - **Poids saisi série par série**, en livres : le champ est pré-rempli avec la
   charge de la série précédente, sinon celle de la dernière fois ; il n'y a
-  qu'à la corriger quand elle change. Dessous, deux raccourcis :
-  « 70 % · 95 lb » et « 100 % · 135 lb » (la charge de travail : la plus
-  lourde de la dernière fois), pour noter d'un toucher ce qu'on a fait.
+  qu'à la corriger quand elle change. Deux raccourcis, « 70 % · 95 lb » et
+  « 100 % · 135 lb » (la charge de travail : la plus lourde de la dernière
+  fois), pour noter d'un toucher ce qu'on a fait — sur un seul téléphone,
+  sous la case qu'on vient de toucher. **Une série faite à 70 % ne fait pas
+  la suite** (le bug du 13 octobre 2026) : notée d'un toucher sur « 70 % »,
+  ou à ses 70 % pendant une douleur qu'on éteint ensuite, elle ne compte ni
+  pour la série d'après ni pour le 100 %, comme la première série au bas du
+  dos. Avant, une seule série à 70 % mettait toutes les suivantes à 70 %,
+  douleur éteinte.
 - **Le bas du dos** (trap bar, swing, soulevés de terre…) : la première série
   est pré-remplie à **70 %**, arrondie au 5 lb (2,5 kg) ; les suivantes à
   100 %.
@@ -777,13 +790,16 @@ exercice par un autre de la même zone.
   la charge de travail du moment où on l'a signalé — pour celui qui a mal
   seulement : la douleur de Big Max ne touche pas les charges de Speedy. Elle
   reste, exercice par exercice, jusqu'à ce qu'on l'éteigne : tout redevient
-  alors comme avant. Elle vit sur ce téléphone ; celles d'avant le 13 octobre
-  sont à la personne du téléphone.
+  alors comme avant — les séries notées à ses 70 % ne font plus la suite.
+  Sur un seul téléphone, l'allumer ou l'éteindre ne réécrit aucune case :
+  seules les charges pré-remplies suivent. Elle vit sur ce téléphone ;
+  celles d'avant le 13 octobre sont à la personne du téléphone.
 - Pas de saisie de poids, ni de raccourcis, ni de « Comment était la
   charge ? » pour un exercice sans charge (poids du corps, tenues,
   étirements).
 - **😊 😐 ☹️** : sous la dernière série de chacun, trois gros visages, pour
-  dire comment la charge a été. C'est facultatif : voir plus bas.
+  dire comment la charge a été. Sur un seul téléphone, obligatoires pour
+  finir l'exercice ; en séance libre, facultatifs : voir plus bas.
 - **Changer de côté** : à l'échauffement (balancements de jambe) et aux
   étirements de fin, un mouvement d'un seul côté se fait à droite, puis
   « CHANGE DE CÔTÉ » 5 s (« +5 s » si besoin), puis à gauche — comme aux
@@ -809,17 +825,17 @@ On ne monte pas les charges à chaque séance. Alors, pour savoir quand le faire
 chacun dit comment c'était. C'est **la seule règle de progression** du
 programme.
 
-- **Où.** Sur la ligne de la **dernière série** d'un exercice, dès qu'elle
-  commence, trois gros visages (13 octobre 2026, à la place des boutons
-  Lourd, Correct, Léger) : **😊 facile** (léger : il en restait 4 ou plus),
-  **😐 correct** (2 ou 3 en réserve), **☹️ difficile** (lourd : 0 ou 1, ou la
-  forme lâche — dos rond, genou qui fait mal). Rien sur les premières
-  séries. Dessous, une fois : « La dernière série doit être dure : 1 à 3
-  répétitions en réserve. » Les visages restent pendant la pause qui suit ;
-  pour le tout dernier exercice, pendant les étirements. Un seul toucher ; en
-  toucher un autre plus tard change la réponse. On peut aussi ne rien
-  toucher : c'est facultatif. En séance libre, les mêmes visages à la fin de
-  l'exercice.
+- **Où.** Sur la ligne de la **dernière série** d'un exercice, trois gros
+  visages (13 octobre 2026, à la place des boutons Lourd, Correct, Léger) :
+  **😊 facile** (léger : il en restait 4 ou plus), **😐 correct** (2 ou 3 en
+  réserve), **☹️ difficile** (lourd : 0 ou 1, ou la forme lâche — dos rond,
+  genou qui fait mal). Rien sur les premières séries. Dessous, une fois :
+  « La dernière série doit être dure : 1 à 3 répétitions en réserve. » Sur
+  un seul téléphone, ils sont là dès que l'exercice s'ouvre, et **un visage
+  de chacun est obligatoire** pour toucher « Exercice terminé » (version
+  1.3.0) ; ils restent pendant la pause qui suit, pour corriger. Un seul
+  toucher ; en toucher un autre plus tard change la réponse. En séance
+  libre, les mêmes visages à la fin de l'exercice, facultatifs.
 - **Qui.** Chacun répond pour lui, pour chaque exercice. Sur un seul
   téléphone, chacun dans sa colonne, sous **sa** dernière série — Speedy sous
   la 3e, Big Max sous la 4e quand il en a une de plus : la réponse de l'autre
@@ -1121,7 +1137,7 @@ puis ouvrir l'adresse « Network » affichée.
 | `npm run dev` | Serveur de développement |
 | `npm run build` | Version de production dans `dist/` |
 | `npm run preview` | Sert la version de production |
-| `npm test` | Tests unitaires (Vitest) |
+| `npm test` | Tests unitaires (Vitest) ; la séance guidée d'un seul téléphone se joue aussi dans un navigateur simulé (jsdom, `SeanceGuidee.parExercice.test.tsx`) |
 | `npm run lint` | Analyse statique (ESLint) |
 | `npm run build:unique` | Fichier HTML autonome dans `dist-unique/` |
 
@@ -1288,7 +1304,9 @@ src/
 │   └── parametres.ts             # Durées, tempos, niveaux, formats, zones
 ├── utils/
 │   ├── generateurSeance.ts       # Choix des exercices et calcul des volumes
-│   ├── etapesSeance.ts           # Machine à étapes de la séance guidée, métronome, changement de côté
+│   ├── etapesSeance.ts           # Machine à étapes de la séance guidée (sur un seul téléphone : une étape par exercice), métronome, changement de côté
+│   ├── parExercice.ts            # Exercice par exercice : les visages qui manquent, les charges notées d'office, la pause d'un toucher entre les tours
+│   ├── charges.ts                # La charge de chaque série : pré-remplie, 70 % et 100 %, la douleur, les séries allégées
 │   ├── tableauMouvements.ts      # Le tableau des mouvements (docs/mouvements.md), lu dans le métronome, et « Au temps ou au tempo ? »
 │   ├── programmeMois.ts          # Composition du programme par paires, les classiques, les points faibles, calendrier A/B, charges, lien
 │   ├── zones.ts                  # Les trois grandes zones — le haut, le bas, le tronc : jamais deux de la même en paire

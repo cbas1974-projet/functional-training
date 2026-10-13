@@ -2,7 +2,15 @@ import { describe, expect, it } from 'vitest';
 import type { Douleur } from '../types';
 import { EXERCICES, EXERCICES_PAR_ID } from '../data/exercices';
 import { chargeLeBasDuDos } from './programmeMois';
-import { PART_ALLEGEE, chargeAllegee, chargesDeLaSerie, libelleDisques, libelleParCote, seCharge } from './charges';
+import {
+  PART_ALLEGEE,
+  chargeAllegee,
+  chargesDeLaSerie,
+  libelleDisques,
+  libelleParCote,
+  seCharge,
+  seriesAllegeesParLaDouleur,
+} from './charges';
 import type { ParametresCharge } from './charges';
 
 const TRAP_BAR = EXERCICES_PAR_ID['trap-bar-deadlift'];
@@ -112,6 +120,57 @@ describe('la charge de chaque série', () => {
     const passees = [140, 140, 140];
     expect(serie({ exercice: PRESSE, passees, douleur: null })).toEqual(serie({ exercice: PRESSE, passees }));
     expect(serie({ exercice: PRESSE, passees, bloc: { series: 3, ajustementRessenti: 5 } }).proposee).toBe(145);
+  });
+});
+
+describe('le bug du 13 octobre 2026 : les 70 % qui collent, sans douleur', () => {
+  // Capture de Sébastien, à la salle : développé couché aux haltères, Big Max
+  // S1 = 23 tapé, puis S2, S3 et S4 pré-remplies à 15 (70 % de 23, « 70 % ·
+  // 15 » surligné), alors que le développé ne charge pas le bas du dos et que
+  // Big Max n'a plus de douleur.
+  const DEVELOPPE = EXERCICES_PAR_ID['bench-press'];
+  const bloc = { series: 4 };
+
+  it('S1 tapée à 23, pas de douleur : S2, S3 et S4 à 23, jamais à 70 %', () => {
+    expect(chargeLeBasDuDos(DEVELOPPE)).toBe(false);
+    for (const n of [2, 3, 4]) {
+      expect(serie({ exercice: DEVELOPPE, bloc, saisies: [23], serie: n })).toEqual({ proposee: 23, pleine: 23, allegee: 15 });
+    }
+  });
+
+  it('la cause : une S2 notée à 70 % (pendant « J’ai mal », ou d’un toucher sur « 70 % ») servait de série d’avant et de 100 %', () => {
+    // Sans repère, comme en 1.2.0 : une baisse notée se garde — c'est voulu
+    // pour une baisse tapée à la main —, et le 100 % tombe avec elle.
+    expect(serie({ exercice: DEVELOPPE, bloc, saisies: [23, 15], serie: 3 })).toEqual({ proposee: 15, pleine: 15, allegee: 10 });
+    // Repérée allégée, elle ne dit plus la charge de travail : S3 et S4
+    // repartent à 23, « 100 % · 23 » reste à 23 ; la S2 garde ses 15.
+    for (const n of [3, 4]) {
+      expect(serie({ exercice: DEVELOPPE, bloc, saisies: [23, 15], allegees: [2], serie: n })).toEqual({
+        proposee: 23,
+        pleine: 23,
+        allegee: 15,
+      });
+    }
+    expect(serie({ exercice: DEVELOPPE, bloc, saisies: [23, 15], allegees: [2], serie: 2 }).proposee).toBe(15);
+    // Avec la dernière fois : la série d'après la reprend.
+    expect(serie({ exercice: DEVELOPPE, bloc, passees: [20, 20, 20, 20], saisies: [15], allegees: [1], serie: 2 })).toEqual({
+      proposee: 20,
+      pleine: 20,
+      allegee: 15,
+    });
+    // Au bas du dos aussi : une deuxième série allégée ne fait pas la troisième.
+    expect(serie({ exercice: TRAP_BAR, passees: [95, 135, 135], saisies: [95, 95], allegees: [2], serie: 3 }).proposee).toBe(135);
+  });
+
+  it('la douleur éteinte : les séries notées à ses 70 % sont repérées allégées, celles tapées autrement non', () => {
+    const douleur: Douleur = { depuis: '2026-10-13T11:00:00.000Z', charge: 23, unite: 'lb' };
+    expect(seriesAllegeesParLaDouleur([23, 15, 15], douleur, 'lb')).toEqual([2, 3]);
+    expect(seriesAllegeesParLaDouleur([23, 20, 0, 15], douleur, 'lb')).toEqual([4]);
+    // Sans charge retenue, ou sans douleur : rien.
+    expect(seriesAllegeesParLaDouleur([23, 15], { depuis: '' }, 'lb')).toEqual([]);
+    expect(seriesAllegeesParLaDouleur([23, 15], null, 'lb')).toEqual([]);
+    // En kilos, les 70 % de la charge retenue en livres.
+    expect(seriesAllegeesParLaDouleur([10, 7.5], douleur, 'kg')).toEqual([2]);
   });
 });
 

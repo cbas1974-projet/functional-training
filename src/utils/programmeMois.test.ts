@@ -2657,7 +2657,8 @@ describe('les décisions de Sébastien sur l’audit (11 octobre 2026)', () => {
     // lundi 1 h 02 min 54 s, chaque semaine ; mardi A 1 h 05 min 11 s, jeudi
     // A 59 min 7 s ; mardi B 1 h 08 min 44 s, jeudi B 1 h 02 min 7 s — les
     // exercices seuls avec une pause entre les tours, sauf la marche du
-    // fermier. Une estimation : les séries se finissent sur « Série terminée ».
+    // fermier. Une estimation : un exercice se finit sur « Exercice terminé »
+    // (13 octobre 2026 : la même durée que série par série).
     const graine1 = programmeCompose(8, undefined, 1);
     expect(graine1.seances.map((s) => [s.id, dureeSec(s)])).toEqual([
       ['lundi', 3774],

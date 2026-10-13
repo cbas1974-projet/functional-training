@@ -16,6 +16,7 @@ import { IDENTIFIANT_MESURE, lireMesures } from './mesures';
 import { VERSION_PROGRAMME, validerProgramme } from './programmeMois';
 import { lireRoutineSoir } from './routineSoir';
 import { lireDouleurs } from './douleurs';
+import { versLeDerouleParExercice } from './etapesSeance';
 
 const CLE_STOCKAGE = 'functional-training';
 
@@ -87,33 +88,59 @@ const migrerPoids = (
   return poids;
 };
 
-/** Les séries finies sur « Série terminée » : des places d'étapes, rien
+/** Les exercices (ou, avant, les séries) finis : des places d'étapes, rien
  *  d'autre. */
 const placesLues = (brut: unknown): number[] | undefined =>
   Array.isArray(brut) ? brut.filter((n): n is number => Number.isInteger(n) && n >= 0) : undefined;
 
-const migrerProgression = (enCours: ProgressionSeance | null): ProgressionSeance | null =>
-  enCours === null
-    ? null
-    : {
-        ...enCours,
-        poids: migrerPoids(enCours.poids),
-        // Une séance commencée avant l'arrivée du ressenti n'en a pas.
-        ressentis: lireRessentis(enCours.ressentis),
-        // Sur un seul téléphone, à deux : ce qu'on a noté pour l'autre, et
-        // les séries finies. Une séance d'avant n'en a pas.
-        ...(enCours.poidsAutre ? { poidsAutre: migrerPoids(enCours.poidsAutre) } : {}),
-        ...(enCours.ressentisAutre ? { ressentisAutre: lireRessentis(enCours.ressentisAutre) } : {}),
-        ...(placesLues(enCours.faites) ? { faites: placesLues(enCours.faites) } : {}),
-        // Une séance commencée avant le réglage d'unité l'a été en kilos.
-        seance: {
-          ...enCours.seance,
-          parametres: {
-            ...enCours.seance.parametres,
-            unitePoids: uniteDeSeance(enCours.seance.parametres),
-          },
-        },
-      };
+/** Les séries allégées, par exercice : des numéros de série, rien d'autre ;
+ *  aucune, pas de champ. */
+function seriesLues(brut: unknown): Record<string, number[]> | undefined {
+  if (typeof brut !== 'object' || brut === null || Array.isArray(brut)) return undefined;
+  const lues: Record<string, number[]> = {};
+  for (const [exerciceId, valeur] of Object.entries(brut as Record<string, unknown>)) {
+    const series = placesLues(valeur)?.filter((n) => n > 0);
+    if (series && series.length > 0) lues[exerciceId] = series;
+  }
+  return Object.keys(lues).length > 0 ? lues : undefined;
+}
+
+const migrerProgression = (enCours: ProgressionSeance | null): ProgressionSeance | null => {
+  if (enCours === null) return null;
+  const migree: ProgressionSeance = {
+    ...enCours,
+    poids: migrerPoids(enCours.poids),
+    // Une séance commencée avant l'arrivée du ressenti n'en a pas.
+    ressentis: lireRessentis(enCours.ressentis),
+    // Une séance commencée avant le réglage d'unité l'a été en kilos.
+    seance: {
+      ...enCours.seance,
+      parametres: {
+        ...enCours.seance.parametres,
+        unitePoids: uniteDeSeance(enCours.seance.parametres),
+      },
+    },
+  };
+  // Sur un seul téléphone, à deux : ce qu'on a noté pour l'autre, et les
+  // exercices finis ; les séries allégées. Une séance d'avant n'en a pas, une
+  // abîmée perd ce qui ne se lit plus.
+  delete migree.poidsAutre;
+  delete migree.ressentisAutre;
+  delete migree.faites;
+  delete migree.allegees;
+  delete migree.allegeesAutre;
+  if (enCours.poidsAutre) migree.poidsAutre = migrerPoids(enCours.poidsAutre);
+  if (enCours.ressentisAutre) migree.ressentisAutre = lireRessentis(enCours.ressentisAutre);
+  const faites = placesLues(enCours.faites);
+  if (faites) migree.faites = faites;
+  const allegees = seriesLues(enCours.allegees);
+  if (allegees) migree.allegees = allegees;
+  const allegeesAutre = seriesLues(enCours.allegeesAutre);
+  if (allegeesAutre) migree.allegeesAutre = allegeesAutre;
+  // Une séance commencée série par série (version 1.2.0) reprend exercice par
+  // exercice, avec ses charges.
+  return versLeDerouleParExercice(migree);
+};
 
 /** Avant le réglage d'unité, toutes les charges étaient en kilogrammes et
  *  vivaient dans un champ `poidsKg`. On fige l'unité de ces séances-là : sans

@@ -44,11 +44,11 @@ export const AIDE_RESSENTI = 'La dernière série doit être dure : 1 à 3 rép�
 export const LEGENDE_VISAGES = '😊 facile · 😐 correct · ☹️ difficile';
 
 /** Sur un seul téléphone, les visages vont sur la ligne de la dernière série
- *  de chacun — jamais sur les premières —, dès qu'elle commence : on les
- *  touche juste après la série, ou pendant la pause qui suit. `place` : la
- *  place de cette série dans les étapes ; `index` : l'étape en cours. */
-export function ressentiSurLaSerie(serie: number, series: number, place: number | undefined, index: number): boolean {
-  return series > 0 && serie === series && place !== undefined && place <= index;
+ *  de chacun — jamais sur les premières. Ils y sont dès que l'exercice
+ *  s'ouvre : tout l'exercice est à l'écran d'un coup, et « Exercice terminé »
+ *  attend un visage de chacun (décision de Sébastien, 13 octobre 2026). */
+export function ressentiSurLaSerie(serie: number, series: number): boolean {
+  return series > 0 && serie === series;
 }
 
 /** Le mot en petit, pour l'historique : « léger ». */
@@ -255,10 +255,11 @@ export function raisonProposition(motif: 'leger' | 'lourd', personne?: Personne 
 /** Les exercices dont on peut dire le ressenti à cette étape : ceux dont la
  *  dernière série vient d'être faite, dans le dernier groupe travaillé — un
  *  exercice seul, ou les deux d'une paire. On le demande pendant la pause qui
- *  suit, ou, pour le tout dernier exercice, aux étirements. Sur un seul
- *  téléphone, les visages sont déjà sur la ligne de la dernière série
- *  (`ressentiSurLaSerie`) : seuls les étirements les redemandent, pour le
- *  dernier exercice. Rien pendant un circuit, qui n'a pas de charge à noter. */
+ *  suit, ou, pour le tout dernier exercice, aux étirements (la séance
+ *  libre). Sur un seul téléphone, exercice par exercice, rien : les visages
+ *  sont sur la ligne de la dernière série (`ressentiSurLaSerie`), et
+ *  obligatoires avant « Exercice terminé ». Rien pendant un circuit, qui n'a
+ *  pas de charge à noter. */
 export function exercicesAEvaluer(etapes: readonly Etape[], index: number): string[] {
   const etape = etapes[index];
   if (!etape || (etape.type !== 'repos' && etape.type !== 'retourCalme')) return [];

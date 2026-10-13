@@ -1580,7 +1580,7 @@ export default function Accueil({
             </p>
             <p className="mt-2 text-sm" style={{ color: 'var(--texte-discret)' }}>
               {unTelephone
-                ? `Le premier et le dernier exercice se font seuls${aDeux ? `, chacun son tour, avec une pause d’un toucher entre les tours${avecFermier ? ' (pas à la marche du fermier)' : ''}` : ''}. Une paire : A, B, A, B, sans pause entre les tours${machineEnPaire ? ' — sa machine, chacun son tour' : ''}. La pause se lance d’un toucher à la fin : 1 min${avecTrapBar ? ', 1 min 30 après la trap bar' : ''}.`
+                ? `Le premier et le dernier exercice se font seuls${aDeux ? `, chacun son tour, avec une pause d’un toucher entre les tours${avecFermier ? ' (pas à la marche du fermier)' : ''}` : ''}. Une paire : A, B, A, B, sans pause entre les tours${machineEnPaire ? ' — sa machine, chacun son tour' : ''}. Un seul « Exercice terminé » par exercice, puis la pause part toute seule : 1 min${avecTrapBar ? ', 1 min 30 après la trap bar' : ''}.`
                 : avecPaires
                   ? `Par paires : les deux exercices à la suite, puis 1 min de pause${avecTrapBar ? ' (1 min 30 après la trap bar)' : ''}. À chaque nouvel exercice, on installe, puis on repart sur « Go ».`
                   : `Pauses : 1 min${avecTrapBar ? ', 1 min 30 à la trap bar' : ''}. À chaque nouvel exercice, on installe, puis on repart sur « Go ».`}

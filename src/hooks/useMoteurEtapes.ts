@@ -47,9 +47,9 @@ function ecouleEtapeMs(etat: EtatMoteur, now: number): number {
  *  faite (audit du 13 octobre 2026). */
 export const ANTI_REBOND_MS = 600;
 
-/** Un appui qui fait avancer la séance — « Série terminée », « Pause »,
- *  « Passer »… — compte-t-il ? Pas tant que l'étape en cours a commencé il y
- *  a moins de `ANTI_REBOND_MS`, pauses exclues. */
+/** Un appui qui fait avancer la séance — « Exercice terminé », « Série
+ *  terminée », « Passer »… — compte-t-il ? Pas tant que l'étape en cours a
+ *  commencé il y a moins de `ANTI_REBOND_MS`, pauses exclues. */
 export function appuiAccepte(etat: EtatMoteur | null, now: number): boolean {
   return etat !== null && ecouleEtapeMs(etat, now) >= ANTI_REBOND_MS;
 }

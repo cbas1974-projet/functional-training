@@ -1,6 +1,9 @@
 // Mode séance guidée : l'application déroule les étapes de la séance, dicte
 // le tempo des séries (l'utilisateur suit la bille et les bips), gère la
 // pause, la reprise après rechargement et le temps passé sur chaque exercice.
+// Sur un seul téléphone, à deux ou seul : exercice par exercice — la liste du
+// programme, toutes les séries de l'exercice en cours, un seul « Exercice
+// terminé » qui lance la pause de fin (13 octobre 2026).
 //
 // Habillage : uniquement les jetons de couleur de `index.css` (mode sombre
 // par défaut, mode clair suivant le système) et la classe `.chiffres` sur
@@ -43,6 +46,7 @@ import {
   pauseAEtirement,
   pauseEntreLesTours,
   premierePhase,
+  versLeDerouleParExercice,
 } from '../utils/etapesSeance';
 import type {
   Etape,
@@ -65,10 +69,25 @@ import {
 import { libelleTempo } from '../utils/formatage';
 import type { Essai } from '../utils/essai';
 import { NOM_PERSONNE, autrePersonne, chargeLeBasDuDos, etirementsPauseDe } from '../utils/programmeMois';
-import { chargeAllegee, chargesDeLaSerie, libelleDisques, libelleParCote, seCharge } from '../utils/charges';
+import {
+  chargeAllegee,
+  chargesDeLaSerie,
+  libelleDisques,
+  libelleParCote,
+  seCharge,
+  seriesAllegeesParLaDouleur,
+} from '../utils/charges';
 import type { ChargesSerie } from '../utils/charges';
 import { douleurDe } from '../utils/douleurs';
 import type { QuiDouleur } from '../utils/douleurs';
+import {
+  lancerPauseTour,
+  phraseVisageManquant,
+  restePauseTourSec,
+  seriesANoter,
+  visagesManquants,
+} from '../utils/parExercice';
+import type { PauseTour, VisageManquant } from '../utils/parExercice';
 import { choixDeSortie, compteSeries, phraseEnregistrementPartiel } from '../utils/sortieSeance';
 import type { ChoixSortie } from '../utils/sortieSeance';
 import { decisionPasserExercice, decisionProlonger, decisionSuivant, perspectiveAutre } from '../utils/horlogeCommune';
@@ -201,16 +220,22 @@ interface BoutonProps {
   /** Uniquement de la mise en page (largeur, flex, soulignement). */
   className?: string;
   disabled?: boolean;
+  /** Grisé, mais on peut le toucher : il dit ce qui manque, et y ramène. */
+  inactif?: boolean;
+  /** Son nom, quand le texte est coupé sur deux lignes. */
+  libelle?: string;
 }
 
-function Bouton({ variante, onClick, children, taille = 'grand', className = '', disabled }: BoutonProps) {
+function Bouton({ variante, onClick, children, taille = 'grand', className = '', disabled, inactif = false, libelle }: BoutonProps) {
   return (
     <button
       type="button"
       onClick={onClick}
       disabled={disabled}
+      aria-label={libelle}
+      aria-disabled={inactif || undefined}
       className={`${BOUTON_COMMUN} ${CLASSES_TAILLE[taille]} ${className}`}
-      style={STYLES_BOUTON[variante]}
+      style={inactif ? { ...STYLES_BOUTON.neutre, opacity: 0.6 } : STYLES_BOUTON[variante]}
     >
       {children}
     </button>
@@ -249,6 +274,7 @@ function ambianceEtape(etape: Etape): Ambiance {
   switch (etape.type) {
     case 'serie':
     case 'station':
+    case 'exercice':
       return { couleur: 'var(--montee)', fond: 'var(--montee-fond)' };
     case 'repos':
     case 'reposTour':
@@ -326,6 +352,8 @@ function libellePhase(etape: Etape, mobilite: boolean): string {
       return 'Préparation';
     case 'serie':
       return mobilite ? 'Position' : 'Série';
+    case 'exercice':
+      return estPaire(etape) ? 'Paire' : 'Exercice';
     case 'repos':
       if (etape.motif === 'a-lancer') return 'Exercice fini';
       if (etape.motif === 'pause') return 'Pause';
@@ -374,6 +402,10 @@ function decrireEtape(etape: Etape): string {
       return `juste avant ${nom}`;
     case 'serie':
       return `pendant ${nom} (série ${etape.serie} / ${etape.series})`;
+    case 'exercice':
+      return `pendant ${[...new Set(etape.series.map((serie) => serie.exerciceId))]
+        .map((id) => exerciceDeSeance(id).nomFr)
+        .join(' et ')}`;
     case 'repos':
       return `pendant le repos après ${nom}`;
     case 'station':
@@ -413,6 +445,25 @@ function avecCharge(
   return suivants;
 }
 
+/** Les séries allégées d'un exercice, changées ; sans changement, les mêmes ;
+ *  aucune, plus d'entrée. */
+function avecSeriesAllegees(
+  precedentes: Record<string, number[]>,
+  exerciceId: string,
+  series: readonly number[],
+): Record<string, number[]> {
+  const avant = precedentes[exerciceId] ?? [];
+  const apres = [...new Set(series)].filter((serie) => serie > 0).sort((a, b) => a - b);
+  if (avant.length === apres.length && avant.every((serie, i) => serie === apres[i])) return precedentes;
+  const suivantes = { ...precedentes };
+  if (apres.length > 0) suivantes[exerciceId] = apres;
+  else delete suivantes[exerciceId];
+  return suivantes;
+}
+
+/** Le guide du tempo, éteint. */
+const GUIDE_ETEINT = { actif: false, visite: -1, depuisSec: 0, exerciceId: '' };
+
 /** Sur un seul téléphone, une colonne de la liste du programme : la personne
  *  du téléphone, ou l'autre. */
 export type QuiColonne = 'moi' | 'autre';
@@ -423,11 +474,22 @@ function colonnesDeLaSerie(qui: QuiFait | undefined): QuiColonne[] {
   return qui === 'autre' ? ['autre'] : ['moi'];
 }
 
+/** Un exercice d'un seul téléphone qui compte deux exercices : une paire. */
+function estPaire(etape: Extract<Etape, { type: 'exercice' }>): boolean {
+  return new Set(etape.series.map((serie) => serie.exerciceId)).size > 1;
+}
+
+/** Le groupe d'une étape de la liste : l'exercice ou la paire, ou sa pause. */
+function groupeDeLaListe(etape: Etape): number | undefined {
+  return etape.type === 'exercice' || etape.type === 'serie' || etape.type === 'repos' ? etape.groupe : undefined;
+}
+
 /** Sur un seul téléphone, l'écran est la liste du programme pendant les
- *  séries et les pauses ; l'échauffement, les étirements et la fin gardent le
- *  leur. */
+ *  exercices et leurs pauses ; l'échauffement, les étirements et la fin
+ *  gardent le leur. */
 function estEtapeDeListe(etape: Etape): boolean {
   return (
+    etape.type === 'exercice' ||
     (etape.type === 'serie' && etape.manuelle === true) ||
     (etape.type === 'repos' && (etape.motif === 'a-lancer' || etape.motif === 'pause'))
   );
@@ -435,21 +497,18 @@ function estEtapeDeListe(etape: Etape): boolean {
 
 /** Sur un seul téléphone, ce qui vient après l'exercice ou la paire en
  *  cours : ses noms, ou les étirements. Il reste en vue au-dessus des
- *  boutons, même quand la carte d'une paire remplit l'écran. Pendant une
- *  pause entre deux tours d'un exercice seul : le tour qui suit. */
+ *  boutons, même quand la carte d'une paire remplit l'écran. */
 function ensuiteDansLaListe(seance: Seance, etapes: Etape[], etape: Etape): string | null {
-  if ((etape.type !== 'serie' && etape.type !== 'repos') || etape.groupe === undefined) return null;
-  const groupes = groupesUnTelephone(seance);
-  if (etape.type === 'repos' && etape.suivant.type === 'serie') {
-    const { exerciceId, serie } = etape.suivant;
-    if (groupes[etape.groupe]?.some((bloc) => bloc.exerciceId === exerciceId)) {
-      return `Série ${serie} · ${exerciceDeSeance(exerciceId).nomFr}`;
-    }
-  }
-  const suivant = groupes[etape.groupe + 1];
+  const groupe = groupeDeLaListe(etape);
+  if (groupe === undefined) return null;
+  const suivant = groupesUnTelephone(seance)[groupe + 1];
   if (suivant) return suivant.map((bloc) => exerciceDeSeance(bloc.exerciceId).nomFr).join(' + ');
   return etapes.some((e) => e.type === 'retourCalme') ? 'Étirements' : null;
 }
+
+/** Où sont les visages d'une personne sur un exercice : le bouton du bas y
+ *  ramène quand il en manque un. */
+const idVisages = (qui: QuiColonne, exerciceId: string) => `visages-${qui}-${exerciceId}`;
 
 
 // ------------------------------------------------------------- Composant
@@ -481,18 +540,25 @@ export default function SeanceGuidee({
   // Le ressenti de chaque exercice, dit après sa dernière série (facultatif).
   const [ressentis, setRessentis] = useState<Record<string, Ressenti>>({});
   // Sur un seul téléphone, à deux : les charges et les ressentis de l'autre,
-  // notés ici, et les séries finies sur « Série terminée ».
+  // notés ici, et les exercices finis sur « Exercice terminé ».
   const [poidsAutre, setPoidsAutre] = useState<Record<string, number[]>>({});
   const [ressentisAutre, setRessentisAutre] = useState<Record<string, Ressenti>>({});
   const [faites, setFaites] = useState<number[]>([]);
+  // Les séries notées à 70 % d'un toucher, ou pendant une douleur éteinte
+  // depuis : elles ne disent pas la charge de travail (`chargesDeLaSerie`).
+  const [allegees, setAllegees] = useState<Record<string, number[]>>({});
+  const [allegeesAutre, setAllegeesAutre] = useState<Record<string, number[]>>({});
   // Le guide du tempo, sur un seul téléphone : caché par défaut, un petit
-  // bouton le montre. `depuisSec` : ce qui était déjà écoulé de la série
-  // quand on l'a allumé — il repart de zéro.
-  const [guideTempo, setGuideTempo] = useState<{ actif: boolean; visite: number; depuisSec: number }>({
-    actif: false,
-    visite: -1,
-    depuisSec: 0,
-  });
+  // bouton sur chaque exercice le montre. `depuisSec` : ce qui était déjà
+  // écoulé de l'exercice quand on l'a allumé — il repart de zéro.
+  const [guideTempo, setGuideTempo] = useState<{ actif: boolean; visite: number; depuisSec: number; exerciceId: string }>(
+    GUIDE_ETEINT,
+  );
+  // Sur un seul téléphone, la pause qu'on prend entre deux tours, d'un
+  // toucher : elle ne change pas d'exercice.
+  const [pauseTour, setPauseTour] = useState<PauseTour | null>(null);
+  // « Exercice terminé » touché alors qu'il manque un visage : on montre où.
+  const [manquantsMontres, setManquantsMontres] = useState(-1);
   const [demarreeLe, setDemarreeLe] = useState<string | null>(null);
   // « +5 s » au changement de côté d'un étirement, seul : l'étape s'allonge,
   // et la rallonge va au mouvement en cours — les suivants sont repoussés
@@ -528,6 +594,16 @@ export default function SeanceGuidee({
   const etirementsPause = useMemo(() => (personne ? etirementsPauseDe(personne) : []), [personne]);
   const blocDe = (exerciceId: string): BlocSeries | undefined =>
     seanceActive.blocs.find((bloc) => bloc.exerciceId === exerciceId);
+  // Sur un seul téléphone : une colonne chacun, Speedy d'abord ; seul, la
+  // sienne.
+  const colonneMoi: ColonneDuo = { qui: 'moi', ...(personne ? { personne } : {}) };
+  const colonnes: ColonneDuo[] = autre
+    ? autre === 'sebastien'
+      ? [{ qui: 'autre', personne: autre }, colonneMoi]
+      : [colonneMoi, { qui: 'autre', personne: autre }]
+    : [colonneMoi];
+  const ressentiDe = (qui: QuiColonne, exerciceId: string): Ressenti | undefined =>
+    (qui === 'moi' ? ressentis : ressentisAutre)[exerciceId];
 
   // À deux, avec le serveur : l'horloge commune mène la séance, la même sur
   // les deux téléphones. Sans réseau, elle tourne ici et rattrape le serveur
@@ -600,21 +676,41 @@ export default function SeanceGuidee({
     conteneurRef.current?.scrollTo({ top: 0, behavior: 'auto' });
   }, [visite, enListe]);
 
-  // Sur un seul téléphone, pas de minuteur pendant une série : le métronome
-  // et le décompte n'y viennent que si on les demande (`guideTempo`), et
-  // repartent alors de zéro. « +5 s » au changement de côté allonge la série
-  // d'autant : le côté gauche repart d'autant plus tard.
-  const serieManuelle = etape.type === 'serie' && etape.manuelle === true;
-  const guideActif = serieManuelle && guideTempo.actif;
-  const decalageGuide = guideActif && guideTempo.visite === visite ? guideTempo.depuisSec : 0;
+  // Sur un seul téléphone, pas de minuteur pendant un exercice : le métronome
+  // et le décompte d'une série n'y viennent que si on les demande sur un
+  // exercice (`guideTempo`), et repartent alors de zéro. « +5 s » au
+  // changement de côté allonge d'autant : le côté gauche repart d'autant plus
+  // tard.
+  const sansMinuteur = etape.type === 'exercice' || (etape.type === 'serie' && etape.manuelle === true);
+  const guideActif = sansMinuteur && guideTempo.actif && guideTempo.visite === visite;
+  /** La série que le guide rythme : une de l'exercice choisi, aux
+   *  répétitions les plus nombreuses des deux. */
+  const serieGuidee: Extract<Etape, { type: 'serie' }> | null = (() => {
+    if (!guideActif) return null;
+    if (etape.type === 'serie') return etape;
+    const bloc = seanceActive.blocs.find((b) => b.exerciceId === guideTempo.exerciceId);
+    if (!bloc) return null;
+    const reps = Math.max(bloc.reps, bloc.autre?.reps ?? 0);
+    return {
+      type: 'serie',
+      exerciceId: bloc.exerciceId,
+      serie: 1,
+      series: 1,
+      reps,
+      dureeSec: dureeSerieSec(exerciceDeSeance(bloc.exerciceId), reps, tempo),
+      manuelle: true,
+    };
+  })();
+  const decalageGuide = guideActif ? guideTempo.depuisSec : 0;
   const ecouleGuide = Math.max(0, ecoule - decalageGuide);
-  /** L'horloge du guide, pour la bille : celle de la série, moins ce qui en
+  /** L'horloge du guide, pour la bille : celle de l'étape, moins ce qui en
    *  était écoulé quand on l'a allumé. */
   const lireEcouleGuide = useCallback(() => Math.max(0, lireEcouleSec() - decalageGuide), [lireEcouleSec, decalageGuide]);
-  const sansGuide = serieManuelle && !guideActif;
-  const metro = sansGuide ? null : etatMetronome(etape, ecouleGuide, tempo, prolongation);
-  const changement = sansGuide ? null : etatChangementCote(etape, ecouleGuide, tempo, prolongation);
-  const maintien = sansGuide ? null : etatMaintien(etape, ecouleGuide, prolongation);
+  const etapeRythmee: Etape = serieGuidee ?? etape;
+  const sansGuide = sansMinuteur && serieGuidee === null;
+  const metro = sansGuide ? null : etatMetronome(etapeRythmee, ecouleGuide, tempo, prolongation);
+  const changement = sansGuide ? null : etatChangementCote(etapeRythmee, ecouleGuide, tempo, prolongation);
+  const maintien = sansGuide ? null : etatMaintien(etapeRythmee, ecouleGuide, prolongation);
   // Échauffement et retour au calme : ceux de la séance (tapis ou rameur,
   // étirements du poster), sinon ceux d'usage.
   const mouvements: MouvementGuide[] | null =
@@ -644,8 +740,8 @@ export default function SeanceGuidee({
       // geste est l'occasion de le réveiller.
       bellSound.unlock();
       const destination = etapes[Math.max(0, Math.min(cible, etapes.length - 1))];
-      // Une série menée sur « Série terminée » ne sonne pas : on vient de
-      // toucher l'écran, ou la fin de la pause a déjà sonné.
+      // Un exercice d'un seul téléphone ne sonne pas : on vient de toucher
+      // l'écran, ou la fin de la pause a déjà sonné.
       if ((destination.type === 'serie' && !destination.manuelle) || destination.type === 'station') {
         bellSound.playBell('start');
       }
@@ -747,9 +843,9 @@ export default function SeanceGuidee({
     // Fin de l'étape : passage automatique à la suivante — sauf quand la
     // séance attend « Go », ou une pause qu'on lance d'un clic.
     const attendGo = etape.type === 'repos' && etape.manuel === true;
-    // Sur un seul téléphone, une série se finit sur « Série terminée », jamais
-    // au bout du temps.
-    const attendFin = etape.type === 'serie' && etape.manuelle === true;
+    // Sur un seul téléphone, un exercice se finit sur « Exercice terminé »,
+    // jamais au bout du temps.
+    const attendFin = etape.type === 'exercice' || (etape.type === 'serie' && etape.manuelle === true);
     // À deux, l'étape suit l'horloge commune d'elle-même.
     if (!enCommun && ecoule >= dureeEff && ev.avance !== visite && !attendGo && !attendFin) {
       ev.avance = visite;
@@ -765,6 +861,29 @@ export default function SeanceGuidee({
       naviguer(index + 1, depart);
     }
   }, [etat, estFin, etape, reste, prolongation, metro, changement, maintien, mouvements, indexMouvement, changeDeCoteMouvement, resteMouvement, ecoule, dureeEff, maintenant, index, naviguer, enCommun]);
+
+  // La pause prise entre deux tours, d'un toucher : les trois derniers bips,
+  // puis la cloche et la vibration, comme la pause de fin — mais l'exercice
+  // reste le même.
+  useEffect(() => {
+    if (!pauseTour || !etat || etat.enPause) return;
+    const resteTour = restePauseTourSec(pauseTour, etat.visite, maintenant);
+    if (resteTour === null) return;
+    const ev = evenementsRef.current;
+    const secondes = Math.ceil(resteTour);
+    if (secondes >= 1 && secondes <= 3) {
+      const cle = `tour:${pauseTour.debutMs}:${secondes}`;
+      if (ev.compteARebours !== cle) {
+        ev.compteARebours = cle;
+        bellSound.playCountdown();
+      }
+    }
+    if (resteTour <= 0) {
+      bellSound.playBell('start');
+      vibrer();
+      setPauseTour(null);
+    }
+  }, [pauseTour, etat, maintenant]);
 
   // À deux, la cloche sonne quand l'horloge commune entre dans une série, et
   // quand elle en sort.
@@ -789,8 +908,8 @@ export default function SeanceGuidee({
   /** Ce qui a été saisi depuis la dernière sauvegarde : un changement la
    *  déclenche. */
   const saisiesActuelles = useMemo(
-    () => ({ poids, ressentis, poidsAutre, ressentisAutre, faites }),
-    [poids, ressentis, poidsAutre, ressentisAutre, faites],
+    () => ({ poids, ressentis, poidsAutre, ressentisAutre, faites, allegees, allegeesAutre }),
+    [poids, ressentis, poidsAutre, ressentisAutre, faites, allegees, allegeesAutre],
   );
   const sauvegardeRef = useRef<{
     visite: number;
@@ -810,7 +929,16 @@ export default function SeanceGuidee({
     tempsParEtapeSec: tempsAvecCourante.map((t) => Math.round(t)),
     poids,
     ressentis,
-    ...(unTelephone ? { poidsAutre, ressentisAutre, faites } : {}),
+    ...(Object.keys(allegees).length > 0 ? { allegees } : {}),
+    ...(unTelephone
+      ? {
+          poidsAutre,
+          ressentisAutre,
+          faites,
+          ...(Object.keys(allegeesAutre).length > 0 ? { allegeesAutre } : {}),
+          deroule: 'par-exercice' as const,
+        }
+      : {}),
     demarreeLe: debut,
     sauvegardeeLe: new Date(quand).toISOString(),
   });
@@ -840,7 +968,7 @@ export default function SeanceGuidee({
     poidsInitial: Record<string, number[]>,
     debut: string,
     ressentisInitiaux: Record<string, Ressenti> = {},
-    pourLAutre: Pick<ProgressionSeance, 'poidsAutre' | 'ressentisAutre' | 'faites'> = {},
+    reprise: Pick<ProgressionSeance, 'poidsAutre' | 'ressentisAutre' | 'faites' | 'allegees' | 'allegeesAutre'> = {},
   ) => {
     // Geste utilisateur : on en profite pour débloquer l'audio et l'écran.
     bellSound.unlock();
@@ -849,9 +977,11 @@ export default function SeanceGuidee({
     setSeanceActive(source);
     setPoids(poidsInitial);
     setRessentis(ressentisInitiaux);
-    setPoidsAutre(pourLAutre.poidsAutre ?? {});
-    setRessentisAutre(pourLAutre.ressentisAutre ?? {});
-    setFaites(pourLAutre.faites ?? []);
+    setPoidsAutre(reprise.poidsAutre ?? {});
+    setRessentisAutre(reprise.ressentisAutre ?? {});
+    setFaites(reprise.faites ?? []);
+    setAllegees(reprise.allegees ?? {});
+    setAllegeesAutre(reprise.allegeesAutre ?? {});
     setDemarreeLe(debut);
     // À deux : on commence la séance commune, ou on la rejoint.
     if (enCommun) commune.envoyer({ type: 'commencer' });
@@ -862,8 +992,11 @@ export default function SeanceGuidee({
   const commencer = () => demarrerSeance(seance, 0, [], {}, new Date().toISOString());
 
   const reprendreSeance = () => {
-    const sauvee = progressionInitiale;
-    if (!sauvee) return;
+    if (!progressionInitiale) return;
+    // Une séance commencée série par série (version 1.2.0) reprend exercice
+    // par exercice : la sauvegarde est relue au chargement, et encore ici,
+    // sans effet si c'est déjà fait.
+    const sauvee = versLeDerouleParExercice(progressionInitiale);
     const etapesSauvees = construireEtapes(sauvee.seance);
     demarrerSeance(
       sauvee.seance,
@@ -872,7 +1005,13 @@ export default function SeanceGuidee({
       sauvee.poids ?? {},
       sauvee.demarreeLe || new Date().toISOString(),
       sauvee.ressentis ?? {},
-      { poidsAutre: sauvee.poidsAutre, ressentisAutre: sauvee.ressentisAutre, faites: sauvee.faites },
+      {
+        poidsAutre: sauvee.poidsAutre,
+        ressentisAutre: sauvee.ressentisAutre,
+        faites: sauvee.faites,
+        allegees: sauvee.allegees,
+        allegeesAutre: sauvee.allegeesAutre,
+      },
     );
   };
 
@@ -974,34 +1113,33 @@ export default function SeanceGuidee({
   };
   const passerExercice = () =>
     enCommun ? decider(decisionPasserExercice) : naviguer(indexApresExercice(etapes, index));
-  /** « Suivant », en haut : pendant une série, il ne la saute pas sans le dire. */
+  /** « Suivant », en haut : pendant une série, il ne la saute pas sans le
+   *  dire ; sur un exercice d'un seul téléphone, c'est « Passer cet
+   *  exercice ». */
   const suivantEnHaut = () => {
+    if (etape.type === 'exercice') {
+      demanderPasserExercice();
+      return;
+    }
     if (etape.type !== 'serie' && etape.type !== 'station') {
       suivant();
       return;
     }
     confirmer({
       titre: etape.type === 'serie' ? 'Sauter cette série ?' : 'Sauter cette station ?',
-      // Sur un seul téléphone, seule « Série terminée » fait compter une série.
-      texte:
-        etape.type === 'serie' && etape.manuelle
-          ? 'Elle ne comptera pas. Pour la finir, c’est le bouton du bas.'
-          : 'Elle ne compte que si tu en as fait au moins la moitié. Pour la finir, c’est le bouton du bas.',
+      texte: 'Elle ne compte que si tu en as fait au moins la moitié. Pour la finir, c’est le bouton du bas.',
       oui: etape.type === 'serie' ? 'Sauter la série' : 'Sauter la station',
       action: suivant,
     });
   };
-  /** « Passer l'exercice » — sur un seul téléphone, la paire entière : toutes
-   *  ses séries qui restent ; on demande. */
+  /** « Passer l'exercice » — sur un seul téléphone, l'exercice ou la paire
+   *  entière, sans sa pause : ses séries ne comptent pas ; on demande. */
   const demanderPasserExercice = () => {
-    const paire =
-      enListe &&
-      (etape.type === 'serie' || etape.type === 'repos') &&
-      etape.groupe !== undefined &&
-      (groupesUnTelephone(seanceActive)[etape.groupe]?.length ?? 0) > 1;
+    const groupe = enListe ? groupeDeLaListe(etape) : undefined;
+    const paire = groupe !== undefined && (groupesUnTelephone(seanceActive)[groupe]?.length ?? 0) > 1;
     confirmer({
       titre: paire ? 'Passer cette paire ?' : 'Passer cet exercice ?',
-      texte: 'Les séries qui restent ne seront pas faites.',
+      texte: etape.type === 'exercice' ? 'Ses séries ne compteront pas.' : 'Les séries qui restent ne seront pas faites.',
       oui: paire ? 'Passer la paire' : 'Passer l’exercice',
       action: passerExercice,
     });
@@ -1036,16 +1174,20 @@ export default function SeanceGuidee({
 
   /** Les douleurs de l'un ou de l'autre : chacun les siennes. */
   const douleursDe = (qui: QuiColonne) => (qui === 'moi' ? douleurs : douleursAutre);
+  /** Les séries allégées de l'un ou de l'autre. */
+  const allegeesDe = (qui: QuiColonne) => (qui === 'moi' ? allegees : allegeesAutre);
 
   /** Les charges d'une série, pour soi ou pour l'autre, avec ces saisies et
    *  cette douleur : pré-remplie — la dernière fois, un cran plus loin si son
-   *  ressenti le demande —, 70 % et 100 %. */
+   *  ressenti le demande —, 70 % et 100 %. Les séries allégées ne disent pas
+   *  la charge de travail. */
   const chargesPour = (
     qui: QuiColonne,
     exerciceId: string,
     serie: number,
     saisies: number[],
     douleur: Douleur | null,
+    seriesAllegees: readonly number[] = allegeesDe(qui)[exerciceId] ?? [],
   ): ChargesSerie => {
     const bloc = blocDe(exerciceId);
     return chargesDeLaSerie({
@@ -1061,6 +1203,7 @@ export default function SeanceGuidee({
       serie,
       unite: unitePoids,
       douleur,
+      allegees: seriesAllegees,
     });
   };
 
@@ -1072,14 +1215,35 @@ export default function SeanceGuidee({
   /** Les charges d'une série de la personne du téléphone. */
   const chargesIci = (exerciceId: string, serie: number): ChargesSerie => chargesDe('moi', exerciceId, serie);
 
+  /** Change les séries allégées d'un exercice, pour l'un ou pour l'autre. */
+  const changerAllegees = (qui: QuiColonne, exerciceId: string, changer: (series: number[]) => number[]) =>
+    (qui === 'moi' ? setAllegees : setAllegeesAutre)((precedentes) =>
+      avecSeriesAllegees(precedentes, exerciceId, changer(precedentes[exerciceId] ?? [])),
+    );
+
+  /** Note la charge d'une série, pour soi ou pour l'autre ; `allegee` : à 70 %
+   *  d'un toucher — elle ne dira pas la charge de travail. Taper une charge,
+   *  ou toucher 100 %, enlève ce repère. */
+  const changerCharge = (qui: QuiColonne, exerciceId: string, serie: number, charge: number | null, allegee = false) => {
+    (qui === 'moi' ? setPoids : setPoidsAutre)((precedents) => avecCharge(precedents, exerciceId, serie, charge));
+    const marquer = allegee && charge !== null && charge > 0;
+    changerAllegees(qui, exerciceId, (series) => (marquer ? [...series, serie] : series.filter((s) => s !== serie)));
+  };
+
   /** « J'ai mal à cet exercice », pour l'un ou pour l'autre : on le signale,
-   *  ou on l'enlève. Sa série en cours suit aussitôt — à 70 %, ou de nouveau
-   *  comme avant ; celle de l'autre ne bouge pas. */
+   *  ou on l'enlève, pour lui seul. Sur un seul téléphone, rien n'est
+   *  réécrit : les charges pré-remplies de ses séries suivent — à 70 %, ou de
+   *  nouveau comme avant. En séance libre, sa série en cours suit aussitôt.
+   *  Quand la douleur s'éteint, les séries notées à ses 70 % ne disent plus
+   *  la charge de travail : les suivantes repartent du 100 % (le bug du 13
+   *  octobre 2026 : elles restaient à 70 %). */
   const basculerDouleurDe = (qui: QuiColonne, exerciceId: string) => {
     if (!onBasculerDouleur) return;
-    const avait = douleurDe(douleursDe(qui), exerciceId) !== null;
-    // La série en cours, si elle est la sienne.
+    const douleurAvant = douleurDe(douleursDe(qui), exerciceId);
+    const avait = douleurAvant !== null;
+    // Hors de la liste, la série en cours, si elle est la sienne.
     const enCoursIci =
+      !enListe &&
       (etape.type === 'serie' || etape.type === 'station') &&
       etape.exerciceId === exerciceId &&
       (etape.type !== 'serie' || colonnesDeLaSerie(etape.qui).includes(qui))
@@ -1087,35 +1251,40 @@ export default function SeanceGuidee({
           ? etape.serie
           : etape.tour
         : null;
-    const sansLaSerie = [...((qui === 'moi' ? poids : poidsAutre)[exerciceId] ?? [])];
+    const notees = (qui === 'moi' ? poids : poidsAutre)[exerciceId] ?? [];
+    const sansLaSerie = [...notees];
     if (enCoursIci !== null) sansLaSerie[enCoursIci - 1] = 0;
-    // Sa charge de travail du moment, sans la montée que la douleur coupe.
-    const charge = avait ? 0 : chargesPour(qui, exerciceId, enCoursIci ?? 1, sansLaSerie, { depuis: '' }).pleine;
+    // Les séries allégées après ce toucher : celles notées aux 70 % de la
+    // douleur qu'on éteint s'y ajoutent ; la série en cours, réécrite, n'en
+    // est plus.
+    const allegeesApres = [
+      ...new Set([
+        ...(allegeesDe(qui)[exerciceId] ?? []),
+        ...(avait ? seriesAllegeesParLaDouleur(notees, douleurAvant, unitePoids) : []),
+      ]),
+    ].filter((serie) => serie !== enCoursIci);
+    // Sa charge de travail du moment — à sa série en cours, ou après tout ce
+    // qui est noté aujourd'hui —, sans la montée que la douleur coupe.
+    const reference = enCoursIci ?? sansLaSerie.length + 1;
+    const charge = avait ? 0 : chargesPour(qui, exerciceId, reference, sansLaSerie, { depuis: '' }, allegeesApres).pleine;
     onBasculerDouleur(qui, exerciceId, charge, unitePoids);
+    changerAllegees(qui, exerciceId, () => allegeesApres);
     if (enCoursIci !== null) {
       const apres: Douleur | null = avait ? null : { depuis: '', ...(charge > 0 ? { charge, unite: unitePoids } : {}) };
-      changerCharge(qui, exerciceId, enCoursIci, chargesPour(qui, exerciceId, enCoursIci, sansLaSerie, apres).proposee);
+      changerCharge(qui, exerciceId, enCoursIci, chargesPour(qui, exerciceId, enCoursIci, sansLaSerie, apres, allegeesApres).proposee);
     }
   };
 
-  /** Enregistre la charge d'une série précise (numérotée à partir de 1). */
-  const changerPoids = (exerciceId: string, serie: number, charge: number | null) =>
-    setPoids((precedents) => avecCharge(precedents, exerciceId, serie, charge));
+  /** Enregistre la charge d'une série précise (numérotée à partir de 1) de
+   *  la personne du téléphone. */
+  const changerPoids = (exerciceId: string, serie: number, charge: number | null, allegee = false) =>
+    changerCharge('moi', exerciceId, serie, charge, allegee);
 
   /** Dit le ressenti d'un exercice ; en toucher un autre plus tard le change. */
   const choisirRessenti = (exerciceId: string, ressenti: Ressenti) =>
     setRessentis((precedents) => (precedents[exerciceId] === ressenti ? precedents : { ...precedents, [exerciceId]: ressenti }));
 
   // ------------------------------------------------ Sur un seul téléphone
-
-  /** Note la charge d'une série, pour soi ou pour l'autre. */
-  const changerCharge = (qui: QuiColonne, exerciceId: string, serie: number, charge: number | null) => {
-    if (qui === 'moi') {
-      changerPoids(exerciceId, serie, charge);
-      return;
-    }
-    setPoidsAutre((precedents) => avecCharge(precedents, exerciceId, serie, charge));
-  };
 
   /** Dit le ressenti, pour soi ou pour l'autre. */
   const choisirRessentiDe = (qui: QuiColonne, exerciceId: string, ressenti: Ressenti) => {
@@ -1128,35 +1297,73 @@ export default function SeanceGuidee({
     );
   };
 
-  /** « Série terminée » : la série compte, et la charge pré-remplie de ceux
-   *  qui l'ont faite est notée telle quelle — on ne tape que si elle change.
-   *  Le second toucher d'un double toucher ne compte pas : il ne valide pas
-   *  la série suivante. */
-  const terminerSerie = () => {
-    if (etape.type !== 'serie' || !appuiCompte()) return;
-    const { exerciceId, serie } = etape;
-    if (seCharge(exerciceDeSeance(exerciceId))) {
-      for (const qui of colonnesDeLaSerie(etape.qui)) {
-        const deja = (qui === 'moi' ? poids : poidsAutre)[exerciceId]?.[serie - 1] ?? 0;
-        if (deja > 0) continue;
-        const proposee = chargesDe(qui, exerciceId, serie).proposee;
-        if (proposee > 0) changerCharge(qui, exerciceId, serie, proposee);
-      }
+  /** Le groupe de l'exercice en cours, sur un seul téléphone : l'exercice
+   *  seul, ou les deux de la paire. */
+  const groupeEnCours = (() => {
+    const groupe = enListe ? groupeDeLaListe(etape) : undefined;
+    return groupe === undefined ? [] : (groupesUnTelephone(seanceActive)[groupe] ?? []);
+  })();
+  /** Les visages qui manquent encore pour finir l'exercice en cours : un par
+   *  personne, sur chaque exercice qui se charge. */
+  const manquants: VisageManquant[] =
+    etape.type === 'exercice'
+      ? visagesManquants(
+          groupeEnCours,
+          colonnes.map((colonne) => colonne.qui),
+          ressentiDe,
+        )
+      : [];
+
+  /** « Exercice terminé » (ou « Paire terminée ») : toutes ses séries
+   *  comptent, et les charges affichées sont notées telles quelles — on ne
+   *  tape que ce qui change. Il faut un visage de chacun : tant qu'il en
+   *  manque un, le bouton dit lequel, et y ramène. Puis la pause de fin part
+   *  d'elle-même. Le second toucher d'un double toucher ne compte pas. */
+  const terminerExercice = () => {
+    if (etape.type !== 'exercice' || !appuiCompte()) return;
+    const [manquant] = manquants;
+    if (manquant) {
+      setManquantsMontres(visite ?? -1);
+      document.getElementById(idVisages(manquant.qui, manquant.exerciceId))?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+      return;
+    }
+    for (const { qui, exerciceId, serie } of seriesANoter(etape.series)) {
+      const deja = (qui === 'moi' ? poids : poidsAutre)[exerciceId]?.[serie - 1] ?? 0;
+      if (deja > 0) continue;
+      const proposee = chargesDe(qui, exerciceId, serie).proposee;
+      if (proposee > 0) changerCharge(qui, exerciceId, serie, proposee);
     }
     const ici = index;
     setFaites((precedentes) => (precedentes.includes(ici) ? precedentes : [...precedentes, ici]));
+    setPauseTour(null);
+    setGuideTempo(GUIDE_ETEINT);
     naviguer(index + 1);
   };
 
-  /** Le guide du tempo, d'un toucher : il repart de zéro. */
-  const basculerGuideTempo = () => {
+  /** « Pause · 1 min » pendant un exercice : on souffle entre deux tours,
+   *  sans changer d'exercice ; un second toucher l'arrête. */
+  const basculerPauseTour = (dureeSec: number) => {
     bellSound.unlock();
-    if (guideTempo.actif) {
-      setGuideTempo({ actif: false, visite: -1, depuisSec: 0 });
+    if (restePauseTourSec(pauseTour, visite, Date.now()) !== null) {
+      setPauseTour(null);
+      return;
+    }
+    if (visite === undefined || dureeSec <= 0) return;
+    setGuideTempo(GUIDE_ETEINT);
+    setPauseTour(lancerPauseTour(visite, Date.now(), dureeSec));
+  };
+
+  /** Le guide du tempo d'un exercice, d'un toucher : il repart de zéro ; sur
+   *  l'autre exercice de la paire, il y passe. */
+  const basculerGuideTempo = (exerciceId: string) => {
+    bellSound.unlock();
+    if (guideActif && guideTempo.exerciceId === exerciceId) {
+      setGuideTempo(GUIDE_ETEINT);
       return;
     }
     bellSound.playBell('start');
-    setGuideTempo({ actif: true, visite: visite ?? -1, depuisSec: ecoule });
+    setPauseTour(null);
+    setGuideTempo({ actif: true, visite: visite ?? -1, depuisSec: ecoule, exerciceId });
   };
 
   // Un essai ne garde rien : sa séance faite n'est jamais enregistrée, ressentis compris.
@@ -1296,16 +1503,6 @@ export default function SeanceGuidee({
   /** L'un ou l'autre a mal à cet exercice. */
   const douleurDeColonne = (qui: QuiColonne, exerciceId: string) => douleurDe(douleursDe(qui), exerciceId) !== null;
   const douleurIci = (exerciceId: string) => douleurDeColonne('moi', exerciceId);
-  // Sur un seul téléphone : une colonne chacun, Speedy d'abord ; seul, la
-  // sienne.
-  const colonneMoi: ColonneDuo = { qui: 'moi', ...(personne ? { personne } : {}) };
-  const colonnes: ColonneDuo[] = autre
-    ? autre === 'sebastien'
-      ? [{ qui: 'autre', personne: autre }, colonneMoi]
-      : [colonneMoi, { qui: 'autre', personne: autre }]
-    : [colonneMoi];
-  const ressentiDe = (qui: QuiColonne, exerciceId: string): Ressenti | undefined =>
-    (qui === 'moi' ? ressentis : ressentisAutre)[exerciceId];
   // Après la dernière série d'un exercice : facile, correct ou difficile ?
   // Pendant la pause qui suit, ou, pour le dernier exercice, aux étirements.
   // Sur un seul téléphone, les visages sont sur la ligne de la dernière série
@@ -1399,12 +1596,16 @@ export default function SeanceGuidee({
           unitePoids={unitePoids}
           douleur={douleur}
           onBasculerDouleur={onBasculerDouleur ? () => basculerDouleurDe('moi', etape.exerciceId) : undefined}
-          onPoids={(serie, charge) => changerPoids(etape.exerciceId, serie, charge)}
+          onPoids={(serie, charge, allegee) => changerPoids(etape.exerciceId, serie, charge, allegee)}
           onPasser={demanderPasserExercice}
         />
       );
       break;
     }
+    // Sur un seul téléphone, la liste du programme en tient lieu (plus bas).
+    case 'exercice':
+      corps = null;
+      break;
     case 'repos':
     case 'reposTour': {
       // La charge à installer pour la série qui vient.
@@ -1450,19 +1651,20 @@ export default function SeanceGuidee({
       break;
   }
 
-  // Sur un seul téléphone, pendant les séries et les pauses : la liste de tout
-  // le programme, l'exercice en cours déroulé. Le guide du tempo n'y vient que
-  // si on le demande.
+  // Sur un seul téléphone, pendant les exercices et leurs pauses : la liste de
+  // tout le programme, l'exercice en cours déroulé. Le guide du tempo d'un
+  // exercice n'y vient que si on le demande.
+  const exerciceGuide = serieGuidee ? exerciceDeSeance(serieGuidee.exerciceId) : null;
   const guide =
-    guideActif && exercice && etape.type === 'serie' ? (
+    serieGuidee && exerciceGuide ? (
       <GuideDeSerie
-        etape={etape}
-        exercice={exercice}
+        etape={serieGuidee}
+        exercice={exerciceGuide}
         metro={metro}
         changement={changement}
         onProlongerChangement={prolongerChangement}
         maintien={maintien}
-        resteSec={Math.max(0, dureeSerieSec(exercice, etape.reps, tempo) + prolongation - ecouleGuide)}
+        resteSec={Math.max(0, dureeSerieSec(exerciceGuide, serieGuidee.reps, tempo) + prolongation - ecouleGuide)}
         tempo={tempo}
         prolongationSec={prolongation}
         guideVisuel={guideVisuel}
@@ -1486,7 +1688,9 @@ export default function SeanceGuidee({
         onBasculerDouleur={onBasculerDouleur ? basculerDouleurDe : undefined}
         onCharge={changerCharge}
         onRessenti={choisirRessentiDe}
-        guide={guide}
+        guide={serieGuidee && guide ? { exerciceId: serieGuidee.exerciceId, noeud: guide } : null}
+        onTempo={basculerGuideTempo}
+        manquants={manquantsMontres === visite ? manquants : []}
         onPasser={demanderPasserExercice}
       />
     );
@@ -1550,42 +1754,56 @@ export default function SeanceGuidee({
         </Bouton>
       );
       break;
+    case 'exercice':
     case 'fin':
       actions = null;
       break;
   }
   if (enListe) {
-    if (etape.type === 'serie') {
-      // Pas de décompte : la durée estimée de la série, et « Série terminée ».
-      const estimee = exercice ? dureeSerieSec(exercice, etape.reps, tempo) : 0;
+    if (etape.type === 'exercice') {
+      // Pas de décompte : « Pause · 1 min » pour souffler entre deux tours,
+      // et un seul « Exercice terminé », grisé tant qu'il manque un visage.
+      const pauseSec = groupeEnCours[groupeEnCours.length - 1]?.reposSec ?? 0;
+      const resteTour = restePauseTourSec(pauseTour, visite, maintenant);
+      const [manquant] = manquants;
+      const nomDe = (qui: QuiColonne) =>
+        colonnes.length > 1 ? nomColonne(colonnes.find((colonne) => colonne.qui === qui) ?? colonneMoi) : undefined;
       actions = (
         <>
-          <Bouton variante={guideActif ? 'accent' : 'neutre'} taille="etroit" onClick={basculerGuideTempo} className="flex-1">
-            {guideActif ? 'Sans tempo' : 'Tempo'}
-          </Bouton>
-          <Bouton variante="accent" taille="vedette" onClick={terminerSerie} className="flex-[2.4]">
-            <span className="block leading-tight">Série terminée</span>
-            <span className="chiffres block text-sm font-normal leading-tight">série ≈ {formaterDureeCourte(estimee)}</span>
-          </Bouton>
-        </>
-      );
-    } else if (etape.type === 'repos' && etape.motif === 'a-lancer') {
-      // La pause se lance d'un toucher ; on peut aussi s'en passer.
-      const pauseSec = etapes[index + 1]?.dureeSec ?? 0;
-      actions = (
-        <>
+          {pauseSec > 0 && (
+            <Bouton
+              variante={resteTour !== null ? 'pause' : 'neutre'}
+              taille="etroit"
+              onClick={() => basculerPauseTour(pauseSec)}
+              libelle={resteTour !== null ? undefined : `Pause · ${dureePause(pauseSec)}`}
+              className="flex-1"
+            >
+              {resteTour !== null ? (
+                <>
+                  <span className="chiffres block text-2xl font-bold leading-none" aria-live="polite">
+                    {formaterMmSs(Math.ceil(resteTour))}
+                  </span>
+                  <span className="block text-xs font-normal leading-tight">Arrêter la pause</span>
+                </>
+              ) : (
+                <>
+                  <span className="block leading-tight">Pause</span>
+                  <span className="chiffres block text-sm font-normal leading-tight">{dureePause(pauseSec)}</span>
+                </>
+              )}
+            </Bouton>
+          )}
           <Bouton
-            variante="neutre"
-            taille="etroit"
-            onClick={() => {
-              if (appuiCompte()) naviguer(index + 2);
-            }}
-            className="flex-1"
+            variante="accent"
+            taille="vedette"
+            inactif={manquant !== undefined}
+            onClick={terminerExercice}
+            className="flex-[2.2]"
           >
-            Sans pause
-          </Bouton>
-          <Bouton variante="accent" taille="vedette" onClick={suivant} className="flex-[2]">
-            Pause · {dureePause(pauseSec)}
+            <span className="block leading-tight">{estPaire(etape) ? 'Paire terminée' : 'Exercice terminé'}</span>
+            <span className="block text-sm font-normal leading-tight">
+              {manquant ? phraseVisageManquant(manquant, nomDe, estPaire(etape)) : `≈ ${formaterDureeCourte(etape.dureeSec)}`}
+            </span>
           </Bouton>
         </>
       );
@@ -1725,9 +1943,10 @@ function EcranAccueil({
   onQuitter,
 }: EcranAccueilProps) {
   const { tempo } = seance.parametres;
-  const etapesSauvees = progression ? construireEtapes(progression.seance) : null;
+  const sauvee = progression ? versLeDerouleParExercice(progression) : null;
+  const etapesSauvees = sauvee ? construireEtapes(sauvee.seance) : null;
   const etapeSauvee = etapesSauvees
-    ? etapesSauvees[Math.max(0, Math.min(progression?.indexEtape ?? 0, etapesSauvees.length - 1))]
+    ? etapesSauvees[Math.max(0, Math.min(sauvee?.indexEtape ?? 0, etapesSauvees.length - 1))]
     : null;
 
   const chiffreCle = 'chiffres text-2xl font-bold';
@@ -2144,7 +2363,8 @@ interface CorpsTravailProps {
   douleur: boolean;
   /** Absent : on ne peut pas le signaler d'ici. */
   onBasculerDouleur?: () => void;
-  onPoids: (serie: number, charge: number | null) => void;
+  /** `allegee` : à 70 % d'un toucher — elle ne dira pas la charge de travail. */
+  onPoids: (serie: number, charge: number | null, allegee?: boolean) => void;
   onPasser: () => void;
 }
 
@@ -2200,10 +2420,11 @@ function CorpsTravail({
     setTapee(Number.isFinite(charge) && charge > 0 ? charge : 0);
     onPoids(serieCourante, Number.isFinite(charge) ? charge : null);
   };
-  /** Un raccourci, 70 % ou 100 % : la charge vraiment faite. */
-  const choisirCharge = (charge: number) => {
+  /** Un raccourci, 70 % ou 100 % : la charge vraiment faite. À 70 %, elle ne
+   *  dit pas la charge de travail : la série d'après repart du 100 %. */
+  const choisirCharge = (charge: number, allegee: boolean) => {
     setTexte(String(charge));
-    onPoids(serieCourante, charge);
+    onPoids(serieCourante, charge, allegee);
   };
   const chargeSaisie = Number.parseFloat(texte.replace(',', '.'));
   const base = pleine > 0 ? pleine : tapee;
@@ -2338,7 +2559,7 @@ function CorpsTravail({
                       key={part}
                       type="button"
                       aria-pressed={choisie}
-                      onClick={() => choisirCharge(charge)}
+                      onClick={() => choisirCharge(charge, part === '70 %')}
                       className={`${BOUTON_COMMUN} chiffres min-h-11 rounded-xl px-2 text-base`}
                       style={choisie ? STYLES_BOUTON.accent : STYLES_BOUTON.neutre}
                     >
@@ -2983,11 +3204,13 @@ function CorpsFin({
 // ------------------------------------------------------------- Sur un seul téléphone
 //
 // Un seul téléphone pour deux (décision de Sébastien, 12 octobre 2026) :
-// celui qui le tient note pour les deux. Pendant les séries et les pauses,
-// l'écran est la liste de tout le programme du jour — l'exercice en cours
-// déroulé, le suivant en vue (« Ensuite »), le reste en une ligne. Pour
-// l'exercice en cours, une ligne par série, la charge de Speedy et celle de
-// Big Max côte à côte, pré-remplies avec celles de la dernière fois.
+// celui qui le tient note pour les deux. Pendant les exercices et leurs
+// pauses, l'écran est la liste de tout le programme du jour — l'exercice en
+// cours déroulé, le suivant en vue (« Ensuite »), le reste en une ligne. Pour
+// l'exercice en cours (ou la paire), toutes ses séries d'un coup (13 octobre
+// 2026) : une ligne par série, la charge de Speedy et celle de Big Max côte à
+// côte, pré-remplies avec celles de la dernière fois, et les visages sur la
+// dernière série de chacun.
 
 /** Une colonne de la liste : la personne du téléphone, ou l'autre. */
 export interface ColonneDuo {
@@ -3029,7 +3252,7 @@ export interface ListeProgrammeProps {
   saisies: (qui: QuiColonne, exerciceId: string) => number[];
   /** La charge d'une série : pré-remplie, 70 % et 100 %. */
   charges: (qui: QuiColonne, exerciceId: string, serie: number) => ChargesSerie;
-  /** Les séries finies sur « Série terminée », par leur place dans les
+  /** Les exercices finis sur « Exercice terminé », par leur place dans les
    *  étapes. */
   faites: readonly number[];
   ressentiDe: (qui: QuiColonne, exerciceId: string) => Ressenti | undefined;
@@ -3037,26 +3260,33 @@ export interface ListeProgrammeProps {
   douleur: (qui: QuiColonne, exerciceId: string) => boolean;
   /** Absent : on ne peut pas le signaler d'ici. */
   onBasculerDouleur?: (qui: QuiColonne, exerciceId: string) => void;
-  onCharge: (qui: QuiColonne, exerciceId: string, serie: number, charge: number | null) => void;
+  /** Note la charge d'une série ; `allegee` : à 70 % d'un toucher. */
+  onCharge: (qui: QuiColonne, exerciceId: string, serie: number, charge: number | null, allegee?: boolean) => void;
   onRessenti: (qui: QuiColonne, exerciceId: string, ressenti: Ressenti) => void;
-  /** Le guide du tempo de la série en cours, quand on l'a demandé. */
-  guide: ReactNode;
-  /** « Passer cet exercice » : ses séries qui restent ; on demande avant. */
+  /** Le guide du tempo d'un exercice, quand on l'a demandé. */
+  guide: { exerciceId: string; noeud: ReactNode } | null;
+  /** « Tempo » sur un exercice ; absent : pas de bouton. */
+  onTempo?: (exerciceId: string) => void;
+  /** Les visages qui manquent, à montrer : « Exercice terminé » a été touché
+   *  sans eux. */
+  manquants?: readonly VisageManquant[];
+  /** « Passer cet exercice » : ses séries ne comptent pas ; on demande avant. */
   onPasser: () => void;
 }
 
 /** Tout le programme du jour, en liste. */
 export function ListeProgramme(props: ListeProgrammeProps) {
-  const { seance, etapes, index, colonnes } = props;
+  const { seance, etapes, index, colonnes, faites } = props;
   const groupes = useMemo(() => groupesUnTelephone(seance), [seance]);
-  // Les étapes de chaque groupe : de la première à la dernière.
+  // Les étapes de chaque groupe : de la première (l'exercice) à la dernière
+  // (sa pause).
   const bornes = useMemo(
     () =>
       groupes.map((_, g) => {
         let debut = -1;
         let fin = -1;
         etapes.forEach((etape, i) => {
-          if ((etape.type === 'serie' || etape.type === 'repos') && etape.groupe === g) {
+          if (groupeDeLaListe(etape) === g) {
             if (debut < 0) debut = i;
             fin = i;
           }
@@ -3065,17 +3295,7 @@ export function ListeProgramme(props: ListeProgrammeProps) {
       }),
     [groupes, etapes],
   );
-  // La place de chaque série dans les étapes, par exercice, série et colonne.
-  const places = useMemo(() => {
-    const parCle = new Map<string, number>();
-    etapes.forEach((etape, i) => {
-      if (etape.type !== 'serie') return;
-      for (const qui of colonnesDeLaSerie(etape.qui)) parCle.set(`${etape.exerciceId}|${etape.serie}|${qui}`, i);
-    });
-    return parCle;
-  }, [etapes]);
-  const etape = etapes[index];
-  const courant = etape.type === 'serie' || etape.type === 'repos' ? etape.groupe : undefined;
+  const courant = groupeDeLaListe(etapes[index]);
 
   // À chaque nouvel exercice, sa carte vient sous les yeux.
   const carteRef = useRef<HTMLLIElement>(null);
@@ -3094,15 +3314,17 @@ export function ListeProgramme(props: ListeProgrammeProps) {
   return (
     <ol className="space-y-2" aria-label="Le programme du jour">
       {echauffement >= 0 && <LigneEtape nom="Échauffement" statut={statut(echauffement, echauffement)} />}
-      {groupes.map((groupe, g) =>
-        g === courant ? (
+      {groupes.map((groupe, g) => {
+        const etapeExercice = etapes[bornes[g].debut];
+        return g === courant ? (
           <CarteGroupe
             key={groupe[0].exerciceId}
             ref={carteRef}
             {...props}
             groupe={groupe}
             numero={numeros[g]}
-            places={places}
+            exercice={etapeExercice?.type === 'exercice' ? etapeExercice : undefined}
+            fait={faites.includes(bornes[g].debut)}
             dernier={g === groupes.length - 1}
           />
         ) : (
@@ -3115,8 +3337,8 @@ export function ListeProgramme(props: ListeProgrammeProps) {
             ensuite={g === ensuite}
             dernier={g === groupes.length - 1}
           />
-        ),
-      )}
+        );
+      })}
       {retourCalme >= 0 && (
         <LigneEtape nom="Étirements" statut={statut(retourCalme, retourCalme)} ensuite={ensuite === groupes.length} />
       )}
@@ -3208,32 +3430,41 @@ function LigneGroupe({
   );
 }
 
+/** La case touchée en dernier : ses raccourcis 70 % et 100 % s'affichent
+ *  dessous. */
+interface Cellule {
+  qui: QuiColonne;
+  exerciceId: string;
+  serie: number;
+}
+
 interface CarteGroupeProps extends ListeProgrammeProps {
   groupe: BlocSeries[];
   numero: number;
-  places: Map<string, number>;
+  /** L'étape de l'exercice : ses séries, dans l'ordre où elles se font. */
+  exercice: Extract<Etape, { type: 'exercice' }> | undefined;
+  /** Fini sur « Exercice terminé » : les cases disent ce qui est noté. */
+  fait: boolean;
   /** Le dernier exercice : pas de pause après, les étirements suivent. */
   dernier: boolean;
   ref: Ref<HTMLLIElement>;
 }
 
-/** L'exercice ou la paire en cours, déroulé : chaque exercice, ses séries,
- *  les charges des deux, et les visages du ressenti sur la dernière série. */
+/** L'exercice ou la paire en cours, d'un coup : chaque exercice, toutes ses
+ *  séries, les charges des deux, et les visages du ressenti sur la dernière
+ *  série de chacun. */
 function CarteGroupe({ ref, ...props }: CarteGroupeProps) {
-  const { groupe, numero, colonnes, etapes, index, dernier } = props;
+  const { groupe, numero, colonnes, etapes, index, dernier, exercice } = props;
   const etape = etapes[index];
   const paire = groupe.length > 1;
   const aDeux = colonnes.length > 1;
   // À deux, la machine d'une paire — un seul siège — se fait chacun son tour.
   const machine = paire && aDeux ? groupe.find((bloc) => bloc.tour) : undefined;
-  // Un exercice seul, à deux : une pause d'un toucher entre deux tours — sauf
-  // la marche du fermier.
-  const entreLesTours = !paire && aDeux && pauseEntreLesTours(exerciceDeSeance(groupe[0].exerciceId));
+  // Un exercice seul, à deux : une pause entre deux tours, d'un toucher — sauf
+  // la marche du fermier, qui enchaîne.
+  const entreLesTours = !paire && (!aDeux || pauseEntreLesTours(exerciceDeSeance(groupe[0].exerciceId)));
   // Chacun son tour : qui commence.
-  const premiere = etapes.find(
-    (e): e is Extract<Etape, { type: 'serie' }> =>
-      e.type === 'serie' && e.exerciceId === (machine ?? groupe[0]).exerciceId,
-  );
+  const premiere = exercice?.series.find((serie) => serie.exerciceId === (machine ?? groupe[0]).exerciceId);
   const commence = colonnes.find((colonne) => colonne.qui === (premiere?.qui === 'autre' ? 'autre' : 'moi'));
   const quiCommence = commence ? nomColonne(commence) : 'l’un';
   const explication = paire
@@ -3244,9 +3475,17 @@ function CarteGroupe({ ref, ...props }: CarteGroupeProps) {
       : 'A, B, A, B, sans pause entre les tours'
     : aDeux
       ? `Chacun son tour : ${quiCommence} commence${entreLesTours ? '' : ', sans pause entre les tours'}`
-      : 'Une pause entre deux séries';
+      : 'Toutes tes séries';
   const pause = groupe[groupe.length - 1].reposSec;
-  const lancee = `${dureePause(pause)}, lancée d’un toucher`;
+  const consigne = [
+    entreLesTours && pause > 0 ? 'Entre les tours : « Pause », en bas, quand vous voulez' : null,
+    dernier
+      ? 'Pas de pause à la fin : les étirements suivent'
+      : `À la fin : ${dureePause(pause)} de pause, lancée par « ${paire ? 'Paire terminée' : 'Exercice terminé'} »`,
+  ]
+    .filter(Boolean)
+    .join(' · ');
+  const [cellule, setCellule] = useState<Cellule | null>(null);
   return (
     <li
       ref={ref}
@@ -3258,22 +3497,14 @@ function CarteGroupe({ ref, ...props }: CarteGroupeProps) {
           {titreGroupe(groupe, numero)} · {explication}
         </div>
         <div className="chiffres text-xs" style={{ color: 'var(--texte-discret)' }}>
-          {etape.type === 'repos' && etape.motif === 'pause'
-            ? 'Pause en cours'
-            : entreLesTours
-              ? dernier
-                ? `Pause entre les tours : ${lancee} ; à la fin, les étirements suivent`
-                : `Pause entre les tours et à la fin : ${lancee}`
-              : dernier
-                ? 'Pas de pause à la fin : les étirements suivent'
-                : `Pause à la fin${paire ? ' de la paire' : ''} : ${lancee}`}
+          {etape.type === 'repos' ? 'Pause en cours' : consigne}
         </div>
       </div>
       {groupe.map((bloc) => (
-        <BlocDuProgramme key={bloc.exerciceId} {...props} bloc={bloc} />
+        <BlocDuProgramme key={bloc.exerciceId} {...props} bloc={bloc} cellule={cellule} onCellule={setCellule} />
       ))}
       {/* Loin du gros bouton du bas, en petit, et on demande avant. */}
-      {etape.type === 'serie' && (
+      {etape.type === 'exercice' && (
         <Bouton variante="fantome" taille="petit" onClick={props.onPasser} className="w-full underline">
           {paire ? 'Passer cette paire' : 'Passer cet exercice'}
         </Bouton>
@@ -3291,18 +3522,20 @@ function BlocDuProgramme({
   unitePoids,
   saisies,
   charges,
-  faites,
-  places,
+  fait,
   ressentiDe,
   douleur,
   onBasculerDouleur,
   onCharge,
   onRessenti,
   guide,
-}: Omit<CarteGroupeProps, 'ref'> & { bloc: BlocSeries }) {
+  onTempo,
+  manquants = [],
+  cellule,
+  onCellule,
+}: Omit<CarteGroupeProps, 'ref'> & { bloc: BlocSeries; cellule: Cellule | null; onCellule: (cellule: Cellule) => void }) {
   const exercice = exerciceDeSeance(bloc.exerciceId);
   const etape = etapes[index];
-  const actif = etape.type === 'serie' && etape.exerciceId === bloc.exerciceId ? etape : null;
   const avecCharge = seCharge(exercice);
   const posture = estPosture(exercice);
   const volumes = colonnes
@@ -3312,57 +3545,56 @@ function BlocDuProgramme({
     })
     .filter(Boolean)
     .join(' · ');
-  const qui = actif ? colonnesDeLaSerie(actif.qui) : [];
-  const nomQui =
-    colonnes.length < 2
-      ? ''
-      : qui.length > 1
-        ? ' — les deux'
-        : ` — ${nomColonne(colonnes.find((colonne) => colonne.qui === qui[0]) ?? colonnes[0])}`;
-  // Une série longue qui charge le bas du dos : le rappel qui protège.
-  const dosAMenager = actif !== null && actif.reps >= 10 && chargeLeBasDuDos(exercice);
+  // Des séries longues qui chargent le bas du dos : le rappel qui protège.
+  const dosAMenager = chargeLeBasDuDos(exercice) && Math.max(bloc.reps, bloc.autre?.reps ?? 0) >= 10;
+  const guideIci = guide !== null && guide.exerciceId === exercice.id;
   return (
-    <div
-      className="space-y-2 rounded-xl p-2"
-      style={{ background: actif ? 'var(--surface-haute)' : 'transparent', border: '1px solid var(--bordure)' }}
-    >
+    <div className="space-y-2 rounded-xl p-2" style={{ background: 'var(--surface-haute)', border: '1px solid var(--bordure)' }}>
       <div className="flex items-center gap-3">
         <Vignette exerciceId={exercice.id} alt="" className="w-20 shrink-0 rounded-lg" />
-        <div className="min-w-0">
+        <div className="min-w-0 flex-1">
           <h3 className="font-bold leading-tight">{exercice.nomFr}</h3>
           <p className="chiffres text-xs" style={{ color: 'var(--texte-discret)' }}>
             {volumes}
           </p>
         </div>
+        {/* Le métronome, en petit, si on le veut. */}
+        {onTempo && etape.type === 'exercice' && !posture && (
+          <button
+            type="button"
+            aria-pressed={guideIci}
+            aria-label={`${guideIci ? 'Arrêter le tempo' : 'Tempo'} : ${exercice.nomFr}`}
+            onClick={() => onTempo(exercice.id)}
+            className={`${BOUTON_COMMUN} min-h-11 shrink-0 rounded-xl px-3 text-sm`}
+            style={guideIci ? STYLES_BOUTON.accent : STYLES_BOUTON.neutre}
+          >
+            {guideIci ? 'Sans tempo' : 'Tempo'}
+          </button>
+        )}
       </div>
-      {actif && (
-        <p className="text-base font-bold" style={{ color: 'var(--montee)' }}>
-          ▶ Série {actif.serie}
-          {nomQui}
-        </p>
-      )}
       {dosAMenager && (
         <p className="text-sm font-semibold" style={{ color: 'var(--alerte)' }}>
           Si le dos s’arrondit, on arrête la série.
         </p>
       )}
-      {actif && guide}
+      {guideIci && guide.noeud}
       <TableauSeries
         bloc={bloc}
         exercice={exercice}
         colonnes={colonnes}
-        index={index}
         unitePoids={unitePoids}
         saisies={saisies}
         charges={charges}
-        faites={faites}
-        places={places}
+        fait={fait}
         avecCharge={avecCharge}
         onCharge={onCharge}
         ressentiDe={ressentiDe}
         onRessenti={onRessenti}
         douleur={douleur}
         onBasculerDouleur={posture ? undefined : onBasculerDouleur}
+        manquants={manquants}
+        cellule={cellule}
+        onCellule={onCellule}
       />
       <details className="rounded-xl px-2" style={{ background: 'var(--surface)' }}>
         <summary className="flex min-h-11 cursor-pointer items-center text-sm font-medium">Points d’attention</summary>
@@ -3376,46 +3608,46 @@ function BlocDuProgramme({
   );
 }
 
+/** Ce qu'on fait à une série sans charge : « 10 rép. », « 30 s ». */
+function cibleSansCharge(exercice: Exercice, reps: number): string {
+  return exercice.unite === 'secondes' ? `${reps} s` : `${reps} rép.`;
+}
+
 /** Les séries d'un exercice, une ligne chacune, une colonne par personne :
  *  la charge, pré-remplie avec celle de la dernière fois — on ne tape que si
- *  elle change —, ou un crochet pour un exercice sans charge. Sous les noms,
- *  « J'ai mal » pour chacun. Sous la série en cours : 70 % et 100 % d'un
- *  toucher, et ce qu'on met de chaque côté. Sous la dernière série de chacun,
- *  dès qu'elle commence, et sous elle seulement : les visages du ressenti. */
+ *  elle change —, ou ce qu'il y a à faire pour un exercice sans charge. Sous
+ *  les noms, « J'ai mal » pour chacun. Sous la case touchée : 70 % et 100 %
+ *  d'un toucher, et ce qu'on met de chaque côté. Sous la dernière série de
+ *  chacun : les visages du ressenti, obligatoires pour finir l'exercice. */
 function TableauSeries({
   bloc,
   exercice,
   colonnes,
-  index,
   unitePoids,
   saisies,
   charges,
-  faites,
-  places,
+  fait,
   avecCharge,
   onCharge,
   ressentiDe,
   onRessenti,
   douleur,
   onBasculerDouleur,
+  manquants,
+  cellule,
+  onCellule,
 }: Pick<
   ListeProgrammeProps,
-  | 'colonnes'
-  | 'index'
-  | 'unitePoids'
-  | 'saisies'
-  | 'charges'
-  | 'faites'
-  | 'onCharge'
-  | 'ressentiDe'
-  | 'onRessenti'
-  | 'douleur'
-  | 'onBasculerDouleur'
+  'colonnes' | 'unitePoids' | 'saisies' | 'charges' | 'onCharge' | 'ressentiDe' | 'onRessenti' | 'douleur' | 'onBasculerDouleur'
 > & {
   bloc: BlocSeries;
   exercice: Exercice;
-  places: Map<string, number>;
+  /** Fini sur « Exercice terminé » : les cases disent ce qui est noté. */
+  fait: boolean;
   avecCharge: boolean;
+  manquants: readonly VisageManquant[];
+  cellule: Cellule | null;
+  onCellule: (cellule: Cellule) => void;
 }) {
   const lignes = Math.max(...colonnes.map((colonne) => volumeDeColonne(bloc, colonne.qui).series));
   const numeros = Array.from({ length: lignes }, (_, i) => i + 1);
@@ -3424,9 +3656,9 @@ function TableauSeries({
   // Les visages du ressenti : sur la dernière série de chacun. Rien sur un
   // exercice sans charge — il n'y a rien à monter.
   const visagesSur = (colonne: ColonneDuo, serie: number) =>
-    avecCharge &&
-    ressentiSurLaSerie(serie, volumeDeColonne(bloc, colonne.qui).series, places.get(`${exercice.id}|${serie}|${colonne.qui}`), index);
+    avecCharge && ressentiSurLaSerie(serie, volumeDeColonne(bloc, colonne.qui).series);
   const avecVisages = numeros.some((serie) => colonnes.some((colonne) => visagesSur(colonne, serie)));
+  const manque = (qui: QuiColonne) => manquants.some((m) => m.qui === qui && m.exerciceId === exercice.id);
   return (
     <div className="space-y-1" role="group" aria-label={`Séries : ${exercice.nomFr}`}>
       {colonnes.length > 1 || avecCharge ? (
@@ -3455,15 +3687,15 @@ function TableauSeries({
         </div>
       )}
       {numeros.map((serie) => {
-        const enCours = colonnes.some((colonne) => places.get(`${exercice.id}|${serie}|${colonne.qui}`) === index);
+        const celluleIci = avecCharge && cellule?.exerciceId === exercice.id && cellule.serie === serie ? cellule : null;
         return (
           <div key={serie} className="space-y-1">
             <div className="grid items-center gap-2" style={grille}>
-              <span className="chiffres text-sm font-semibold" style={{ color: enCours ? 'var(--montee)' : 'var(--texte-discret)' }}>
-                {enCours ? '▶' : ''}S{serie}
+              <span className="chiffres text-sm font-semibold" style={{ color: 'var(--texte-discret)' }}>
+                S{serie}
               </span>
               {colonnes.map((colonne) => {
-                const { series } = volumeDeColonne(bloc, colonne.qui);
+                const { series, reps } = volumeDeColonne(bloc, colonne.qui);
                 if (serie > series) {
                   return (
                     <span key={colonne.qui} className="text-center" style={{ color: 'var(--texte-discret)' }}>
@@ -3471,25 +3703,18 @@ function TableauSeries({
                     </span>
                   );
                 }
-                const place = places.get(`${exercice.id}|${serie}|${colonne.qui}`);
-                const faite = place !== undefined && faites.includes(place);
-                const ici = place === index;
-                // Une série faite, ou passée sans « Série terminée » : la case
-                // dit ce qui est noté, rien d'autre — pas la charge proposée.
-                const passee = place !== undefined && place < index;
-                const proposee = faite || passee ? 0 : charges(colonne.qui, exercice.id, serie).proposee;
                 if (!avecCharge) {
                   return (
                     <span
                       key={colonne.qui}
-                      className="flex h-11 items-center justify-center rounded-xl text-lg font-bold"
+                      className="chiffres flex h-11 items-center justify-center rounded-xl text-base font-semibold"
                       style={{
                         background: 'var(--surface)',
-                        color: faite ? 'var(--montee)' : ici ? 'var(--texte)' : 'var(--texte-discret)',
-                        border: `2px solid ${ici ? 'var(--montee)' : 'var(--bordure)'}`,
+                        color: fait ? 'var(--montee)' : 'var(--texte-discret)',
+                        border: '2px solid var(--bordure)',
                       }}
                     >
-                      {faite ? '✓' : ici ? 'en cours' : '·'}
+                      {fait ? '✓' : cibleSansCharge(exercice, reps)}
                     </span>
                   );
                 }
@@ -3497,29 +3722,30 @@ function TableauSeries({
                   <CaseCharge
                     key={colonne.qui}
                     valeur={saisies(colonne.qui, exercice.id)[serie - 1] ?? 0}
-                    proposee={proposee}
+                    // Fini : la case dit ce qui est noté, rien d'autre.
+                    proposee={fait ? 0 : charges(colonne.qui, exercice.id, serie).proposee}
                     unitePoids={unitePoids}
-                    ici={ici}
-                    faite={faite}
+                    choisie={celluleIci?.qui === colonne.qui}
                     libelle={`Charge de ${nomColonne(colonne)}, série ${serie} (${SUFFIXE_UNITE[unitePoids]})`}
+                    onChoisir={() => onCellule({ qui: colonne.qui, exerciceId: exercice.id, serie })}
                     onCharge={(charge) => onCharge(colonne.qui, exercice.id, serie, charge)}
                   />
                 );
               })}
             </div>
-            {/* Sous la série en cours : ce qu'on a vraiment fait, d'un toucher. */}
-            {enCours && avecCharge && (
+            {/* Sous la case touchée : ce qu'on a vraiment fait, d'un toucher. */}
+            {celluleIci && (
               <div className="grid gap-2" style={grille}>
                 <span />
                 {colonnes.map((colonne) =>
-                  places.get(`${exercice.id}|${serie}|${colonne.qui}`) === index ? (
+                  colonne.qui === celluleIci.qui ? (
                     <Raccourcis
                       key={colonne.qui}
                       charges={charges(colonne.qui, exercice.id, serie)}
                       saisie={saisies(colonne.qui, exercice.id)[serie - 1] ?? 0}
                       unitePoids={unitePoids}
                       parCote={exercice.chargeParCote === true}
-                      onChoisir={(charge) => onCharge(colonne.qui, exercice.id, serie, charge)}
+                      onChoisir={(charge, allegee) => onCharge(colonne.qui, exercice.id, serie, charge, allegee)}
                     />
                   ) : (
                     <span key={colonne.qui} />
@@ -3533,13 +3759,19 @@ function TableauSeries({
                 <span />
                 {colonnes.map((colonne) =>
                   visagesSur(colonne, serie) ? (
-                    <VisagesRessenti
+                    <div
                       key={colonne.qui}
-                      compact
-                      choisi={ressentiDe(colonne.qui, exercice.id)}
-                      nom={`${nomColonne(colonne)}, ${exercice.nomFr}`}
-                      onChoisir={(ressenti) => onRessenti(colonne.qui, exercice.id, ressenti)}
-                    />
+                      id={idVisages(colonne.qui, exercice.id)}
+                      className="scroll-mt-24 rounded-xl"
+                      style={manque(colonne.qui) ? { outline: '2px solid var(--alerte)', outlineOffset: 2 } : undefined}
+                    >
+                      <VisagesRessenti
+                        compact
+                        choisi={ressentiDe(colonne.qui, exercice.id)}
+                        nom={`${nomColonne(colonne)}, ${exercice.nomFr}`}
+                        onChoisir={(ressenti) => onRessenti(colonne.qui, exercice.id, ressenti)}
+                      />
+                    </div>
                   ) : (
                     <span key={colonne.qui} />
                   ),
@@ -3563,32 +3795,42 @@ function TableauSeries({
   );
 }
 
+/** Le nombre d'un texte tapé : « 12, » vaut 12 ; rien de lisible, 0. */
+function chargeTapee(texte: string): number {
+  const charge = Number.parseFloat(texte.replace(',', '.'));
+  return Number.isFinite(charge) && charge > 0 ? charge : 0;
+}
+
 /** La case de la charge d'une série : pré-remplie, on ne tape que si elle
  *  change. Le texte tapé reste tel quel pendant la saisie (« 12, » ne doit
- *  pas devenir « 12 » à chaque frappe) ; seule la valeur remonte. */
+ *  pas devenir « 12 » à chaque frappe) ; seule la valeur remonte. La toucher
+ *  montre ses raccourcis 70 % et 100 % ; si la charge change d'ailleurs — un
+ *  raccourci, « J'ai mal » — pendant qu'elle est touchée, elle la suit. */
 function CaseCharge({
   valeur,
   proposee,
   unitePoids,
-  ici,
-  faite,
+  choisie,
   libelle,
+  onChoisir,
   onCharge,
 }: {
   /** La charge notée ; 0 : pas encore. */
   valeur: number;
-  /** Celle qu'on propose tant qu'on n'a rien noté ; 0 pour une série faite
-   *  ou passée : la case dit alors ce qui est enregistré. */
+  /** Celle qu'on propose tant qu'on n'a rien noté ; 0 pour un exercice fini :
+   *  la case dit alors ce qui est enregistré. */
   proposee: number;
   unitePoids: UnitePoids;
-  /** La série en cours. */
-  ici: boolean;
-  faite: boolean;
+  /** La case touchée en dernier : ses raccourcis sont dessous. */
+  choisie: boolean;
   libelle: string;
+  onChoisir: () => void;
   onCharge: (charge: number | null) => void;
 }) {
   const [texte, setTexte] = useState<string | null>(null);
-  const affiche = texte ?? (valeur > 0 ? String(valeur) : proposee > 0 ? String(proposee) : '');
+  const notee = valeur > 0 ? String(valeur) : proposee > 0 ? String(proposee) : '';
+  // Le texte tapé, tant qu'il dit la charge notée ; sinon, la charge.
+  const affiche = texte !== null && chargeTapee(texte) === valeur ? texte : notee;
   return (
     <input
       type="number"
@@ -3599,8 +3841,9 @@ function CaseCharge({
       aria-label={libelle}
       value={affiche}
       onFocus={(evenement) => {
-        setTexte(affiche);
+        setTexte(notee);
         evenement.target.select();
+        onChoisir();
       }}
       onChange={(evenement) => {
         setTexte(evenement.target.value);
@@ -3613,7 +3856,7 @@ function CaseCharge({
         background: 'var(--surface)',
         color: 'var(--texte)',
         fontWeight: valeur > 0 ? 700 : 400,
-        borderColor: ici ? 'var(--montee)' : faite ? 'var(--descente)' : 'var(--bordure)',
+        borderColor: choisie ? 'var(--montee)' : 'var(--bordure)',
       }}
     />
   );
@@ -3632,7 +3875,8 @@ function Raccourcis({
   saisie: number;
   unitePoids: UnitePoids;
   parCote: boolean;
-  onChoisir: (charge: number) => void;
+  /** `allegee` : le 70 % — la série ne dira pas la charge de travail. */
+  onChoisir: (charge: number, allegee: boolean) => void;
 }) {
   const { pleine, allegee, proposee } = charges;
   const choix = pleine > 0 ? (allegee < pleine ? [['70 %', allegee] as const, ['100 %', pleine] as const] : [['100 %', pleine] as const]) : [];
@@ -3648,7 +3892,11 @@ function Raccourcis({
                 key={part}
                 type="button"
                 aria-pressed={choisie}
-                onClick={() => onChoisir(charge)}
+                onClick={() => {
+                  // Un raccourci finit la saisie : le clavier se range.
+                  if (document.activeElement instanceof HTMLInputElement) document.activeElement.blur();
+                  onChoisir(charge, part === '70 %');
+                }}
                 className={`${BOUTON_COMMUN} chiffres min-h-10 rounded-lg px-1 text-xs leading-tight`}
                 style={choisie ? STYLES_BOUTON.accent : STYLES_BOUTON.neutre}
               >

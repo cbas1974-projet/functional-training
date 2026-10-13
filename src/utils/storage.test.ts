@@ -2,8 +2,9 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import type { EntrainementState } from '../types';
 import { PARAMETRES_PAR_DEFAUT } from '../data/parametres';
 import { chargerEtat, enregistrerEtat } from './storage';
-import { VERSION_PROGRAMME, genererProgramme } from './programmeMois';
+import { VERSION_PROGRAMME, genererProgramme, seancePourPersonne } from './programmeMois';
 import { basculerDouleurDe, douleursDe } from './douleurs';
+import { construireEtapes, construireEtapesParSerie } from './etapesSeance';
 
 const CLE = 'functional-training';
 
@@ -474,5 +475,48 @@ describe('un seul téléphone, dans la sauvegarde', () => {
     // Une sauvegarde d'avant n'en a pas.
     localStorage.setItem(CLE, JSON.stringify(ANCIENNE_SAUVEGARDE));
     expect(chargerEtat().enCours?.faites).toBeUndefined();
+  });
+
+  it('une séance commencée avec la version 1.2.0, série par série, reprend exercice par exercice, avec ses charges', () => {
+    const seance = seancePourPersonne(
+      { id: 'mardi', nom: 'Mardi — le haut', jour: 2, type: 'dure', partie: 'haut', format: 'series', exercices: ['bench-press', 'alternating-curl', 'calf-raise'], liens: [['alternating-curl', 'calf-raise']] },
+      { ...PARAMETRES_PAR_DEFAUT, unitePoids: 'lb' },
+      { personne: 'sebastien', aDeux: true, unTelephone: true },
+      new Date(2026, 9, 13),
+    );
+    const parSerie = construireEtapesParSerie(seance);
+    // Ce matin, en 1.2.0 : la deuxième série de Big Max au développé couché.
+    const indexEtape = parSerie.findIndex((e) => e.type === 'serie' && e.exerciceId === 'bench-press' && e.serie === 2 && e.qui === 'autre');
+    const enCours = {
+      seance,
+      indexEtape,
+      tempsCumuleSec: 600,
+      tempsParEtapeSec: parSerie.map((_, i) => (i <= indexEtape ? 40 : 0)),
+      poids: { 'bench-press': [20] },
+      ressentis: {},
+      poidsAutre: { 'bench-press': [23] },
+      ressentisAutre: {},
+      faites: [1, 2],
+      demarreeLe: '2026-10-13T11:00:00.000Z',
+    };
+    localStorage.setItem(CLE, JSON.stringify({ ...ANCIENNE_SAUVEGARDE, personne: 'sebastien', enCours }));
+    const relue = chargerEtat().enCours;
+    expect(relue?.deroule).toBe('par-exercice');
+    const etapes = construireEtapes(seance);
+    expect(etapes[relue?.indexEtape ?? -1]).toMatchObject({ type: 'exercice', exerciceId: 'bench-press' });
+    expect(relue?.faites).toEqual([]);
+    expect(relue?.poids).toEqual({ 'bench-press': [20] });
+    expect(relue?.poidsAutre).toEqual({ 'bench-press': [23] });
+    expect(relue?.tempsParEtapeSec.reduce((total, t) => total + t, 0)).toBe(40 * (indexEtape + 1));
+    // Enregistrée de nouveau, puis relue : plus rien ne bouge.
+    enregistrerEtat({ ...chargerEtat() });
+    expect(chargerEtat().enCours).toEqual(relue);
+    // Les séries allégées se gardent ; ce qui ne se lit pas est écarté.
+    localStorage.setItem(
+      CLE,
+      JSON.stringify({ ...ANCIENNE_SAUVEGARDE, enCours: { ...enCours, deroule: 'par-exercice', allegees: { 'bench-press': [2, 'x', -1] }, allegeesAutre: 'non' } }),
+    );
+    expect(chargerEtat().enCours?.allegees).toEqual({ 'bench-press': [2] });
+    expect(chargerEtat().enCours?.allegeesAutre).toBeUndefined();
   });
 });

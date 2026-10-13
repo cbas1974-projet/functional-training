@@ -413,13 +413,14 @@ export interface Seance {
      *  30 s. L'essai la raccourcit. */
     installationSec?: number;
     /** La séance se mène sur un seul téléphone : celui qui le tient note pour
-     *  les deux (décision du 12 octobre 2026). Pas de minuteur pendant une
-     *  série, qui se finit sur « Série terminée » ; une paire se fait A, B,
-     *  A, B sans pause entre les tours — sa machine chacun son tour —, un
-     *  exercice seul chacun son tour ; la pause, à la fin, se lance d'un
-     *  clic. Absent : l'horloge d'avant, qui déroule les séries au tempo —
-     *  celle de la séance commune sur deux téléphones (`SEANCE_COMMUNE`).
-     *  Voir `construireEtapes`. */
+     *  les deux (décision du 12 octobre 2026). Exercice par exercice (13
+     *  octobre 2026) : pas de minuteur, toutes les séries d'un exercice ou
+     *  d'une paire à l'écran, finies d'un seul « Exercice terminé » ; une
+     *  paire se fait A, B, A, B sans pause entre les tours — sa machine
+     *  chacun son tour —, un exercice seul chacun son tour ; la pause de fin
+     *  part d'elle-même. Absent : l'horloge d'avant, qui déroule les séries au
+     *  tempo — celle de la séance commune sur deux téléphones
+     *  (`SEANCE_COMMUNE`). Voir `construireEtapes`. */
     unTelephone?: boolean;
   };
   blocs: BlocSeries[];
@@ -485,10 +486,23 @@ export interface ProgressionSeance {
    *  notés ici. */
   poidsAutre?: Record<string, number[]>;
   ressentisAutre?: Record<string, Ressenti>;
-  /** Sur un seul téléphone : les séries finies sur « Série terminée », par
-   *  leur place dans les étapes. Absent : une série compte quand on y a
-   *  passé au moins la moitié de son temps, comme avant. */
+  /** Sur un seul téléphone : les exercices finis sur « Exercice terminé »,
+   *  par leur place dans les étapes (version 1.2.0 : les séries finies sur
+   *  « Série terminée »). Absent : une étape compte quand on y a passé au
+   *  moins la moitié de son temps, comme avant. */
   faites?: number[];
+  /** Les séries notées à 70 % d'un toucher, ou pendant une douleur éteinte
+   *  depuis, par exercice (numéros à partir de 1) : elles ne disent pas la
+   *  charge de travail — ni le 100 %, ni la série d'après n'en partent. Sur un
+   *  seul téléphone, celles de l'autre à part. */
+  allegees?: Record<string, number[]>;
+  allegeesAutre?: Record<string, number[]>;
+  /** 'par-exercice' : sur un seul téléphone, la séance se déroule exercice
+   *  par exercice (version 1.3.0, 13 octobre 2026) — `indexEtape`, `faites`
+   *  et `tempsParEtapeSec` comptent ces étapes-là. Absent sur un seul
+   *  téléphone : une séance de la version 1.2.0, série par série, relue au
+   *  chargement (`versLeDerouleParExercice`). */
+  deroule?: 'par-exercice';
   demarreeLe: string;
   /** Dernière sauvegarde (ISO), pour le bandeau de reprise. */
   sauvegardeeLe?: string;

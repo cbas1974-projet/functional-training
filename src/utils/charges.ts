@@ -57,6 +57,10 @@ export interface ParametresCharge {
   unite: UnitePoids;
   /** « J'ai mal à cet exercice », s'il est signalé. */
   douleur?: Douleur | null;
+  /** Les séries notées à 70 % d'un toucher, ou pendant une douleur éteinte
+   *  depuis (numéros à partir de 1) : elles ne disent pas la charge de
+   *  travail. */
+  allegees?: readonly number[];
 }
 
 export interface ChargesSerie {
@@ -76,7 +80,13 @@ export interface ChargesSerie {
  *  Pré-rempli : avec une douleur, chaque série à 70 %. Un exercice qui charge
  *  le bas du dos : la première série à 70 %, les suivantes à 100 % (ou
  *  comme la série d'avant, la première mise à part). Les autres, comme
- *  avant : la série d'avant, sinon la même la dernière fois. */
+ *  avant : la série d'avant, sinon la même la dernière fois.
+ *
+ *  Une série allégée (`allegees` : 70 % d'un toucher, ou faite pendant une
+ *  douleur éteinte depuis) ne dit pas la charge de travail, comme la première
+ *  série au bas du dos : ni le 100 %, ni la série d'après n'en partent. Sans
+ *  cela, les 70 % collaient à toutes les séries qui suivent, douleur éteinte
+ *  (Big Max au développé couché, 13 octobre 2026). */
 export function chargesDeLaSerie({
   exercice,
   bloc,
@@ -85,12 +95,15 @@ export function chargesDeLaSerie({
   serie,
   unite,
   douleur,
+  allegees = [],
 }: ParametresCharge): ChargesSerie {
   const ajout = ajustementDeCharge(bloc)?.ajout ?? 0;
   // Avec une douleur, on ne monte pas ; redescendre reste permis.
   const permis = douleur ? Math.min(0, ajout) : ajout;
   const reference = permis !== 0 ? passees.map((charge) => (charge > 0 ? avecCran(charge, permis) : 0)) : [...passees];
-  const avant = saisies.slice(0, Math.max(0, serie - 1));
+  // Les séries qui disent la charge de travail : sans les allégées.
+  const deTravail = saisies.map((charge, i) => (allegees.includes(i + 1) ? 0 : charge));
+  const avant = deTravail.slice(0, Math.max(0, serie - 1));
   const basDuDos = chargeLeBasDuDos(exercice);
   // Au bas du dos, la première série est allégée : elle ne dit pas la charge
   // de travail.
@@ -112,8 +125,22 @@ export function chargesDeLaSerie({
   if (deja > 0) proposee = deja;
   else if (memoire > 0) proposee = allegee;
   else if (basDuDos) proposee = serie <= 1 ? allegee : derniereNotee(avant.slice(1)) || pleine;
-  else proposee = chargeDeSerie({ series: bloc?.series ?? 0, ajustementRessenti: permis }, [...saisies], [...passees], serie);
+  else proposee = chargeDeSerie({ series: bloc?.series ?? 0, ajustementRessenti: permis }, deTravail, [...passees], serie);
   return { proposee, pleine, allegee };
+}
+
+/** Quand une douleur s'éteint : les séries notées pendant qu'elle était là,
+ *  à ses 70 % (numéros à partir de 1). Elles ont été faites allégées ; elles
+ *  ne disent pas la charge de travail pour la suite. */
+export function seriesAllegeesParLaDouleur(
+  saisies: readonly number[],
+  douleur: Douleur | null | undefined,
+  unite: UnitePoids,
+): number[] {
+  const memoire = chargeDeDouleur(douleur, unite);
+  if (memoire <= 0) return [];
+  const allegee = chargeAllegee(memoire, unite);
+  return saisies.flatMap((charge, i) => (charge > 0 && charge === allegee ? [i + 1] : []));
 }
 
 // ------------------------------------------------------------- De chaque côté

@@ -21,6 +21,51 @@ Claude, de son côté :
 
 ## Séance du 13 octobre 2026
 
+- **Version 1.3.0, exercice par exercice** (retour de Sébastien en pleine
+  séance : toucher « Série terminée » à chaque série, c'était de trop). Tout
+  l'exercice — ou toute la paire — d'un coup : les séries des deux,
+  pré-remplies, modifiables ; « J'ai mal » pour chacun ; 70 % / 100 % sous la
+  case touchée. Les visages de la dernière série sont **obligatoires** : le
+  gros bouton reste grisé et dit lequel manque (« Choisis un visage : Big Max,
+  Curl alterné »), le toucher y ramène. **Un seul « Exercice terminé »**
+  (« Paire terminée ») note les charges affichées et lance la pause de fin
+  (1 min, 1 min 30 trap bar, « +15 s », « Passer » ; rien avant les
+  étirements), puis l'exercice suivant s'ouvre. **« Pause · 1 min »**, petit,
+  toujours là, pour souffler entre les tours sans changer d'exercice ;
+  « Tempo » en petit sur chaque exercice. Mêmes durées (l'accueil dit
+  toujours ≈ 1 h). Une séance commencée en 1.2.0 reprend exercice par
+  exercice, avec ses charges (`versLeDerouleParExercice`).
+- **Le bug des 70 %** (capture de ce matin : Big Max, développé couché, S1 =
+  23, S2 à S4 à 15). Cause : une série pré-remplie copie la série d'avant, et
+  le 100 % sans dernière fois est la dernière série notée. « J'ai mal »
+  réécrivait la série en cours à 70 % (et « Série terminée » notait ces 70 %) ;
+  douleur éteinte, les séries suivantes recopiaient ces 70 % — l'éteindre
+  réécrivait même la série en cours d'après eux. Pareil après un toucher sur
+  « 70 % ». Corrigé : une série notée à 70 % (d'un toucher, ou aux 70 % d'une
+  douleur éteinte) ne fait plus ni la suite ni le 100 % (`allegees`,
+  `src/utils/charges.ts`) ; « J'ai mal » ne réécrit plus aucune case sur un
+  seul téléphone, et sa charge part de ce qui est noté aujourd'hui (sans
+  dernière fois, elle valait 0 : pas de 70 % du tout).
+- **Tranché par Claude** : la séance libre garde son déroulé série par série
+  (seule, minutée) et profite de la correction des 70 % ; « Passer cet
+  exercice » le saute en entier, ses séries ne comptent pas ; quitter au
+  milieu d'un exercice n'en compte aucune série ; pas de visage demandé sur
+  un exercice sans charge (Superman, planches, pompes) ; le nom de
+  l'exercice dans le bouton seulement pour une paire. Les tests jouent la
+  séance dans un navigateur simulé (jsdom, ajouté aux outils de test).
+- **À savoir** : une séance faite toute à 70 % (douleur) devient « la
+  dernière fois » ; la douleur éteinte la fois d'après, on repart de ces 70 %
+  (à corriger à la main) — c'était déjà le cas.
+- **Vérifié à 375 px** (Playwright) : le développé seul (Big Max 23 partout,
+  15 avec « J'ai mal », 23 de nouveau), le bouton grisé et l'entourage,
+  « Pause · 1 min » sans changer d'exercice, la pause de fin puis la paire,
+  une séance entière jusqu'à l'enregistrement (24 / 24 séries, Big Max à
+  part), la reprise après rechargement et celle d'une séance 1.2.0, l'essai,
+  la séance libre. **Non vérifié** : un vrai téléphone (son, vibration,
+  clavier qui se range sous les raccourcis), une vraie séance à la salle.
+- **À tester à la salle** : un seul « Exercice terminé » par exercice ;
+  « Pause · 1 min » entre les tours ; les visages obligatoires ; « J'ai mal »
+  allumé puis éteint ; une séance 1.2.0 en cours qui reprend.
 - **Version 1.2.0, programme version 9** (même graine : les anciens liens
   s'ouvrent, recomposés). L'accueil prévient une fois, avec « Compris » : un
   exercice changé ou une paire refaite à la main est à refaire, les charges

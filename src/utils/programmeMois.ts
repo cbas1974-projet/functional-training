@@ -1787,8 +1787,9 @@ export function seancePourPersonne(
     retourCalmeSec: dureeDes(retourCalme),
     echauffement,
     retourCalme,
-    // Sur un seul téléphone : « Série terminée », et la pause d'un clic. Sinon,
-    // chaque nouvel exercice attend « Go » ; à deux, l'horloge est commune.
+    // Sur un seul téléphone : « Exercice terminé », puis la pause de fin.
+    // Sinon, chaque nouvel exercice attend « Go » ; à deux, l'horloge est
+    // commune.
     horloge: {
       ...(moi ? { personne: moi } : {}),
       ...(partenaire ? { partenaire: NOM_PERSONNE[partenaire], jeCommence: moi === COMMENCE } : {}),
