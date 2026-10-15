@@ -31,3 +31,7 @@ __pycache__/
 # Base du serveur quand on le lance en local
 serveur/donnees/
 serveur/.env
+
+# Originaux des images OpenAI (1536 x 1024, ~1,2 Mo chacun) : gardés sur le PC, pas dans git
+images_generees/
+.claude/launch.json

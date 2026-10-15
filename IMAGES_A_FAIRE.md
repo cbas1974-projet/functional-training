@@ -1,3 +1,5 @@
+> **Dépassé le 15 octobre 2026** : ces images sont refaites avec OpenAI. Voir [IMAGES.md](IMAGES.md).
+
 # Images à faire avec Gemini (Nano Banana)
 
 Sept machines, quatre exercices au poids du corps (le Superman sans poids,

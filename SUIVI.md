@@ -19,6 +19,33 @@ Claude, de son côté :
 4. Résume en quelques lignes simples ce qui attend, propose par quoi
    commencer, et attend le feu vert de Sébastien avant les gros changements.
 
+## 14 et 15 octobre 2026
+
+- **Le jeudi** (programme version 11) : la planche de Copenhague sort du
+  programme (Big Max a du mal avec elle), le **squat cosaque** la remplace ;
+  la **montée sur marche** finit le jeudi à la place des mollets (déjà au
+  mardi). Ajoutés aux classiques (`ADMIS_A_PART`). **10 tests de
+  `programmeMois.test.ts` décrivent encore l'ancien jeudi** : à mettre à jour
+  (Sébastien a dit de publier sans).
+- **Minuteur** : sur un exercice au temps (planche, swing), le bouton
+  « ▶ 30 s » lance le décompte, sonne et vibre à zéro, puis se relance.
+  Vérifié dans le navigateur ; **son et vibration non vérifiés sur un vrai
+  téléphone**.
+- **Échauffement à la grande boucle élastique**, adapté au jour, une image
+  par mouvement (lundi : passage d'épaules, marche latérale, good morning,
+  squat ; mardi : écartés, passage d'épaules, rotation externe, tirage au
+  visage ; jeudi : balancements, marche latérale, squat, pont fessier).
+  Mêmes durées. **L'image à l'écran pendant l'échauffement n'est pas vue**
+  (données vérifiées seulement).
+- **Images refaites avec OpenAI** (skill /gen-image, gpt-image-2) : 79, dont
+  tout le programme du mois. Registre : [IMAGES.md](IMAGES.md).
+  `IMAGES_A_FAIRE.md` (Gemini) est dépassé. Les planches gardent les images
+  du poster de yoga. **Règle** : les images de Sébastien d'abord.
+- **Pistes** : l'oiseau revient le mardi et le jeudi (« Changer » en
+  attendant) ; la routine du soir trop longue et toujours pareille (viser
+  5-6 min, des listes qui tournent) ; des GIF à deux temps à partir des
+  positions 1 et 2.
+
 ## 13 octobre 2026 (après la séance)
 
 **Rodage cette semaine ; programme figé un mois à partir du lundi 19
