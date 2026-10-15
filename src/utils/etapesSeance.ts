@@ -1402,6 +1402,9 @@ export interface OptionsRealisation {
   poidsAutre?: Record<string, number[]>;
   /** La finale choisie, quand ce n'est pas celle proposée. */
   finale?: string;
+  /** Les allers-retours de la finale, de chacun : la finale est faite dès
+   *  un aller-retour. Absents : au temps passé, comme avant. */
+  allersRetours?: { moi?: number; autre?: number };
 }
 
 /** Agrège le temps passé sur chaque étape en un compte rendu par exercice.
@@ -1442,19 +1445,26 @@ export function agregerRealisation(
   }
   const faites = options.faites ? new Set(options.faites) : null;
 
-  // La finale : un exercice de plus, une seule « série » de dix minutes, faite
-  // quand on en a passé au moins la moitié — le poids, s'il a été noté, est
-  // celui de chacun. Pas de ressenti, pas de montée de charge.
+  // La finale : un exercice de plus, une seule « série », comptée en
+  // allers-retours (15 octobre 2026) — faite dès un aller-retour ; avant, au
+  // temps passé (la moitié des dix minutes). Le poids et le visage, s'ils ont
+  // été notés, sont ceux de chacun.
   const finale = etapes.findIndex((etape) => etape.type === 'finale' && etape.chrono === true);
   if (finale >= 0) {
     const chrono = etapes[finale];
     const choisie = options.finale ?? (chrono.type === 'finale' ? chrono.proposee : '');
     const temps = tempsParEtapeSec[finale] ?? 0;
-    const faite = chrono.dureeSec > 0 && temps >= chrono.dureeSec / 2;
-    for (const dans of lui ? [parExercice, pourLui] : [parExercice]) {
+    const compte = options.allersRetours;
+    for (const [dans, qui] of (lui ? [[parExercice, 'moi'], [pourLui, 'autre']] : [[parExercice, 'moi']]) as [
+      Map<string, ExerciceRealise>,
+      'moi' | 'autre',
+    ][]) {
       prevoir(dans, choisie, 1, chrono.dureeSec);
       const realise = dans.get(choisie)!;
       realise.dureeSec += temps;
+      const allers = compte?.[qui] ?? 0;
+      if (allers > 0) realise.allersRetours = allers;
+      const faite = compte ? allers > 0 : chrono.dureeSec > 0 && temps >= chrono.dureeSec / 2;
       if (faite) realise.seriesFaites += 1;
     }
   }

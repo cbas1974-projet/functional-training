@@ -45,6 +45,9 @@ describe('bibliothèque d’exercices', () => {
     const connus = new Set([
       ...EXERCICES.map((e) => `${e.id}.png`),
       ...POSTERS.map((p) => `${p.id}.jpg`),
+      // Les images de l'échauffement à l'élastique et du chien d'arrêt au sol
+      // (15 octobre 2026) : montrées sans fiche dans la bibliothèque.
+      ...['band-dislocate', 'band-external-rotation', 'band-face-pull', 'band-glute-bridge', 'band-good-morning', 'band-lateral-walk', 'band-pull-apart', 'band-squat', 'bird-dog'].map((id) => `${id}.png`),
     ]);
     expect([...FICHIERS].filter((f) => !connus.has(f)).sort()).toEqual([]);
   });

@@ -457,6 +457,9 @@ export interface ExerciceRealise {
   /** Le ressenti de la personne sur la charge, dit sur la dernière série ;
    *  absent = rien dit (et toutes les séances d'avant son arrivée). */
   ressenti?: Ressenti;
+  /** La finale (traîneau, marche du fermier, sac de sable) : le nombre
+   *  d'allers-retours faits (15 octobre 2026) ; absent avant. */
+  allersRetours?: number;
 }
 
 export interface SeanceRealisee {
@@ -503,6 +506,8 @@ export interface ProgressionSeance {
    *  seul téléphone, celles de l'autre à part. */
   allegees?: Record<string, number[]>;
   allegeesAutre?: Record<string, number[]>;
+  /** Les allers-retours de la finale comptés jusque-là, de chacun. */
+  allersRetours?: { moi?: number; autre?: number };
   /** 'par-exercice' : sur un seul téléphone, la séance se déroule exercice
    *  par exercice (version 1.3.0, 13 octobre 2026) — `indexEtape`, `faites`
    *  et `tempsParEtapeSec` comptent ces étapes-là. Absent sur un seul

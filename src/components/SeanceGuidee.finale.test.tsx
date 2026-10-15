@@ -181,15 +181,16 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
-describe('la finale : dix minutes au chrono, juste avant les étirements', () => {
-  it('après le dernier exercice : le gros décompte à 10:00 qui attend « Démarrer », le choix des trois, le poids de chacun si on veut', () => {
+describe('la finale : en allers-retours, juste avant les étirements', () => {
+  it('après le dernier exercice : un compteur chacun, sur 10, qui attend « Démarrer », le choix des trois, le poids de chacun si on veut', () => {
     lancer({ progression: avantLaFinale });
     avancer(700);
     expect(phase()).toBe('Finale');
-    // Le décompte, au repos : rien ne tourne avant « Démarrer ».
-    expect(texte()).toContain('10:00');
+    // Un compteur chacun, à zéro, sur 10 : rien ne tourne, plus de décompte.
+    expect(texte()).toContain('Speedy0sur 10');
+    expect(texte()).toContain('Big Max0sur 10');
     avancer(90_000);
-    expect(texte()).toContain('10:00');
+    expect(texte()).not.toContain('10:00');
     expect(phase()).toBe('Finale');
     // Pas de « Pause » avant de démarrer : « Démarrer », seul.
     expect(texteBarre()).toContain('Démarrer');
@@ -216,41 +217,33 @@ describe('la finale : dix minutes au chrono, juste avant les étirements', () =>
     expect(derniere()?.poidsAutre?.traineau).toEqual([190]);
   });
 
-  it('« Démarrer » lance les dix minutes ; « Pause » les arrête ; à la fin, la cloche, la vibration, puis les étirements — et la finale compte, avec son poids', () => {
+  it('« Démarrer », puis « +1 » à chaque aller-retour, de chacun, et le visage ; rien ne finit au temps ; « Terminer » mène aux étirements — la finale compte, avec ses allers-retours et son poids', () => {
     lancer({ progression: avantLaFinale });
     avancer(700);
     cliquer(conteneur.querySelector('[aria-label="La finale"] button'));
     saisir('Poids de la finale, Big Max (lb)', '190');
-    sons.cloches = [];
     cliquer(bouton('Démarrer'));
-    expect(sons.cloches).toEqual(['start']);
-    expect(texte()).toContain('10:00');
-    // L'écran se rafraîchit toutes les 80 ms et arrondit au-dessus.
-    avancer(30_100);
-    expect(texte()).toContain('9:30');
-    // « Pause » : le chrono s'arrête, « Reprendre » le relance.
-    cliquer(bouton('Pause'));
-    expect(texte()).toContain('En pause');
-    avancer(60_000);
-    expect(texte()).toContain('9:30');
-    cliquer(bouton('Reprendre'));
-    avancer(500_000);
+    expect(texte()).toContain('Objectif : 10 allers-retours');
+    const plus = (qui: string) => conteneur.querySelector(`button[aria-label="Un aller-retour de plus, ${qui}"]`);
+    for (let i = 0; i < 12; i++) cliquer(plus('Speedy'));
+    for (let i = 0; i < 11; i++) cliquer(plus('Big Max'));
+    cliquer(conteneur.querySelector('button[aria-label="Un aller-retour de moins, Big Max"]'));
+    expect(texte()).toContain('Speedy12sur 10');
+    expect(texte()).toContain('Big Max10sur 10');
+    cliquer(conteneur.querySelector('[aria-label="Ressenti : Speedy, Traîneau : pousser, puis tirer"] button[aria-label="Facile (léger)"]'));
+    expect(derniere()?.allersRetours).toEqual({ moi: 12, autre: 10 });
+    // Plus de chrono : vingt minutes plus tard, toujours la finale.
+    avancer(1_200_000);
     expect(phase()).toBe('Finale');
-    expect(sons.vibrations).toBe(0);
-    // Les dix minutes écoulées : la cloche de fin, la vibration, les
-    // étirements.
-    avancer(70_000);
-    expect(sons.cloches).toContain('end');
-    expect(sons.vibrations).toBe(1);
-    expect(phase()).toBe('Retour au calme');
-    // Le compte rendu : la finale choisie, faite, avec le poids de Big Max.
+    cliquer(bouton('Terminer'));
     avancer(700);
+    expect(phase()).toBe('Retour au calme');
     cliquer(bouton('Étirements finis'));
     avancer(700);
     cliquer(bouton('Enregistrer la séance'));
     const realisee = enregistrees.at(-1)!;
-    expect(realisee.exercices.at(-1)).toMatchObject({ exerciceId: 'traineau', seriesPrevues: 1, seriesFaites: 1 });
-    expect(realisee.partenaire?.exercices.at(-1)).toMatchObject({ exerciceId: 'traineau', seriesFaites: 1, poids: 190 });
+    expect(realisee.exercices.at(-1)).toMatchObject({ exerciceId: 'traineau', seriesFaites: 1, allersRetours: 12, ressenti: 'leger' });
+    expect(realisee.partenaire?.exercices.at(-1)).toMatchObject({ exerciceId: 'traineau', seriesFaites: 1, allersRetours: 10, poids: 190 });
   });
 
   it('dans la liste du programme : la finale entre le dernier exercice et les étirements, « Ensuite » après les pompes', () => {
@@ -259,7 +252,7 @@ describe('la finale : dix minutes au chrono, juste avant les étirements', () =>
     cliquer(bouton('Passer l’échauffement'));
     avancer(700);
     const lignes = [...conteneur.querySelectorAll('ol[aria-label="Le programme du jour"] > li')].map((li) => (li.textContent ?? '').replace(/\s+/g, ' ').trim());
-    expect(lignes.at(-2)).toBe('Finale · 10 min');
+    expect(lignes.at(-2)).toBe('Finale · 10 allers-retours');
     expect(lignes.at(-1)).toBe('Étirements');
   });
 });

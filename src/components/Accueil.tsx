@@ -29,6 +29,8 @@ import { SUFFIXE_UNITE, chargeTotale, uniteDeSeance } from '../utils/statistique
 import { bellSound } from '../utils/sounds';
 import {
   CHOIX_FINALE,
+  OBJECTIF_ALLERS_RETOURS,
+  allersPasses,
   JOURS,
   NOMBRES_EXERCICES,
   NOM_PERSONNE,
@@ -1622,7 +1624,7 @@ export default function Accueil({
             </p>
             <p className="mt-2 text-sm" style={{ color: 'var(--texte-discret)' }}>
               {unTelephone
-                ? `Le premier et le dernier exercice se font seuls${aDeux ? `, chacun son tour, avec une pause d’un toucher entre les tours${avecFermier ? ' (pas à la marche du fermier)' : ''}` : ''}. Une paire : A, B, A, B, sans pause entre les tours${machineEnPaire ? ' — sa machine, chacun son tour' : ''}. Un seul « Exercice terminé » par exercice, puis la pause part toute seule : 1 min${avecTrapBar ? ', 1 min 30 après la trap bar' : ''}.${finale ? ` Pour finir, ${Math.round(finale.dureeSec / 60)} min au chrono pour se vider, puis les étirements.` : ''}`
+                ? `Le premier et le dernier exercice se font seuls${aDeux ? `, chacun son tour, avec une pause d’un toucher entre les tours${avecFermier ? ' (pas à la marche du fermier)' : ''}` : ''}. Une paire : A, B, A, B, sans pause entre les tours${machineEnPaire ? ' — sa machine, chacun son tour' : ''}. Un seul « Exercice terminé » par exercice, puis la pause part toute seule : 1 min${avecTrapBar ? ', 1 min 30 après la trap bar' : ''}.${finale ? ` Pour finir, ${OBJECTIF_ALLERS_RETOURS} allers-retours pour se vider, puis les étirements.` : ''}`
                 : avecPaires
                   ? `Par paires : les deux exercices à la suite, puis 1 min de pause${avecTrapBar ? ' (1 min 30 après la trap bar)' : ''}. À chaque nouvel exercice, on installe, puis on repart sur « Go ».`
                   : `Pauses : 1 min${avecTrapBar ? ', 1 min 30 à la trap bar' : ''}. À chaque nouvel exercice, on installe, puis on repart sur « Go ».`}
@@ -1765,7 +1767,7 @@ export default function Accueil({
             {finale && (
               <div className="mt-3">
                 <p className="mb-2 text-sm font-bold" style={{ color: 'var(--texte)' }}>
-                  Finale · <span className="chiffres">{Math.round(finale.dureeSec / 60)} min</span> au chrono, pour se vider
+                  Finale · <span className="chiffres">{OBJECTIF_ALLERS_RETOURS}</span> allers-retours, pour se vider
                 </p>
                 <div className="flex items-center gap-3 rounded-xl p-3" style={{ background: 'var(--surface-haute)' }}>
                   <button
@@ -1997,6 +1999,8 @@ export default function Accueil({
           chargeDerniereFoisAutre={chargeDerniereFoisAutre}
           chargesPassees={chargesActives}
           chargesPasseesAutre={chargesActivesAutre}
+          allersPasses={active && active.essai?.genre !== 'apercu' ? allersPasses(historique, CHOIX_FINALE) : undefined}
+          allersPassesAutre={active && active.essai?.genre !== 'apercu' && lAutre ? allersPasses(historiqueAutre, CHOIX_FINALE) : undefined}
           // L'aperçu est l'écran de l'autre : nos douleurs n'y sont pas.
           douleurs={active.essai?.genre === 'apercu' ? undefined : douleurs}
           douleursAutre={active.essai?.genre === 'apercu' ? undefined : douleursAutre}

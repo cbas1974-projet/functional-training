@@ -41,6 +41,14 @@ Claude, de son côté :
   tout le programme du mois. Registre : [IMAGES.md](IMAGES.md).
   `IMAGES_A_FAIRE.md` (Gemini) est dépassé. Les planches gardent les images
   du poster de yoga. **Règle** : les images de Sébastien d'abord.
+- **La finale en allers-retours** (plus au chrono) : traîneau, marche du
+  fermier, sac de sable (les marches à monter en font partie) ; objectif
+  **10** (`OBJECTIF_ALLERS_RETOURS`). Un compteur « +1 / − » chacun, le visage
+  😊 😐 ☹️, et « la dernière fois : 12 😊 → on monte le poids »
+  (`allersPasses`). Enregistré dans `allersRetours` de l'exercice. Le 15
+  octobre, Speedy et Big Max ont fait 12 allers-retours de traîneau sur
+  30 pieds (pas dans l'historique : la finale se comptait encore au temps).
+  Vérifié par un test qui joue la finale et à l'écran à 375 px (seul).
 - **Pistes** : l'oiseau revient le mardi et le jeudi (« Changer » en
   attendant) ; la routine du soir trop longue et toujours pareille (viser
   5-6 min, des listes qui tournent) ; des GIF à deux temps à partir des

@@ -116,7 +116,7 @@ describe('la liste du programme : tout l’exercice d’un coup', () => {
     expect(fermier).toContain('sans pause entre les tours');
     expect(fermier).not.toContain('Entre les tours');
     expect(fermier).toContain('Pas de pause à la fin : la finale suit');
-    expect(fermier).toMatch(/Ensuite Finale · 10 min\s+Étirements/);
+    expect(fermier).toMatch(/Ensuite Finale · 10 allers-retours\s+Étirements/);
   });
 
   it('les charges pré-remplies dans chaque case ; les raccourcis 70 % et 100 % attendent qu’on touche une case', () => {

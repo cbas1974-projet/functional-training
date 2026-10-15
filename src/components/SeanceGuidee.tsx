@@ -68,7 +68,7 @@ import {
 } from '../utils/generateurSeance';
 import { libelleTempo } from '../utils/formatage';
 import type { Essai } from '../utils/essai';
-import { CHOIX_FINALE, NOM_FINALE, NOM_PERSONNE, autrePersonne, chargeLeBasDuDos, etirementsPauseDe } from '../utils/programmeMois';
+import { CHOIX_FINALE, NOM_FINALE, NOM_PERSONNE, OBJECTIF_ALLERS_RETOURS, autrePersonne, chargeLeBasDuDos, etirementsPauseDe } from '../utils/programmeMois';
 import {
   chargeAllegee,
   chargesDeLaSerie,
@@ -135,6 +135,10 @@ export interface SeanceGuideeProps {
   /** Sur un seul téléphone, à deux : celles de l'autre, d'après ce que ce
    *  téléphone a noté pour lui. */
   chargesPasseesAutre?: Record<string, number[]>;
+  /** La finale, la dernière fois : ses allers-retours et le visage dit, par
+   *  finale ; pour l'autre, à part. */
+  allersPasses?: Record<string, AllersPasses>;
+  allersPassesAutre?: Record<string, AllersPasses>;
   /** Démarre aussitôt, sans l'écran de présentation : l'accueil du
    *  programme montre déjà la séance, un second « Commencer » ferait double
    *  emploi. 'reprise' repart de la progression sauvegardée. */
@@ -545,7 +549,7 @@ function ensuiteDansLaListe(seance: Seance, etapes: Etape[], etape: Etape): stri
   const suivant = groupesUnTelephone(seance)[groupe + 1];
   if (suivant) return suivant.map((bloc) => exerciceDeSeance(bloc.exerciceId).nomFr).join(' + ');
   const finale = etapes.find((e) => e.type === 'finale' && e.chrono);
-  if (finale) return `Finale · ${formaterDureeCourte(finale.dureeSec)}`;
+  if (finale) return `Finale · ${OBJECTIF_ALLERS_RETOURS} allers-retours`;
   return etapes.some((e) => e.type === 'retourCalme') ? 'Étirements' : null;
 }
 
@@ -564,6 +568,8 @@ export default function SeanceGuidee({
   onQuitter,
   chargesPassees = {},
   chargesPasseesAutre = {},
+  allersPasses = {},
+  allersPassesAutre = {},
   demarrage,
   synchro,
   chargeDerniereFois,
@@ -617,6 +623,8 @@ export default function SeanceGuidee({
   const [dialogue, setDialogue] = useState<DialogueOuvert | null>(null);
   /** La finale choisie au moment de la finale ; null : celle du jour. */
   const [finaleChoisie, setFinaleChoisie] = useState<string | null>(null);
+  /** Les allers-retours de la finale, de chacun. */
+  const [allers, setAllers] = useState<{ moi?: number; autre?: number }>({});
   /** L'exercice dont l'image est ouverte en grand. */
   const [enGrand, setEnGrand] = useState<string | null>(null);
   const fermerImage = useCallback(() => setEnGrand(null), []);
@@ -831,7 +839,7 @@ export default function SeanceGuidee({
 
     // Trois derniers bips d'une préparation ou d'un repos. La prolongation
     // fait partie de la clé : après « +15 s », les bips doivent rejouer.
-    if (etape.type === 'pret' || etape.type === 'repos' || etape.type === 'reposTour' || (etape.type === 'finale' && etape.chrono)) {
+    if (etape.type === 'pret' || etape.type === 'repos' || etape.type === 'reposTour') {
       const secondes = Math.ceil(reste);
       if (secondes >= 1 && secondes <= 3) {
         const cle = `${prefixe}${prolongation}:${secondes}`;
@@ -913,9 +921,10 @@ export default function SeanceGuidee({
     // séance attend « Go », ou une pause qu'on lance d'un clic.
     const attendGo = etape.type === 'repos' && etape.manuel === true;
     // Sur un seul téléphone, un exercice se finit sur « Exercice terminé »,
-    // jamais au bout du temps ; la finale attend « Démarrer ».
+    // jamais au bout du temps ; la finale attend « Démarrer », puis
+    // « Terminer » : elle se compte en allers-retours, pas au temps.
     const attendFin =
-      etape.type === 'exercice' || (etape.type === 'serie' && etape.manuelle === true) || (etape.type === 'finale' && !etape.chrono);
+      etape.type === 'exercice' || (etape.type === 'serie' && etape.manuelle === true) || etape.type === 'finale';
     // À deux, l'étape suit l'horloge commune d'elle-même.
     if (!enCommun && ecoule >= dureeEff && ev.avance !== visite && !attendGo && !attendFin) {
       ev.avance = visite;
@@ -924,12 +933,6 @@ export default function SeanceGuidee({
       // vibre — on l'entend, ou on le sent dans la poche.
       if (etape.type === 'repos' && etape.motif === 'pause') {
         bellSound.playBell('start');
-        vibrer();
-      }
-      // La fin des dix minutes de la finale : la cloche de fin et la
-      // vibration, puis les étirements.
-      if (etape.type === 'finale' && etape.chrono) {
-        bellSound.playBell('end');
         vibrer();
       }
       const finPrevueMs = etat.debutEtapeMs + dureeEff * 1000;
@@ -984,8 +987,8 @@ export default function SeanceGuidee({
   /** Ce qui a été saisi depuis la dernière sauvegarde : un changement la
    *  déclenche. */
   const saisiesActuelles = useMemo(
-    () => ({ poids, ressentis, poidsAutre, ressentisAutre, faites, allegees, allegeesAutre, finaleChoisie }),
-    [poids, ressentis, poidsAutre, ressentisAutre, faites, allegees, allegeesAutre, finaleChoisie],
+    () => ({ poids, ressentis, poidsAutre, ressentisAutre, faites, allegees, allegeesAutre, finaleChoisie, allers }),
+    [poids, ressentis, poidsAutre, ressentisAutre, faites, allegees, allegeesAutre, finaleChoisie, allers],
   );
   const sauvegardeRef = useRef<{
     visite: number;
@@ -1016,6 +1019,7 @@ export default function SeanceGuidee({
         }
       : {}),
     ...(finaleChoisie ? { finale: finaleChoisie } : {}),
+    ...(allers.moi || allers.autre ? { allersRetours: allers } : {}),
     demarreeLe: debut,
     sauvegardeeLe: new Date(quand).toISOString(),
   });
@@ -1045,7 +1049,7 @@ export default function SeanceGuidee({
     poidsInitial: Record<string, number[]>,
     debut: string,
     ressentisInitiaux: Record<string, Ressenti> = {},
-    reprise: Pick<ProgressionSeance, 'poidsAutre' | 'ressentisAutre' | 'faites' | 'allegees' | 'allegeesAutre' | 'finale'> = {},
+    reprise: Pick<ProgressionSeance, 'poidsAutre' | 'ressentisAutre' | 'faites' | 'allegees' | 'allegeesAutre' | 'finale' | 'allersRetours'> = {},
   ) => {
     // Geste utilisateur : on en profite pour débloquer l'audio et l'écran.
     bellSound.unlock();
@@ -1060,6 +1064,7 @@ export default function SeanceGuidee({
     setAllegees(reprise.allegees ?? {});
     setAllegeesAutre(reprise.allegeesAutre ?? {});
     setFinaleChoisie(reprise.finale ?? null);
+    setAllers(reprise.allersRetours ?? {});
     setDemarreeLe(debut);
     // À deux : on commence la séance commune, ou on la rejoint.
     if (enCommun) commune.envoyer({ type: 'commencer' });
@@ -1090,6 +1095,7 @@ export default function SeanceGuidee({
         allegees: sauvee.allegees,
         allegeesAutre: sauvee.allegeesAutre,
         finale: sauvee.finale,
+        allersRetours: sauvee.allersRetours,
       },
     );
   };
@@ -1472,6 +1478,7 @@ export default function SeanceGuidee({
         {
           ...(unTelephone ? { faites, poidsAutre } : {}),
           ...(finaleChoisie ? { finale: finaleChoisie } : {}),
+          allersRetours: allers,
         },
       ),
       ressentis,
@@ -1736,14 +1743,17 @@ export default function SeanceGuidee({
       // La finale du jour, ou celle qu'on a choisie : son poids, facultatif,
       // se note en série 1, pour chacun.
       const choisie = finaleChoisie ?? etape.proposee;
-      const chrono = etapes.find((e) => e.type === 'finale' && e.chrono === true);
       const derniere = (charges: number[] | undefined) =>
         (charges ?? []).reduce((plus, charge) => (charge > 0 ? charge : plus), 0);
       corps = (
         <CorpsFinale
           chrono={etape.chrono === true}
-          resteSec={etape.chrono ? reste : (chrono?.dureeSec ?? etape.dureeSec)}
           choisie={choisie}
+          allersDe={(qui) => allers[qui] ?? 0}
+          onAllers={(qui, n) => setAllers((prec) => ({ ...prec, [qui]: Math.max(0, n) }))}
+          passesDe={(qui) => (qui === 'moi' ? allersPasses : allersPassesAutre)[choisie]}
+          ressentiDe={(qui) => ressentiDe(qui, choisie)}
+          onRessenti={(qui, ressenti) => choisirRessentiDe(qui, choisie, ressenti)}
           onChoisir={(id) => setFinaleChoisie(id === etape.proposee ? null : id)}
           colonnes={colonnes}
           unitePoids={unitePoids}
@@ -3179,16 +3189,26 @@ function CorpsRepos({ etape, resteSec, partenaire, charge, etirement, ressenti }
   );
 }
 
+/** La finale, la dernière fois : ses allers-retours et le visage dit. */
+export interface AllersPasses {
+  allersRetours: number;
+  ressenti?: Ressenti;
+}
+
 interface CorpsFinaleProps {
-  /** Le décompte est lancé ; sinon, on s'installe et on choisit. */
+  /** C'est parti ; sinon, on s'installe et on choisit. */
   chrono: boolean;
-  /** Ce qu'il reste ; tout le temps de la finale tant qu'on s'installe. */
-  resteSec: number;
   /** La finale choisie : celle du jour, ou une autre. */
   choisie: string;
   onChoisir: (exerciceId: string) => void;
-  /** Une colonne chacun : le poids de chacun, facultatif. */
+  /** Une colonne chacun : ses allers-retours, son visage, son poids. */
   colonnes: ColonneDuo[];
+  allersDe: (qui: QuiColonne) => number;
+  onAllers: (qui: QuiColonne, allers: number) => void;
+  /** La dernière fois, pour cette finale ; absent : jamais comptée. */
+  passesDe: (qui: QuiColonne) => AllersPasses | undefined;
+  ressentiDe: (qui: QuiColonne) => Ressenti | undefined;
+  onRessenti: (qui: QuiColonne, ressenti: Ressenti) => void;
   unitePoids: UnitePoids;
   /** Le poids noté pour une colonne ; 0 : rien. */
   poidsDe: (qui: QuiColonne) => number;
@@ -3197,11 +3217,36 @@ interface CorpsFinaleProps {
   onPoids: (qui: QuiColonne, charge: number | null) => void;
 }
 
-/** La finale : un gros décompte, lisible de loin — dix minutes, au repos tant
- *  qu'on n'a pas touché « Démarrer » —, le choix du traîneau, de la marche du
- *  fermier ou du sac de sable, et le poids de chacun, si on veut. Pas de
- *  visage, pas de montée de charge. */
-function CorpsFinale({ chrono, resteSec, choisie, onChoisir, colonnes, unitePoids, poidsDe, derniereFois, onPoids }: CorpsFinaleProps) {
+const VISAGE: Record<Ressenti, string> = { leger: '😊', correct: '😐', lourd: '☹️' };
+
+/** Ce que dit la dernière fois : on monte le poids après 😊 avec l'objectif
+ *  atteint, on le garde ou on le baisse après ☹️. */
+function conseilFinale(passe: AllersPasses | undefined): string | null {
+  if (!passe) return null;
+  if (passe.ressenti === 'leger' && passe.allersRetours >= OBJECTIF_ALLERS_RETOURS) return 'on monte le poids';
+  if (passe.ressenti === 'lourd') return 'on garde ou on baisse le poids';
+  return null;
+}
+
+/** La finale (15 octobre 2026) : en allers-retours, plus au chrono —
+ *  l'objectif est de 10 (pour le sac de sable, les marches à monter en font
+ *  partie). Un compteur chacun, lisible de loin, le visage pour savoir si on
+ *  monte, et le poids, si on veut. */
+function CorpsFinale({
+  chrono,
+  choisie,
+  onChoisir,
+  colonnes,
+  allersDe,
+  onAllers,
+  passesDe,
+  ressentiDe,
+  onRessenti,
+  unitePoids,
+  poidsDe,
+  derniereFois,
+  onPoids,
+}: CorpsFinaleProps) {
   const exercice = exerciceDeSeance(choisie);
   const [consigne] = consignesDe(exercice);
   const dernieres = colonnes
@@ -3210,14 +3255,7 @@ function CorpsFinale({ chrono, resteSec, choisie, onChoisir, colonnes, unitePoid
   return (
     <div className="space-y-4 text-center">
       <div className="text-xs font-bold uppercase tracking-[0.18em]" style={{ color: chrono ? 'var(--montee)' : 'var(--accent)' }}>
-        {chrono ? 'Dix minutes pour se vider' : 'On s’installe, puis « Démarrer »'}
-      </div>
-      {/* Le gros décompte : on le lit de loin, le sac sur l'épaule. */}
-      <div
-        className="chiffres font-bold leading-none"
-        style={{ ...ARCHIVO, fontSize: 'min(30vw, 9rem)', color: chrono ? couleurCompte(resteSec, 'var(--texte)') : 'var(--texte)' }}
-      >
-        {formaterMmSs(Math.ceil(resteSec))}
+        {chrono ? `Objectif : ${OBJECTIF_ALLERS_RETOURS} allers-retours` : 'On s’installe, puis « Démarrer »'}
       </div>
       <div role="group" aria-label="La finale" className="grid grid-cols-3 gap-2">
         {CHOIX_FINALE.map((id) => (
@@ -3243,6 +3281,65 @@ function CorpsFinale({ chrono, resteSec, choisie, onChoisir, colonnes, unitePoid
             </p>
           )}
         </div>
+      </div>
+      {/* Un compteur chacun : on le lit de loin, le sac sur l'épaule. */}
+      <div className="grid gap-2" style={{ gridTemplateColumns: `repeat(${colonnes.length}, minmax(0, 1fr))` }}>
+        {colonnes.map((colonne) => {
+          const allers = allersDe(colonne.qui);
+          const passe = passesDe(colonne.qui);
+          const conseil = conseilFinale(passe);
+          return (
+            <div key={colonne.qui} className="space-y-2 rounded-2xl p-3" style={{ background: 'var(--surface)' }}>
+              {colonnes.length > 1 && <div className="truncate text-sm font-bold">{nomColonne(colonne)}</div>}
+              <div
+                className="chiffres font-bold leading-none"
+                style={{ ...ARCHIVO, fontSize: '4rem', color: allers >= OBJECTIF_ALLERS_RETOURS ? 'var(--montee)' : 'var(--texte)' }}
+                aria-label={`${nomColonne(colonne)} : ${allers} allers-retours`}
+              >
+                {allers}
+              </div>
+              <div className="text-xs" style={{ color: 'var(--texte-discret)' }}>
+                sur {OBJECTIF_ALLERS_RETOURS}
+              </div>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  aria-label={`Un aller-retour de moins, ${nomColonne(colonne)}`}
+                  onClick={() => onAllers(colonne.qui, allers - 1)}
+                  disabled={allers === 0}
+                  className={`${BOUTON_COMMUN} min-h-12 w-12 shrink-0 rounded-xl text-xl`}
+                  style={STYLES_BOUTON.neutre}
+                >
+                  −
+                </button>
+                <button
+                  type="button"
+                  aria-label={`Un aller-retour de plus, ${nomColonne(colonne)}`}
+                  onClick={() => onAllers(colonne.qui, allers + 1)}
+                  className={`${BOUTON_COMMUN} min-h-12 flex-1 rounded-xl text-xl font-bold`}
+                  style={STYLES_BOUTON.accent}
+                >
+                  +1
+                </button>
+              </div>
+              {passe && (
+                <p className="chiffres text-xs" style={{ color: 'var(--texte-discret)' }}>
+                  La dernière fois : {passe.allersRetours}
+                  {passe.ressenti ? ` ${VISAGE[passe.ressenti]}` : ''}
+                  {conseil ? ` → ${conseil}` : ''}
+                </p>
+              )}
+              {chrono && (
+                <VisagesRessenti
+                  compact
+                  choisi={ressentiDe(colonne.qui)}
+                  nom={`${nomColonne(colonne)}, ${exercice.nomFr}`}
+                  onChoisir={(ressenti) => onRessenti(colonne.qui, ressenti)}
+                />
+              )}
+            </div>
+          );
+        })}
       </div>
       {seCharge(exercice) && (
         <div className="space-y-2 rounded-2xl p-3 text-left" style={{ background: 'var(--surface)' }}>
@@ -3593,7 +3690,7 @@ export function ListeProgramme(props: ListeProgrammeProps) {
       })}
       {finale >= 0 && chrono >= 0 && (
         <LigneEtape
-          nom={`Finale · ${formaterDureeCourte(etapes[chrono].dureeSec)}`}
+          nom={`Finale · ${OBJECTIF_ALLERS_RETOURS} allers-retours`}
           statut={statut(finale, chrono)}
           ensuite={ensuite === groupes.length}
         />

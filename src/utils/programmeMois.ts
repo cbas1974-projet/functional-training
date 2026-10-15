@@ -28,6 +28,7 @@ import type {
   PointFaible,
   ProgrammeMois,
   ReglagesDuo,
+  Ressenti,
   Seance,
   SeanceDuMois,
   SeanceRealisee,
@@ -2254,6 +2255,27 @@ export function chargesPassees(
       if (!valeurs.some((v) => v > 0)) continue;
       const de = uniteDeSeance(realisee.parametres);
       resultat[id] = valeurs.map((v) => (v > 0 ? convertirPoids(v, de, unite) : 0));
+      break;
+    }
+  }
+  return resultat;
+}
+
+/** La finale se compte en allers-retours (15 octobre 2026) : l'objectif. */
+export const OBJECTIF_ALLERS_RETOURS = 10;
+
+/** Les allers-retours de la dernière fois, par finale, et le visage dit : la
+ *  séance la plus récente où elle a été comptée. */
+export function allersPasses(
+  historique: SeanceRealisee[],
+  ids: readonly string[],
+): Record<string, { allersRetours: number; ressenti?: Ressenti }> {
+  const resultat: Record<string, { allersRetours: number; ressenti?: Ressenti }> = {};
+  for (const id of ids) {
+    for (const realisee of historique) {
+      const exo = realisee.exercices.find((e) => e.exerciceId === id);
+      if (!exo?.allersRetours) continue;
+      resultat[id] = { allersRetours: exo.allersRetours, ...(exo.ressenti ? { ressenti: exo.ressenti } : {}) };
       break;
     }
   }
