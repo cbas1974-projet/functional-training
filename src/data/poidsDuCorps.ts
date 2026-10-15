@@ -87,7 +87,7 @@ export const EXERCICES_POIDS_DU_CORPS: Exercice[] = [
     niveauMin: 1,
     cotes: 'bilateral',
     unite: 'secondes',
-    position: 'Sur les avant-bras et la pointe des pieds, le corps droit',
+    position: 'Sur les mains et la pointe des pieds, bras tendus, le corps droit (sur les avant-bras si les poignets font mal)',
     pointsAttention: [
       'Coudes sous les épaules, le corps droit de la tête aux talons.',
       'Serrer le ventre et les fesses : le bas du dos ne se creuse pas.',
@@ -115,9 +115,9 @@ export const EXERCICES_POIDS_DU_CORPS: Exercice[] = [
     niveauMin: 1,
     cotes: 'unilateral',
     unite: 'secondes',
-    position: 'Sur le côté, en appui sur un avant-bras',
+    position: 'Sur le côté, en appui sur une main, bras tendu (sur l’avant-bras si le poignet fait mal)',
     pointsAttention: [
-      'Le coude sous l’épaule ; épaule, hanche et pieds en ligne.',
+      'La main sous l’épaule ; épaule, hanche et pieds en ligne.',
       'Les hanches montent et restent hautes : c’est l’extérieur de la hanche qui travaille.',
       'Un côté, puis l’autre.',
       'Plus facile : les genoux pliés au sol.',

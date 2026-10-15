@@ -21,7 +21,7 @@ import {
   ANCIENS_POINTS_FAIBLES_DE_BIG_MAX,
   APPUIS_EN_ARRIERE,
   CHOIX_FINALE,
-  COPENHAGUE,
+  INTERIEUR_DU_JEUDI,
   DEVELOPPE_DU_MARDI,
   DUREE_MAXI_SEC,
   FINALE_SEC,
@@ -171,7 +171,7 @@ const MACHINES_DU_JEUDI = ['leg-extension-machine', 'leg-curl-machine'];
 /** Ce qui revient chaque semaine, en plus du lundi tout entier : le développé
  *  couché le mardi, le swing, la planche de Copenhague et les deux machines
  *  le jeudi. */
-const FAVORIS = [DEVELOPPE_DU_MARDI, SWING_DU_JEUDI, COPENHAGUE, ...MACHINES_DU_JEUDI];
+const FAVORIS = [DEVELOPPE_DU_MARDI, SWING_DU_JEUDI, INTERIEUR_DU_JEUDI, ...MACHINES_DU_JEUDI];
 /** Les grandes zones d'un exercice : le haut du corps, le bas, le tronc. */
 const zonesDe = (e: Exercice) => grandesZonesDe(e);
 /** Une jambe légère : un exercice d'isolation des jambes, ou le pont fessier,
@@ -308,7 +308,7 @@ describe('genererProgramme', () => {
       for (const id of LES_MARDIS) expect(seanceNommee(p, id).exercices[0]).toBe(DEVELOPPE_DU_MARDI);
       for (const id of LES_JEUDIS) {
         expect(seanceNommee(p, id).exercices[0]).toBe(SWING_DU_JEUDI);
-        expect(seanceNommee(p, id).exercices).toEqual(expect.arrayContaining([...MACHINES_DU_JEUDI, COPENHAGUE]));
+        expect(seanceNommee(p, id).exercices).toEqual(expect.arrayContaining([...MACHINES_DU_JEUDI, INTERIEUR_DU_JEUDI]));
       }
     }
   });
@@ -460,7 +460,7 @@ describe('genererProgramme', () => {
         expect(lesHuit(seance).some(estUnTirage), cas).toBe(true);
         // L'intérieur de cuisse : la planche de Copenhague courte, et les deux
         // machines des cuisses — chaque semaine.
-        expect(seance.exercices, cas).toEqual(expect.arrayContaining([COPENHAGUE, ...MACHINES_DU_JEUDI]));
+        expect(seance.exercices, cas).toEqual(expect.arrayContaining([INTERIEUR_DU_JEUDI, ...MACHINES_DU_JEUDI]));
         // Ni trap bar, ni presse, ni hack squat : les mollets pour finir, le
         // traîneau à la finale.
         const ids = [...seance.exercices, seance.finale];
@@ -606,7 +606,7 @@ describe('genererProgramme', () => {
     // nouvelle machine à mollets ; rien d'inhabituel.
     expect(classiques.size).toBe(EXERCICES_CLASSIQUES.length);
     for (const id of EXERCICES_CLASSIQUES) expect(EXERCICES_PAR_ID[id], id).toBeDefined();
-    for (const id of [SUPERMAN, COPENHAGUE, 'seated-calf-raise', 'plank', 'side-plank', SWING_DU_JEUDI, 'kb-goblet-squat']) {
+    for (const id of [SUPERMAN, INTERIEUR_DU_JEUDI, 'seated-calf-raise', 'plank', 'side-plank', SWING_DU_JEUDI, 'kb-goblet-squat']) {
       expect(classiques.has(id), id).toBe(true);
     }
     const inhabituels = [
@@ -1722,7 +1722,7 @@ describe('les exercices mis de côté : la liste est vide, le mécanisme reste',
     // « Changer » les propose : une fente latérale à la place de la planche de
     // Copenhague, l'intérieur de cuisse.
     const programme = programmes[0];
-    const choix = alternatives(programme, 'jeudi-a', COPENHAGUE, 200).map((e) => e.id);
+    const choix = alternatives(programme, 'jeudi-a', INTERIEUR_DU_JEUDI, 200).map((e) => e.id);
     expect(RENDUS.filter((id) => choix.includes(id)).length).toBeGreaterThan(0);
   });
 
@@ -1878,7 +1878,7 @@ describe('les machines des cuisses, le jeudi', () => {
       for (const id of LES_JEUDIS) {
         const court = seanceNommee(programmeCompose(4, undefined, graine), id);
         expect(court.exercices.filter((x) => MACHINES_DU_JEUDI.includes(x))).toEqual([]);
-        expect(court.exercices).toContain(COPENHAGUE);
+        expect(court.exercices).toContain(INTERIEUR_DU_JEUDI);
         const libre = seanceNommee(programmeCompose(4, [], graine), id);
         expect(libre.exercices[0]).toBe(SWING_DU_JEUDI);
         expect(libre.liens?.[0]).toContain('leg-extension-machine');
@@ -2021,7 +2021,7 @@ describe('après la séance du 13 octobre 2026 : les jours rééquilibrés, la f
     expect(aEviterPar(null)).toEqual([]);
     // Les autres exercices d'épaules, la planche de face, la planche latérale
     // et la Copenhague restent.
-    for (const id of ['plank', 'side-plank', COPENHAGUE, 'shoulder-press', 'arnold-press', 'side-raise', 'reverse-fly']) {
+    for (const id of ['plank', 'side-plank', INTERIEUR_DU_JEUDI, 'shoulder-press', 'arnold-press', 'side-raise', 'reverse-fly']) {
       expect(APPUIS_EN_ARRIERE, id).not.toContain(id);
     }
     // Au programme — ils y font les mêmes exercices — et dans « Changer ».
@@ -2855,7 +2855,7 @@ describe('les décisions de Sébastien sur l’audit (11 octobre 2026)', () => {
   }, 30_000);
 
   it('la planche de Copenhague courte, chaque jeudi, avec le dos ou les épaules : 15 s de chaque côté', () => {
-    const copenhague = EXERCICES_PAR_ID[COPENHAGUE];
+    const copenhague = EXERCICES_PAR_ID[INTERIEUR_DU_JEUDI];
     expect(copenhague.nomFr).toBe('Planche de Copenhague (courte)');
     expect([copenhague.materiel, copenhague.cotes, copenhague.unite, copenhague.tenueImposeeSec]).toEqual(['banc', 'unilateral', 'secondes', 15]);
     expect(copenhague.musclesPrincipaux).toEqual(['adducteurs']);
@@ -2870,28 +2870,28 @@ describe('les décisions de Sébastien sur l’audit (11 octobre 2026)', () => {
       for (const id of LES_JEUDIS) {
         const jeudi = seanceDe(programme, id);
         const cas = `${nombre} · ${graine} · ${id}`;
-        const paire = pairesDe(jeudi).find((p) => p.some((e) => e.id === COPENHAGUE));
+        const paire = pairesDe(jeudi).find((p) => p.some((e) => e.id === INTERIEUR_DU_JEUDI));
         expect(paire, cas).toBeDefined();
         // Plus avec l'extérieur de cuisse : deux exercices des jambes.
-        const partenaire = paire!.find((e) => e.id !== COPENHAGUE)!;
+        const partenaire = paire!.find((e) => e.id !== INTERIEUR_DU_JEUDI)!;
         expect(tirageLeger(partenaire) || epauleLegere(partenaire), `${cas} · ${partenaire.id}`).toBe(true);
       }
       // Le lundi, l'intérieur de cuisse est une fente latérale ; le mardi peut
       // la reprendre, en jambe légère.
-      for (const id of LES_LUNDIS) expect(seanceDe(programme, id).exercices, `${nombre} · ${graine} · ${id}`).not.toContain(COPENHAGUE);
+      for (const id of LES_LUNDIS) expect(seanceDe(programme, id).exercices, `${nombre} · ${graine} · ${id}`).not.toContain(INTERIEUR_DU_JEUDI);
     }
     // Dans la séance : 3 séries de 15 s de chaque côté, les mêmes pour les deux.
     const jeudi = seanceDe(programmeCompose(6, undefined, 1), 'jeudi-a');
     const seance = seancePourPersonne(jeudi, PARAMETRES, { ...DUO_SEB, tempo: TEMPO_PROGRAMME }, LUNDI);
-    const bloc = seance.blocs.find((b) => b.exerciceId === COPENHAGUE)!;
+    const bloc = seance.blocs.find((b) => b.exerciceId === INTERIEUR_DU_JEUDI)!;
     expect([bloc.series, bloc.reps, bloc.autre?.series, bloc.autre?.reps]).toEqual([3, 15, 3, 15]);
-    const serie = construireEtapes(seance).find((e) => e.type === 'serie' && e.exerciceId === COPENHAGUE)!;
+    const serie = construireEtapes(seance).find((e) => e.type === 'serie' && e.exerciceId === INTERIEUR_DU_JEUDI)!;
     expect(serie.dureeSec).toBe(15 + 5 + 15);
     // Sans banc, l'intérieur de cuisse revient à une fente latérale.
     const sansBanc = genererProgramme({ graine: 1, aujourdhui: LUNDI, materiels: ['halteres', 'kettlebell', 'tapis', 'salle'] });
     for (const id of LES_JEUDIS) {
       const s = seanceDe(sansBanc, id);
-      expect(s.exercices, id).not.toContain(COPENHAGUE);
+      expect(s.exercices, id).not.toContain(INTERIEUR_DU_JEUDI);
       expect(exercicesDe(s).some((e) => (e.musclesPrincipaux ?? []).includes('adducteurs')), id).toBe(true);
     }
   }, 30_000);

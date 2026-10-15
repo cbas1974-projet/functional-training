@@ -328,8 +328,10 @@ export const pointsFaiblesDe = (programme: Pick<ProgrammeMois, 'duo'>): Record<P
  *  le lundi avec l'intérieur et l'extérieur de cuisse et la presse pour
  *  finir, le mardi avec des jambes légères, le jeudi avec le dos et les
  *  épaules, un tirage chaque jour, la marche du fermier et le traîneau à la
- *  finale de dix minutes, trois séries pour les deux par défaut. */
-export const VERSION_PROGRAMME = 10;
+ *  finale de dix minutes, trois séries pour les deux par défaut ; 11 = le
+ *  jeudi (14 octobre 2026), le squat cosaque à la place de la planche de
+ *  Copenhague et la montée sur marche à la place des mollets. */
+export const VERSION_PROGRAMME = 11;
 
 /** La durée inscrite dans les réglages d'une séance du programme ; la vraie
  *  est celle de ses étapes. */
@@ -413,9 +415,17 @@ export const EXERCICES_CLASSIQUES: readonly string[] = [
   // Les machines de la salle, et le sac de sable de la finale.
   'trap-bar-deadlift', 'leg-press', 'hack-squat', 'leg-extension-machine', 'leg-curl-machine', 'traineau',
   'seated-calf-raise', 'sandbag-carry',
+  // Ajoutés le 14 octobre 2026, pour le jeudi : le squat cosaque, qui remplace
+  // la planche de Copenhague, et la montée sur marche, qui remplace les
+  // mollets (déjà au mardi).
+  'cossack-squat', 'step-up',
 ];
 
 const CLASSIQUES = new Set(EXERCICES_CLASSIQUES);
+
+/** Admis malgré leur niveau ou leur matériel : le squat cosaque (niveau 3)
+ *  et la montée sur marche, qui se fait sur le banc de la salle. */
+const ADMIS_A_PART = new Set(['cossack-squat', 'step-up']);
 
 // ------------------------------------------------------------- La finale
 
@@ -521,9 +531,10 @@ const POUSSEE_LOURDE: Emplacement = { cle: 'poussee', muscles: ['pectoraux', 'tr
 /** Le Superman du lundi, sans poids : au programme, il remplace celui au
  *  kettlebell (`HORS_PROGRAMME`). */
 export const SUPERMAN = 'superman';
-/** L'intérieur de cuisse du jeudi, chaque semaine : la planche de Copenhague
- *  courte, le genou sur le banc, 15 s de chaque côté. */
-export const COPENHAGUE = 'copenhagen-plank';
+/** L'intérieur de cuisse du jeudi, chaque semaine : le squat cosaque, qui
+ *  remplace la planche de Copenhague (14 octobre 2026 : Big Max a du mal avec
+ *  elle) — de la mobilité de hanche pour le jiu-jitsu en prime. */
+export const INTERIEUR_DU_JEUDI = 'cossack-squat';
 
 /** Le swing à deux mains : le seul mouvement explosif du programme. Il ouvre
  *  le jeudi, au temps, léger — ce sont les fesses qui lancent, pas le dos. */
@@ -582,7 +593,7 @@ const BASE: Record<Gabarit, Emplacement[]> = {
   // Le jeudi, surtout les jambes (≈ 60 %), avec le dos et les épaules pour
   // partenaires (≈ 40 %) : un peu plus intense — trois jours sans salle
   // après —, mais jiu-jitsu le soir : ni trap bar, ni presse, ni hack squat
-  // (`DANS_LE_JOUR`, `DERNIERS`). Le swing en tête, les mollets pour finir.
+  // (`DANS_LE_JOUR`, `DERNIERS`). Le swing en tête, la montée sur marche pour finir.
   bas: [
     // Les deux machines des cuisses : l'extension des jambes (quadriceps) et
     // la flexion des jambes couché (ischios). Ce sont les préférées du duo :
@@ -603,7 +614,7 @@ const BASE: Record<Gabarit, Emplacement[]> = {
     { cle: 'squat', muscles: ['quadriceps', 'fessiers'], principal: ['quadriceps'], patterns: ['squat'], avec: DOS_ET_EPAULES },
     { cle: 'fessiers', muscles: ['fessiers'], principal: ['fessiers'], avec: DOS_ET_EPAULES },
     { cle: 'abducteurs', muscles: ['abducteurs'], principal: ['abducteurs'], avec: DOS_ET_EPAULES },
-    { cle: 'adducteurs', muscles: ['adducteurs'], principal: ['adducteurs'], favoris: [COPENHAGUE], avec: DOS_ET_EPAULES },
+    { cle: 'adducteurs', muscles: ['adducteurs'], principal: ['adducteurs'], favoris: [INTERIEUR_DU_JEUDI], avec: DOS_ET_EPAULES },
     // Le ventre, quand le dos et les épaules manquent.
     { cle: 'tronc', muscles: ['abdominaux', 'obliques'], principal: ['abdominaux', 'obliques'], patterns: DOS_IMMOBILE, reprise: true, sans: gainageDeHanche, avec: ['cuisse-avant', 'cuisse-arriere', 'adducteurs', 'abducteurs', 'fente', 'squat', 'fessiers'] },
     { cle: 'bas-du-dos', muscles: ['lombaires', 'fessiers', 'ischios'], principal: ['lombaires'], avec: ['tirage-leger', 'tirage-leger-bis'] },
@@ -639,7 +650,7 @@ const BASE: Record<Gabarit, Emplacement[]> = {
  *  bas du dos le lundi (le jeudi, le swing travaille déjà l'arrière du
  *  corps) ; les épaules le mardi, et un développé le lundi ; l'extérieur de
  *  cuisse le lundi ; l'intérieur de cuisse le lundi (une fente latérale) et le
- *  jeudi (la planche de Copenhague). */
+ *  jeudi (le squat cosaque). */
 const PAR_OBJECTIF: Record<
   string,
   { emplacement: Emplacement; gabarits: Gabarit[]; surcharge?: Partial<Record<Gabarit, Partial<Emplacement>>> }
@@ -672,11 +683,11 @@ const PAR_OBJECTIF: Record<
     gabarits: ['dure'],
   },
   'interieur-cuisse': {
-    // La planche de Copenhague courte, chaque jeudi : la meilleure protection
-    // de l'aine pour le hockey de Big Max (Harøy 2019), et la garde de Speedy.
+    // Le squat cosaque, chaque jeudi (la planche de Copenhague, avant le 14
+    // octobre 2026) : l'intérieur de cuisse, et la garde de Speedy.
     // Sans banc, une fente latérale. Le lundi, le jour lourd : la fente
     // latérale, une vraie charge pour l'intérieur de cuisse.
-    emplacement: { cle: 'adducteurs', muscles: ['adducteurs'], principal: ['adducteurs'], reprise: true, favoris: [COPENHAGUE], preferer: (e) => e.pattern === 'fente', avec: ['tirage-leger', 'epaules', 'tirage-leger-bis', 'tronc'] },
+    emplacement: { cle: 'adducteurs', muscles: ['adducteurs'], principal: ['adducteurs'], reprise: true, favoris: [INTERIEUR_DU_JEUDI], preferer: (e) => e.pattern === 'fente', avec: ['tirage-leger', 'epaules', 'tirage-leger-bis', 'tronc'] },
     gabarits: ['dure', 'bas'],
     surcharge: { dure: { favoris: undefined, avec: ['poussee', 'tirage', 'dorsaux', 'epaules', 'oiseau'] } },
   },
@@ -782,8 +793,9 @@ function emplacementsDe(gabarit: Gabarit, objectifs: string[], materiels: Materi
 /** Hors du programme, mais dans la bibliothèque et la séance libre : le
  *  Superman au kettlebell. Au programme, le Superman se fait sans poids
  *  (`SUPERMAN`) : une charge au bout des bras écrase le bas du dos, cambré
- *  (audit du 11 octobre 2026, point 1.5). */
-export const HORS_PROGRAMME = ['kb-superman'];
+ *  (audit du 11 octobre 2026, point 1.5). La planche de Copenhague aussi : Big
+ *  Max a du mal avec elle (14 octobre 2026). */
+export const HORS_PROGRAMME = ['kb-superman', 'copenhagen-plank'];
 
 /** Plie le dos : les crunchs, les V-ups, les relevés de buste (la flexion du
  *  tronc), et les rotations faites assis ou allongé — la rotation russe, les
@@ -797,7 +809,7 @@ export const plieLeDos = (exercice: Exercice): boolean =>
 
 /** Les exercices dont on peut composer un programme : des classiques
  *  (`EXERCICES_CLASSIQUES`), de musculation, avec le matériel de la salle,
- *  sans mouvement explosif ni niveau avancé, rien qui plie le dos
+ *  sans mouvement explosif ni niveau avancé (sauf `ADMIS_A_PART`), rien qui plie le dos
  *  (`plieLeDos`), sans ceux qu'on a mis de côté (`EXERCICES_MIS_DE_COTE`,
  *  `HORS_PROGRAMME`), ni ceux de la finale (le traîneau, la marche du
  *  fermier, le sac de sable), ni ce que l'un des deux évite (`aEviterPar`) :
@@ -808,8 +820,7 @@ export function candidatsProgramme(materiels: Materiel[]): Exercice[] {
     (e) =>
       CLASSIQUES.has(e.id) &&
       familleDe(e) === 'musculation' &&
-      possedes.has(e.materiel) &&
-      e.niveauMin <= 2 &&
+      (ADMIS_A_PART.has(e.id) || (possedes.has(e.materiel) && e.niveauMin <= 2)) &&
       !e.explosif &&
       !plieLeDos(e) &&
       !HORS_PROGRAMME.includes(e.id) &&
@@ -1237,16 +1248,17 @@ const MACHINES_LOURDES = ['trap-bar-deadlift', 'leg-press', 'hack-squat'];
  *  Sébastien, 13 octobre 2026, après la séance) : la marche du fermier et le
  *  traîneau sont passés à la finale. Le lundi, sans jiu-jitsu le soir : la
  *  presse ou le hack squat — le jour le plus lourd pour les jambes. Le mardi :
- *  des pompes, qui gardent la poigne pour les prises du kimono. Le jeudi : les
- *  mollets, à la machine assise ou aux haltères — pas de machine lourde. */
+ *  des pompes, qui gardent la poigne pour les prises du kimono. Le jeudi : la
+ *  montée sur marche, sur le banc — les mollets sont déjà au mardi (14
+ *  octobre 2026) ; pas de machine lourde. */
 const DERNIERS: Record<Gabarit, string[]> = {
   dure: ['leg-press', 'hack-squat'],
-  bas: ['seated-calf-raise', 'calf-raise'],
+  bas: ['step-up'],
   haut: ['dumbbell-push-up', 'kb-push-up'],
 };
 /** Sans les machines de la salle, ou quand le dernier du jour est déjà pris :
- *  un squat, ou les mollets aux haltères. */
-const DERNIERS_DE_SECOURS = ['goblet-squat', 'squat', 'kb-goblet-squat', 'calf-raise'];
+ *  un squat. */
+const DERNIERS_DE_SECOURS = ['goblet-squat', 'squat', 'kb-goblet-squat', 'sumo-squat'];
 
 /** Un aller-retour de traîneau : pousser, puis tirer à reculons. */
 const TRAINEAU_SEC = 30;
@@ -1510,7 +1522,7 @@ export function genererProgramme(options: OptionsProgramme = {}): ProgrammeMois 
     // La semaine B prend d'autres exercices que la semaine A — sauf ceux qui
     // visent un muscle à peine servi (`reprise`), quand elle n'en trouve pas
     // d'autre, et les favoris (`favoris` : le développé couché du mardi, le
-    // swing, la planche de Copenhague et les deux machines des cuisses du
+    // swing, le squat cosaque et les deux machines des cuisses du
     // jeudi, et les reprises du lundi), qui reviennent chaque semaine.
     const reprenable = (e: Exercice) =>
       places.some((p) => (p.reprise && p.principal && viseLePrincipal(e, p.principal)) || p.favoris?.includes(e.id));
