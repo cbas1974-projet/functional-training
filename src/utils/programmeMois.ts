@@ -1301,11 +1301,18 @@ const CARDIO: MouvementGuide = {
   dureeSec: 5 * 60,
 };
 
-/** … puis quatre mouvements légers, choisis pour le jour : le lundi, un
- *  good morning à vide avant la trap bar ; le jeudi, un pont fessier, qui
- *  réveille les fesses avant le swing. */
+/** … puis quatre mouvements actifs, à la grande boucle élastique, choisis
+ *  pour le jour et ce qu'il va solliciter (15 octobre 2026 : Sébastien veut
+ *  bouger, avec un élastique ou un poids léger, une image pour chacun) : le
+ *  lundi, tout le corps ; le mardi, les épaules et le haut du dos ; le jeudi,
+ *  les hanches et les fesses, avant le swing. */
 const MOUVEMENT_SEC = 45;
-const leger = (nom: string, consigne: string): MouvementGuide => ({ nom, consigne, dureeSec: MOUVEMENT_SEC });
+const leger = (nom: string, consigne: string, exerciceId?: string): MouvementGuide => ({
+  nom,
+  consigne,
+  dureeSec: MOUVEMENT_SEC,
+  ...(exerciceId ? { exerciceId } : {}),
+});
 
 /** Un mouvement d'un seul côté : le côté droit, cinq secondes pour changer de
  *  côté (« CHANGE DE CÔTÉ », « +5 s » si besoin), puis le côté gauche — comme
@@ -1318,24 +1325,24 @@ function deuxCotes(nom: string, consigne: string, parCoteSec: number, exerciceId
     { nom: `${nom} · côté gauche`, consigne, dureeSec: parCoteSec, ...image },
   ];
 }
-const CERCLES_BRAS = leger('Cercles de bras', 'Petits puis grands, vers l’arrière puis vers l’avant.');
-const BASSIN = leger('Rotations du bassin', 'Mains sur les hanches, grands cercles dans les deux sens.');
-const SQUATS = leger('Squats à vide', 'Lents, aussi bas que le genou le permet, talons au sol, buste droit.');
+const ECARTES = leger('Écartés à l’élastique', 'Bras tendus devant, à hauteur d’épaules : on ouvre en serrant les omoplates, on revient lentement.', 'band-pull-apart');
+const PASSAGE_EPAULES = leger('Passage d’épaules à l’élastique', 'Mains larges, bras tendus : l’élastique passe au-dessus de la tête jusque derrière, puis revient. Plus large si ça coince.', 'band-dislocate');
+const ROTATION_EXTERNE = leger('Rotation externe à l’élastique', 'Coudes collés au corps, pliés à angle droit : on ouvre les avant-bras vers l’extérieur, lentement.', 'band-external-rotation');
+const TIRAGE_VISAGE = leger('Tirage au visage à l’élastique', 'L’élastique accroché à un poteau, à hauteur du visage : on tire vers le front, coudes hauts et écartés.', 'band-face-pull');
+const MARCHE_LATERALE = leger('Marche latérale à l’élastique', 'L’élastique en double au-dessus des genoux, mi-accroupi : 10 pas d’un côté, 10 de l’autre, les genoux poussent vers l’extérieur.', 'band-lateral-walk');
+const GOOD_MORNING = leger('Good morning à l’élastique', 'Debout sur l’élastique, l’autre bout derrière la nuque : on plie aux hanches, dos plat, genoux souples.', 'band-good-morning');
+const SQUAT_ELASTIQUE = leger('Squat à l’élastique', 'L’élastique en double au-dessus des genoux : on descend lentement, aussi bas que le genou le permet, genoux poussés vers l’extérieur.', 'band-squat');
+const PONT_ELASTIQUE = leger('Pont fessier à l’élastique', 'Allongé sur le dos, l’élastique en double au-dessus des genoux : on monte le bassin en écartant un peu les genoux, on redescend lentement.', 'band-glute-bridge');
 const MOUVEMENTS_LEGERS: Record<Gabarit, MouvementGuide[]> = {
-  dure: [CERCLES_BRAS, BASSIN, SQUATS, leger('Good morning à vide', 'Mains sur la nuque : on plie aux hanches, dos plat, genoux souples.')],
+  dure: [PASSAGE_EPAULES, MARCHE_LATERALE, GOOD_MORNING, SQUAT_ELASTIQUE],
   bas: [
-    BASSIN,
     // Une jambe, puis l'autre : 20 s, 5 s pour changer, 20 s — les 45 s d'un mouvement.
     ...deuxCotes('Balancements de jambe', 'Une main au mur : d’avant en arrière, puis de côté.', (MOUVEMENT_SEC - CHANGER_DE_COTE_SEC) / 2),
-    SQUATS,
-    leger('Pont fessier', 'Allongé sur le dos, genoux pliés : on monte le bassin en serrant les fessiers, puis on redescend lentement.'),
+    MARCHE_LATERALE,
+    SQUAT_ELASTIQUE,
+    PONT_ELASTIQUE,
   ],
-  haut: [
-    CERCLES_BRAS,
-    leger('Rotations du buste', 'Bras croisés, on tourne les épaules ; le bassin reste face à l’avant.'),
-    leger('Chat-vache', 'À quatre pattes, arrondir puis creuser le dos en respirant.'),
-    leger('Pompes contre le mur', 'Mains au mur, corps gainé, lentement.'),
-  ],
+  haut: [ECARTES, PASSAGE_EPAULES, ROTATION_EXTERNE, TIRAGE_VISAGE],
 };
 
 /** Les étirements des jambes, à chaque fin de séance — le lundi, le mardi et

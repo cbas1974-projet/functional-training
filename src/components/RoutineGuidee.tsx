@@ -16,7 +16,6 @@ import { useVerrouEcran } from '../hooks/useVerrouEcran';
 import {
   CONSIGNE_COU,
   CONSIGNE_GAINAGE,
-  NOTE_DESSIN_CHIEN_D_ARRET,
   PROLONGATION_SEC,
   ROLE_MOBILITE,
   etapesRoutine,
@@ -89,10 +88,14 @@ function Bouton({
 
 /** Les dessins sont noirs sur fond blanc : sur le thème sombre il leur faut
  *  toujours une plaque blanche. */
+/** Le chien d'arrêt au sol a son propre dessin (15 octobre 2026) ; sa fiche
+ *  reste celle du rowing chien d'arrêt (`exerciceRoutine`). */
+const IMAGE_CHIEN_D_ARRET = 'bird-dog';
+
 function Vignette({ exerciceId, alt, className = '' }: { exerciceId: string; alt: string; className?: string }) {
   return (
     <img
-      src={cheminImage(exerciceId)}
+      src={cheminImage(exerciceId === 'bird-dog-row' ? IMAGE_CHIEN_D_ARRET : exerciceId)}
       alt={alt}
       className={`object-contain ${className}`}
       style={{ background: '#ffffff', aspectRatio: '3 / 2' }}
@@ -175,16 +178,6 @@ function RoleMobilite({ exercice, partie }: { exercice: Exercice; partie: Partie
   );
 }
 
-/** Le dessin du chien d'arrêt vient d'un autre exercice : on le dit. */
-function NoteDessin({ exercice }: { exercice: Exercice }) {
-  if (exercice.id !== 'bird-dog-row') return null;
-  return (
-    <p className="text-center text-xs" style={{ color: 'var(--texte-discret)' }}>
-      {NOTE_DESSIN_CHIEN_D_ARRET}
-    </p>
-  );
-}
-
 function CorpsInstallation({
   etape,
   exercice,
@@ -200,7 +193,6 @@ function CorpsInstallation({
     <div className="space-y-4">
       <MotDePartie partie={etape.partie} />
       <Vignette exerciceId={exercice.id} alt={exercice.nomFr} className="mx-auto w-full max-w-md rounded-2xl" />
-      <NoteDessin exercice={exercice} />
       <div className="text-center">
         <h2 className="text-2xl font-bold">{exercice.nomFr}</h2>
         <p style={{ color: 'var(--texte-discret)' }}>

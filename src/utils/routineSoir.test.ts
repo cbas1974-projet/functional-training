@@ -15,7 +15,6 @@ import {
   MOBILITE_JJB,
   NOM_PARTIE,
   NOTE_A_EVITER,
-  NOTE_DESSIN_CHIEN_D_ARRET,
   NOTE_ROUTINE,
   PARTIES_ROUTINE,
   ROLE_MOBILITE,
@@ -418,7 +417,6 @@ describe('le gainage', () => {
     expect(chien.position).toContain('À quatre pattes');
     // Plus rien du banc ni de l'haltère dans ce qu'il dit.
     expect(`${chien.nomFr} ${chien.position} ${chien.pointsAttention.join(' ')}`).not.toMatch(/banc|haltère|rowing/i);
-    expect(NOTE_DESSIN_CHIEN_D_ARRET).toContain('banc');
     // Les autres exercices de la bibliothèque restent tels quels.
     expect(exerciceRoutine('yoga-planche')).toBe(exercice('yoga-planche'));
     expect(exercice('bird-dog-row').nomFr).toBe('Rowing chien d’arrêt');

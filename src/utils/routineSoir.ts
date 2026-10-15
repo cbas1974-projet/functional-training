@@ -245,11 +245,6 @@ const CHIEN_D_ARRET: Partial<Exercice> = {
   ],
 };
 
-/** Ce que dit l'écran sous le dessin du chien d'arrêt, qui vient d'un autre
- *  exercice. */
-export const NOTE_DESSIN_CHIEN_D_ARRET =
-  'Le dessin montre la version avec banc et haltère : ici, au sol, sans charge.';
-
 /** Un exercice qu'on peut déjà montrer dans la routine : une fiche de la
  *  bibliothèque. */
 const estUnExercice = (id: string): boolean => Object.prototype.hasOwnProperty.call(EXERCICES_PAR_ID, id);
