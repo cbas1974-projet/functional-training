@@ -754,6 +754,19 @@ export default function SeanceGuidee({
   })();
   const decalageGuide = guideActif ? guideTempo.depuisSec : 0;
   const ecouleGuide = Math.max(0, ecoule - decalageGuide);
+  // Un exercice au temps (planche, swing…) : le décompte lancé d'un toucher
+  // sonne et vibre à zéro, puis s'éteint — le bouton relance la série
+  // suivante (15 octobre 2026).
+  const finDuDecompte =
+    serieGuidee !== null &&
+    exerciceDeSeance(serieGuidee.exerciceId).unite === 'secondes' &&
+    ecouleGuide >= serieGuidee.dureeSec;
+  useEffect(() => {
+    if (!finDuDecompte) return;
+    bellSound.playBell('end');
+    vibrer();
+    setGuideTempo(GUIDE_ETEINT);
+  }, [finDuDecompte]);
   /** L'horloge du guide, pour la bille : celle de l'étape, moins ce qui en
    *  était écoulé quand on l'a allumé. */
   const lireEcouleGuide = useCallback(() => Math.max(0, lireEcouleSec() - decalageGuide), [lireEcouleSec, decalageGuide]);
@@ -3797,6 +3810,9 @@ function BlocDuProgramme({
   // Des séries longues qui chargent le bas du dos : le rappel qui protège.
   const dosAMenager = chargeLeBasDuDos(exercice) && Math.max(bloc.reps, bloc.autre?.reps ?? 0) >= 10;
   const guideIci = guide !== null && guide.exerciceId === exercice.id;
+  // Au temps (planche, swing…) : le bouton dit la durée et lance le décompte.
+  const auTemps = exercice.unite === 'secondes';
+  const secondesAuTemps = Math.max(bloc.reps, bloc.autre?.reps ?? 0);
   return (
     <div className="space-y-2 rounded-xl p-2" style={{ background: 'var(--surface-haute)', border: '1px solid var(--bordure)' }}>
       <div className="flex items-center gap-3">
@@ -3812,12 +3828,12 @@ function BlocDuProgramme({
           <button
             type="button"
             aria-pressed={guideIci}
-            aria-label={`${guideIci ? 'Arrêter le tempo' : 'Tempo'} : ${exercice.nomFr}`}
+            aria-label={`${guideIci ? (auTemps ? 'Arrêter le décompte' : 'Arrêter le tempo') : auTemps ? `Décompte de ${secondesAuTemps} s` : 'Tempo'} : ${exercice.nomFr}`}
             onClick={() => onTempo(exercice.id)}
-            className={`${BOUTON_COMMUN} min-h-11 shrink-0 rounded-xl px-3 text-sm`}
-            style={guideIci ? STYLES_BOUTON.accent : STYLES_BOUTON.neutre}
+            className={`${BOUTON_COMMUN} min-h-11 shrink-0 rounded-xl px-3 ${auTemps ? 'text-base font-bold' : 'text-sm'}`}
+            style={guideIci || auTemps ? STYLES_BOUTON.accent : STYLES_BOUTON.neutre}
           >
-            {guideIci ? 'Sans tempo' : 'Tempo'}
+            {guideIci ? (auTemps ? 'Arrêter' : 'Sans tempo') : auTemps ? `▶ ${secondesAuTemps} s` : 'Tempo'}
           </button>
         )}
       </div>
