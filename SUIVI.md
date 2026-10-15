@@ -24,9 +24,12 @@ Claude, de son côté :
 - **Le jeudi** (programme version 11) : la planche de Copenhague sort du
   programme (Big Max a du mal avec elle), le **squat cosaque** la remplace ;
   la **montée sur marche** finit le jeudi à la place des mollets (déjà au
-  mardi). Ajoutés aux classiques (`ADMIS_A_PART`). **10 tests de
-  `programmeMois.test.ts` décrivent encore l'ancien jeudi** : à mettre à jour
-  (Sébastien a dit de publier sans).
+  mardi). Ajoutés aux classiques (`ADMIS_A_PART`). Les **11 tests
+  de `programmeMois.test.ts`** sont remis à jour le 15 octobre (vitest, tsc,
+  eslint verts). Effet à noter : sans la Copenhague, **chaque mardi prend la
+  planche latérale** comme 3e « jambe légère » (donc 2 vraies jambes + elle) ;
+  à six exercices avec les huit objectifs, la machine à mollets n'est plus
+  garantie (les mollets ne finissent plus le jeudi).
 - **Minuteur** : sur un exercice au temps (planche, swing), le bouton
   « ▶ 30 s » lance le décompte, sonne et vibre à zéro, puis se relance.
   Vérifié dans le navigateur ; **son et vibration non vérifiés sur un vrai
