@@ -368,7 +368,7 @@ function libelleReps(exercice: Exercice, reps: number): string {
   const base = pluriel(reps, 'répétition');
   if (exercice.mouvement === 'rotation') return `${base}, à droite puis à gauche`;
   if (exercice.cotes === 'unilateral') return `${base} par côté`;
-  if (exercice.cotes === 'alterne') return `${base} en alternant`;
+  if (exercice.cotes === 'alterne') return `${base} ${exercice.mouvement ? '' : 'de chaque côté, '}en alternant`;
   return base;
 }
 
@@ -3566,7 +3566,7 @@ const nomColonne = (colonne: ColonneDuo): string => (colonne.personne ? NOM_PERS
 /** « 3 × 10 », « 4 × 30 s par côté » : le volume d'une personne. */
 function volumeCourt(exercice: Exercice, series: number, reps: number): string {
   if (exercice.unite === 'secondes') return `${series} × ${reps} s${precisionAuTemps(exercice)}`;
-  return `${series} × ${reps}${exercice.cotes === 'unilateral' ? ' par côté' : exercice.cotes === 'alterne' ? ' en alternant' : ''}`;
+  return `${series} × ${reps}${exercice.cotes === 'unilateral' ? ' par côté' : exercice.cotes === 'alterne' ? (exercice.mouvement ? ' en alternant' : ' de chaque côté, en alternant') : ''}`;
 }
 
 /** Les séries et les répétitions d'une colonne sur un bloc. */

@@ -190,7 +190,7 @@ export function deroulementDesCotes(exercice: Exercice, tempo: Tempo = TEMPO_TAB
   }
   const total = cycles(() => true);
   if (forme === 'rotation') return `${total} rép., chacune à droite puis à gauche`;
-  if (exercice.cotes === 'alterne') return `${total} rép. en alternant : un côté par rép.`;
+  if (exercice.cotes === 'alterne') return `${total} rép. en alternant : un côté par rép., ${total / 2} de chaque côté`;
   return `${total} rép.`;
 }
 

@@ -196,7 +196,10 @@ export function chargeTotale(realisee: SeanceRealisee, vers: UnitePoids = uniteD
         : reference
           ? Array.from({ length: exo.seriesFaites }, () => reference)
           : [];
-    const cotes = exercice.cotes === 'unilateral' ? 2 : 1;
+    // En alternant, les répétitions se comptent de chaque côté, comme d'un
+    // seul côté (15 octobre 2026).
+    const cotes =
+      exercice.cotes === 'unilateral' || (exercice.cotes === 'alterne' && (exercice.mouvement ?? 'vertical') === 'vertical') ? 2 : 1;
     for (const charge of charges.slice(0, exo.seriesFaites)) {
       if (charge > 0) total += charge * exo.reps * cotes;
     }

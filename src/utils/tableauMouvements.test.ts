@@ -57,7 +57,7 @@ describe('le tableau des mouvements (docs/mouvements.md)', () => {
     expect(cotes('kb-turkish-get-up')).toBe('côté droit → CHANGE DE CÔTÉ 5 s (« +5 s » si besoin) → côté gauche');
     expect(cotes('farmers-walk')).toBe('les deux ensemble');
     expect(cotes('kb-russian-twist')).toBe('8 rép., chacune à droite puis à gauche');
-    expect(cotes('alternating-curl')).toBe('8 rép. en alternant : un côté par rép.');
+    expect(cotes('alternating-curl')).toBe('16 rép. en alternant : un côté par rép., 8 de chaque côté');
     expect(cotes('hammer-curl')).toBe('8 rép.');
   });
 

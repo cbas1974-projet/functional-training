@@ -187,7 +187,7 @@ const musclesCibles = (exercice: Exercice) =>
 function volume(bloc: Pick<BlocSeries, 'series' | 'reps'>, exercice: Exercice): string {
   if (exercice.unite === 'secondes') return `${bloc.series} × ${bloc.reps} s${precisionAuTemps(exercice)}`;
   const cotes =
-    exercice.cotes === 'unilateral' ? ' par côté' : exercice.cotes === 'alterne' ? ' en alternant' : '';
+    exercice.cotes === 'unilateral' ? ' par côté' : exercice.cotes === 'alterne' ? (exercice.mouvement ? ' en alternant' : ' de chaque côté, en alternant') : '';
   return `${bloc.series} × ${bloc.reps}${cotes}`;
 }
 

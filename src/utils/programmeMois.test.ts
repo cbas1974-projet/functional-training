@@ -6,6 +6,7 @@ import { agregerRealisation, construireEtapes, dureeTotaleSec, etatMetronome } f
 import {
   changementDeCoteSec,
   cleMouvement,
+  deChaqueCote,
   exercicesDisponibles,
   genererSeance,
   remplacerExercice,
@@ -563,16 +564,19 @@ describe('genererProgramme', () => {
     // tour avec une pause entre les tours ; un mardi sur deux, la machine à
     // mollets d'une paire, chacun son tour.
     expect(Math.min(...durees[2])).toBeGreaterThan(66);
-    expect(Math.max(...durees[2])).toBeLessThan(76);
+    // (Depuis le 15 octobre 2026, en alternant, 8 de chaque côté : plus long.)
+    expect(Math.max(...durees[2])).toBeLessThan(82);
     expect(moyenne(durees[2])).toBeGreaterThan(68);
-    expect(moyenne(durees[2])).toBeLessThan(74);
+    expect(moyenne(durees[2])).toBeLessThan(78);
     // Le jeudi, environ 1 h 10, sans machine lourde : ses deux machines, un
     // seul siège, se font chacun son tour (audit du 13 octobre 2026) ; le
     // swing et les mollets, une pause entre les tours.
     expect(Math.min(...durees[4])).toBeGreaterThan(66);
-    expect(Math.max(...durees[4])).toBeLessThan(76);
+    // Le squat cosaque et la montée sur marche, 8 de chaque côté : jusqu'à
+    // 1 h 25 (15 octobre 2026, accepté par Sébastien).
+    expect(Math.max(...durees[4])).toBeLessThan(88);
     expect(moyenne(durees[4])).toBeGreaterThan(68);
-    expect(moyenne(durees[4])).toBeLessThan(74);
+    expect(moyenne(durees[4])).toBeLessThan(85);
   });
 
   it('seul, la séance ne dure pas plus qu’à deux : sans l’autre, une pause entre deux séries d’un exercice seul, au lieu de sa série', () => {
@@ -2168,7 +2172,7 @@ describe('les précautions : arrêt en bas', () => {
               if (etape.type !== 'serie') continue;
               const exercice = EXERCICES_PAR_ID[etape.exerciceId];
               if (exercice.unite !== 'reps') continue;
-              const cycles = etape.reps * (exercice.cotes === 'unilateral' ? 2 : 1);
+              const cycles = etape.reps * (exercice.cotes === 'unilateral' || deChaqueCote(exercice) ? 2 : 1);
               const cas = `${programme.graine} · ${s.id} · ${etape.exerciceId} · ${JSON.stringify(tempo)}`;
               // La série dure exactement ses répétitions, chacune à son tempo,
               // plus le changement de côté d'un exercice unilatéral.
@@ -2922,17 +2926,18 @@ describe('les décisions de Sébastien sur l’audit (11 octobre 2026)', () => {
       }
     }
     // Graine 1, par défaut — huit exercices —, à deux sur un seul téléphone,
-    // la finale comprise : lundi 1 h 10 min 49 s, chaque semaine ; mardi A
-    // 1 h 14 min 34 s, jeudi A 1 h 12 min 16 s ; mardi B 1 h 11 min 1 s,
-    // jeudi B 1 h 12 min 46 s (version 11 : squat cosaque, montée sur marche) — les exercices seuls avec une pause entre les
+    // la finale comprise : lundi 1 h 13 min 49 s, chaque semaine ; mardi A
+    // 1 h 18 min 4 s, jeudi A 1 h 20 min 40 s ; mardi B 1 h 11 min 1 s,
+    // jeudi B 1 h 24 min 40 s (version 11 : squat cosaque, montée sur marche ;
+    // en alternant, 8 de chaque côté) — les exercices seuls avec une pause entre les
     // tours. Une estimation : un exercice se finit sur « Exercice terminé ».
     const graine1 = programmeCompose(8, undefined, 1);
     expect(graine1.seances.map((s) => [s.id, dureeSec(s)])).toEqual([
-      ['lundi', 4249],
-      ['mardi-a', 4474],
-      ['jeudi-a', 4336],
+      ['lundi', 4429],
+      ['mardi-a', 4684],
+      ['jeudi-a', 4840],
       ['mardi-b', 4261],
-      ['jeudi-b', 4366],
+      ['jeudi-b', 5080],
     ]);
   }, 30_000);
 });

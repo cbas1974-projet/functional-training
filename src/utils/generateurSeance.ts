@@ -547,8 +547,16 @@ export function precisionAuTemps(exercice: Pick<Exercice, 'cotes' | 'unite' | 'm
   return exercice.cotes === 'unilateral' ? ' par côté' : '';
 }
 
+/** En alternant, une répétition d'un côté puis une de l'autre : les
+ *  répétitions se comptent de chaque côté (15 octobre 2026 : « 3 × 8 en
+ *  alternant », c'est 8 à droite et 8 à gauche). Pas pour un cercle ou une
+ *  rotation, où une répétition fait déjà les deux côtés. */
+export const deChaqueCote = (exercice: Pick<Exercice, 'cotes' | 'mouvement'>): boolean =>
+  exercice.cotes === 'alterne' && (exercice.mouvement ?? 'vertical') === 'vertical';
+
 /** Durée d'une série en secondes : reps × tempo (doublée si unilatéral, plus
- *  le changement de côté au milieu), ou directement `reps` secondes si
+ *  le changement de côté au milieu ; doublée aussi en alternant, où les
+ *  répétitions se comptent de chaque côté — 15 octobre 2026), ou directement `reps` secondes si
  *  l'exercice se mesure au temps — par côté, ou dans chaque sens pour un
  *  cercle (`partiesAuTemps`), plus le changement de côté d'un exercice de
  *  musculation unilatéral. */
@@ -558,7 +566,7 @@ export function dureeSerieSec(exercice: Exercice, reps: number, tempo: Tempo): n
   // ou l'étirement du quadriceps coûtent deux fois la durée annoncée. Un
   // cercle tourne autant dans un sens que dans l'autre.
   if (exercice.unite === 'secondes') return reps * partiesAuTemps(exercice) + changementDeCoteSec(exercice);
-  const deuxCotes = exercice.cotes === 'unilateral' ? 2 : 1;
+  const deuxCotes = exercice.cotes === 'unilateral' || deChaqueCote(exercice) ? 2 : 1;
   return reps * secondesParRep(tempo, exercice) * deuxCotes + changementDeCoteSec(exercice);
 }
 
@@ -1419,7 +1427,7 @@ export function libelleBloc(bloc: BlocSeries, exercice: Exercice): string {
   }
   if (exercice.unite === 'secondes') return `${bloc.series} × ${bloc.reps} s${precisionAuTemps(exercice)}${repos}`;
   if (exercice.cotes === 'unilateral') return `${bloc.series} × ${bloc.reps} reps par côté${repos}`;
-  if (exercice.cotes === 'alterne') return `${bloc.series} × ${bloc.reps} reps en alternant${repos}`;
+  if (exercice.cotes === 'alterne') return `${bloc.series} × ${bloc.reps} reps ${deChaqueCote(exercice) ? 'de chaque côté, ' : ''}en alternant${repos}`;
   return `${bloc.series} × ${bloc.reps} reps${repos}`;
 }
 

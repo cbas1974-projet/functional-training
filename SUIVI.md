@@ -52,6 +52,14 @@ Claude, de son côté :
   octobre, Speedy et Big Max ont fait 12 allers-retours de traîneau sur
   30 pieds (pas dans l'historique : la finale se comptait encore au temps).
   Vérifié par un test qui joue la finale et à l'écran à 375 px (seul).
+- **En alternant = 8 de chaque côté** (décision de Sébastien : « 3 × 8 en
+  alternant », c'est 8 à droite et 8 à gauche). Le temps d'une série double
+  et la charge soulevée compte les deux côtés (`deChaqueCote`,
+  `generateurSeance.ts`) ; pas pour un cercle ou une rotation. L'écran dit
+  « 3 × 8 de chaque côté, en alternant ». Durées, graine 1, à deux : lundi
+  1 h 14, mardi 1 h 18 / 1 h 11, jeudi 1 h 21 / 1 h 25 (accepté). La charge
+  soulevée du 15 octobre (Speedy 4 476 lb) a été recalculée à la main : juste
+  avec l'ancienne règle ; Big Max à 8 205, cohérent avec ses 10 à 30 lb de plus.
 - **Pistes** : l'oiseau revient le mardi et le jeudi (« Changer » en
   attendant) ; la routine du soir trop longue et toujours pareille (viser
   5-6 min, des listes qui tournent) ; des GIF à deux temps à partir des
