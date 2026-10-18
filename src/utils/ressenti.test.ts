@@ -382,12 +382,12 @@ describe('les phrases', () => {
   });
 
   it('explique la proposition dans la séance guidée, avec le seuil de chacun', () => {
-    expect(phraseRessenti('leger', 5, 'lb', 'sebastien')).toBe('Léger les 2 dernières fois : on monte de 5 lb');
-    expect(phraseRessenti('leger', 5, 'lb', 'max')).toBe('Léger la dernière fois : on monte de 5 lb');
-    expect(phraseRessenti('lourd', -5, 'lb', 'sebastien')).toBe('Lourd les 2 dernières fois : on redescend de 5 lb');
-    expect(phraseRessenti('lourd', -5, 'lb', 'max')).toBe('Lourd les 2 dernières fois : on redescend de 5 lb');
-    expect(phraseRessenti('leger', 2.5, 'kg', 'max')).toBe('Léger la dernière fois : on monte de 2,5 kg');
-    expect(phraseRessenti('lourd', -2.5, 'kg', 'sebastien')).toBe('Lourd les 2 dernières fois : on redescend de 2,5 kg');
+    expect(phraseRessenti('leger', 5, 'lb', 'sebastien')).toBe('😊😊 les 2 dernières fois : on monte de 5 lb');
+    expect(phraseRessenti('leger', 5, 'lb', 'max')).toBe('😊 la dernière fois : on monte de 5 lb');
+    expect(phraseRessenti('lourd', -5, 'lb', 'sebastien')).toBe('☹️☹️ les 2 dernières fois : on redescend de 5 lb');
+    expect(phraseRessenti('lourd', -5, 'lb', 'max')).toBe('☹️☹️ les 2 dernières fois : on redescend de 5 lb');
+    expect(phraseRessenti('leger', 2.5, 'kg', 'max')).toBe('😊 la dernière fois : on monte de 2,5 kg');
+    expect(phraseRessenti('lourd', -2.5, 'kg', 'sebastien')).toBe('☹️☹️ les 2 dernières fois : on redescend de 2,5 kg');
   });
 
   it('résume la proposition sur l’accueil', () => {

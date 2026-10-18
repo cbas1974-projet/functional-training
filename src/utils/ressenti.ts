@@ -222,8 +222,9 @@ export function libelleCran(ajout: number, unite: UnitePoids): string {
 /** « les 2 dernières fois », « la dernière fois ». */
 const dernieresFois = (fois: number): string => (fois > 1 ? `les ${fois} dernières fois` : 'la dernière fois');
 
-/** La phrase de la séance guidée, sous la saisie du poids : « Léger les 2
- *  dernières fois : on monte de 5 lb », « Léger la dernière fois : … ». */
+/** La phrase de la séance guidée, sous la saisie du poids, avec les visages
+ *  touchés (un par fois) : « 😊😊 les 2 dernières fois : on monte de 5 lb »,
+ *  « 😊 la dernière fois : … ». */
 export function phraseRessenti(
   motif: 'leger' | 'lourd',
   ajout: number,
@@ -233,8 +234,8 @@ export function phraseRessenti(
   const cran = `${nombreFr(Math.abs(ajout))} ${SUFFIXE_UNITE[unite]}`;
   const seuils = seuilsRessenti(personne);
   return motif === 'leger'
-    ? `Léger ${dernieresFois(seuils.monter)} : on monte de ${cran}`
-    : `Lourd ${dernieresFois(seuils.descendre)} : on redescend de ${cran}`;
+    ? `${EMOJI_RESSENTI.leger.repeat(seuils.monter)} ${dernieresFois(seuils.monter)} : on monte de ${cran}`
+    : `${EMOJI_RESSENTI.lourd.repeat(seuils.descendre)} ${dernieresFois(seuils.descendre)} : on redescend de ${cran}`;
 }
 
 /** La petite ligne de l'accueil : « ↑ +5 lb proposé », « ↓ −5 lb proposé ». */
