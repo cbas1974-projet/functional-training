@@ -294,6 +294,12 @@ export default function RoutineSoir({
     }));
   const marquerFaite = () => onChange((prec) => ({ ...prec, routineSoir: avecSoir(prec.routineSoir, soirDe(new Date())) }));
   const demarquer = () => onChange((prec) => ({ ...prec, routineSoir: sansSoir(prec.routineSoir, soirDe(new Date())) }));
+  /** Un appui sur un des sept points : marque ce soir-là (routine faite de mémoire) ou le retire. */
+  const basculerSoir = (soir: string, faite: boolean) =>
+    onChange((prec) => ({
+      ...prec,
+      routineSoir: faite ? sansSoir(prec.routineSoir, soir) : avecSoir(prec.routineSoir, soir),
+    }));
 
   const commencer = () => {
     // Geste de l'utilisateur : c'est maintenant qu'on réveille le son.
@@ -338,11 +344,14 @@ export default function RoutineSoir({
             </p>
           )}
           <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
-            <PointsSemaine routine={routine} maintenant={maintenant} />
+            <PointsSemaine routine={routine} maintenant={maintenant} onBasculerSoir={basculerSoir} />
             <p className="text-sm" style={{ color: 'var(--texte-discret)' }}>
               <BilanSoirs routine={routine} maintenant={maintenant} />
             </p>
           </div>
+          <p className="mt-1 text-xs" style={{ color: 'var(--texte-discret)' }}>
+            Oublié de cocher un soir ? Appuie sur son point pour le marquer.
+          </p>
           {faiteCeSoir ? (
             <div className="mt-3 flex items-center justify-between gap-3">
               <p className="text-sm font-bold" style={{ color: 'var(--montee)' }}>

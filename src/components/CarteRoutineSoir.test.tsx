@@ -1,6 +1,7 @@
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 import CarteRoutineSoir, { PointsSemaine } from './CarteRoutineSoir';
+import { avecSoir, sansSoir, serieDeSoirs } from '../utils/routineSoir';
 
 /** Dimanche 11 octobre 2026, 21 h 30 : un soir. */
 const SOIR = new Date(2026, 9, 11, 21, 30);
@@ -56,5 +57,33 @@ describe('la carte de la routine du soir, sur l’accueil', () => {
     const html = renderToStaticMarkup(<PointsSemaine routine={{ soirs: ['2026-10-11', '2026-10-10'] }} maintenant={SOIR} />);
     expect(html.match(/rounded-full/g)).toHaveLength(7);
     expect(html.match(/background:var\(--montee\)/g)).toHaveLength(2);
+  });
+});
+
+describe('rattraper un soir passé, depuis les sept points', () => {
+  // Dimanche 18 octobre 2026, 21 h 30. Le vendredi 16 a été fait de mémoire, sans coche.
+  const MAINTENANT = new Date(2026, 9, 18, 21, 30);
+  const sansLe16 = { soirs: ['2026-10-12', '2026-10-13', '2026-10-14', '2026-10-15', '2026-10-17'] };
+
+  it('chaque point devient un bouton qui dit ce que l’appui va faire', () => {
+    const html = renderToStaticMarkup(
+      <PointsSemaine routine={sansLe16} maintenant={MAINTENANT} onBasculerSoir={() => undefined} />,
+    );
+    expect(html.match(/<button/g)).toHaveLength(7);
+    expect(html).toContain('2026-10-16 : pas faite, appuyer pour marquer');
+    expect(html).toContain('2026-10-17 : faite, appuyer pour retirer');
+    expect(html).toContain('2026-10-18 (ce soir) : pas faite, appuyer pour marquer');
+  });
+
+  it('sans la fonction, les points restent une simple image (la carte de l’accueil est déjà un bouton)', () => {
+    const html = renderToStaticMarkup(<PointsSemaine routine={sansLe16} maintenant={MAINTENANT} />);
+    expect(html).not.toContain('<button');
+  });
+
+  it('marquer le 16 recolle la série : 1 d’affilée devient 6 (du 12 au 17)', () => {
+    expect(serieDeSoirs(sansLe16, MAINTENANT)).toBe(1);
+    const rattrapee = avecSoir(sansLe16, '2026-10-16');
+    expect(serieDeSoirs(rattrapee, MAINTENANT)).toBe(6);
+    expect(serieDeSoirs(sansSoir(rattrapee, '2026-10-16'), MAINTENANT)).toBe(1);
   });
 });

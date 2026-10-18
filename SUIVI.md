@@ -23,6 +23,13 @@ Claude, de son côté :
 
 - **Ex-CH-0122** : routine du soir plus courte (viser 5-6 min, au lieu de 10) et des listes qui tournent, pour qu'elle ne soit plus toujours pareille. Noté en piste le 14-15 octobre 2026, pas fait. Source : la section « Pistes » ci-dessous.
 
+## 18 octobre 2026 : rattraper un soir d'étirements, puis semaine d'utilisation
+
+- **Décision de Seb** : toutes les lignes du registre sur Functional Training sont fermées (CH-0104, CH-0179). Cette semaine il utilise l'app et **prend des notes** ; les corrections se feront **en fin de semaine prochaine ou après un entraînement**.
+- **Routine du soir** : les sept points des derniers soirs sont maintenant des boutons (écran « Routine du soir » seulement, pas la carte de l'accueil) : un appui marque ou démarque ce soir-là. Raison : Seb s'étire tous les soirs, a fait celui du vendredi 16 octobre de mémoire sans le cocher, et la série paraissait cassée. Les données restent sur le téléphone, donc la correction se fait **dans l'app** (appui sur le point V du 16).
+- Preuves : vitest 1077/1077 (3 tests ajoutés dans `CarteRoutineSoir.test.tsx`), tsc et eslint verts ; vu à l'écran en 375 px (15 et 17 marqués = « 2 soirs sur 7 », puis le 16 = « 3 soirs sur 7 · 3 d'affilée »).
+- **Pas publié** : en attente du go de Seb (poussée sur main + vérification en ligne). Fichiers : `src/components/CarteRoutineSoir.tsx`, `src/components/RoutineSoir.tsx`.
+
 ## 17 octobre 2026 : une image à chaque mouvement
 
 - Inventaire : les 275 exercices de la bibliothèque avaient déjà leur image ; les trous étaient dans les listes de mouvements (cardio « Tapis ou rameur », balancements de jambe du jeudi, `ECHAUFFEMENT` et `RETOUR_CALME` d'usage de la séance libre).
