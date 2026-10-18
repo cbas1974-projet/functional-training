@@ -19,6 +19,15 @@ Claude, de son côté :
 4. Résume en quelques lignes simples ce qui attend, propose par quoi
    commencer, et attend le feu vert de Sébastien avant les gros changements.
 
+## Backlog (sorti du registre le 2026-10-16, décision Seb)
+
+- **Ex-CH-0122** : routine du soir plus courte (viser 5-6 min, au lieu de 10) et des listes qui tournent, pour qu'elle ne soit plus toujours pareille. Noté en piste le 14-15 octobre 2026, pas fait. Source : la section « Pistes » ci-dessous.
+
+## 17 octobre 2026 : une image à chaque mouvement
+
+- Inventaire : les 275 exercices de la bibliothèque avaient déjà leur image ; les trous étaient dans les listes de mouvements (cardio « Tapis ou rameur », balancements de jambe du jeudi, `ECHAUFFEMENT` et `RETOUR_CALME` d'usage de la séance libre).
+- 10 images créées (OpenAI, voir `IMAGES.md`) et branchées par `exerciceId` ; `VERSION_IMAGES` monté à 6 ; 2 tests ajoutés (chaque mouvement a une image qui existe). Vérifié à l'écran en 375 px : le rameur à l'échauffement et le balancement du jeudi. Publication : en attente du go de Seb.
+
 ## 14 et 15 octobre 2026
 
 - **Le jeudi** (programme version 11) : la planche de Copenhague sort du

@@ -3,9 +3,11 @@ import {
   CONSIGNE_GENOU,
   CONSIGNE_PAUSE_EN_HAUT,
   CONSIGNE_SANS_PAUSE,
+  ECHAUFFEMENT,
   EXERCICES,
   EXERCICES_PAR_ID,
   POSTERS,
+  RETOUR_CALME,
   consignesDe,
 } from './exercices';
 import { EXERCICES_ETIREMENTS } from './etirements';
@@ -36,6 +38,13 @@ describe('bibliothèque d’exercices', () => {
     expect(manquantes).toEqual([]);
   });
 
+  it('montre une image à chaque mouvement de l’échauffement et du retour au calme d’usage', () => {
+    const sansImage = [...ECHAUFFEMENT, ...RETOUR_CALME]
+      .filter((m) => !m.exerciceId || !FICHIERS.has(`${m.exerciceId}.png`))
+      .map((m) => m.nom);
+    expect(sansImage).toEqual([]);
+  });
+
   it('a une image pour chaque poster annoncé', () => {
     const manquants = POSTERS.filter((p) => !FICHIERS.has(`${p.id}.jpg`)).map((p) => p.id);
     expect(manquants).toEqual([]);
@@ -48,6 +57,8 @@ describe('bibliothèque d’exercices', () => {
       // Les images de l'échauffement à l'élastique et du chien d'arrêt au sol
       // (15 octobre 2026) : montrées sans fiche dans la bibliothèque.
       ...['band-dislocate', 'band-external-rotation', 'band-face-pull', 'band-glute-bridge', 'band-good-morning', 'band-lateral-walk', 'band-pull-apart', 'band-squat', 'bird-dog'].map((id) => `${id}.png`),
+      // L'échauffement et le retour au calme d'usage, et le cardio du programme (17 octobre 2026).
+      ...['rameur', 'balancement-jambe', 'rotations-nuque', 'cercles-epaules', 'cercles-bras', 'rotations-poignets-chevilles', 'rotations-bassin', 'squat-a-vide', 'fentes-a-vide', 'respiration-lente'].map((id) => `${id}.png`),
     ]);
     expect([...FICHIERS].filter((f) => !connus.has(f)).sort()).toEqual([]);
   });

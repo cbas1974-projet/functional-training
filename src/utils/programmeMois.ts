@@ -1300,6 +1300,7 @@ const CARDIO: MouvementGuide = {
   nom: 'Tapis ou rameur',
   consigne: 'Rythme facile : on peut parler, le souffle monte un peu.',
   dureeSec: 5 * 60,
+  exerciceId: 'rameur',
 };
 
 /** … puis quatre mouvements actifs, à la grande boucle élastique, choisis
@@ -1338,7 +1339,7 @@ const MOUVEMENTS_LEGERS: Record<Gabarit, MouvementGuide[]> = {
   dure: [PASSAGE_EPAULES, MARCHE_LATERALE, GOOD_MORNING, SQUAT_ELASTIQUE],
   bas: [
     // Une jambe, puis l'autre : 20 s, 5 s pour changer, 20 s — les 45 s d'un mouvement.
-    ...deuxCotes('Balancements de jambe', 'Une main au mur : d’avant en arrière, puis de côté.', (MOUVEMENT_SEC - CHANGER_DE_COTE_SEC) / 2),
+    ...deuxCotes('Balancements de jambe', 'Une main au mur : d’avant en arrière, puis de côté.', (MOUVEMENT_SEC - CHANGER_DE_COTE_SEC) / 2, 'balancement-jambe'),
     MARCHE_LATERALE,
     SQUAT_ELASTIQUE,
     PONT_ELASTIQUE,

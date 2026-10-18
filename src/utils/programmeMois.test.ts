@@ -1312,6 +1312,12 @@ describe('la séance de chacun', () => {
       [5, true],
       [20, false],
     ]);
+    // Une image à chaque temps : le rameur, et le balancement des deux côtés.
+    for (const seance of [lundi, mardi, jeudi]) {
+      expect(echauffementDe(seance).filter((m) => !m.exerciceId).map((m) => m.nom)).toEqual([]);
+    }
+    expect(echauffementDe(lundi)[0].exerciceId).toBe('rameur');
+    expect(echauffementDe(jeudi).slice(1, 4).map((m) => m.exerciceId)).toEqual(Array(3).fill('balancement-jambe'));
     // Le même pour les deux, à la même durée.
     expect(seancePourPersonne(jeudi, PARAMETRES, DUO_SEB, LUNDI).echauffement).toEqual(
       seancePourPersonne(jeudi, PARAMETRES, DUO_MAX, LUNDI).echauffement,

@@ -2017,7 +2017,7 @@ const IMAGES_INTEGREES: Record<string, string> | undefined = (
 /** Version des vignettes : à changer quand des images sont redécoupées. Le
  *  site les fait garder une semaine en cache ; sans elle, les téléphones
  *  montreraient encore les anciennes. */
-const VERSION_IMAGES = 5;
+const VERSION_IMAGES = 6;
 
 /** Chemin public d'une vignette d'exercice (respecte la base Vite). */
 export const cheminImage = (exerciceId: string): string =>
@@ -2067,28 +2067,30 @@ export const POSTERS: { id: string; nom: string; chemin: string }[] = [
 export interface MouvementLibre {
   nom: string;
   consigne: string;
+  /** L'image à montrer (un fichier de `public/exercices/`). */
+  exerciceId?: string;
 }
 
 /** Échauffement articulaire, sans charge, du haut vers le bas. */
 export const ECHAUFFEMENT: MouvementLibre[] = [
-  { nom: 'Rotations de la nuque', consigne: 'Lentement, dans les deux sens, sans forcer.' },
-  { nom: 'Cercles d’épaules', consigne: 'Vers l’arrière puis vers l’avant, grande amplitude.' },
-  { nom: 'Cercles de bras', consigne: 'Bras tendus, petits puis grands cercles.' },
-  { nom: 'Rotations des poignets et des chevilles', consigne: 'Dans les deux sens, mains jointes puis pied levé.' },
-  { nom: 'Rotations du bassin', consigne: 'Mains sur les hanches, grands cercles.' },
-  { nom: 'Chat-vache', consigne: 'À quatre pattes, arrondir puis creuser le dos en respirant.' },
-  { nom: 'Squats à vide', consigne: 'Lents, aussi bas que le genou le permet, talons au sol.' },
-  { nom: 'Fentes dynamiques', consigne: 'En alternant, buste droit, sans charge.' },
+  { nom: 'Rotations de la nuque', consigne: 'Lentement, dans les deux sens, sans forcer.', exerciceId: 'rotations-nuque' },
+  { nom: 'Cercles d’épaules', consigne: 'Vers l’arrière puis vers l’avant, grande amplitude.', exerciceId: 'cercles-epaules' },
+  { nom: 'Cercles de bras', consigne: 'Bras tendus, petits puis grands cercles.', exerciceId: 'cercles-bras' },
+  { nom: 'Rotations des poignets et des chevilles', consigne: 'Dans les deux sens, mains jointes puis pied levé.', exerciceId: 'rotations-poignets-chevilles' },
+  { nom: 'Rotations du bassin', consigne: 'Mains sur les hanches, grands cercles.', exerciceId: 'rotations-bassin' },
+  { nom: 'Chat-vache', consigne: 'À quatre pattes, arrondir puis creuser le dos en respirant.', exerciceId: 'etir-dos-rond-quatre-pattes' },
+  { nom: 'Squats à vide', consigne: 'Lents, aussi bas que le genou le permet, talons au sol.', exerciceId: 'squat-a-vide' },
+  { nom: 'Fentes dynamiques', consigne: 'En alternant, buste droit, sans charge.', exerciceId: 'fentes-a-vide' },
 ];
 
 /** Retour au calme : étirements doux, 20 à 30 s par position, sans à-coups. */
 export const RETOUR_CALME: MouvementLibre[] = [
-  { nom: 'Respiration lente', consigne: 'Debout ou assis, inspirer 4 s, expirer 6 s.' },
-  { nom: 'Étirement des pectoraux', consigne: 'Avant-bras contre un mur, tourner doucement le buste.' },
-  { nom: 'Étirement des triceps', consigne: 'Main derrière la tête, tirer doucement le coude.' },
-  { nom: 'Étirement des avant-bras', consigne: 'Bras tendu, tirer les doigts vers soi puis vers le bas.' },
-  { nom: 'Étirement des ischio-jambiers', consigne: 'Jambe tendue sur un appui, dos plat.' },
-  { nom: 'Étirement des quadriceps', consigne: 'Debout, talon vers la fesse, genoux serrés.' },
-  { nom: 'Étirement des fessiers', consigne: 'Assis, cheville sur le genou opposé, buste vers l’avant.' },
-  { nom: 'Étirement des mollets', consigne: 'Mains contre un mur, jambe arrière tendue, talon au sol.' },
+  { nom: 'Respiration lente', consigne: 'Debout ou assis, inspirer 4 s, expirer 6 s.', exerciceId: 'respiration-lente' },
+  { nom: 'Étirement des pectoraux', consigne: 'Avant-bras contre un mur, tourner doucement le buste.', exerciceId: 'etir-pectoral-montant' },
+  { nom: 'Étirement des triceps', consigne: 'Main derrière la tête, tirer doucement le coude.', exerciceId: 'etir-triceps-nuque' },
+  { nom: 'Étirement des avant-bras', consigne: 'Bras tendu, tirer les doigts vers soi puis vers le bas.', exerciceId: 'etir-avant-bras-flechisseurs' },
+  { nom: 'Étirement des ischio-jambiers', consigne: 'Jambe tendue sur un appui, dos plat.', exerciceId: 'etir-ischios-debout' },
+  { nom: 'Étirement des quadriceps', consigne: 'Debout, talon vers la fesse, genoux serrés.', exerciceId: 'etir-quadriceps-debout' },
+  { nom: 'Étirement des fessiers', consigne: 'Assis, cheville sur le genou opposé, buste vers l’avant.', exerciceId: 'etir-fessier-chiffre-4' },
+  { nom: 'Étirement des mollets', consigne: 'Mains contre un mur, jambe arrière tendue, talon au sol.', exerciceId: 'etir-mollet-mur' },
 ];
