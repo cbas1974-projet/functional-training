@@ -2121,7 +2121,7 @@ describe('les précautions : arrêt en bas', () => {
     'single-leg-deadlift-db', 'woodchop', 'kb-wood-chop',
   ];
   const POUR_LES_GENOUX = [
-    'squat', 'goblet-squat', 'kb-goblet-squat', 'sumo-squat', 'thruster', 'kb-thruster', 'hack-squat', 'leg-press',
+    'squat', 'goblet-squat', 'kb-goblet-squat', 'sumo-squat', 'thruster', 'kb-thruster', 'hack-squat', 'leg-press', 'front-squat',
     'reverse-lunge', 'kb-lunge', 'elevated-reverse-lunge', 'step-up', 'side-lunge', 'kb-side-lunge', 'curtsy-lunge',
     'kb-wall-squat-press', 'kb-lunge-press', 'kb-rotating-side-lunge-press', 'leg-extension-machine', 'leg-extension',
     // Les squats et fentes avancés ou mis de côté, qui tenaient encore en bas :

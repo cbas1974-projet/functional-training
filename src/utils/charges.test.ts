@@ -175,9 +175,9 @@ describe('le bug du 13 octobre 2026 : les 70 % qui collent, sans douleur', () =>
 });
 
 describe('de chaque côté', () => {
-  it('la trap bar, la presse et le hack squat se chargent des deux côtés, et eux seuls', () => {
+  it('la trap bar, la presse, le hack squat et le squat avant se chargent des deux côtés, et eux seuls', () => {
     const parCote = EXERCICES.filter((exercice) => exercice.chargeParCote).map((exercice) => exercice.id);
-    expect(parCote.sort()).toEqual(['hack-squat', 'leg-press', 'trap-bar-deadlift']);
+    expect(parCote.sort()).toEqual(['front-squat', 'hack-squat', 'leg-press', 'trap-bar-deadlift']);
   });
 
   it('« soit 35 lb de chaque côté » : la moitié des disques', () => {

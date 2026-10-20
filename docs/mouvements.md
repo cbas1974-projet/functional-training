@@ -35,7 +35,7 @@ Tous les autres montent et descendent : le tempo est leur geste, on le garde.
 
 ## Le métronome, exercice par exercice
 
-Ce que dit le métronome de la séance guidée pour chacun des 157 exercices de musculation,
+Ce que dit le métronome de la séance guidée pour chacun des 158 exercices de musculation,
 au tempo par défaut (3 s / 3 s + 1 s), sur une série de 8 répétitions
 (8 de chaque côté pour un exercice unilatéral). Chaque ligne est lue dans le vrai métronome :
 les mots, leurs secondes, le changement de côté et la durée de la série sont ceux de l’application.
@@ -156,7 +156,7 @@ les mots, leurs secondes, le changement de côté et la durée de la série sont
 | `kb-rear-fly` | Oiseau (écarté buste penché) au kettlebell | MONTE 3 s → DESCENDS 3 s | 8 rép. | 48 s | Sans arrêt en bas : le dos. |
 | `superman` | Superman, sans poids | MONTE 3 s → TIENS 1 s → DESCENDS 3 s | 8 rép. | 56 s | Tenu en haut : la position basse est un repos. |
 
-## Bas du corps (40)
+## Bas du corps (41)
 
 | id | Nom | Une répétition | Côtés, sur une série de 8 | Série | Pourquoi |
 |---|---|---|---|---|---|
@@ -196,6 +196,7 @@ les mots, leurs secondes, le changement de côté et la durée de la série sont
 | `trap-bar-deadlift` | Soulevé de terre à la trap bar | MONTE 3 s → DESCENDS 3 s | 8 rép. | 48 s | Sans arrêt en bas : le dos. |
 | `leg-press` | Presse à cuisses | DESCENDS 3 s → MONTE 3 s | 8 rép. | 48 s | Sans arrêt en bas : le genou. Part d’en haut : on descend d’abord. |
 | `hack-squat` | Hack squat | DESCENDS 3 s → MONTE 3 s | 8 rép. | 48 s | Sans arrêt en bas : le genou. Part d’en haut : on descend d’abord. |
+| `front-squat` | Squat avant, bras croisés | DESCENDS 3 s → MONTE 3 s | 8 rép. | 48 s | Sans arrêt en bas : le genou. Part d’en haut : on descend d’abord. |
 | `leg-extension-machine` | Extension des jambes à la machine | MONTE 3 s → DESCENDS 3 s | 8 rép. | 48 s | Sans arrêt en bas : le genou. Ni tenu jambes tendues : sur une machine assise, la rotule y est la plus chargée — les genoux de Big Max (avant : TIENS 1 s jambes tendues). |
 | `leg-curl-machine` | Flexion des jambes couché, à la machine | MONTE 3 s → TIENS 1 s → DESCENDS 3 s | 8 rép. | 56 s | Tenu en haut : la position basse est un repos. |
 | `seated-calf-raise` | Mollets assis, à la machine | MONTE 3 s → DESCENDS 3 s → TIENS 1 s | 8 rép. | 56 s | Tenu en bas, comme le mollet sur une marche : les talons sous la marche, le mollet s’étire sous la charge. |

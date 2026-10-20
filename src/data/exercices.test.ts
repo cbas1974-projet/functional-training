@@ -238,10 +238,10 @@ describe('où se tient l’arrêt du tempo', () => {
 });
 
 describe('machines de la salle', () => {
-  it('compte sept machines et le sac de sable de la finale, chacun avec son dessin', () => {
+  it('compte sept machines, le squat avant et le sac de sable de la finale, chacun avec son dessin', () => {
     const machines = EXERCICES.filter((e) => e.materiel === 'salle').map((e) => e.id);
     expect(machines).toEqual([
-      'trap-bar-deadlift', 'leg-press', 'hack-squat', 'traineau', 'leg-extension-machine', 'leg-curl-machine',
+      'trap-bar-deadlift', 'leg-press', 'hack-squat', 'front-squat', 'traineau', 'leg-extension-machine', 'leg-curl-machine',
       'seated-calf-raise', 'sandbag-carry',
     ]);
     for (const id of machines) expect(FICHIERS.has(`${id}.png`), id).toBe(true);
