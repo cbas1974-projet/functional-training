@@ -333,8 +333,9 @@ export const pointsFaiblesDe = (programme: Pick<ProgrammeMois, 'duo'>): Record<P
  *  jeudi (14 octobre 2026), le squat cosaque à la place de la planche de
  *  Copenhague et la montée sur marche à la place des mollets ; 12 = le
  *  programme sur mesure de Sébastien (22 octobre 2026, `PROGRAMME_SUR_MESURE`),
- *  ses cinq séances écrites telles quelles, à huit exercices. */
-export const VERSION_PROGRAMME = 12;
+ *  ses cinq séances écrites telles quelles, à huit exercices ; 13 = l'exercice
+ *  seul au début de chaque séance (23 octobre 2026). */
+export const VERSION_PROGRAMME = 13;
 
 /** Une séance écrite à la main : ses paires, dans l'ordre, puis les exercices
  *  seuls, puis le dernier (seul aussi). */
@@ -399,7 +400,7 @@ function seancesSurMesure(): SeanceDuMois[] {
   const parJour = { lundi: [1, 'tout le corps', 'dure', 'complet'], mardi: [2, 'le haut', 'facile', 'haut'], jeudi: [4, 'les jambes', 'facile', 'bas'] } as const;
   return PROGRAMME_SUR_MESURE.map((s) => {
     const [jour, partieNom, type, partie] = parJour[s.jourNom];
-    const exercices = [...s.paires.flat(), ...s.seuls];
+    const exercices = [...s.seuls, ...s.paires.flat()];
     const tour = [...exercices, s.dernier].filter((id) => EXERCICES_PAR_ID[id]?.materiel === 'salle');
     return rangee({
       ...enteteDe(s.jourNom, partieNom, jour, s.semaine, type, partie),

@@ -2613,9 +2613,9 @@ describe('le lien court : la recette du programme, et les retouches', () => {
     expect(avecEquipe.equipe).toBe(equipeDe(p));
     const lien = lienDePartage(avecEquipe, SITE, SERVEUR);
     // https://sgtraining.netlify.app/#programme=b.19xy8w4.g01.….ep1fi6cbe20261005.ssrv123~hstgr~cloud
-    // — la version 12, « c » en base 36.
-    expect(VERSION_PROGRAMME).toBe(12);
-    expect(lien).toMatch(/^https:\/\/sgtraining\.netlify\.app\/#programme=c\.[0-9a-z]+\.[0-9a-z]+\.[0-9a-z]{4}\.ep[0-9a-z]+20261005\.ssrv123~hstgr~cloud$/);
+    // — la version 13, « d » en base 36.
+    expect(VERSION_PROGRAMME).toBe(13);
+    expect(lien).toMatch(/^https:\/\/sgtraining\.netlify\.app\/#programme=d\.[0-9a-z]+\.[0-9a-z]+\.[0-9a-z]{4}\.ep[0-9a-z]+20261005\.ssrv123~hstgr~cloud$/);
     expect(lien.length).toBeLessThan(200);
     expect(programmeDansLien(new URL(lien).hash, SERVEUR)).toEqual(avecEquipe);
     // Le serveur du site ne s'écrit pas en entier : une lettre.
