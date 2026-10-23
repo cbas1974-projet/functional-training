@@ -1,4 +1,8 @@
 import { describe, expect, it } from 'vitest';
+import { avecSurMesure } from './programmeMois';
+
+// Ces tests décrivent les règles du générateur, sans le programme sur mesure.
+avecSurMesure(false);
 import type { Exercice, ParametresSeance, ProgrammeMois, SeanceDuMois, SeanceRealisee } from '../types';
 import { EXERCICES_PAR_ID } from '../data/exercices';
 import { PARAMETRES_PAR_DEFAUT, TEMPOS } from '../data/parametres';
@@ -2609,9 +2613,9 @@ describe('le lien court : la recette du programme, et les retouches', () => {
     expect(avecEquipe.equipe).toBe(equipeDe(p));
     const lien = lienDePartage(avecEquipe, SITE, SERVEUR);
     // https://sgtraining.netlify.app/#programme=b.19xy8w4.g01.….ep1fi6cbe20261005.ssrv123~hstgr~cloud
-    // — la version 11, « b » en base 36.
-    expect(VERSION_PROGRAMME).toBe(11);
-    expect(lien).toMatch(/^https:\/\/sgtraining\.netlify\.app\/#programme=b\.[0-9a-z]+\.[0-9a-z]+\.[0-9a-z]{4}\.ep[0-9a-z]+20261005\.ssrv123~hstgr~cloud$/);
+    // — la version 12, « c » en base 36.
+    expect(VERSION_PROGRAMME).toBe(12);
+    expect(lien).toMatch(/^https:\/\/sgtraining\.netlify\.app\/#programme=c\.[0-9a-z]+\.[0-9a-z]+\.[0-9a-z]{4}\.ep[0-9a-z]+20261005\.ssrv123~hstgr~cloud$/);
     expect(lien.length).toBeLessThan(200);
     expect(programmeDansLien(new URL(lien).hash, SERVEUR)).toEqual(avecEquipe);
     // Le serveur du site ne s'écrit pas en entier : une lettre.

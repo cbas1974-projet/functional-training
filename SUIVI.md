@@ -19,6 +19,27 @@ Claude, de son côté :
 4. Résume en quelques lignes simples ce qui attend, propose par quoi
    commencer, et attend le feu vert de Sébastien avant les gros changements.
 
+## 22 octobre 2026 : le programme sur mesure (codé le 22 au soir, PAS publié)
+
+- **Fait** : `PROGRAMME_SUR_MESURE` dans `src/utils/programmeMois.ts` (les 5 séances écrites telles quelles) remplace la sortie du générateur à 8 exercices + alternance, quelle que soit la graine ; version du programme 11 → 12 (un programme v11 est recomposé : même graine, même premier lundi, charges et historique intacts, retouches à la main perdues). Nouvel exercice `band-pull-apart` (écarté à l'élastique, l'image existait). Tests : `programmeSurMesure.test.ts` (4) ; les anciens tests du générateur tournent sans le sur mesure (`avecSurMesure(false)` en tête de `programmeMois`, `unTelephone`, `explosifsAuTemps`, `storage`) ; compteurs 158 → 159 (`muscles`, `tableauMouvements`, `docs/mouvements.md` régénéré) ; lien court « c. ». vitest 1081/1081, tsc et eslint verts.
+- **Vu à 375 px** (dev) : Jeudi A = cosaque + rowing incliné · extension + flexion (chacun son tour) · rowing 1 bras KB + chaise au mur · swing seul · curl marteau dernier · traîneau ; démarré jusqu'au 1er exercice. Pendant l'exercice, la barre du bas montre « Ensuite · … » (visible) ; la liste complète « Ensuite » est plus bas (défiler).
+- **Pas fait** : mini-finale gainage du lundi (planche + bird dog) ; le texte d'intro dit encore « le premier exercice se fait seul » ; un avertissement « deux fois le bas du corps » s'affiche sur la paire des machines.
+- **Pas vérifié** : que la semaine du 19 octobre est bien A sur le téléphone de Seb (dépend du premier lundi enregistré ; dans le navigateur de test, aujourd'hui = semaine B → choisir « Jeu A » à la main si besoin).
+
+### La décision (avant le code)
+
+- **Décision de Seb** : ses 5 séances deviennent le programme officiel, écrites telles quelles (un « programme sur mesure » fixe, pas de retouche du générateur de `programmeMois.ts`). Page de référence : [docs/jeudi.html](docs/jeudi.html) (Jeudi A/B en images + pourcentages) ; autres pages : `docs/mes-seances-choisies.html`, `docs/mes-ajouts.html`, `docs/plan-jambes.html`.
+- **Les séances** (8 exercices chacune ; jambes ≤ 50 % le lundi et le jeudi, ~25 % le mardi ; swing compté à part) :
+  - **Lundi** : Superman + fente latérale · Arnold + rowing incliné · planche latérale + développé incliné · trap bar · hack squat · + mini-finale gainage 2 min (planche + bird dog).
+  - **Mardi A** : mollets assis + développé serré poitrine · planche latérale + rowing vertical · curl alterné + pont fessier · développé couché haltères · extension triceps au-dessus de la tête.
+  - **Mardi B** : élévation des mollets + élévation latérale KB · planche latérale + élévation en T au sol · curl supination + pont fessier · développé couché · extension triceps KB.
+  - **Jeudi A** : cosaque + rowing incliné · extension + flexion à la machine · rowing un bras KB + chaise au mur · swing à deux mains · curl marteau. Finale traîneau.
+  - **Jeudi B** : cosaque + élévation frontale alternée · extension + flexion à la machine · oiseau + écarté à l'élastique · swing · bouche d'incendie. Finale traîneau.
+  - Pas de paire de machines au mardi (Seb : le mardi suit le lundi de jambes).
+- **À faire (demain matin, avant la séance du vendredi 23 octobre = Jeudi A)** : coder ce programme sur mesure, tester que l'appli démarre, que le Jeudi A s'affiche, que l'historique et les charges sont intacts. Semaine du 19 octobre = A (non vérifié sur le téléphone).
+- **Demande de Seb (22 octobre, 23 h)** : en séance, « on ne sait pas ce qui suit, on est pogné dans l'exercice » ; **voir ce qui s'en vient** l'intéresse. Le code a déjà « Ensuite » et `ListeProgramme` (`SeanceGuidee.tsx`), mais NON VÉRIFIÉ à l'écran depuis la version exercice par exercice (13 octobre) : tester d'abord ce qui s'affiche à 375 px, puis ajouter si besoin un accès « Voir toute la séance » toujours visible.
+- **Pas vérifié** : les pourcentages sont à la main ; la finale (traîneau jeudi, marche du fermier lundi) vient du code.
+
 ## Backlog (sorti du registre le 2026-10-16, décision Seb)
 
 - **Ex-CH-0122** : routine du soir plus courte (viser 5-6 min, au lieu de 10) et des listes qui tournent, pour qu'elle ne soit plus toujours pareille. Noté en piste le 14-15 octobre 2026, pas fait. Source : la section « Pistes » ci-dessous.

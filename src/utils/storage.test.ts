@@ -1,4 +1,8 @@
 import { beforeEach, describe, expect, it } from 'vitest';
+import { avecSurMesure } from './programmeMois';
+
+// Ces tests décrivent les règles du générateur, sans le programme sur mesure.
+avecSurMesure(false);
 import type { EntrainementState } from '../types';
 import { PARAMETRES_PAR_DEFAUT } from '../data/parametres';
 import { chargerEtat, enregistrerEtat } from './storage';

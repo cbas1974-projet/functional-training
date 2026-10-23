@@ -336,6 +336,29 @@ export const EXERCICES: Exercice[] = [
     ],
   },
   {
+    // Ajouté au programme sur mesure du Jeudi B (22 octobre 2026) ; l'image
+    // servait déjà à l'échauffement du mardi.
+    id: 'band-pull-apart',
+    nomFr: 'Écarté à l’élastique',
+    nomEn: 'Band Pull-Apart',
+    zone: 'haut',
+    groupe: 'epaules',
+    muscles: 'Deltoïdes postérieurs, haut du dos',
+    musclesPrincipaux: ['epaules', 'dorsaux'],
+    musclesSecondaires: ['trapezes'],
+    materiel: 'elastique',
+    pattern: 'isolation',
+    niveauMin: 1,
+    cotes: 'bilateral',
+    unite: 'reps',
+    position: 'Debout',
+    pointsAttention: [
+      'Bras tendus devant, à hauteur d’épaules.',
+      'Ouvrir en serrant les omoplates, sans hausser les épaules.',
+      'Revenir lentement, l’élastique toujours un peu tendu.',
+    ],
+  },
+  {
     id: 'reverse-fly',
     nomFr: 'Oiseau (écarté buste penché)',
     nomEn: 'Reverse Fly',

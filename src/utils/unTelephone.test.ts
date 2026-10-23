@@ -5,6 +5,10 @@
 // A, B sans pause entre les tours ; un exercice seul, chacun son tour, une
 // pause d'un toucher entre les tours, quand on veut.
 import { describe, expect, it } from 'vitest';
+import { avecSurMesure } from './programmeMois';
+
+// Ces tests décrivent les règles du générateur, sans le programme sur mesure.
+avecSurMesure(false);
 import type { ParametresSeance, ProgressionSeance, Ressenti, SeanceDuMois } from '../types';
 import { PARAMETRES_PAR_DEFAUT } from '../data/parametres';
 import { EXERCICES_PAR_ID } from '../data/exercices';

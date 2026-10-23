@@ -5,6 +5,10 @@
 // en séance libre — et hors du programme du mois, sauf le swing à deux mains,
 // qui ouvre le jeudi.
 import { describe, expect, it } from 'vitest';
+import { avecSurMesure } from './programmeMois';
+
+// Ces tests décrivent les règles du générateur, sans le programme sur mesure.
+avecSurMesure(false);
 import type { Etape } from './etapesSeance';
 import type { BlocSeries, FormatSeance, Niveau, Seance, SeanceDuMois, SeanceRealisee, StyleCircuit } from '../types';
 import { CONSIGNE_EXPLOSIF_AU_TEMPS, EXERCICES, EXERCICES_PAR_ID, consignesDe } from '../data/exercices';

@@ -35,7 +35,7 @@ Tous les autres montent et descendent : le tempo est leur geste, on le garde.
 
 ## Le métronome, exercice par exercice
 
-Ce que dit le métronome de la séance guidée pour chacun des 158 exercices de musculation,
+Ce que dit le métronome de la séance guidée pour chacun des 159 exercices de musculation,
 au tempo par défaut (3 s / 3 s + 1 s), sur une série de 8 répétitions
 (8 de chaque côté pour un exercice unilatéral). Chaque ligne est lue dans le vrai métronome :
 les mots, leurs secondes, le changement de côté et la durée de la série sont ceux de l’application.
@@ -53,7 +53,7 @@ les mots, leurs secondes, le changement de côté et la durée de la série sont
   sauts et le burpee), de chaque côté avec CHANGE DE CÔTÉ 5 s pour un seul bras ; à son rythme, léger, un décompte
   et pas de métronome. `jump-squat`, `swing`, `dumbbell-burpee`, `high-pull`, `dumbbell-snatch`, `kb-side-swing`, `kb-double-arm-swing`, `kb-single-arm-swing`, `kb-snatch`, `kb-clean`, `kb-golfer-swing`, `kb-jump-squat`, `kb-frog-jump`, `kb-power-jump-squat`, `kb-speed-skater`, `kb-log-jump`.
 
-## Haut du corps (42)
+## Haut du corps (43)
 
 | id | Nom | Une répétition | Côtés, sur une série de 8 | Série | Pourquoi |
 |---|---|---|---|---|---|
@@ -71,6 +71,7 @@ les mots, leurs secondes, le changement de côté et la durée de la série sont
 | `bench-press` | Développé couché avec haltères | DESCENDS 3 s → TIENS 1 s → MONTE 3 s | 8 rép. | 56 s | Part d’en haut : on descend d’abord. |
 | `incline-bench-press` | Développé incliné | DESCENDS 3 s → TIENS 1 s → MONTE 3 s | 8 rép. | 56 s | Part d’en haut : on descend d’abord. |
 | `chest-fly` | Écarté couché | DESCENDS 3 s → TIENS 1 s → MONTE 3 s | 8 rép. | 56 s | Part d’en haut : on descend d’abord. |
+| `band-pull-apart` | Écarté à l’élastique | MONTE 3 s → DESCENDS 3 s → TIENS 1 s | 8 rép. | 56 s |  |
 | `reverse-fly` | Oiseau (écarté buste penché) | MONTE 3 s → DESCENDS 3 s | 8 rép. | 48 s | Sans arrêt en bas : le dos. |
 | `alternating-curl` | Curl alterné | MONTE 3 s → DESCENDS 3 s → TIENS 1 s | 16 rép. en alternant : un côté par rép., 8 de chaque côté | 1 min 52 s |  |
 | `zottman-curl` | Curl Zottman | MONTE 3 s → DESCENDS 3 s → TIENS 1 s | 8 rép. | 56 s |  |

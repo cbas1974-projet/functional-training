@@ -23,7 +23,7 @@ describe('le tableau des mouvements (docs/mouvements.md)', () => {
     expect(TEMPO_TABLEAU).toEqual({ monteeSec: 3, descenteSec: 3, pauseSec: 1 });
     expect(REPS_TABLEAU).toBe(8);
     const exercices = exercicesDuTableau();
-    expect(exercices).toHaveLength(158);
+    expect(exercices).toHaveLength(159);
     const tableau = tableauDesMouvements();
     for (const exercice of exercices) {
       expect(tableau.match(new RegExp(`^\\| \`${exercice.id}\` \\|`, 'gm')), exercice.id).toHaveLength(1);

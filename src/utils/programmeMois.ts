@@ -331,8 +331,86 @@ export const pointsFaiblesDe = (programme: Pick<ProgrammeMois, 'duo'>): Record<P
  *  épaules, un tirage chaque jour, la marche du fermier et le traîneau à la
  *  finale de dix minutes, trois séries pour les deux par défaut ; 11 = le
  *  jeudi (14 octobre 2026), le squat cosaque à la place de la planche de
- *  Copenhague et la montée sur marche à la place des mollets. */
-export const VERSION_PROGRAMME = 11;
+ *  Copenhague et la montée sur marche à la place des mollets ; 12 = le
+ *  programme sur mesure de Sébastien (22 octobre 2026, `PROGRAMME_SUR_MESURE`),
+ *  ses cinq séances écrites telles quelles, à huit exercices. */
+export const VERSION_PROGRAMME = 12;
+
+/** Une séance écrite à la main : ses paires, dans l'ordre, puis les exercices
+ *  seuls, puis le dernier (seul aussi). */
+interface SeanceSurMesure {
+  jourNom: 'lundi' | 'mardi' | 'jeudi';
+  semaine?: 'A' | 'B';
+  paires: [string, string][];
+  seuls: string[];
+  dernier: string;
+}
+
+/** Le programme sur mesure de Sébastien (22 octobre 2026, docs/jeudi.html et
+ *  docs/mes-seances-choisies.html) : à huit exercices et avec l'alternance,
+ *  il remplace les séances du générateur, quelle que soit la graine. */
+export const PROGRAMME_SUR_MESURE: readonly SeanceSurMesure[] = [
+  {
+    jourNom: 'lundi',
+    paires: [['superman', 'side-lunge'], ['arnold-press', 'incline-row'], ['side-plank', 'incline-bench-press']],
+    seuls: ['trap-bar-deadlift'],
+    dernier: 'hack-squat',
+  },
+  {
+    jourNom: 'mardi',
+    semaine: 'A',
+    paires: [['seated-calf-raise', 'chest-squeeze-press'], ['side-plank', 'upright-row'], ['alternating-curl', 'glute-bridge']],
+    seuls: ['bench-press'],
+    dernier: 'tricep-extension',
+  },
+  {
+    jourNom: 'jeudi',
+    semaine: 'A',
+    paires: [['cossack-squat', 'incline-row'], ['leg-extension-machine', 'leg-curl-machine'], ['kb-single-arm-row', 'kb-wall-squat-press']],
+    seuls: ['kb-double-arm-swing'],
+    dernier: 'hammer-curl',
+  },
+  {
+    jourNom: 'mardi',
+    semaine: 'B',
+    paires: [['calf-raise', 'kb-side-raise'], ['side-plank', 'floor-t-raise'], ['grip-curl', 'glute-bridge']],
+    seuls: ['bench-press'],
+    dernier: 'kb-tricep-extension',
+  },
+  {
+    jourNom: 'jeudi',
+    semaine: 'B',
+    paires: [['cossack-squat', 'alternating-front-raise'], ['leg-extension-machine', 'leg-curl-machine'], ['reverse-fly', 'band-pull-apart']],
+    seuls: ['kb-double-arm-swing'],
+    dernier: 'fire-hydrant',
+  },
+];
+
+let surMesureActif = true;
+/** Pour les tests qui décrivent les règles du générateur : sans le programme
+ *  sur mesure, les séances sont composées comme avant le 22 octobre 2026. */
+export function avecSurMesure(actif: boolean): void {
+  surMesureActif = actif;
+}
+
+/** Les séances du programme sur mesure, au format du programme. Chacun son
+ *  tour : les exercices à la machine de la salle, comme le générateur. */
+function seancesSurMesure(): SeanceDuMois[] {
+  const parJour = { lundi: [1, 'tout le corps', 'dure', 'complet'], mardi: [2, 'le haut', 'facile', 'haut'], jeudi: [4, 'les jambes', 'facile', 'bas'] } as const;
+  return PROGRAMME_SUR_MESURE.map((s) => {
+    const [jour, partieNom, type, partie] = parJour[s.jourNom];
+    const exercices = [...s.paires.flat(), ...s.seuls];
+    const tour = [...exercices, s.dernier].filter((id) => EXERCICES_PAR_ID[id]?.materiel === 'salle');
+    return rangee({
+      ...enteteDe(s.jourNom, partieNom, jour, s.semaine, type, partie),
+      format: 'series',
+      exercices,
+      finale: s.dernier,
+      liens: s.paires.map((p) => [...p]),
+      ...(tour.length > 0 ? { tour } : {}),
+    });
+  });
+}
 
 /** La durée inscrite dans les réglages d'une séance du programme ; la vraie
  *  est celle de ses étapes. */
@@ -1609,12 +1687,17 @@ export function genererProgramme(options: OptionsProgramme = {}): ProgrammeMois 
   const mardiA = composer('haut', [], lundi);
   const jeudiA = composer('bas', [], lundi);
   const semaineB = alternance ? { mardi: composer('haut', mardiA, lundi), jeudi: composer('bas', jeudiA, lundi) } : null;
-  const seances: SeanceDuMois[] = [
-    seanceDe(enteteDe('lundi', 'tout le corps', 1, undefined, 'dure', 'complet'), 'dure', lundi),
-    seanceDe(mardi(semaineA), 'haut', mardiA),
-    seanceDe(jeudi(semaineA), 'bas', jeudiA),
-    ...(semaineB ? [seanceDe(mardi('B'), 'haut', semaineB.mardi), seanceDe(jeudi('B'), 'bas', semaineB.jeudi)] : []),
-  ];
+  // Huit exercices et l'alternance : le programme sur mesure de Sébastien
+  // (22 octobre 2026) remplace les séances composées.
+  const seances: SeanceDuMois[] =
+    surMesureActif && alternance && nombre === EXERCICES_PAR_DEFAUT
+      ? seancesSurMesure()
+      : [
+          seanceDe(enteteDe('lundi', 'tout le corps', 1, undefined, 'dure', 'complet'), 'dure', lundi),
+          seanceDe(mardi(semaineA), 'haut', mardiA),
+          seanceDe(jeudi(semaineA), 'bas', jeudiA),
+          ...(semaineB ? [seanceDe(mardi('B'), 'haut', semaineB.mardi), seanceDe(jeudi('B'), 'bas', semaineB.jeudi)] : []),
+        ];
 
   return {
     debut: isoDate(premiereSemaine(options.aujourdhui ?? new Date(), seances)),
