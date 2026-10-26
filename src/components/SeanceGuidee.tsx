@@ -10,6 +10,7 @@
 // tout ce qui se compte. Chaque phase a sa couleur d'ambiance, reconnaissable
 // d'un coup d'œil à bout de bras.
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import { envoyerImageSeance, type IssueEnvoi } from '../utils/imageSeance';
 import type { ChangeEvent, CSSProperties, ReactNode, Ref } from 'react';
 import type {
   BlocSeries,
@@ -3648,6 +3649,36 @@ export interface ListeProgrammeProps {
   onPasser: () => void;
 }
 
+/** « Envoyer à Max » : l'image de la séance du jour, puis le partage du
+ *  téléphone — Sébastien choisit lui-même la personne, rien ne part seul. */
+function BoutonEnvoyerMax({ seance }: { seance: Seance }) {
+  const [etat, setEtat] = useState<'repos' | 'en-cours' | IssueEnvoi>('repos');
+  const envoyer = async () => {
+    setEtat('en-cours');
+    setEtat(await envoyerImageSeance(seance, seance.titre ?? 'Séance du jour'));
+  };
+  return (
+    <div className="mb-2">
+      <button
+        type="button"
+        onClick={() => void envoyer()}
+        disabled={etat === 'en-cours'}
+        className="w-full rounded-xl border px-3 py-2 text-sm font-semibold"
+        style={{ borderColor: 'var(--bordure)' }}
+      >
+        {etat === 'en-cours' ? 'Image en préparation…' : '📤 Envoyer à Max'}
+      </button>
+      {(etat === 'telecharge' || etat === 'impossible') && (
+        <p role="status" className="mt-1 text-xs">
+          {etat === 'telecharge'
+            ? 'Le partage n’existe pas ici : l’image est téléchargée, envoie-la à Max à la main.'
+            : 'Impossible de faire l’image sur cet appareil.'}
+        </p>
+      )}
+    </div>
+  );
+}
+
 /** Tout le programme du jour, en liste. */
 export function ListeProgramme(props: ListeProgrammeProps) {
   const { seance, etapes, index, colonnes, faites } = props;
@@ -3689,6 +3720,8 @@ export function ListeProgramme(props: ListeProgrammeProps) {
   const ensuite = courant === undefined ? -1 : courant + 1;
 
   return (
+    <>
+    <BoutonEnvoyerMax seance={seance} />
     <ol className="space-y-2" aria-label="Le programme du jour">
       {echauffement >= 0 && <LigneEtape nom="Échauffement" statut={statut(echauffement, echauffement)} />}
       {groupes.map((groupe, g) => {
@@ -3728,6 +3761,7 @@ export function ListeProgramme(props: ListeProgrammeProps) {
         <LigneEtape nom="Étirements" statut={statut(retourCalme, retourCalme)} ensuite={finale < 0 && ensuite === groupes.length} />
       )}
     </ol>
+    </>
   );
 }
 
