@@ -2040,7 +2040,7 @@ const IMAGES_INTEGREES: Record<string, string> | undefined = (
 /** Version des vignettes : à changer quand des images sont redécoupées. Le
  *  site les fait garder une semaine en cache ; sans elle, les téléphones
  *  montreraient encore les anciennes. */
-const VERSION_IMAGES = 10;
+const VERSION_IMAGES = 11;
 
 /** Chemin public d'une vignette d'exercice (respecte la base Vite). */
 export const cheminImage = (exerciceId: string): string =>
