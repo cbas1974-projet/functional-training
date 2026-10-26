@@ -334,8 +334,10 @@ export const pointsFaiblesDe = (programme: Pick<ProgrammeMois, 'duo'>): Record<P
  *  Copenhague et la montée sur marche à la place des mollets ; 12 = le
  *  programme sur mesure de Sébastien (22 octobre 2026, `PROGRAMME_SUR_MESURE`),
  *  ses cinq séances écrites telles quelles, à huit exercices ; 13 = l'exercice
- *  seul au début de chaque séance (23 octobre 2026). */
-export const VERSION_PROGRAMME = 13;
+ *  seul au début de chaque séance (23 octobre 2026) ; 14 = le mardi B refait
+ *  par Sébastien (26 octobre 2026) : squat sumo seul au début, mollets + T,
+ *  gobelet + curl, triceps KB + pont fessier, chien d'arrêt pour finir. */
+export const VERSION_PROGRAMME = 14;
 
 /** Une séance écrite à la main : ses paires, dans l'ordre, puis les exercices
  *  seuls, puis le dernier (seul aussi). */
@@ -374,9 +376,9 @@ export const PROGRAMME_SUR_MESURE: readonly SeanceSurMesure[] = [
   {
     jourNom: 'mardi',
     semaine: 'B',
-    paires: [['calf-raise', 'kb-side-raise'], ['side-plank', 'floor-t-raise'], ['grip-curl', 'glute-bridge']],
-    seuls: ['bench-press'],
-    dernier: 'kb-tricep-extension',
+    paires: [['calf-raise', 'floor-t-raise'], ['goblet-squat', 'grip-curl'], ['kb-tricep-extension', 'glute-bridge']],
+    seuls: ['sumo-squat'],
+    dernier: 'bird-dog',
   },
   {
     jourNom: 'jeudi',

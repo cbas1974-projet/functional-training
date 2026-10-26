@@ -290,6 +290,8 @@ describe('👎 « Pas aimé », facultatif, et l’accueil la fois suivante', ()
     avancer(700);
     cliquer(conteneur.querySelector('[aria-label="Big Max : pas aimé cet exercice"]'));
     act(() => racine.unmount());
+    // Le mardi B n'a plus de développé couché (26 octobre 2026) : on rejoue le 👎 sur son exercice seul, le squat sumo.
+    pasAimes = { pasAimesAutre: { 'sumo-squat': Object.values(pasAimes.pasAimesAutre ?? {})[0] } };
     // Le mardi d'après : l'accueil, sur le téléphone de Speedy, à deux.
     vi.setSystemTime(new Date(2026, 9, 20, 7, 0, 0));
     racine = createRoot(conteneur);
@@ -315,13 +317,13 @@ describe('👎 « Pas aimé », facultatif, et l’accueil la fois suivante', ()
     const bandeau = () => conteneur.querySelector('[role="note"]');
     expect(conteneur.querySelector('h2')?.textContent).toBe('Mardi B — le haut');
     expect(bandeau()?.textContent?.replace(/\s+/g, ' ')).toBe('👎 Pas aimé par Big MaxChanger ?Garder');
-    expect(bandeau()?.closest('li')?.textContent).toContain('Développé couché avec haltères');
+    expect(bandeau()?.closest('li')?.textContent).toContain('Squat sumo');
     // Un seul : les autres exercices n'en ont pas.
     expect(conteneur.querySelectorAll('[role="note"]')).toHaveLength(1);
     // « Changer ? » ouvre le « Changer » de cet exercice.
     cliquer(bandeau()?.querySelector('button'));
     expect(document.body.textContent).toContain('Changer d’exercice');
-    expect(document.body.textContent).toContain('À la place de Développé couché avec haltères');
+    expect(document.body.textContent).toContain('À la place de Squat sumo');
     cliquer(bouton('Terminé'));
     // « Garder » : le 👎 s'en va, et le bandeau avec.
     cliquer(bouton('Garder'));
@@ -351,5 +353,28 @@ describe('l’image d’un exercice, en grand, pendant la séance', () => {
     // Les petites images de la liste aussi : l'exercice qui vient.
     cliquer(conteneur.querySelector('button[aria-label="Voir Curl alterné en grand"]'));
     expect(document.querySelector('[role="dialog"][aria-label="Curl alterné"]')).not.toBeNull();
+  });
+});
+
+describe('l’échauffement : « Mouvement suivant » et ce qui s’en vient (26 octobre 2026)', () => {
+  it('le premier mouvement (le rameur) se saute d’un toucher : le deuxième s’affiche, le chrono avance, la liste à venir raccourcit', () => {
+    lancer();
+    avancer(700);
+    expect(phase()).toBe('Échauffement');
+    expect(texte()).toContain('À venir');
+    expect(texte()).toMatch(/1 \/ \d+/);
+    const avant = texte();
+    const nombre = Number(/1 \/ (\d+)/.exec(avant)?.[1]);
+    const minuteurAvant = conteneur.querySelector('.text-8xl')?.textContent;
+    cliquer(bouton('Mouvement suivant'));
+    avancer(200);
+    expect(texte()).toMatch(new RegExp(`2 / ${nombre}`));
+    expect(texte()).not.toMatch(/1 \/ \d+/);
+    // Le chrono de l'étape a perdu ce qui restait du premier mouvement.
+    expect(conteneur.querySelector('.text-8xl')?.textContent).not.toBe(minuteurAvant);
+    // Passer jusqu'au dernier : plus de bouton.
+    for (let i = 2; i < nombre; i += 1) cliquer(bouton('Mouvement suivant'));
+    expect(texte()).toMatch(new RegExp(`${nombre} / ${nombre}`));
+    expect(bouton('Mouvement suivant')).toBeUndefined();
   });
 });

@@ -242,7 +242,7 @@ describe('le changement de côté', () => {
     expect(EXERCICES.filter((e) => changementDeCoteSec(e) > 0 && e.unite === 'secondes').map((e) => e.id).sort()).toEqual(
       [
         'kb-turkish-get-up', 'dumbbell-snatch', 'kb-side-swing', 'kb-single-arm-swing', 'kb-snatch', 'kb-clean',
-        'kb-golfer-swing', 'copenhagen-plank', 'side-plank',
+        'kb-golfer-swing', 'copenhagen-plank', 'side-plank', 'bird-dog',
       ].sort(),
     );
     // Les positions tenues d'un côté puis de l'autre enchaînent, comme avant.

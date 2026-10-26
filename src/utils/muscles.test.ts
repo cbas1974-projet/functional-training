@@ -12,12 +12,12 @@ import {
 const MUSCULATION = EXERCICES.filter((e) => (e.famille ?? 'musculation') === 'musculation');
 
 describe('lecture des planches anatomiques', () => {
-  it('les 159 exercices chargés ont au moins un muscle principal', () => {
+  it('les 160 exercices chargés ont au moins un muscle principal', () => {
     // 77 aux haltères, 68 au kettlebell, 7 machines de la salle (la machine à
     // mollets assis depuis le 13 octobre 2026) et le sac de sable de la
     // finale, 4 au poids du corps (le Superman sans poids, la planche de
     // Copenhague, la planche et la planche latérale).
-    expect(MUSCULATION).toHaveLength(159);
+    expect(MUSCULATION).toHaveLength(160);
     const sans = MUSCULATION.filter((e) => (e.musclesPrincipaux ?? []).length === 0);
     expect(sans.map((e) => e.id)).toEqual([]);
   });

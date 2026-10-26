@@ -124,4 +124,30 @@ export const EXERCICES_POIDS_DU_CORPS: Exercice[] = [
     ],
     interetJjb: 'Le gainage de côté, quand on est écrasé sur le flanc.',
   },
+  {
+    id: 'bird-dog',
+    nomFr: 'Chien d’arrêt',
+    nomEn: 'Bird Dog',
+    zone: 'gainage',
+    groupe: 'ischios-fessiers',
+    muscles: 'Fessiers, lombaires, abdominaux, épaules',
+    // Le dos en croisé : un bras et la jambe opposée (23 octobre 2026, choix
+    // de Sébastien pour le mardi B). Tenu 30 s de chaque côté, comme la planche
+    // latérale ; l'image est celle du rowing chien d'arrêt (`bird-dog.png`).
+    musclesPrincipaux: ['lombaires', 'fessiers'],
+    musclesSecondaires: ['abdominaux', 'epaules'],
+    materiel: 'tapis',
+    pattern: 'anti-rotation',
+    niveauMin: 1,
+    cotes: 'unilateral',
+    unite: 'secondes',
+    position: 'À quatre pattes, un bras et la jambe opposée tendus',
+    pointsAttention: [
+      'À quatre pattes, mains sous les épaules, genoux sous les hanches ; un tapis sous les genoux.',
+      'Côté droit : bras droit et jambe gauche tendus, dans le prolongement du dos. Côté gauche : l’inverse.',
+      'Le bassin et les épaules restent à plat : ni penché, ni dos creusé.',
+      'Tenir sans bouger, en respirant ; la main et le pied posés ne glissent pas.',
+    ],
+    interetJjb: 'Le dos en croisé : tenir la posture quand un côté travaille et l’autre porte.',
+  },
 ];

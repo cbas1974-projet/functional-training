@@ -45,7 +45,7 @@ describe('le programme sur mesure (22 octobre 2026)', () => {
     expect(seance(1, 'lundi').finale).toBe('hack-squat');
     expect(seance(1, 'lundi').exercices[0]).toBe('trap-bar-deadlift');
     expect(seance(1, 'mardi-a').liens![0]).toEqual(['seated-calf-raise', 'chest-squeeze-press']);
-    expect(seance(1, 'mardi-b').finale).toBe('kb-tricep-extension');
+    expect(seance(1, 'mardi-b').finale).toBe('bird-dog');
   });
 
   it('les 5 séances : le seul au début, puis les paires, puis le dernier seul en finale', () => {
@@ -75,7 +75,7 @@ describe('le programme sur mesure (22 octobre 2026)', () => {
     expect(programmeDansLien('#x', null)).toBeNull();
   });
 
-  it('un programme de la version 12 passe à la 13 : même graine, même premier lundi, mêmes exercices, charges gardées', () => {
+  it('un programme de la version 12 passe à la 14 : même graine, même premier lundi, mêmes exercices, charges gardées', () => {
     const programme = genererProgramme({ graine: 42, aujourdhui: new Date(2026, 9, 19) });
     // Le Jeudi A tel que la version 12 l'ordonnait : les paires, puis le seul.
     const v12 = {
@@ -86,7 +86,7 @@ describe('le programme sur mesure (22 octobre 2026)', () => {
         : { ...s, exercices: [...s.exercices] })),
     };
     const mis = validerProgramme(v12)!;
-    expect(mis.version).toBe(13);
+    expect(mis.version).toBe(14);
     expect(mis.graine).toBe(42);
     expect(mis.debut).toBe(programme.debut);
     expect(mis.debut).toMatch(/^2026-10-19/);

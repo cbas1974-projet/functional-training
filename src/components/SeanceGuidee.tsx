@@ -619,6 +619,9 @@ export default function SeanceGuidee({
     visite: -1,
     parMouvement: {},
   });
+  // « Mouvement suivant » à l'échauffement ou aux étirements : les secondes
+  // sautées, pour cette étape — le chrono et le mouvement en cours y avancent.
+  const [saut, setSaut] = useState<{ visite: number; sec: number }>({ visite: -1, sec: 0 });
   /** La question en cours (quitter, passer l'exercice…), dans l'application. */
   const [dialogue, setDialogue] = useState<DialogueOuvert | null>(null);
   /** La finale choisie au moment de la finale ; null : celle du jour. */
@@ -704,7 +707,8 @@ export default function SeanceGuidee({
   const ecoule = moteur.ecouleSec;
   const prolongation = etat?.prolongationSec ?? 0;
   const dureeEff = etape.dureeSec + prolongation;
-  const reste = Math.max(0, dureeEff - ecoule);
+  const sautSec = saut.visite === visite ? saut.sec : 0;
+  const reste = Math.max(0, dureeEff - ecoule - sautSec);
 
   // Temps réel : étapes quittées + étape courante (rien sur l'étape finale).
   // Une attente où l'on arrive en avance (à deux) commence « avant zéro » :
@@ -795,7 +799,7 @@ export default function SeanceGuidee({
   const { index: indexMouvement, resteSec: resteMouvement } = lireMouvement(
     mouvements ?? [],
     etape.dureeSec,
-    ecoule,
+    ecoule + sautSec,
     rallongesEtape,
     prolongation,
   );
@@ -926,7 +930,7 @@ export default function SeanceGuidee({
     const attendFin =
       etape.type === 'exercice' || (etape.type === 'serie' && etape.manuelle === true) || etape.type === 'finale';
     // À deux, l'étape suit l'horloge commune d'elle-même.
-    if (!enCommun && ecoule >= dureeEff && ev.avance !== visite && !attendGo && !attendFin) {
+    if (!enCommun && ecoule + sautSec >= dureeEff && ev.avance !== visite && !attendGo && !attendFin) {
       ev.avance = visite;
       if (etape.type === 'serie' || etape.type === 'station') bellSound.playBell('end');
       // La fin d'une pause lancée d'un clic : la cloche, et le téléphone
@@ -936,10 +940,10 @@ export default function SeanceGuidee({
         vibrer();
       }
       const finPrevueMs = etat.debutEtapeMs + dureeEff * 1000;
-      const depart = maintenant - finPrevueMs <= TOLERANCE_FIN_MS ? finPrevueMs : maintenant;
+      const depart = sautSec === 0 && maintenant - finPrevueMs <= TOLERANCE_FIN_MS ? finPrevueMs : maintenant;
       naviguer(index + 1, depart);
     }
-  }, [etat, estFin, etape, reste, prolongation, metro, changement, maintien, mouvements, indexMouvement, changeDeCoteMouvement, resteMouvement, ecoule, dureeEff, maintenant, index, naviguer, enCommun]);
+  }, [etat, estFin, etape, reste, prolongation, metro, changement, maintien, mouvements, indexMouvement, changeDeCoteMouvement, resteMouvement, ecoule, sautSec, dureeEff, maintenant, index, naviguer, enCommun]);
 
   // La pause prise entre deux tours, d'un toucher : les trois derniers bips,
   // puis la cloche et la vibration, comme la pause de fin — mais l'exercice
@@ -1269,6 +1273,14 @@ export default function SeanceGuidee({
       },
     });
     moteur.prolonger(PROLONGATION_CHANGEMENT_SEC);
+  };
+
+  /** « Mouvement suivant » : on saute le reste du mouvement en cours (on a
+   *  fait le rameur de son côté, ou on veut passer). Seul : à deux, l'horloge
+   *  est commune. */
+  const sauterMouvement = () => {
+    if (enCommun || visite === undefined) return;
+    setSaut({ visite, sec: sautSec + Math.ceil(resteMouvement) });
   };
 
   /** Les douleurs de l'un ou de l'autre : chacun les siennes. */
@@ -1656,6 +1668,7 @@ export default function SeanceGuidee({
             resteMouvementSec={resteMouvement}
             resteSec={reste}
             onProlongerChangement={prolongerMouvement}
+            onSuivant={enCommun ? undefined : sauterMouvement}
           />
           {etape.type === 'retourCalme' && panneauRessenti}
         </div>
@@ -2332,6 +2345,8 @@ interface CorpsMouvementsProps {
   resteSec: number;
   /** « +5 s » au changement de côté. */
   onProlongerChangement: () => void;
+  /** « Mouvement suivant » ; absent à deux (horloge commune). */
+  onSuivant?: () => void;
 }
 
 /** Échauffement et retour au calme : les mouvements défilent automatiquement.
@@ -2344,6 +2359,7 @@ function CorpsMouvements({
   resteMouvementSec,
   resteSec,
   onProlongerChangement,
+  onSuivant,
 }: CorpsMouvementsProps) {
   const courant = mouvements[indexMouvement];
   const prochain = mouvements[indexMouvement + 1];
@@ -2399,10 +2415,22 @@ function CorpsMouvements({
           <p className="mt-2" style={{ color: 'var(--texte-discret)' }}>{courant.consigne}</p>
         </div>
       )}
+      {prochain && onSuivant && (
+        <Bouton variante="neutre" onClick={onSuivant} className="w-full">
+          Mouvement suivant →
+        </Bouton>
+      )}
       {prochain && (
-        <p className="text-sm" style={{ color: 'var(--texte-discret)' }}>
-          Ensuite : {prochain.nom}
-        </p>
+        <div className="text-left text-sm" style={{ color: 'var(--texte-discret)' }}>
+          <div className="text-xs font-bold uppercase tracking-[0.18em]">À venir</div>
+          <ol className="mt-1 space-y-1">
+            {mouvements.slice(indexMouvement + 1).map((m, i) => (
+              <li key={`${indexMouvement + 1 + i}-${m.nom}`}>
+                {indexMouvement + 2 + i}. {m.nom}
+              </li>
+            ))}
+          </ol>
+        </div>
       )}
     </div>
   );
@@ -3691,6 +3719,7 @@ export function ListeProgramme(props: ListeProgrammeProps) {
       {finale >= 0 && chrono >= 0 && (
         <LigneEtape
           nom={`Finale · ${OBJECTIF_ALLERS_RETOURS} allers-retours`}
+          exerciceId={(etapes[finale] as Extract<Etape, { type: 'finale' }>).proposee}
           statut={statut(finale, chrono)}
           ensuite={ensuite === groupes.length}
         />
@@ -3705,7 +3734,18 @@ export function ListeProgramme(props: ListeProgrammeProps) {
 type StatutLigne = 'fait' | 'en-cours' | 'a-venir';
 
 /** L'échauffement ou les étirements, en une ligne. */
-function LigneEtape({ nom, statut, ensuite = false }: { nom: string; statut: StatutLigne; ensuite?: boolean }) {
+function LigneEtape({
+  nom,
+  statut,
+  ensuite = false,
+  exerciceId,
+}: {
+  nom: string;
+  statut: StatutLigne;
+  ensuite?: boolean;
+  /** Son dessin, à côté du nom (la finale). */
+  exerciceId?: string;
+}) {
   return (
     <li
       className="flex min-h-11 items-center gap-2 rounded-2xl px-3 text-sm font-semibold"
@@ -3715,6 +3755,7 @@ function LigneEtape({ nom, statut, ensuite = false }: { nom: string; statut: Sta
         border: ensuite ? '2px solid var(--accent)' : '1px solid var(--bordure)',
       }}
     >
+      {exerciceId && <Vignette exerciceId={exerciceId} alt="" className="w-11 rounded-lg" />}
       {statut === 'fait' && <span style={{ color: 'var(--montee)' }}>✓</span>}
       {ensuite && (
         <span className="text-xs font-bold uppercase tracking-[0.14em]" style={{ color: 'var(--accent)' }}>
