@@ -38,6 +38,7 @@ Claude, de son côté :
   - Pas de paire de machines au mardi (Seb : le mardi suit le lundi de jambes).
 - **À faire (demain matin, avant la séance du vendredi 23 octobre = Jeudi A)** : coder ce programme sur mesure, tester que l'appli démarre, que le Jeudi A s'affiche, que l'historique et les charges sont intacts. Semaine du 19 octobre = A (non vérifié sur le téléphone).
 - **Demande de Seb (22 octobre, 23 h)** : en séance, « on ne sait pas ce qui suit, on est pogné dans l'exercice » ; **voir ce qui s'en vient** l'intéresse. Le code a déjà « Ensuite » et `ListeProgramme` (`SeanceGuidee.tsx`), mais NON VÉRIFIÉ à l'écran depuis la version exercice par exercice (13 octobre) : tester d'abord ce qui s'affiche à 375 px, puis ajouter si besoin un accès « Voir toute la séance » toujours visible.
+- **Fait (23 octobre)** : programme sur mesure publié (version 13, `cd0294f`) ; **Jeudi A fait en séance le matin du 23 octobre : « c'était bien »** (Seb). Reste : mini-finale gainage du lundi, « voir ce qui s'en vient » en séance, 5 dessins de machines (plafond OpenAI 10 $/mois, remise à zéro le 1er novembre), ménage des pages `docs/` non commitées.
 - **Pas vérifié** : les pourcentages sont à la main ; la finale (traîneau jeudi, marche du fermier lundi) vient du code.
 
 ## Backlog (sorti du registre le 2026-10-16, décision Seb)
@@ -808,3 +809,9 @@ d'installation du README.
     `setsid` permet de le figer avec SIGSTOP pour simuler un réseau muet.
   - Construire le site avec `VITE_SERVEUR=http://127.0.0.1:18080 npx vite build`,
     puis le servir avec `npx vite preview --port 4173`.
+
+## 26 octobre 2026 (soir) : Envoyer à Max, charges gardées (commits locaux, PAS publiés)
+
+- **Bouton « 📤 Envoyer à Max »** (haut de la liste de la séance, `SeanceGuidee.tsx`) : dessine l'image de la séance du jour (`src/utils/imageSeance.ts`, même mise en page que `docs/mardi-max.png`, faite à la main en HTML avant) puis ouvre le partage du téléphone ; Sébastien choisit Max lui-même. Sans partage de fichiers : l'image est téléchargée et un message le dit. Vu à l'écran : bouton, message de repli, aucun plantage. NON VU : le dessin final et le vrai partage sur téléphone.
+- **Charges gardées dès la saisie** (`chargesGardees.ts`) : un poids noté en séance non enregistrée (abandonnée) revient comme « dernière fois ». Avant : seul l'historique enregistré comptait. Tests ajoutés (2).
+- **Squat sumo** : une seule image existe (`public/exercices/sumo-squat.png`, un haltère) ; les cases de charge S1-S3 sont là, vides faute d'historique.

@@ -42,6 +42,8 @@ const chargerImage = (src: string): Promise<HTMLImageElement | null> =>
     const image = new Image();
     image.onload = () => resolve(image);
     image.onerror = () => resolve(null);
+    // Une image qui ne vient pas ne bloque pas le bouton : la case reste vide.
+    setTimeout(() => resolve(null), 8000);
     image.src = src;
   });
 
