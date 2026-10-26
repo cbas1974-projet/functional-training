@@ -522,7 +522,21 @@ export interface ProgressionSeance {
   sauvegardeeLe?: string;
 }
 
+/** Les charges notées pour un exercice dans une séance pas (encore)
+ *  enregistrée : gardées dès qu'elles sont saisies, pour que « la dernière
+ *  fois » ne les perde pas si la séance est abandonnée ou oubliée. */
+export interface ChargeGardee {
+  poids: number[];
+  unite: UnitePoids;
+  /** Quand la dernière série a été notée (ISO). */
+  le: string;
+}
+
 export interface EntrainementState {
+  /** Charges saisies en séance, par exercice, avant tout enregistrement ;
+   *  l'historique reprend la main dès qu'une séance plus récente est
+   *  enregistrée. */
+  chargesGardees?: Record<string, ChargeGardee>;
   parametres: ParametresSeance;
   seanceCourante: Seance | null;
   enCours: ProgressionSeance | null;

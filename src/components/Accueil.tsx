@@ -3,6 +3,7 @@
 // objectifs ; chacun suit la séance sur son téléphone, avec ses répétitions et
 // ses charges — seul, ou à deux sur une horloge commune. La séance libre,
 // l'historique et les exercices sont à un bouton.
+import { avecChargesGardees } from '../utils/chargesGardees';
 import { useCallback, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
 import type {
@@ -1057,8 +1058,8 @@ export default function Accueil({
   }, [personne, aDeux, unTelephone, programme, historique, historiqueAutre, lAutre, seanceMois, unite, douleurs, douleursAutre]);
   const seance = useMemo(() => seancePourPersonne(seanceMois, parametres, contexte), [seanceMois, parametres, contexte]);
   const passees = useMemo(
-    () => chargesPassees(historique, seance.blocs.map((bloc) => bloc.exerciceId), unite),
-    [historique, seance, unite],
+    () => chargesPassees(historique, seance.blocs.map((bloc) => bloc.exerciceId), unite, etat.chargesGardees),
+    [historique, seance, unite, etat.chargesGardees],
   );
   const passeesAutre = useMemo(
     () => (lAutre ? chargesPassees(historiqueAutre, seance.blocs.map((bloc) => bloc.exerciceId), unite) : {}),
@@ -1085,9 +1086,10 @@ export default function Accueil({
             historique,
             [...active.seance.blocs.map((bloc) => bloc.exerciceId), ...CHOIX_FINALE],
             uniteDeSeance(active.seance.parametres),
+            etat.chargesGardees,
           )
         : {},
-    [active, historique],
+    [active, historique, etat.chargesGardees],
   );
   const chargesActivesAutre = useMemo(
     () =>
@@ -2011,7 +2013,7 @@ export default function Accueil({
           onBasculerPasAime={active.essai?.genre === 'apercu' ? undefined : basculerPasAimeIci}
           onProgression={(progression) => {
             // Un essai ne laisse aucune trace : ni reprise, ni séance interrompue effacée.
-            if (!active.essai) onChange((prec) => ({ ...prec, enCours: progression }));
+            if (!active.essai) onChange((prec) => avecChargesGardees({ ...prec, enCours: progression }, progression));
           }}
           onTerminee={(realisee) => {
             if (!active.essai) onChange((prec) => avecSeanceFaite(prec, realisee));

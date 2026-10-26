@@ -17,6 +17,7 @@ import { CHOIX_FINALE, VERSION_PROGRAMME, validerProgramme } from './programmeMo
 import { lireRoutineSoir } from './routineSoir';
 import { lireDouleurs } from './douleurs';
 import { lirePasAimes } from './pasAimes';
+import { chargesGardeesLues } from './chargesGardees';
 import { versLeDerouleParExercice } from './etapesSeance';
 
 const CLE_STOCKAGE = 'functional-training';
@@ -211,6 +212,7 @@ const migrer = (sauvegarde: Partial<EntrainementState>): EntrainementState => {
     ...sauvegarde,
     parametres: migrerParametres(sauvegarde.parametres ?? {}),
     enCours: migrerProgression(sauvegarde.enCours ?? null),
+    chargesGardees: chargesGardeesLues(sauvegarde.chargesGardees),
     historique: migrerHistorique(sauvegarde.historique ?? []),
     programme,
     programmeRecomposeDepuis: depuis,

@@ -17,6 +17,7 @@
 // finale au chrono, pour se vider, et les étirements. Les deux s'entraînent
 // avec un seul téléphone : celui qui le tient note pour les deux.
 import type {
+  ChargeGardee,
   BlocSeries,
   Exercice,
   Materiel,
@@ -2331,8 +2332,10 @@ export function chargesPassees(
   historique: SeanceRealisee[],
   ids: string[],
   unite: UnitePoids,
+  gardees?: Record<string, ChargeGardee>,
 ): Record<string, number[]> {
   const resultat: Record<string, number[]> = {};
+  const dateDuResultat: Record<string, string> = {};
   for (const id of ids) {
     for (const realisee of historique) {
       const exo = realisee.exercices.find((e) => e.exerciceId === id);
@@ -2342,7 +2345,14 @@ export function chargesPassees(
       if (!valeurs.some((v) => v > 0)) continue;
       const de = uniteDeSeance(realisee.parametres);
       resultat[id] = valeurs.map((v) => (v > 0 ? convertirPoids(v, de, unite) : 0));
+      dateDuResultat[id] = realisee.date;
       break;
+    }
+    // Les charges notées en séance mais jamais enregistrées passent devant
+    // l'historique quand elles sont plus récentes.
+    const gardee = gardees?.[id];
+    if (gardee && gardee.poids.some((v) => v > 0) && (!dateDuResultat[id] || gardee.le > dateDuResultat[id])) {
+      resultat[id] = gardee.poids.map((v) => (v > 0 ? convertirPoids(v, gardee.unite, unite) : 0));
     }
   }
   return resultat;

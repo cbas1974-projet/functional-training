@@ -54,6 +54,7 @@ import {
 import { frequencesParExercice, libelleFrequenceCourte, uniteDeSeance } from '../utils/statistiques';
 import type { FrequenceExercice } from '../utils/statistiques';
 import { aEviterPar, chargesPassees } from '../utils/programmeMois';
+import { avecChargesGardees } from '../utils/chargesGardees';
 import { avecSeanceFaite, sansSeance } from '../utils/enLigne';
 import { basculerDouleurDe } from '../utils/douleurs';
 import SeanceGuidee from './SeanceGuidee';
@@ -1105,13 +1106,14 @@ export default function Entrainement({ etat, onChange }: EntrainementProps) {
               ...(seanceActive.seance.circuit?.stations ?? []),
             ],
             uniteDeSeance(seanceActive.seance.parametres),
+            etat.chargesGardees,
           )}
           douleurs={etat.douleurs}
           // La séance libre se fait seul : la douleur est celle du téléphone.
           onBasculerDouleur={(qui, exerciceId, charge, unite) =>
             onChange((prec) => ({ ...prec, ...basculerDouleurDe(prec, qui, exerciceId, charge, unite) }))
           }
-          onProgression={(p) => onChange((prec) => ({ ...prec, enCours: p }))}
+          onProgression={(p) => onChange((prec) => avecChargesGardees({ ...prec, enCours: p }, p))}
           onTerminee={(realisee) => {
             onChange((prec) => avecSeanceFaite(prec, realisee));
             setSeanceActive(null);
