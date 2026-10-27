@@ -3651,7 +3651,7 @@ export interface ListeProgrammeProps {
 
 /** « Envoyer à Max » : l'image de la séance du jour, puis le partage du
  *  téléphone — Sébastien choisit lui-même la personne, rien ne part seul. */
-function BoutonEnvoyerMax({ seance }: { seance: Seance }) {
+export function BoutonEnvoyerMax({ seance }: { seance: Seance }) {
   const [etat, setEtat] = useState<'repos' | 'en-cours' | IssueEnvoi>('repos');
   const envoyer = async () => {
     setEtat('en-cours');
@@ -3721,7 +3721,6 @@ export function ListeProgramme(props: ListeProgrammeProps) {
 
   return (
     <>
-    <BoutonEnvoyerMax seance={seance} />
     <ol className="space-y-2" aria-label="Le programme du jour">
       {echauffement >= 0 && <LigneEtape nom="Échauffement" statut={statut(echauffement, echauffement)} />}
       {groupes.map((groupe, g) => {

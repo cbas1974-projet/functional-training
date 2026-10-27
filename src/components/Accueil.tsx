@@ -103,7 +103,7 @@ import type { QuiPasAime } from '../utils/pasAimes';
 import { seCharge } from '../utils/charges';
 import ImageEnGrand from './ImageEnGrand';
 import { BandeauPasAime } from './PasAime';
-import SeanceGuidee from './SeanceGuidee';
+import SeanceGuidee, { BoutonEnvoyerMax } from './SeanceGuidee';
 import CarteRoutineSoir from './CarteRoutineSoir';
 import { Bascule, CIBLE, Choix, Feuille, Groupe, Pastille } from './Feuille';
 
@@ -1644,6 +1644,9 @@ export default function Accueil({
                   Voir comme {autre}
                 </button>
               )}
+            </div>
+            <div className="mt-2">
+              <BoutonEnvoyerMax seance={seance} />
             </div>
 
 
